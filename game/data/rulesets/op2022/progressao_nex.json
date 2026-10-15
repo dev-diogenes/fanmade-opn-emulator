@@ -1,0 +1,13 @@
+{
+  "ref": "p.33",
+  "descricao": "Limite de PE gastos por turno, conforme o NEX do agente. Exemplo de formato: só números, sem texto do livro.",
+  "nex_inicial": 5,
+  "nex_por_missao": 5,
+  "nex_maximo_natural": 99,
+  "limite_pe_por_turno": {
+    "5": 1, "10": 2, "15": 3, "20": 4, "25": 5,
+    "30": 6, "35": 7, "40": 8, "45": 9, "50": 10,
+    "55": 11, "60": 12, "65": 13, "70": 14, "75": 15,
+    "80": 16, "85": 17, "90": 18, "95": 19, "99": 20
+  }
+}

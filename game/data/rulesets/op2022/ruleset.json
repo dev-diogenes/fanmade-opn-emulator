@@ -1,0 +1,9 @@
+{
+  "id": "op2022",
+  "nome": "Ordem Paranormal RPG — Livro Básico",
+  "versao_livro": "1.3",
+  "herda_de": null,
+  "arquivos": [
+    "progressao_nex.json"
+  ]
+}

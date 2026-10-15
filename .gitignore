@@ -1,0 +1,32 @@
+# --- Material pago / protegido: NUNCA versionar ---
+# Livros, fichas e qualquer extração de texto deles ficam só na máquina local.
+reference/*
+!reference/README.md
+*.pdf
+
+# --- Godot 4 ---
+.godot/
+game/.godot/
+*.translation
+export_presets.cfg
+export/
+builds/
+
+# --- Mono/C# (caso algum dia usemos) ---
+.mono/
+data_*/
+mono_crash.*.json
+
+# --- Blender ---
+*.blend1
+*.blend2
+
+# --- SO / editores ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# --- Claude Code (configurações locais) ---
+.claude/settings.local.json

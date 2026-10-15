@@ -1,0 +1,14 @@
+; Engine configuration file.
+; Projeto Godot 4.x — abra esta pasta (game/) no editor do Godot.
+
+config_version=5
+
+[application]
+
+config/name="Ordem Paranormal: Fanmade (WIP)"
+config/description="RPG fanmade de Ordem Paranormal no estilo For The King. Não oficial."
+config/features=PackedStringArray("4.5", "Forward Plus")
+
+[internationalization]
+
+locale/fallback="pt_BR"
