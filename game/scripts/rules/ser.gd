@@ -14,6 +14,11 @@ const ENLOUQUECENDO := "enlouquecendo"
 const PERTURBADO := "perturbado"
 const INSANO := "insano"
 const PARALISADO := "paralisado"
+const DESPREVENIDO := "desprevenido"
+const INDEFESO := "indefeso"
+const SURPREENDIDO := "surpreendido"
+const VULNERAVEL := "vulneravel"
+const IMOVEL := "imovel"
 
 const TURNOS_PARA_MORRER := 3
 const TURNOS_PARA_ENLOUQUECER := 3
@@ -34,9 +39,11 @@ var resistencias_base: Dictionary = {}
 var mods_cena: Dictionary = {}
 ## Bônus de Defesa até o início do próximo turno (Combate Defensivo).
 var defesa_temporaria := 0
+## Dados a menos nos ataques até o início do próximo turno (Combate Defensivo, Duas Armas).
+var penalidade_ataque_temporaria := 0
 ## Ações padrão extras no próximo turno (concedidas por efeitos; a UI consome).
 var acoes_padrao_extras := 0
-## Reação usada desde o início do último turno do ser.
+## Reação DEFENSIVA (bloqueio, esquiva, contra-ataque) usada nesta rodada: só uma (p.88).
 var reacao_usada := false
 ## Quem causou o último dano (para "Chamas da Vingança"). Referência fraca para evitar ciclos.
 var _ultimo_atacante: WeakRef
@@ -65,20 +72,37 @@ func treinado_em(_pericia_id: String) -> bool:
 
 
 func defesa() -> int:
-	return 10 + defesa_temporaria
+	return 10 + ajustes_de_defesa()
+
+
+## Ajustes comuns a todos os seres: temporários, de cena e condições (p.89, p.320).
+func ajustes_de_defesa() -> int:
+	var total := defesa_temporaria + int(mods_cena.get("defesa", 0))
+	if esta_indefeso():
+		total -= 10
+	elif tem(DESPREVENIDO) or tem(SURPREENDIDO):
+		total -= 5
+	if tem(VULNERAVEL):
+		total -= 2
+	return total
+
+
+func esta_indefeso() -> bool:
+	return tem(INDEFESO) or tem(INCONSCIENTE) or tem(PARALISADO)
 
 
 ## Modificadores que o ser aplica ao atacar com `arma` contra `alvo`:
 ## {bonus_ataque, dados_extras, margem (redução da margem de ameaça), bonus_dano, dados_dano_extra}
 func modificar_ataque(_arma: Dictionary, alvo: Ser) -> Dictionary:
-	var mods := {"bonus_ataque": 0, "dados_extras": 0, "margem": 0, "bonus_dano": 0, "dados_dano_extra": 0}
+	var mods := {"bonus_ataque": 0, "dados_extras": -penalidade_ataque_temporaria, "margem": 0, "bonus_dano": 0, "dados_dano_extra": 0}
 	mods.bonus_ataque += int(mods_cena.get("ataque_contra", {}).get(alvo, 0))
+	mods.bonus_ataque -= int(mods_cena.get("penalidade_ataque", 0))
 	return mods
 
 
 ## Bônus em testes de resistência (Fortitude, Reflexos, Vontade).
 func bonus_testes_resistencia() -> int:
-	return 0
+	return int(mods_cena.get("resistencia_testes", 0))
 
 
 func resistencia(tipo_dano: String) -> int:
@@ -151,6 +175,7 @@ func estabilizar() -> void:
 ## (ou enlouquecendo) na mesma cena matam (ou enlouquecem) o ser.
 func iniciar_turno() -> void:
 	defesa_temporaria = 0
+	penalidade_ataque_temporaria = 0
 	reacao_usada = false
 	if tem(MORRENDO):
 		_turnos_morrendo += 1
@@ -170,6 +195,9 @@ func encerrar_cena() -> void:
 	_turnos_enlouquecendo = 0
 	mods_cena.clear()
 	defesa_temporaria = 0
+	penalidade_ataque_temporaria = 0
+	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL]:
+		condicoes.erase(c)   # condições terminam no fim da cena (p.321)
 	acoes_padrao_extras = 0
 	reacao_usada = false
 

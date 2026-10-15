@@ -15,6 +15,8 @@ static func rolar(dados: Dados, atributo: int, bonus: int, dt: int, dados_extras
 	if reserva <= 0:
 		quantidade = 2 - reserva
 		r.usa_pior = true
+	r.atributo = atributo
+	r.dados_extras = dados_extras
 	r.slots = dados.rolar_varios(quantidade, 20)
 	r.escolhido = r.slots.min() if r.usa_pior else r.slots.max()
 	r.bonus = bonus
@@ -23,6 +25,14 @@ static func rolar(dados: Dados, atributo: int, bonus: int, dt: int, dados_extras
 	r.natural_20 = r.escolhido == 20
 	r.sucesso = r.natural_20 or r.total >= dt
 	return r
+
+
+## Refaz um teste com os mesmos parâmetros (ex.: Inspirar Confiança). Bônus pós-rolagem não são refeitos.
+static func rerrolar(dados: Dados, anterior: ResultadoTeste) -> ResultadoTeste:
+	var base_bonus := anterior.bonus
+	for extra in anterior.dados_bonus:
+		base_bonus -= extra
+	return rolar(dados, anterior.atributo, base_bonus, anterior.dt, anterior.dados_extras)
 
 
 ## Probabilidade (0..1) de passar, para a dica "chance de passar" da UI.

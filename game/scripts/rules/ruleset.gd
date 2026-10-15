@@ -18,6 +18,8 @@ var _graus: Dictionary = {}
 var _origens: Dictionary = {}
 var _poderes: Dictionary = {}   ## classe_id -> {poder_id -> poder}
 var _trilhas: Dictionary = {}   ## classe_id -> {trilha_id -> trilha}
+var _faixas_idade: Dictionary = {}
+var _desvantagens_idade: Dictionary = {}
 
 
 ## Carrega o manifesto e os arquivos listados. Retorna OK ou um código de erro.
@@ -52,6 +54,10 @@ func _indexar() -> void:
 		_poderes[classe_id] = {}
 		for p in poderes_por_classe[classe_id]:
 			_poderes[classe_id][p.id] = p
+	for f in dados.get("idades", {}).get("faixas", []):
+		_faixas_idade[f.id] = f
+	for dv in dados.get("idades", {}).get("desvantagens", []):
+		_desvantagens_idade[dv.id] = dv
 	var trilhas_por_classe: Dictionary = dados.get("trilhas", {}).get("trilhas", {})
 	for classe_id in trilhas_por_classe:
 		_trilhas[classe_id] = {}
@@ -121,6 +127,24 @@ func tem_trilha(classe_id: String, trilha_id: String) -> bool:
 func trilha(classe_id: String, trilha_id: String) -> Dictionary:
 	assert(tem_trilha(classe_id, trilha_id), "Trilha desconhecida: %s/%s" % [classe_id, trilha_id])
 	return _trilhas[classe_id][trilha_id]
+
+
+func tem_faixa_idade(faixa_id: String) -> bool:
+	return _faixas_idade.has(faixa_id)
+
+
+func faixa_idade(faixa_id: String) -> Dictionary:
+	assert(_faixas_idade.has(faixa_id), "Faixa etária desconhecida: %s" % faixa_id)
+	return _faixas_idade[faixa_id]
+
+
+func tem_desvantagem_idade(desvantagem_id: String) -> bool:
+	return _desvantagens_idade.has(desvantagem_id)
+
+
+func desvantagem_idade(desvantagem_id: String) -> Dictionary:
+	assert(_desvantagens_idade.has(desvantagem_id), "Desvantagem de idade desconhecida: %s" % desvantagem_id)
+	return _desvantagens_idade[desvantagem_id]
 
 
 func habilidade_classe(habilidade_id: String) -> Dictionary:
@@ -214,11 +238,15 @@ func eh_teste_de_resistencia(pericia_id: String) -> bool:
 
 
 ## Valida a distribuição inicial de atributos (p.24). Retorna a lista de erros (vazia = válido).
-func validar_atributos_iniciais(atributos: Dictionary) -> Array[String]:
+## - `pontos`: pontos a distribuir (-1 = padrão do livro; Mundano usa 3).
+## - `zerados_obrigatorios`: atributos que começam em 0 por regra (Idade Variada) — não rendem ponto extra.
+## - `maximos`: máximos específicos por atributo (Idade Variada).
+func validar_atributos_iniciais(atributos: Dictionary, pontos: int = -1, zerados_obrigatorios: Array = [], maximos: Dictionary = {}) -> Array[String]:
 	var erros: Array[String] = []
 	var regra: Dictionary = dados.atributos.criacao
 	var ids: Array = dados.atributos.atributos.map(func(a): return a.id)
 	var inicial := int(regra.valor_inicial)
+	var esperado := int(regra.pontos_para_distribuir) if pontos < 0 else pontos
 	var gasto := 0
 	var zerados := 0
 	for attr_id in ids:
@@ -226,15 +254,20 @@ func validar_atributos_iniciais(atributos: Dictionary) -> Array[String]:
 			erros.append("Falta o atributo %s" % attr_id)
 			continue
 		var v := int(atributos[attr_id])
-		if v > int(regra.maximo_inicial):
-			erros.append("%s acima do máximo inicial (%d)" % [attr_id, int(regra.maximo_inicial)])
+		var maximo := int(maximos.get(attr_id, regra.maximo_inicial))
+		if v > maximo:
+			erros.append("%s acima do máximo inicial (%d)" % [attr_id, maximo])
 		if v < 0:
 			erros.append("%s negativo" % attr_id)
+		if attr_id in zerados_obrigatorios:
+			if v != 0:
+				erros.append("%s começa em 0 nesta faixa etária" % attr_id)
+			continue
 		if v == 0:
 			zerados += 1
 		gasto += v - inicial
 	if zerados > 1 or (zerados == 1 and not regra.pode_reduzir_um_para_zero):
 		erros.append("Só um atributo pode ser reduzido a 0")
-	if gasto != int(regra.pontos_para_distribuir):
-		erros.append("Distribuição deve somar %d pontos (somou %d)" % [int(regra.pontos_para_distribuir), gasto])
+	if gasto != esperado:
+		erros.append("Distribuição deve somar %d pontos (somou %d)" % [esperado, gasto])
 	return erros

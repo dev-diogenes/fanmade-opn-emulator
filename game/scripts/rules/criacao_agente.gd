@@ -12,11 +12,15 @@ extends RefCounted
 ##   "perito": ["ciencias", "investigacao"],   # Especialista
 ##   "trilha": "medico_de_campo",           # obrigatória a partir de NEX 10%
 ##   "poderes": ["treinamento_em_pericia"], # um por marco (NEX 15/30/45…)
-##   "versatilidade": "poder",              # NEX 50%: "poder" (a opção de trilha alheia é pendente)
+##   "versatilidade": "poder",              # NEX 50%: "poder" ou "trilha:<id>" (1º poder de outra trilha)
 ##   "treinamentos": [["crime", "tatica"]], # um par por Treinamento em Perícia
 ##   "graus": [[...], [...]],               # perícias que sobem de grau em NEX 35% e 70%
-##   "escolhas": {"ferramenta_de_trabalho": "machado"}
+##   "escolhas": {"ferramenta_de_trabalho": "machado"},
+##   # Regra opcional Idade Variada (p.182-184):
+##   "idade": "adulto", "desvantagens_idade": ["catarata"],
+##   "beneficios_origem": ["pericia:investigacao"],   # criança (1) / adolescente (2): perícias e/ou "poder"
 ## }
+## Classe "mundano" (regra NEX 0%): NEX 0, 3 pontos de atributo, sem trilha nem poderes.
 ## Simplificação: pré-requisitos de poderes são checados no estado final do agente,
 ## não no NEX em que cada poder foi escolhido.
 
@@ -33,10 +37,37 @@ static func criar(ruleset: Ruleset, ficha: Dictionary) -> Dictionary:
 		return {"agente": null, "erros": ["Origem desconhecida: %s" % origem_id] as Array[String]}
 	var classe := ruleset.classe(classe_id)
 	var origem := ruleset.origem(origem_id)
+	var mundano := classe_id == "mundano"
+	if mundano and nex != int(classe.get("nex_inicial", 0)):
+		erros.append("Mundanos têm NEX 0%")
+
+	# 0. Idade Variada
+	var faixa: Dictionary = {}
+	var idade_id: String = ficha.get("idade", "")
+	var desvantagens: Array = ficha.get("desvantagens_idade", [])
+	if idade_id != "":
+		if not ruleset.tem_faixa_idade(idade_id):
+			return {"agente": null, "erros": ["Faixa etária desconhecida: %s" % idade_id] as Array[String]}
+		faixa = ruleset.faixa_idade(idade_id)
+		if desvantagens.size() != int(faixa.get("desvantagens", 0)):
+			erros.append("A faixa %s exige %d desvantagem(ns) de idade" % [faixa.nome, int(faixa.get("desvantagens", 0))])
+		var vistas: Dictionary = {}
+		for dv in desvantagens:
+			if not ruleset.tem_desvantagem_idade(dv):
+				erros.append("Desvantagem de idade desconhecida: %s" % dv)
+			elif vistas.has(dv):
+				erros.append("Desvantagem de idade repetida: %s" % dv)
+			vistas[dv] = true
+		var nex_minimo := 5 + int(faixa.get("nex_bonus", 0))
+		if not mundano and nex < nex_minimo:
+			erros.append("A faixa %s começa em NEX %d%%" % [faixa.nome, nex_minimo])
+	elif not desvantagens.is_empty():
+		erros.append("Desvantagens de idade exigem a regra Idade Variada")
 
 	# 1. Atributos iniciais + aumentos
 	var atributos: Dictionary = ficha.get("atributos", {}).duplicate()
-	erros.append_array(ruleset.validar_atributos_iniciais(atributos))
+	var maximos_idade: Dictionary = faixa.get("atributos_maximos", {})
+	erros.append_array(ruleset.validar_atributos_iniciais(atributos, int(classe.get("pontos_atributo", -1)), faixa.get("atributos_zerados", []), maximos_idade))
 	var aumentos: Array = ficha.get("aumentos_atributo", [])
 	var aumentos_esperados := ruleset.quantos_ate("aumento_atributo", nex)
 	if aumentos.size() != aumentos_esperados:
@@ -44,8 +75,10 @@ static func criar(ruleset: Ruleset, ficha: Dictionary) -> Dictionary:
 	var maximo := int(ruleset.dados.classes.progressao.atributo_maximo)
 	for attr_id in aumentos:
 		atributos[attr_id] = int(atributos.get(attr_id, 0)) + 1
-		if atributos[attr_id] > maximo:
-			erros.append("Aumento de atributo passa de %d em %s" % [maximo, attr_id])
+		if atributos[attr_id] > mini(maximo, int(maximos_idade.get(attr_id, maximo))):
+			erros.append("Aumento de atributo passa do máximo em %s" % attr_id)
+		if attr_id in faixa.get("sem_aumento", []):
+			erros.append("A faixa %s não pode aumentar %s" % [faixa.nome, attr_id])
 	var intelecto := int(atributos.get("int", 0))
 
 	# 2. Perícias: origem, classe e livres
@@ -55,6 +88,22 @@ static func criar(ruleset: Ruleset, ficha: Dictionary) -> Dictionary:
 		da_origem = ficha.get("pericias_origem", [])
 		if da_origem.size() != int(origem.pericias_escolha):
 			erros.append("A origem %s exige escolher %d perícias" % [origem.nome, int(origem.pericias_escolha)])
+	# Criança e adolescente recebem só parte dos benefícios da origem (p.182)
+	var sem_poder_origem := false
+	if faixa.has("beneficios_de_origem"):
+		var beneficios: Array = ficha.get("beneficios_origem", [])
+		if beneficios.size() != int(faixa.beneficios_de_origem):
+			erros.append("A faixa %s recebe %d benefício(s) da origem" % [faixa.nome, int(faixa.beneficios_de_origem)])
+		var restritas: Array = []
+		for b in beneficios:
+			if b == "poder":
+				continue
+			var pid := String(b).trim_prefix("pericia:")
+			if not pid in da_origem:
+				erros.append("Benefício de origem inválido: %s" % b)
+			restritas.append(pid)
+		da_origem = restritas
+		sem_poder_origem = not "poder" in beneficios
 	var da_classe: Array = classe.get("pericias_fixas", []).duplicate()
 	var escolhidas_classe: Array = ficha.get("pericias_classe", [])
 	for par in classe.get("pericias_fixas_escolha", []):
@@ -83,7 +132,11 @@ static func criar(ruleset: Ruleset, ficha: Dictionary) -> Dictionary:
 
 	# 3. Trilha
 	var trilha_id: String = ficha.get("trilha", "")
-	if nex >= 10:
+	if mundano:
+		if trilha_id != "" or not ficha.get("poderes", []).is_empty():
+			erros.append("Mundanos não têm trilha nem poderes de classe")
+		trilha_id = ""
+	elif nex >= 10:
 		if not ruleset.tem_trilha(classe_id, trilha_id):
 			erros.append("A partir de NEX 10%% é preciso escolher uma trilha de %s" % classe.nome)
 	elif trilha_id != "":
@@ -92,9 +145,23 @@ static func criar(ruleset: Ruleset, ficha: Dictionary) -> Dictionary:
 
 	# 4. Poderes de classe
 	var lista_poderes: Array = ficha.get("poderes", [])
-	var poderes_esperados := ruleset.quantos_ate("poder", nex)
-	if nex >= 50 and ficha.get("versatilidade", "") == "poder":
-		poderes_esperados += 1
+	var poderes_esperados := 0 if mundano else ruleset.quantos_ate("poder", nex)
+	var versatilidade: String = ficha.get("versatilidade", "")
+	var trilha_versatil := ""
+	if versatilidade != "" and nex < 50:
+		erros.append("Versatilidade só em NEX 50%")
+	elif nex >= 50:
+		if versatilidade == "poder":
+			poderes_esperados += 1
+		elif versatilidade.begins_with("trilha:"):
+			trilha_versatil = versatilidade.trim_prefix("trilha:")
+			if not ruleset.tem_trilha(classe_id, trilha_versatil) or trilha_versatil == trilha_id:
+				erros.append("Versatilidade: trilha inválida (%s)" % trilha_versatil)
+				trilha_versatil = ""
+		else:
+			erros.append("Em NEX 50%, escolha a Versatilidade: \"poder\" ou \"trilha:<id>\"")
+	if faixa.get("poder_extra", false):
+		poderes_esperados += 1   # Adulto: Vivência
 	if lista_poderes.size() != poderes_esperados:
 		erros.append("NEX %d%% dá %d poder(es) de classe (recebeu %d)" % [nex, poderes_esperados, lista_poderes.size()])
 	var vistos: Dictionary = {}
@@ -123,7 +190,7 @@ static func criar(ruleset: Ruleset, ficha: Dictionary) -> Dictionary:
 	# 6. Grau de Treinamento (NEX 35% e 70%)
 	var graus: Array = ficha.get("graus", [])
 	var marcos_grau := ruleset.quantos_ate("grau_treinamento", nex)
-	var regra_grau: Dictionary = ruleset.dados.classes.grau_treinamento_qtd[classe_id]
+	var regra_grau: Dictionary = ruleset.dados.classes.grau_treinamento_qtd.get(classe_id, {"base": 0, "soma_atributo": "int"})
 	if graus.size() != marcos_grau:
 		erros.append("NEX %d%% dá %d escolha(s) de Grau de Treinamento" % [nex, marcos_grau])
 	for i in graus.size():
@@ -164,9 +231,16 @@ static func criar(ruleset: Ruleset, ficha: Dictionary) -> Dictionary:
 	for p in lista_perito:
 		a.perito.append(p)
 	a.escolhas = ficha.get("escolhas", {}).duplicate()
+	a.idade = idade_id
+	for dv in desvantagens:
+		a.desvantagens_idade.append(dv)
+	a.trilha_versatil = trilha_versatil
+	a.sem_poder_origem = sem_poder_origem
 
 	if trilha_id != "":
 		erros.append_array(_checar_pre(ruleset.trilha(classe_id, trilha_id).get("pre", {}), a, "trilha " + trilha_id))
+	if trilha_versatil != "":
+		erros.append_array(_checar_pre(ruleset.trilha(classe_id, trilha_versatil).get("pre", {}), a, "trilha " + trilha_versatil))
 	for poder_id in vistos:
 		erros.append_array(_checar_pre(ruleset.poder(classe_id, poder_id).get("pre", {}), a, "poder " + poder_id))
 	for h in a.habilidades():

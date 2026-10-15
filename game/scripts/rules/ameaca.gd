@@ -48,4 +48,4 @@ func treinado_em(pericia_id: String) -> bool:
 
 
 func defesa() -> int:
-	return defesa_fixa + defesa_temporaria
+	return defesa_fixa + ajustes_de_defesa()

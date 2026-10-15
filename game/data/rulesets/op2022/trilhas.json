@@ -4,85 +4,85 @@
   "niveis": [10, 40, 65, 99],
   "trilhas": {
     "combatente": [
-      { "id": "aniquilador", "nome": "Aniquilador", "descricao": "Especialista numa arma favorita.", "habilidades": {
-        "10": { "id": "a_favorita", "nome": "A Favorita", "descricao": "A arma favorita conta uma categoria abaixo.", "implementado": false, "efeitos": [] },
-        "40": { "id": "tecnica_secreta", "nome": "Técnica Secreta", "descricao": "Paga PE para golpes amplos ou mais destrutivos com a favorita.", "implementado": false, "efeitos": [] },
-        "65": { "id": "tecnica_sublime", "nome": "Técnica Sublime", "descricao": "Novas opções de Técnica Secreta: crítico mais fácil e perfuração.", "implementado": false, "efeitos": [] },
-        "99": { "id": "maquina_de_matar", "nome": "Máquina de Matar", "descricao": "A favorita fica mais barata, mais letal e causa mais dano.", "implementado": false, "efeitos": [] } } },
-      { "id": "comandante_de_campo", "nome": "Comandante de Campo", "descricao": "Lidera e coordena os aliados.", "habilidades": {
-        "10": { "id": "inspirar_confianca", "nome": "Inspirar Confiança", "descricao": "Reação + 2 PE: um aliado próximo rerrola um teste.", "implementado": false, "efeitos": [] },
-        "40": { "id": "estrategista", "nome": "Estrategista", "descricao": "Paga PE por aliado para dar a eles uma ação de movimento extra.", "implementado": false, "efeitos": [] },
-        "65": { "id": "brecha_na_guarda", "nome": "Brecha na Guarda", "descricao": "Quando um aliado fere um inimigo, outro aliado ataca de novo.", "implementado": false, "efeitos": [] },
-        "99": { "id": "oficial_comandante", "nome": "Oficial Comandante", "descricao": "5 PE: todos os aliados à vista ganham uma ação padrão extra.", "implementado": false, "efeitos": [] } } },
-      { "id": "guerreiro", "nome": "Guerreiro", "descricao": "O corpo como arma: golpes corpo a corpo devastadores.", "habilidades": {
-        "10": { "id": "tecnica_letal", "nome": "Técnica Letal", "descricao": "+2 na margem de ameaça corpo a corpo.", "implementado": true, "efeitos": [{ "tipo": "margem_ameaca", "valor": 2, "ataques": ["corpo_a_corpo"] }] },
-        "40": { "id": "revidar", "nome": "Revidar", "descricao": "Ao bloquear, reação + 2 PE para atacar quem o atacou.", "implementado": false, "efeitos": [] },
-        "65": { "id": "forca_opressora", "nome": "Força Opressora", "descricao": "Ao acertar, 1 PE para derrubar ou empurrar o alvo.", "implementado": false, "efeitos": [] },
-        "99": { "id": "potencia_maxima", "nome": "Potência Máxima", "descricao": "Ataque Especial corpo a corpo dobra os bônus.", "implementado": true, "efeitos": [{ "tipo": "ataque_especial_dobrado", "ataques": ["corpo_a_corpo"] }] } } },
-      { "id": "operacoes_especiais", "nome": "Operações Especiais", "descricao": "Rápido, calculado e eficiente.", "habilidades": {
-        "10": { "id": "iniciativa_aprimorada", "nome": "Iniciativa Aprimorada", "descricao": "+5 em Iniciativa e um movimento extra na primeira rodada.", "implementado": true, "efeitos": [{ "tipo": "bonus_pericia", "pericia": "iniciativa", "valor": 5 }], "pendente": "movimento extra (grade, Fase 2)" },
-        "40": { "id": "ataque_extra", "nome": "Ataque Extra", "descricao": "Uma vez por rodada, 2 PE para um ataque adicional.", "implementado": false, "efeitos": [] },
-        "65": { "id": "surto_de_adrenalina", "nome": "Surto de Adrenalina", "descricao": "Uma vez por rodada, 5 PE para uma ação extra.", "implementado": false, "efeitos": [] },
-        "99": { "id": "sempre_alerta", "nome": "Sempre Alerta", "descricao": "Ação padrão extra no começo de cada combate.", "implementado": false, "efeitos": [] } } },
-      { "id": "tropa_de_choque", "nome": "Tropa de Choque", "descricao": "Duro na queda: aguenta o dano pelos aliados.", "habilidades": {
-        "10": { "id": "casca_grossa", "nome": "Casca Grossa", "descricao": "+1 PV a cada 5% de NEX e soma Vigor ao bloquear.", "implementado": true, "efeitos": [{ "tipo": "pv_por_nex", "valor": 1 }, { "tipo": "bloqueio_soma_atributo", "atributo": "vig" }] },
-        "40": { "id": "cai_dentro", "nome": "Cai Dentro", "descricao": "Reação + 1 PE: provoca o inimigo para atacar você no lugar do aliado.", "implementado": false, "efeitos": [] },
-        "65": { "id": "duro_de_matar", "nome": "Duro de Matar", "descricao": "Reação + 2 PE: corta pela metade um dano não paranormal.", "implementado": false, "efeitos": [] },
-        "99": { "id": "inquebravel", "nome": "Inquebrável", "descricao": "Machucado, ganha Defesa e resistência; morrendo, ainda age.", "implementado": false, "efeitos": [] } } }
+      {"id": "aniquilador", "nome": "Aniquilador", "descricao": "Especialista numa arma favorita.", "habilidades": {
+        "10": {"id": "a_favorita", "nome": "A Favorita", "descricao": "A arma favorita conta uma categoria abaixo.", "implementado": false, "efeitos": []},
+        "40": {"id": "tecnica_secreta", "nome": "Técnica Secreta", "descricao": "Paga PE para golpes amplos ou mais destrutivos com a favorita.", "implementado": false, "efeitos": []},
+        "65": {"id": "tecnica_sublime", "nome": "Técnica Sublime", "descricao": "Novas opções de Técnica Secreta: crítico mais fácil e perfuração.", "implementado": false, "efeitos": []},
+        "99": {"id": "maquina_de_matar", "nome": "Máquina de Matar", "descricao": "A favorita fica mais barata, mais letal e causa mais dano.", "implementado": false, "efeitos": []} } },
+      {"id": "comandante_de_campo", "nome": "Comandante de Campo", "descricao": "Lidera e coordena os aliados.", "habilidades": {
+        "10": {"id": "inspirar_confianca", "nome": "Inspirar Confiança", "descricao": "Reação + 2 PE: um aliado próximo rerrola um teste.", "implementado": true, "efeitos": [], "pendente": "distância/alcance não verificados (grade, Fase 2)"},
+        "40": {"id": "estrategista", "nome": "Estrategista", "descricao": "Paga PE por aliado para dar a eles uma ação de movimento extra.", "implementado": true, "efeitos": [], "pendente": "distância/alcance não verificados (grade, Fase 2)"},
+        "65": {"id": "brecha_na_guarda", "nome": "Brecha na Guarda", "descricao": "Quando um aliado fere um inimigo, outro aliado ataca de novo.", "implementado": true, "efeitos": [], "pendente": "distância/alcance não verificados (grade, Fase 2)"},
+        "99": {"id": "oficial_comandante", "nome": "Oficial Comandante", "descricao": "5 PE: todos os aliados à vista ganham uma ação padrão extra.", "implementado": true, "efeitos": [], "pendente": "distância/alcance não verificados (grade, Fase 2)"} } },
+      {"id": "guerreiro", "nome": "Guerreiro", "descricao": "O corpo como arma: golpes corpo a corpo devastadores.", "habilidades": {
+        "10": {"id": "tecnica_letal", "nome": "Técnica Letal", "descricao": "+2 na margem de ameaça corpo a corpo.", "implementado": true, "efeitos": [{"tipo": "margem_ameaca", "valor": 2, "ataques": ["corpo_a_corpo"]}]},
+        "40": {"id": "revidar", "nome": "Revidar", "descricao": "Ao bloquear, reação + 2 PE para atacar quem o atacou.", "implementado": true, "efeitos": []},
+        "65": {"id": "forca_opressora", "nome": "Força Opressora", "descricao": "Ao acertar, 1 PE para derrubar ou empurrar o alvo.", "implementado": false, "efeitos": []},
+        "99": {"id": "potencia_maxima", "nome": "Potência Máxima", "descricao": "Ataque Especial corpo a corpo dobra os bônus.", "implementado": true, "efeitos": [{"tipo": "ataque_especial_dobrado", "ataques": ["corpo_a_corpo"]}]} } },
+      {"id": "operacoes_especiais", "nome": "Operações Especiais", "descricao": "Rápido, calculado e eficiente.", "habilidades": {
+        "10": {"id": "iniciativa_aprimorada", "nome": "Iniciativa Aprimorada", "descricao": "+5 em Iniciativa e um movimento extra na primeira rodada.", "implementado": true, "efeitos": [{"tipo": "bonus_pericia", "pericia": "iniciativa", "valor": 5}]},
+        "40": {"id": "ataque_extra", "nome": "Ataque Extra", "descricao": "Uma vez por rodada, 2 PE para um ataque adicional.", "implementado": true, "efeitos": []},
+        "65": {"id": "surto_de_adrenalina", "nome": "Surto de Adrenalina", "descricao": "Uma vez por rodada, 5 PE para uma ação extra.", "implementado": true, "efeitos": []},
+        "99": {"id": "sempre_alerta", "nome": "Sempre Alerta", "descricao": "Ação padrão extra no começo de cada combate.", "implementado": true, "efeitos": []} } },
+      {"id": "tropa_de_choque", "nome": "Tropa de Choque", "descricao": "Duro na queda: aguenta o dano pelos aliados.", "habilidades": {
+        "10": {"id": "casca_grossa", "nome": "Casca Grossa", "descricao": "+1 PV a cada 5% de NEX e soma Vigor ao bloquear.", "implementado": true, "efeitos": [{"tipo": "pv_por_nex", "valor": 1}, {"tipo": "bloqueio_soma_atributo", "atributo": "vig"}]},
+        "40": {"id": "cai_dentro", "nome": "Cai Dentro", "descricao": "Reação + 1 PE: provoca o inimigo para atacar você no lugar do aliado.", "implementado": true, "efeitos": [], "pendente": "distância/alcance não verificados (grade, Fase 2)"},
+        "65": {"id": "duro_de_matar", "nome": "Duro de Matar", "descricao": "Reação + 2 PE: corta pela metade um dano não paranormal.", "implementado": true, "efeitos": []},
+        "99": {"id": "inquebravel", "nome": "Inquebrável", "descricao": "Machucado, ganha Defesa e resistência; morrendo, ainda age.", "implementado": true, "efeitos": []} } }
     ],
     "especialista": [
-      { "id": "atirador_de_elite", "nome": "Atirador de Elite", "descricao": "Precisão letal à distância.", "habilidades": {
-        "10": { "id": "mira_de_elite", "nome": "Mira de Elite", "descricao": "Proficiência com armas de balas longas e soma Intelecto no dano delas.", "implementado": false, "efeitos": [] },
-        "40": { "id": "disparo_letal", "nome": "Disparo Letal", "descricao": "Ao mirar, 1 PE para ampliar a margem de ameaça do próximo tiro.", "implementado": false, "efeitos": [] },
-        "65": { "id": "disparo_impactante", "nome": "Disparo Impactante", "descricao": "2 PE: o tiro vira uma manobra em vez de dano.", "implementado": false, "efeitos": [] },
-        "99": { "id": "atirar_para_matar", "nome": "Atirar para Matar", "descricao": "Crítico com arma de fogo causa dano máximo.", "implementado": false, "efeitos": [] } } },
-      { "id": "infiltrador", "nome": "Infiltrador", "descricao": "Silencioso, ágil e mortal contra alvos distraídos.", "habilidades": {
-        "10": { "id": "ataque_furtivo", "nome": "Ataque Furtivo", "descricao": "1 PE: dano extra contra alvo desprevenido ou flanqueado, crescendo com o NEX.", "implementado": false, "efeitos": [] },
-        "40": { "id": "gatuno", "nome": "Gatuno", "descricao": "+5 em Atletismo e Crime e se esconde sem perder deslocamento.", "implementado": true, "efeitos": [{ "tipo": "bonus_pericia", "pericia": "atletismo", "valor": 5 }, { "tipo": "bonus_pericia", "pericia": "crime", "valor": 5 }] },
-        "65": { "id": "assassinar", "nome": "Assassinar", "descricao": "Analisa um alvo para dobrar o Ataque Furtivo e derrubá-lo.", "implementado": false, "efeitos": [] },
-        "99": { "id": "sombra_fugaz", "nome": "Sombra Fugaz", "descricao": "3 PE: volta a se esconder mesmo após chamar atenção.", "implementado": false, "efeitos": [] } } },
-      { "id": "medico_de_campo", "nome": "Médico de Campo", "descricao": "Primeiros socorros no meio do caos.", "pre": { "treinado": ["medicina"] }, "habilidades": {
-        "10": { "id": "paramedico", "nome": "Paramédico", "descricao": "Ação padrão + 2 PE: cura 2d10 PV (mais dados conforme o NEX).", "implementado": false, "pendente": "itens (kit de medicina)", "efeitos": [] },
-        "40": { "id": "equipe_de_trauma", "nome": "Equipe de Trauma", "descricao": "2 PE: remove uma condição negativa de um aliado.", "implementado": false, "efeitos": [] },
-        "65": { "id": "resgate", "nome": "Resgate", "descricao": "Chega rápido a aliados feridos e ambos ganham Defesa ao curar.", "implementado": false, "efeitos": [] },
-        "99": { "id": "reanimacao", "nome": "Reanimação", "descricao": "Uma vez por cena, 10 PE: traz de volta quem morreu nesta cena.", "implementado": false, "efeitos": [] } } },
-      { "id": "negociador", "nome": "Negociador", "descricao": "Lábia, diplomacia e intimidação.", "habilidades": {
-        "10": { "id": "eloquencia", "nome": "Eloquência", "descricao": "Fascina pessoas próximas com a fala.", "implementado": false, "efeitos": [] },
-        "40": { "id": "discurso_motivador", "nome": "Discurso Motivador", "descricao": "4 PE: aliados próximos ganham um dado extra nas perícias até o fim da cena.", "implementado": false, "efeitos": [] },
-        "65": { "id": "eu_conheco_um_cara", "nome": "Eu Conheço um Cara", "descricao": "Uma vez por missão, pede um favor à rede de contatos.", "implementado": false, "efeitos": [] },
-        "99": { "id": "truque_de_mestre", "nome": "Truque de Mestre", "descricao": "5 PE: imita uma habilidade que viu um aliado usar.", "implementado": false, "efeitos": [] } } },
-      { "id": "tecnico", "nome": "Técnico", "descricao": "Mantém, conserta e improvisa equipamento.", "habilidades": {
-        "10": { "id": "inventario_otimizado", "nome": "Inventário Otimizado", "descricao": "Soma Intelecto à Força para a capacidade de carga.", "implementado": false, "efeitos": [] },
-        "40": { "id": "remendao", "nome": "Remendão", "descricao": "Conserta equipamento quebrado na cena e barateia equipamento geral.", "implementado": false, "efeitos": [] },
-        "65": { "id": "improvisar", "nome": "Improvisar", "descricao": "Cria versões temporárias de equipamentos com o que houver por perto.", "implementado": false, "efeitos": [] },
-        "99": { "id": "preparado_para_tudo", "nome": "Preparado para Tudo", "descricao": "Paga PE para \"lembrar\" que trouxe o item certo.", "implementado": false, "efeitos": [] } } }
+      {"id": "atirador_de_elite", "nome": "Atirador de Elite", "descricao": "Precisão letal à distância.", "habilidades": {
+        "10": {"id": "mira_de_elite", "nome": "Mira de Elite", "descricao": "Proficiência com armas de balas longas e soma Intelecto no dano delas.", "implementado": true, "efeitos": [{"tipo": "proficiencia", "valor": "armas_balas_longas"}, {"tipo": "bonus_dano_atributo", "atributo": "int", "municao": "balas_longas"}]},
+        "40": {"id": "disparo_letal", "nome": "Disparo Letal", "descricao": "Ao mirar, 1 PE para ampliar a margem de ameaça do próximo tiro.", "implementado": true, "efeitos": []},
+        "65": {"id": "disparo_impactante", "nome": "Disparo Impactante", "descricao": "2 PE: o tiro vira uma manobra em vez de dano.", "implementado": false, "efeitos": []},
+        "99": {"id": "atirar_para_matar", "nome": "Atirar para Matar", "descricao": "Crítico com arma de fogo causa dano máximo.", "implementado": true, "efeitos": []} } },
+      {"id": "infiltrador", "nome": "Infiltrador", "descricao": "Silencioso, ágil e mortal contra alvos distraídos.", "habilidades": {
+        "10": {"id": "ataque_furtivo", "nome": "Ataque Furtivo", "descricao": "1 PE: dano extra contra alvo desprevenido ou flanqueado, crescendo com o NEX.", "implementado": true, "efeitos": [], "pendente": "flanquear e alcance curto informados pela grade (Fase 2)"},
+        "40": {"id": "gatuno", "nome": "Gatuno", "descricao": "+5 em Atletismo e Crime e se esconde sem perder deslocamento.", "implementado": true, "efeitos": [{"tipo": "bonus_pericia", "pericia": "atletismo", "valor": 5}, {"tipo": "bonus_pericia", "pericia": "crime", "valor": 5}]},
+        "65": {"id": "assassinar", "nome": "Assassinar", "descricao": "Analisa um alvo para dobrar o Ataque Furtivo e derrubá-lo.", "implementado": false, "efeitos": []},
+        "99": {"id": "sombra_fugaz", "nome": "Sombra Fugaz", "descricao": "3 PE: volta a se esconder mesmo após chamar atenção.", "implementado": false, "efeitos": []} } },
+      {"id": "medico_de_campo", "nome": "Médico de Campo", "descricao": "Primeiros socorros no meio do caos.", "pre": {"treinado": ["medicina"]}, "habilidades": {
+        "10": {"id": "paramedico", "nome": "Paramédico", "descricao": "Ação padrão + 2 PE: cura 2d10 PV (mais dados conforme o NEX).", "implementado": false, "pendente": "itens (kit de medicina)", "efeitos": []},
+        "40": {"id": "equipe_de_trauma", "nome": "Equipe de Trauma", "descricao": "2 PE: remove uma condição negativa de um aliado.", "implementado": false, "efeitos": []},
+        "65": {"id": "resgate", "nome": "Resgate", "descricao": "Chega rápido a aliados feridos e ambos ganham Defesa ao curar.", "implementado": false, "efeitos": []},
+        "99": {"id": "reanimacao", "nome": "Reanimação", "descricao": "Uma vez por cena, 10 PE: traz de volta quem morreu nesta cena.", "implementado": false, "efeitos": []} } },
+      {"id": "negociador", "nome": "Negociador", "descricao": "Lábia, diplomacia e intimidação.", "habilidades": {
+        "10": {"id": "eloquencia", "nome": "Eloquência", "descricao": "Fascina pessoas próximas com a fala.", "implementado": false, "efeitos": []},
+        "40": {"id": "discurso_motivador", "nome": "Discurso Motivador", "descricao": "4 PE: aliados próximos ganham um dado extra nas perícias até o fim da cena.", "implementado": false, "efeitos": []},
+        "65": {"id": "eu_conheco_um_cara", "nome": "Eu Conheço um Cara", "descricao": "Uma vez por missão, pede um favor à rede de contatos.", "implementado": false, "efeitos": []},
+        "99": {"id": "truque_de_mestre", "nome": "Truque de Mestre", "descricao": "5 PE: imita uma habilidade que viu um aliado usar.", "implementado": false, "efeitos": []} } },
+      {"id": "tecnico", "nome": "Técnico", "descricao": "Mantém, conserta e improvisa equipamento.", "habilidades": {
+        "10": {"id": "inventario_otimizado", "nome": "Inventário Otimizado", "descricao": "Soma Intelecto à Força para a capacidade de carga.", "implementado": false, "efeitos": []},
+        "40": {"id": "remendao", "nome": "Remendão", "descricao": "Conserta equipamento quebrado na cena e barateia equipamento geral.", "implementado": false, "efeitos": []},
+        "65": {"id": "improvisar", "nome": "Improvisar", "descricao": "Cria versões temporárias de equipamentos com o que houver por perto.", "implementado": false, "efeitos": []},
+        "99": {"id": "preparado_para_tudo", "nome": "Preparado para Tudo", "descricao": "Paga PE para \"lembrar\" que trouxe o item certo.", "implementado": false, "efeitos": []} } }
     ],
     "ocultista": [
-      { "id": "conduite", "nome": "Conduíte", "descricao": "Domina o alcance e a velocidade dos rituais.", "habilidades": {
-        "10": { "id": "ampliar_ritual", "nome": "Ampliar Ritual", "descricao": "+2 PE: aumenta o alcance ou dobra a área de um ritual.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] },
-        "40": { "id": "acelerar_ritual", "nome": "Acelerar Ritual", "descricao": "+4 PE: conjura como ação livre uma vez por rodada.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] },
-        "65": { "id": "anular_ritual", "nome": "Anular Ritual", "descricao": "Gasta PE e vence um teste de Ocultismo para anular um ritual contra você.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] },
-        "99": { "id": "canalizar_o_medo", "nome": "Canalizar o Medo", "descricao": "Aprende um ritual de Medo exclusivo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] } } },
-      { "id": "flagelador", "nome": "Flagelador", "descricao": "Transforma dor em poder.", "habilidades": {
-        "10": { "id": "poder_do_flagelo", "nome": "Poder do Flagelo", "descricao": "Paga o custo de rituais com PV (2 PV por PE).", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] },
-        "40": { "id": "abracar_a_dor", "nome": "Abraçar a Dor", "descricao": "Reação + 2 PE: corta pela metade um dano não paranormal.", "implementado": false, "efeitos": [] },
-        "65": { "id": "absorver_agonia", "nome": "Absorver Agonia", "descricao": "Derrubar inimigos com rituais rende PE temporários.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] },
-        "99": { "id": "medo_tangivel", "nome": "Medo Tangível", "descricao": "Aprende um ritual de Medo exclusivo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] } } },
-      { "id": "graduado", "nome": "Graduado", "descricao": "Conhece mais rituais e os torna mais difíceis de resistir.", "habilidades": {
-        "10": { "id": "saber_ampliado", "nome": "Saber Ampliado", "descricao": "Aprende rituais extras a cada novo círculo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] },
-        "40": { "id": "grimorio_ritualistico", "nome": "Grimório Ritualístico", "descricao": "Um grimório guarda rituais extras, consultados com tempo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] },
-        "65": { "id": "rituais_eficientes", "nome": "Rituais Eficientes", "descricao": "+5 na DT para resistir aos seus rituais.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] },
-        "99": { "id": "conhecendo_o_medo", "nome": "Conhecendo o Medo", "descricao": "Aprende um ritual de Medo exclusivo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] } } },
-      { "id": "intuitivo", "nome": "Intuitivo", "descricao": "Mente blindada contra o Outro Lado.", "habilidades": {
-        "10": { "id": "mente_sa", "nome": "Mente Sã", "descricao": "+5 nos testes de resistência contra efeitos paranormais.", "implementado": false, "efeitos": [] },
-        "40": { "id": "presenca_poderosa", "nome": "Presença Poderosa", "descricao": "Soma Presença ao limite de PE, só para rituais.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] },
-        "65": { "id": "inabalavel", "nome": "Inabalável", "descricao": "Resistência 10 a dano mental e paranormal.", "implementado": true, "efeitos": [{ "tipo": "resistencia", "dano": "mental", "valor": 10 }, { "tipo": "resistencia", "dano": "paranormal", "valor": 10 }] },
-        "99": { "id": "presenca_do_medo", "nome": "Presença do Medo", "descricao": "Aprende um ritual de Medo exclusivo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] } } },
-      { "id": "lamina_paranormal", "nome": "Lâmina Paranormal", "descricao": "Mistura rituais e combate corpo a corpo.", "habilidades": {
-        "10": { "id": "lamina_maldita", "nome": "Lâmina Maldita", "descricao": "Aprende Amaldiçoar Arma e ataca com Ocultismo usando a arma amaldiçoada.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] },
-        "40": { "id": "gladiador_paranormal", "nome": "Gladiador Paranormal", "descricao": "Acertos corpo a corpo rendem PE temporários.", "implementado": false, "efeitos": [] },
-        "65": { "id": "conjuracao_marcial", "nome": "Conjuração Marcial", "descricao": "Após conjurar, 2 PE para um ataque corpo a corpo livre.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] },
-        "99": { "id": "lamina_do_medo", "nome": "Lâmina do Medo", "descricao": "Aprende um ritual de Medo exclusivo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": [] } } }
+      {"id": "conduite", "nome": "Conduíte", "descricao": "Domina o alcance e a velocidade dos rituais.", "habilidades": {
+        "10": {"id": "ampliar_ritual", "nome": "Ampliar Ritual", "descricao": "+2 PE: aumenta o alcance ou dobra a área de um ritual.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "40": {"id": "acelerar_ritual", "nome": "Acelerar Ritual", "descricao": "+4 PE: conjura como ação livre uma vez por rodada.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "65": {"id": "anular_ritual", "nome": "Anular Ritual", "descricao": "Gasta PE e vence um teste de Ocultismo para anular um ritual contra você.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "99": {"id": "canalizar_o_medo", "nome": "Canalizar o Medo", "descricao": "Aprende um ritual de Medo exclusivo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []} } },
+      {"id": "flagelador", "nome": "Flagelador", "descricao": "Transforma dor em poder.", "habilidades": {
+        "10": {"id": "poder_do_flagelo", "nome": "Poder do Flagelo", "descricao": "Paga o custo de rituais com PV (2 PV por PE).", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "40": {"id": "abracar_a_dor", "nome": "Abraçar a Dor", "descricao": "Reação + 2 PE: corta pela metade um dano não paranormal.", "implementado": true, "efeitos": []},
+        "65": {"id": "absorver_agonia", "nome": "Absorver Agonia", "descricao": "Derrubar inimigos com rituais rende PE temporários.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "99": {"id": "medo_tangivel", "nome": "Medo Tangível", "descricao": "Aprende um ritual de Medo exclusivo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []} } },
+      {"id": "graduado", "nome": "Graduado", "descricao": "Conhece mais rituais e os torna mais difíceis de resistir.", "habilidades": {
+        "10": {"id": "saber_ampliado", "nome": "Saber Ampliado", "descricao": "Aprende rituais extras a cada novo círculo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "40": {"id": "grimorio_ritualistico", "nome": "Grimório Ritualístico", "descricao": "Um grimório guarda rituais extras, consultados com tempo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "65": {"id": "rituais_eficientes", "nome": "Rituais Eficientes", "descricao": "+5 na DT para resistir aos seus rituais.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "99": {"id": "conhecendo_o_medo", "nome": "Conhecendo o Medo", "descricao": "Aprende um ritual de Medo exclusivo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []} } },
+      {"id": "intuitivo", "nome": "Intuitivo", "descricao": "Mente blindada contra o Outro Lado.", "habilidades": {
+        "10": {"id": "mente_sa", "nome": "Mente Sã", "descricao": "+5 nos testes de resistência contra efeitos paranormais.", "implementado": true, "efeitos": [{"tipo": "bonus_resistencia_paranormal", "valor": 5}], "pendente": "efeitos paranormais que pedem resistência (Fase 4)"},
+        "40": {"id": "presenca_poderosa", "nome": "Presença Poderosa", "descricao": "Soma Presença ao limite de PE, só para rituais.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "65": {"id": "inabalavel", "nome": "Inabalável", "descricao": "Resistência 10 a dano mental e paranormal.", "implementado": true, "efeitos": [{"tipo": "resistencia", "dano": "mental", "valor": 10}, {"tipo": "resistencia", "dano": "paranormal", "valor": 10}]},
+        "99": {"id": "presenca_do_medo", "nome": "Presença do Medo", "descricao": "Aprende um ritual de Medo exclusivo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []} } },
+      {"id": "lamina_paranormal", "nome": "Lâmina Paranormal", "descricao": "Mistura rituais e combate corpo a corpo.", "habilidades": {
+        "10": {"id": "lamina_maldita", "nome": "Lâmina Maldita", "descricao": "Aprende Amaldiçoar Arma e ataca com Ocultismo usando a arma amaldiçoada.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "40": {"id": "gladiador_paranormal", "nome": "Gladiador Paranormal", "descricao": "Acertos corpo a corpo rendem PE temporários.", "implementado": true, "efeitos": []},
+        "65": {"id": "conjuracao_marcial", "nome": "Conjuração Marcial", "descricao": "Após conjurar, 2 PE para um ataque corpo a corpo livre.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "99": {"id": "lamina_do_medo", "nome": "Lâmina do Medo", "descricao": "Aprende um ritual de Medo exclusivo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []} } }
     ]
   }
 }

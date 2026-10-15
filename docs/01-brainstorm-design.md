@@ -23,7 +23,7 @@ maior: 14  +5 (Furtividade treinada)  = 19   vs  DT 20  ✗
 - Antes de rolar, o jogador pode gastar PE: **cada PE adiciona 1 slot de d20** ao teste.
 - O gasto respeita o **limite de PE por turno** do NEX (p.33), somado ao PE gasto em habilidades no mesmo turno.
 - A tensão de cada turno fica entre "forçar este teste" e "guardar para a habilidade".
-- **Atributo 0 ✅ (implementado):** a reserva é `atributo + dados extras`. Com reserva 0 ou menos, rolam-se `2 − reserva` d20 e vale o pior. Então, com atributo 0, **1 PE de Foco leva a 1d20 normal**: o Foco tira o agente da penalidade. Penalidades que deixam a reserva negativa somam dados ao "pior". Essa extensão é interpretação nossa; ❓ confirmar nas Clarificações (p.322).
+- **Atributo 0 ✅ (implementado):** a reserva é `atributo + dados extras`. Com reserva 0 ou menos, rolam-se `2 − reserva` d20 e vale o pior. Então, com atributo 0, **1 PE de Foco leva a 1d20 normal**: o Foco tira o agente da penalidade. Penalidades que deixam a reserva negativa somam dados ao "pior". Essa extensão é interpretação nossa: as Clarificações (p.322–323) não tratam do assunto, então ela fica valendo.
 - 🔧 **Balanceamento a observar:** quem tem atributo alto e muito PE pode quebrar as DTs. Se acontecer, o plano B é limitar o bônus a 2 slots extras por teste.
 
 ## 3. Investigação: zoom aproximado com a visão reduzida ✅
@@ -129,7 +129,21 @@ Como as **tabelas** do livro são conteúdo do livro, usamos a estrutura e escre
 - **Com mestre**, um jogador tem a "ficha do mestre" com todas as pistas e decide DT, aparições, NPCs e quando liberar cada pista. Esse modo exige rede e fica para a Fase 8.
 - **Distribuição:** pasta local primeiro, Steam Workshop depois.
 
-## 13. Ferramentas: Godot e o Tabletop Simulator ✅
+## 13. Interpretações adotadas no motor ✅
+
+Pontos em que o livro é ambíguo e escolhemos uma leitura (revisar se surgir errata):
+
+| Tema | Leitura adotada |
+|---|---|
+| Penalidades abaixo de 0 dados | `2 − reserva` d20, fica o pior (§2) |
+| Criança/adolescente com FOR/VIG 0 | Os atributos zerados por idade **não** rendem o ponto extra da regra geral |
+| Pré-requisitos de poderes | Checados no estado final do agente, não no NEX em que o poder foi escolhido |
+| Iniciativa das ameaças | Um teste só, com o menor bônus entre elas (p.93) |
+| PE fora do turno (reações) | Contam no limite do turno atual do agente e zeram no início do turno dele |
+| Golpe Pesado no crítico | O dado extra faz parte do dano da arma e também é multiplicado |
+| Distância e alcance | Não verificados até existir a grade (Fase 2) |
+
+## 14. Ferramentas: Godot e o Tabletop Simulator ✅
 
 O Tabletop Simulator é feito em Unity, mas isso **não nos obriga a usar Unity**. Decisão completa no [ADR 0001](adr/0001-engine-godot.md).
 

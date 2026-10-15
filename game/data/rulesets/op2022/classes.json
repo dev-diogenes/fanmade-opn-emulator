@@ -38,6 +38,34 @@
       "pericias_fixas_escolha": [],
       "pericias_livres": { "base": 3, "soma_atributo": "int" },
       "proficiencias": ["armas_simples"]
+    },
+    {
+      "id": "mundano",
+      "nome": "Mundano",
+      "ref": "p.181-182",
+      "descricao": "Pessoa comum, sem treino da Ordem (regra opcional NEX 0%).",
+      "nex_inicial": 0,
+      "pontos_atributo": 3,
+      "pv": { "inicial": 8, "atributo": "vig", "por_nex": 0 },
+      "pe": { "inicial": 1, "atributo": "pre", "por_nex": 0 },
+      "san": { "inicial": 8, "por_nex": 0 },
+      "pericias_fixas_escolha": [],
+      "pericias_livres": { "base": 1, "soma_atributo": "int" },
+      "proficiencias": ["armas_simples"],
+      "habilidades": [
+        { "id": "empenho", "nome": "Empenho", "descricao": "Gasta 1 PE para +2 num teste de perícia.", "implementado": true,
+          "efeitos": [{ "tipo": "gasto_pe_bonus_teste", "custo": 1, "bonus": 2 }] }
+      ],
+      "promocao": {
+        "nex": 5,
+        "atributo_bonus": 1,
+        "atributo_maximo": 3,
+        "classes": {
+          "combatente": { "pv": 12, "pe": 1, "san": 4, "pericias_fixas_escolha": [["fortitude", "reflexos"], ["luta", "pontaria"]], "pericias_livres": 0 },
+          "especialista": { "pv": 8, "pe": 2, "san": 8, "pericias_fixas_escolha": [], "pericias_livres": 6 },
+          "ocultista": { "pv": 4, "pe": 3, "san": 12, "pericias_fixas": ["ocultismo", "vontade"], "pericias_fixas_escolha": [], "pericias_livres": 2 }
+        }
+      }
     }
   ],
   "progressao": {
