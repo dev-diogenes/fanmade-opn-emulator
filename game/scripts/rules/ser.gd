@@ -31,6 +31,7 @@ const FRACO := "fraco"
 const DEBILITADO := "debilitado"
 const OFUSCADO := "ofuscado"
 const SEM_CURA := "sem_cura"   ## Poeira da Podridão: não recupera PV
+const SANGRANDO := "sangrando"  ## p.321: Vigor DT 20 no início do turno ou perde 1d6 PV
 const POCA := "poca"           ## Imortalidade (esqueleto de Lodo, enraizado): desfeito, mas volta
 ## Condições mentais e de medo (p.320-321): criaturas paranormais são imunes (p.190)
 const CONDICOES_MENTAIS := ["abalado", "apavorado", "alquebrado", "atordoado", "confuso", "esmorecido", "fascinado", "frustrado", "pasmo"]
@@ -192,6 +193,7 @@ func modificar_ataque(arma: Dictionary, alvo: Ser) -> Dictionary:
 	mods.bonus_ataque += int(mods_cena.get("ataque_contra", {}).get(alvo, 0))
 	mods.bonus_ataque -= int(mods_cena.get("penalidade_ataque", 0))
 	mods.dados_extras += efeito_ritual("dados_ataque")
+	mods.dados_dano_extra += efeito_ritual("dados_dano_extra")   # Ordens (comandante mercenário)
 	if tem(AGARRADO):
 		mods.dados_extras -= 1
 	if tem(OFUSCADO):
@@ -328,7 +330,7 @@ func encerrar_cena() -> void:
 	mods_cena.clear()
 	defesa_temporaria = 0
 	penalidade_ataque_temporaria = 0
-	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL, FATIGADO, ATORDOADO, PASMO, ABALADO, APAVORADO, ENJOADO, AGARRADO, OFUSCADO, SEM_CURA]:
+	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL, FATIGADO, ATORDOADO, PASMO, ABALADO, APAVORADO, ENJOADO, AGARRADO, OFUSCADO, SEM_CURA, SANGRANDO]:
 		condicoes.erase(c)   # condições terminam no fim da cena (p.321)
 	duracoes.clear()
 	rituais_ativos.clear()

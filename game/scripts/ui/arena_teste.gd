@@ -211,6 +211,11 @@ func _jogar_ia(ser: Ser) -> void:
 	if ser is Ameaca:
 		if IaAmeaca.agir_antes(combate, ser as Ameaca, alvo) or combate.encerrado:
 			return
+		if IaAmeaca.so_se_move(ser):
+			var perto := grade.aproximar(ser, alvo, ser.deslocamento_quadrados())
+			if perto != grade.posicao(ser):
+				combate.mover(ser, perto)
+			return
 		arma = IaAmeaca.escolher_arma(combate, ser, alvo, arma)
 	if ser is Agente:
 		for rid in (ser as Agente).rituais:

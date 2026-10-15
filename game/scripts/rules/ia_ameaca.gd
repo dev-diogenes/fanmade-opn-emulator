@@ -43,7 +43,14 @@ static func agir_antes(c: Combate, ser: Ameaca, alvo: Ser) -> bool:
 				if atingiria > 0:
 					c.usar_habilidade(ser, h.id, alvo)
 			"movimento":
-				if h.has("buff"):
+				var t := String(h.get("tipo", ""))
+				if t == "aliados":
+					if int(ser.usos.get(h.id, 0)) == 0 and c.participantes.any(func(x): return x != ser and x.lado == ser.lado and not x.esta_fora_de_combate()):
+						c.usar_habilidade(ser, h.id)
+				elif t in ["marcar", "alvo"]:
+					if alvo != null and not ser.mods_cena.has(h.id):
+						c.usar_habilidade(ser, h.id, alvo)
+				elif h.has("buff"):
 					if not ser.rituais_ativos.has(h.id) and ser.mods_cena.get("efeito_" + String(h.get("requer", "")), false):
 						c.usar_habilidade(ser, h.id)
 				elif h.get("morre", false):
@@ -53,16 +60,42 @@ static func agir_antes(c: Combate, ser: Ameaca, alvo: Ser) -> bool:
 				if atingiria >= 2 and c.usar_habilidade(ser, h.id, alvo).ok:
 					return true   # granada em grupo
 			"completa":
+				if h.get("requer_agarrado", false):
+					for vit in ser.mods_cena.get("agarrando", []):
+						if c.usar_habilidade(ser, h.id, vit).ok:
+							return true
+					continue
 				if not adjacente_a_inimigo and atingiria > 0 and c.dados.rolar(2) == 1 and c.usar_habilidade(ser, h.id, alvo).ok:
 					return true
 	if not ser.conjurador.is_empty() and alvo != null and c.rodada % 2 == 1:
 		for rid in ser.conjurador.get("rituais", []):
 			var r := c.ruleset.ritual(rid)
-			if not r.get("implementado", false) or r.efeitos[0].tipo != "dano" or r.efeitos[0].has("area"):
+			if not r.get("implementado", false) or not r.efeitos[0].tipo in ["dano", "purgatorio"]:
 				continue
+			if r.efeitos[0].has("area"):
+				# Ritual de área: só quando pega 2+ inimigos e nenhum aliado
+				var inimigos := 0
+				var aliados := 0
+				for x in c.grade.seres_em(c._celulas_do_efeito(ser, c.efeito_do_ritual(rid), alvo, {})) if c.grade != null else []:
+					if x.esta_fora_de_combate():
+						continue
+					if x.lado == ser.lado:
+						aliados += 1
+					else:
+						inimigos += 1
+				if inimigos < 2 or aliados > 0:
+					continue
+				var cat := c._categoria(String(r.get("alcance", "")))
+				if Grade.ALCANCES.has(cat) and c.grade.distancia_entre(ser, alvo) > int(Grade.ALCANCES[cat]):
+					continue
 			if c.conjurar_ameaca(ser, rid, alvo).ok:
 				return true
 	return false
+
+
+## Enxames não atacam: só chegam perto (o dano vem no fim do turno).
+static func so_se_move(ser: Ser) -> bool:
+	return ser is Ameaca and (ser as Ameaca).ataques.is_empty()
 
 
 ## Quantos inimigos uma habilidade de área atingiria agora.

@@ -62,7 +62,7 @@ func atributo(atributo_id: String) -> int:
 func dados_da_pericia(pericia_id: String) -> int:
 	var attr := ruleset.atributo_da_pericia(pericia_id)
 	var d := int(pericias[pericia_id].get("dados", 1)) if pericias.has(pericia_id) else atributo(attr)
-	return d - penalidade_dados_atributo(attr)
+	return d - penalidade_dados_atributo(attr) + efeito_ritual("dados_testes")
 
 
 func bonus_pericia(pericia_id: String) -> int:

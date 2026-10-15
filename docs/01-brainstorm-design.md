@@ -192,6 +192,12 @@ Pontos em que o livro é ambíguo e escolhemos uma leitura (revisar se surgir er
 | Aceleração | Vale no turno seguinte ao golpe: gastar ação de movimento e padrão (ou completa) causa o dano uma vez |
 | Habilidades com "capazes de vê-lo" ou "em alcance médio" | Explosão centrada na ameaça com o raio do alcance (médio = 18 m); só atinge inimigos dela |
 | Cultistas | Conjuram só a forma básica dos rituais da ficha, sem PE, com a DT da ficha. Escolhemos Decadência e Definhar (iniciado) e Decadência, Definhar, Hemofagia e Descarnar (investido) |
+| Enxames | Na grade, o enxame não entra no espaço do alvo: fere quem está adjacente no fim do turno dele. Metade do dano de armas, +50% de áreas |
+| Faixas da Permanência | A múmia a 0 PV continua agindo; se ao fim do turno seguinte ainda tiver 0 PV, morre. Drenar com a Agarrada Mumificadora conta como recuperar |
+| Invisibilidade permanente (Viajante) | Quem o ataca tem 50% de chance de errar (camuflagem total); quem ele ataca fica desprevenido (−5 na Defesa) |
+| Surgimentos | Com a Membrana fraca, só surgem encontros cuja ameaça mais fraca tenha VD de até o dobro do NEX somado do grupo |
+| Sangrando | Teste de Vigor (dados de Vigor, sem bônus) DT 20 no início do turno: passou, para; falhou, perde 1d6 PV |
+| Ordens (comandante) | Uma vez por cena; +1 dado em testes (inclusive ataques) e um dado de dano a mais para os aliados em alcance médio |
 | Sustentado com vários alvos | Custa 1 PE por turno pelo ritual inteiro, não por alvo; conjurar outro ritual sustentado encerra o anterior |
 | Reforços da Ordem (modo Normal) | 2 por missão. Um agente caído num combate perdido (ou morto) é resgatado: sai da missão com uma lesão (1d6 no atributo, como a regra de Lesões) |
 

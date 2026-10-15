@@ -24,7 +24,19 @@
     { "id": "raizes", "nome": "Raízes", "nivel": 3, "ameacas": ["enraizado", "esqueleto_de_lodo"] },
     { "id": "caos", "nome": "Caos", "nivel": 3, "ameacas": ["anarquico_descontrolado"] },
     { "id": "delegacia", "nome": "Delegacia comprometida", "nivel": 3, "ameacas": ["chefe_de_policia", "policial", "policial"] },
-    { "id": "o_que_ficou", "nome": "O Que Ficou", "nivel": 3, "ameacas": ["o_que_ficou"] }
+    { "id": "o_que_ficou", "nome": "O Que Ficou", "nivel": 3, "ameacas": ["o_que_ficou"] },
+    { "id": "ratos", "nome": "Ratos", "nivel": 0, "ameacas": ["enxame_de_ratos", "enxame_de_ratos"] },
+    { "id": "colmeia", "nome": "Colmeia", "nivel": 0, "ameacas": ["enxame_de_abelhas"] },
+    { "id": "rio", "nome": "Beira do rio", "nivel": 1, "ameacas": ["jacare"] },
+    { "id": "alvo_marcado", "nome": "Alvo marcado", "nivel": 2, "ameacas": ["assassino"] },
+    { "id": "mercenarios", "nome": "Mercenários", "nivel": 3, "ameacas": ["comandante_mercenario", "soldado_de_aluguel", "soldado_de_aluguel"] },
+    { "id": "alto_culto", "nome": "Alto culto", "nivel": 3, "ameacas": ["lider_de_culto", "investido", "iniciado"] },
+    { "id": "grito", "nome": "Grito", "nivel": 3, "ameacas": ["sukkalgir"] },
+    { "id": "sombras", "nome": "Sombras que rastejam", "nivel": 3, "ameacas": ["rastejador_sombrio"] },
+    { "id": "esquecidos", "nome": "Os esquecidos", "nivel": 3, "ameacas": ["viajante"] },
+    { "id": "sigilo", "nome": "O sigilo na testa", "nivel": 3, "ameacas": ["carnical_preto_da_morte", "esqueleto_de_lodo", "esqueleto_de_lodo"] },
+    { "id": "massacre", "nome": "Massacre", "nivel": 3, "ameacas": ["tita_de_sangue", "zumbi_de_sangue"] },
+    { "id": "tumba", "nome": "Tumba", "nivel": 3, "ameacas": ["mumia_xipofaga"] }
   ],
   "chefe": {"id": "covil", "nome": "O Covil Carmesim", "ameacas": ["horror_carmesim", "investido", "zumbi_de_sangue"]}
 }

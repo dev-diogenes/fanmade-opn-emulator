@@ -79,7 +79,7 @@ O **Medo** é só ameaça: ao ver criaturas, cada agente testa Vontade contra a 
 
 ### Ameaças
 
-Os encontros usam as fichas do livro (zumbis de Sangue, esqueletos de Lodo, vultos, cultistas que conjuram rituais, policiais, onças…), cada uma com as próprias habilidades: esqueletos viram poça e voltam se você não usar fogo ou Energia, a aberração agarra e abocanha, o succ prende a vítima até alguém ferir ele. O tamanho do encontro segue a regra do livro: a soma do VD das ameaças fica perto da soma do NEX de quem entra no combate.
+Os encontros usam as fichas do livro (zumbis de Sangue, esqueletos de Lodo, vultos, cultistas que conjuram rituais, policiais, onças…), cada uma com as próprias habilidades: esqueletos viram poça e voltam se você não usar fogo ou Energia, a aberração agarra e abocanha, o succ prende a vítima até alguém ferir ele. O tamanho do encontro segue a regra do livro: a soma do VD das ameaças fica perto da soma do NEX de quem entra no combate. Com o grupo mais experiente aparecem ameaças maiores: o titã de Sangue, a múmia que ainda age a 0 PV, o viajante invisível que devora memórias, líderes de culto que cobrem o campo de Poeira da Podridão e enxames que ferem quem está por perto.
 
 ### Investigação
 

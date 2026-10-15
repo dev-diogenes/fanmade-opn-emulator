@@ -339,6 +339,26 @@ static func escolher_por_vd(lista: Array, orcamento: int) -> Array:
 	return escolhidas
 
 
+## Encontros que podem surgir: nível até o da Membrana e cuja ameaça mais fraca tenha VD de até
+## o dobro do NEX somado do grupo (para uma Membrana fraca não trazer algo impossível).
+func encontros_para_surgir(nivel: int, vivos: Array) -> Array:
+	var nex_total := 0
+	for a in vivos:
+		nex_total += a.nex
+	var opcoes: Array = DadosJogo.ler("encontros").encontros.filter(func(e): return int(e.nivel) <= nivel and _vd_minimo(e) <= nex_total * 2)
+	if opcoes.is_empty():
+		opcoes = DadosJogo.ler("encontros").encontros.filter(func(e): return int(e.nivel) == 0)
+	return opcoes
+
+
+## VD da ameaça mais fraca de um encontro (o mínimo que o combate terá).
+func _vd_minimo(e: Dictionary) -> int:
+	var minimo := 1 << 20
+	for id in e.ameacas:
+		minimo = mini(minimo, int(DadosJogo.ameaca(ruleset, id).vd))
+	return minimo
+
+
 func _perguntas_respondidas() -> Array:
 	var ids: Array = []
 	if caso != null:
@@ -524,7 +544,7 @@ func _surgir_ameaca() -> void:
 		return
 	var alvo: Agente = vivos[dados.rolar(vivos.size()) - 1]
 	var nivel := membrana.nivel_ameaca()
-	var opcoes: Array = DadosJogo.ler("encontros").encontros.filter(func(e): return int(e.nivel) <= nivel)
+	var opcoes := encontros_para_surgir(nivel, vivos)
 	var candidatos: Array[Vector2i] = []
 	for h in Hex.area(posicao(alvo), 3):
 		if Hex.distancia(h, posicao(alvo)) >= 2 and mapa.passavel(h) and mapa.conteudo(h).is_empty() and agentes_em(h).is_empty():

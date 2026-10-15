@@ -159,6 +159,10 @@ func ser_atual() -> Ser:
 func proximo_turno() -> Ser:
 	if encerrado:
 		return null
+	if ser_atual() != null:
+		_fim_de_turno(ser_atual())
+		if encerrado:
+			return null
 	for _tentativa in ordem.size() * 2:
 		_indice += 1
 		if _indice >= ordem.size():
@@ -295,7 +299,10 @@ func agredir(atacante: Ser, alvo: Ser, arma: Dictionary, pe_foco: int = 0, opcoe
 	if atacante.mods_cena.has("prendendo") or not gastar_acao(atacante, "padrao"):
 		return _ataque_invalido(atacante, alvo, arma)
 	var res := atacar(atacante, alvo, arma, pe_foco, opcoes)
-	for _i in int(arma.get("vezes", 1)) - 1:   # "Corpo a corpo x2" (p.189): mais ataques na mesma ação
+	var vezes := int(arma.get("vezes", 1))
+	if atacante is Ameaca and (atacante as Ameaca).tem_hab("instinto_mortal") and atacante.tem(Ser.MACHUCADO):
+		vezes += 1   # Instinto Mortal (carniçal)
+	for _i in vezes - 1:   # "Corpo a corpo x2" (p.189): mais ataques na mesma ação
 		if encerrado or (alvo.esta_fora_de_combate() and not alvo.tem(Ser.POCA)):
 			break
 		res.ataques_extras.append(atacar(atacante, alvo, arma))
@@ -706,7 +713,9 @@ func _aplicar_efeito_ritual(conjurador: Ser, ritual_id: String, r: Dictionary, e
 				return
 			var dano: int = int(res.dano_area) if res.has("dano_area") else _rolar_dano_ritual(conjurador, e)
 			if passou and e.get("ao_passar", "") == "metade":
-				dano /= 2
+				dano = 0 if _tem_evasao(alvo, String(e.get("resistencia", ""))) else dano / 2
+			if res.has("dano_area") and alvo is Ameaca and (alvo as Ameaca).tem_hab("enxame"):
+				dano = dano * 3 / 2   # enxames sofrem 50% a mais de efeitos de área
 			var real := aplicar_dano(alvo, dano, e.get("tipo_dano", r.elemento), 0, conjurador)
 			res.dano = real
 			res.danos[alvo] = real
@@ -968,6 +977,49 @@ func _ao_acertar(atacante: Ser, alvo: Ser, arma: Dictionary, res: ResultadoAtaqu
 			_log("%s revive um trauma: %d de dano mental e fica vulnerável a %s." % [alvo.nome, d, ic.vulnerabilidade])
 	if aa.has("aceleracao") and res.dano > 0:
 		alvo.mods_cena["acelerado"] = aa.aceleracao
+	if aa.has("desespero") and res.dano > 0:   # Desespero: o mesmo dano, agora na mente
+		var dm := res.dano
+		if Teste.rolar(dados, alvo.dados_da_pericia("vontade"), alvo.bonus_pericia("vontade"), int(aa.desespero.dt)).sucesso:
+			dm /= 2
+		alvo.sofrer_dano_mental(dm)
+	if aa.has("efeito_extra"):   # Estraçalhar (titã)
+		var ex: Dictionary = aa.efeito_extra
+		var passou := ex.has("resistencia") and Teste.rolar(dados, alvo.dados_da_pericia(ex.resistencia), alvo.bonus_pericia(ex.resistencia), int(ex.dt)).sucesso
+		var d := dados.rolar_expressao(String(ex.dano))
+		res.dano += aplicar_dano(alvo, d / 2 if passou else d, String(ex.tipo_dano), 0, atacante)
+		if not passou and ex.has("condicao"):
+			alvo.aplicar_condicao(ex.condicao)
+			_log("%s fica %s." % [alvo.nome, ex.condicao])
+
+
+func _tem_evasao(ser: Ser, resistencia: String) -> bool:
+	return resistencia == "reflexos" and ser is Ameaca and (ser as Ameaca).tem_hab("evasao")
+
+
+## Fim do turno: enxames ferem quem está junto deles; a múmia a 0 PV morre se não se recuperou.
+func _fim_de_turno(ser: Ser) -> void:
+	if ser is Ameaca and not ser.esta_fora_de_combate():
+		var amea := ser as Ameaca
+		var enx := amea.habilidade("enxame")
+		if not enx.is_empty():
+			for x in participantes:
+				if x.lado == amea.lado or x.esta_fora_de_combate():
+					continue
+				if grade != null and grade.tem(amea) and grade.tem(x) and not grade.estao_adjacentes(amea, x):
+					continue
+				var d := aplicar_dano(x, dados.rolar_expressao(String(enx.dano)), String(enx.tipo_dano), 0, amea)
+				_log("%s envolve %s: %d de dano." % [amea.nome, x.nome, d])
+				if d > 0 and enx.has("ao_ferir"):
+					var af: Dictionary = enx.ao_ferir
+					if not Teste.rolar(dados, x.dados_da_pericia(af.resistencia), x.bonus_pericia(af.resistencia), int(af.dt)).sucesso:
+						x.aplicar_condicao(af.condicao, int(af.get("rodadas", 0)))
+	if ser.mods_cena.get("permanencia", "") == "neste_turno":
+		if ser.pv <= 0:
+			ser._morrer()
+			_log("%s finalmente se desfaz." % ser.nome)
+		else:
+			ser.mods_cena.erase("permanencia")
+	_verificar_fim()
 
 
 func _soltar(ser: Ser) -> void:
@@ -998,6 +1050,33 @@ func _soltar_succao(succ: Ser) -> void:
 
 ## Início do turno: veneno de qualquer ser; constrição, sucção e aceleração.
 func _inicio_de_turno_ameacas(ser: Ser) -> void:
+	if ser.mods_cena.get("permanencia", "") == "aguardando":
+		ser.mods_cena["permanencia"] = "neste_turno"
+	if ser.tem(Ser.SANGRANDO):
+		if Teste.rolar(dados, ser.atributo("vig"), 0, 20).sucesso:
+			ser.condicoes.erase(Ser.SANGRANDO)
+		else:
+			var perda := dados.rolar(6)
+			ser.sofrer_dano(perda)
+			_log("%s sangra: −%d PV." % [ser.nome, perda])
+	for outro in participantes:   # auras (Sukkalgir) e drenagem de quem agarra (Múmia)
+		if not outro is Ameaca or outro == ser or outro.lado == ser.lado or outro.esta_fora_de_combate():
+			continue
+		for h in (outro as Ameaca).habilidades:
+			if h.get("tipo", "") == "aura":
+				var perto: bool = grade == null or not grade.tem(outro) or not grade.tem(ser) or grade.em_alcance(outro, ser, String(h.get("alcance", "curto")))
+				if perto:
+					var d := dados.rolar_expressao(String(h.dano))
+					if Teste.rolar(dados, ser.dados_da_pericia(h.resistencia), ser.bonus_pericia(h.resistencia), int(h.dt)).sucesso:
+						d /= 2
+					var real := aplicar_dano(ser, d, String(h.tipo_dano), 0, outro)
+					_log("A presença de %s fere %s: %d." % [outro.nome, ser.nome, real])
+			elif h.get("tipo", "") == "drenar" and ser.mods_cena.get("agarrado_por") == outro:
+				var real := aplicar_dano(ser, dados.rolar_expressao(String(h.dano)), String(h.tipo_dano), 0, outro)
+				outro.curar(real)
+				if outro.mods_cena.get("permanencia", "") != "" and outro.pv > 0:
+					outro.mods_cena.erase("permanencia")
+				_log("%s drena %s: %d de dano, e recupera o mesmo." % [outro.nome, ser.nome, real])
 	ser.mods_cena.erase("acelerado_ativo")
 	if ser.mods_cena.has("acelerado"):
 		ser.mods_cena["acelerado_ativo"] = ser.mods_cena.acelerado
@@ -1081,17 +1160,38 @@ func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = nu
 		return {"ok": false, "erro": "já usou nesta cena"}
 	if h.has("requer") and not amea.mods_cena.get("efeito_" + String(h.requer), false):
 		return {"ok": false, "erro": "requer %s" % h.requer}
+	if String(h.get("tipo", "")) in ["alvo", "marcar"]:
+		if alvo == null or alvo.esta_fora_de_combate() or (h.has("alcance") and not _perto(amea, alvo, String(h.alcance))):
+			return {"ok": false, "erro": "alvo inválido"}
+		if h.get("requer_agarrado", false) and alvo.mods_cena.get("agarrado_por") != amea:
+			return {"ok": false, "erro": "precisa estar agarrando o alvo"}
 	if h.acao != "livre" and acoes.has(amea) and not gastar_acao(amea, h.acao):
 		return {"ok": false, "erro": "sem ação"}
 	_marcar_uso_rodada(amea, hab_id)
 	amea.usos[hab_id] = int(amea.usos.get(hab_id, 0)) + 1
 	var nome := String(hab_id).capitalize()
+	var tipo_h := String(h.get("tipo", ""))
+	if tipo_h == "aliados":   # Ordens: buff nos aliados em alcance
+		var lista: Array[Ser] = []
+		for x in participantes:
+			if x != amea and x.lado == amea.lado and not x.esta_fora_de_combate() and _perto(amea, x, String(h.get("alcance", "medio"))):
+				x.rituais_ativos[hab_id] = h.buff.duplicate()
+				lista.append(x)
+		_log("[color=#ec7063]%s usa %s (%d aliado(s)).[/color]" % [amea.nome, nome, lista.size()])
+		return {"ok": true, "atingidos": lista}
 	if h.has("buff"):
 		amea.rituais_ativos[hab_id] = h.buff.duplicate()
 		_log("[color=#ec7063]%s usa %s.[/color]" % [amea.nome, nome])
 		return {"ok": true, "atingidos": []}
+	if tipo_h == "marcar":   # Assassinar
+		amea.mods_cena[hab_id] = alvo
+		_log("[color=#ec7063]%s estuda %s.[/color]" % [amea.nome, alvo.nome if alvo != null else "?"])
+		return {"ok": true, "atingidos": [alvo]}
 	var atingidos: Array[Ser] = []
-	if grade != null and grade.tem(amea):
+	if tipo_h == "alvo":
+		if alvo != null and not alvo.esta_fora_de_combate() and (not h.get("requer_agarrado", false) or alvo.mods_cena.get("agarrado_por") == amea):
+			atingidos.append(alvo)
+	elif grade != null and grade.tem(amea):
 		var origem := grade.posicao(amea)
 		var ponto = celula if celula != null else (grade.posicao(alvo) if alvo != null and grade.tem(alvo) else origem)
 		var metros := float(h.area.get("raio", h.area.get("comprimento", 1.5)))
@@ -1115,6 +1215,10 @@ func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = nu
 			var d := rolagem
 			if passou:
 				d = d / 2 if h.get("ao_passar", "metade") == "metade" else 0
+			if passou and _tem_evasao(x, String(h.resistencia)):
+				d = 0
+			if x is Ameaca and (x as Ameaca).tem_hab("enxame") and tipo_h != "alvo":
+				d = d * 3 / 2
 			if h.tipo_dano == "mental":
 				var antes := x.san
 				x.sofrer_dano_mental(d)
@@ -1152,6 +1256,10 @@ func conjurar_ameaca(amea: Ameaca, ritual_id: String, alvo: Ser, opcoes: Diction
 	var res := {"ok": true, "ritual": r, "forma": "", "custo": 0, "alvo": alvo, "conjurador": amea, "textos": [], "danos": {}, "dano_total": 0}
 	var celulas := _celulas_do_efeito(amea, e, alvo, opcoes)
 	var alvos := _alvos_do_efeito(amea, e, alvo, opcoes, celulas)
+	res.celulas = celulas
+	res.alvos = alvos
+	if e.has("zona"):
+		res.zona = _criar_zona(amea, ritual_id, e, celulas)
 	if e.tipo == "dano" and e.has("area"):
 		res.dano_area = _rolar_dano_ritual(amea, e)
 	for x in alvos:
@@ -1196,6 +1304,8 @@ func _manter_sustentados(ser: Ser) -> void:
 	for s in _sustentados.duplicate():
 		if s.conjurador != ser or pagos.has(s.ritual) or not s in _sustentados:
 			continue
+		if not ser is Agente:
+			continue   # cultistas sustentam sem PE (p.296)
 		if (ser as Agente).gastar_pe(1, true):
 			pagos[s.ritual] = true
 		else:
@@ -1403,6 +1513,13 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 		if amea.tem_hab("ferocidade") and amea.mods_cena.get("ferocidade", false):
 			dados_extras += 1
 			mods.dados_dano_extra = int(mods.dados_dano_extra) + 1
+		if amea.tem_hab("sadismo") and amea.mods_cena.get("sadismo", false):
+			amea.mods_cena.erase("sadismo")   # Sadismo: +1 dado e um dado de dano depois de ferir
+			dados_extras += 1
+			mods.dados_dano_extra = int(mods.dados_dano_extra) + 1
+		if amea.tem_hab("invisivel"):
+			desprevenido = true   # quem não vê o atacante fica desprevenido contra ele
+			defesa -= 5
 		if amea.tem_hab("furtivo_e_letal") and desprevenido:
 			dados_extras += 1
 			mods.dados_dano_extra = int(mods.dados_dano_extra) + 2
@@ -1411,16 +1528,24 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 		if not af.is_empty() and perto and (desprevenido or opcoes.get("flanqueando", false)) and not _usou_na_rodada(amea, "ataque_furtivo"):
 			furtivo_amea = String(af.dados)
 			_marcar_uso_rodada(amea, "ataque_furtivo")
+			if amea.mods_cena.get("assassinar") == alvo:   # Assassinar: dados extras dobrados
+				var ef := Dados.interpretar(furtivo_amea)
+				furtivo_amea = "%dd%d" % [int(ef.quantidade) * 2, int(ef.faces)]
+				amea.mods_cena.erase("assassinar")
 	var pericia_id: String = arma.get("pericia", "luta")
 	var dados_teste := atacante.dados_da_pericia(pericia_id)
 	var bonus_teste := atacante.bonus_pericia(pericia_id)
 	if arma.has("teste"):   # ataque de ficha de ameaça: "TESTE 2O+5" já inclui tudo
-		dados_teste = int(arma.teste.dados) - atacante.penalidade_dados_atributo(ruleset.atributo_da_pericia(pericia_id))
+		dados_teste = int(arma.teste.dados) - atacante.penalidade_dados_atributo(ruleset.atributo_da_pericia(pericia_id)) + atacante.efeito_ritual("dados_testes")
 		bonus_teste = int(arma.teste.bonus) + atacante.efeito_ritual("pericias")
 	res.teste = Teste.rolar(dados, dados_teste, bonus_teste + bonus_ataque, defesa, dados_extras)
 	if agente != null:
 		agente.sofrer_dano_por_teste(dados, ruleset.atributo_da_pericia(pericia_id))   # Gota, Pulmão Ruim
 	res.acertou = res.teste.sucesso
+	if res.acertou and alvo is Ameaca and (alvo as Ameaca).tem_hab("invisivel"):
+		if dados.rolar(100) <= int((alvo as Ameaca).habilidade("invisivel").get("chance_erro", 50)):
+			res.acertou = false   # camuflagem total: o golpe passa pelo vazio
+			_log("%s ataca o vazio: %s é invisível." % [atacante.nome, alvo.nome])
 	if agente != null and not res.acertou:
 		agente.pagar_preco_da_maldicao(ruleset.atributo_da_pericia(pericia_id))
 	_ataques_no_turno[atacante] = int(_ataques_no_turno.get(atacante, 0)) + 1
@@ -1477,12 +1602,15 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 				if ef.tipo == "arma_dano_extra":
 					dano += dados.rolar_expressao(ef.dados, mult if ef.get("multiplica", false) else 1)
 		res.dano_bruto = maxi(1, dano)
+		if alvo is Ameaca and (alvo as Ameaca).tem_hab("enxame"):
+			res.dano_bruto = maxi(1, res.dano_bruto / 2)   # enxames sofrem metade do dano de armas
 		res.dano = aplicar_dano(alvo, res.dano_bruto, arma.get("tipo_dano", ""), rd_extra, atacante)
 		if arma.has("dano_extra") and not alvo.tem(Ser.MORTO):   # "2d8+8 impacto mais 2d12 Morte": cada tipo com sua resistência
 			res.dano += aplicar_dano(alvo, dados.rolar_expressao(String(arma.dano_extra.dados)), String(arma.dano_extra.tipo_dano), 0, atacante)
-		if amea != null and amea.tem_hab("aura_tangivel") and (alvo.tem(Ser.ABALADO) or alvo.tem(Ser.APAVORADO)):
-			var aura := amea.habilidade("aura_tangivel")
-			res.dano += aplicar_dano(alvo, dados.rolar_expressao(String(aura.dano)), String(aura.tipo_dano), 0, atacante)
+		if amea != null:
+			for h in amea.habilidades:   # Aura Tangível, Sede de Sangue: dano a mais contra certas condições
+				if h.has("contra_condicoes") and not alvo.tem(Ser.MORTO) and h.contra_condicoes.any(func(cond): return alvo.tem(cond)):
+					res.dano += aplicar_dano(alvo, dados.rolar_expressao(String(h.dano)), String(h.tipo_dano), 0, atacante)
 		_ao_acertar(atacante, alvo, arma, res)
 		if eh_corpo_a_corpo and agente != null and agente.tem_habilidade("gladiador_paranormal"):
 			_gladiador_paranormal(agente)
@@ -1514,6 +1642,11 @@ func _ataque_invalido(atacante: Ser, alvo: Ser, arma: Dictionary) -> ResultadoAt
 func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 0, atacante: Ser = null) -> int:
 	if alvo.tem(Ser.POCA):
 		return _danificar_poca(alvo as Ameaca, dano, tipo_dano)
+	if tipo_dano == "mental":   # dano mental de ataques e habilidades vai para a Sanidade (p.82)
+		var san_antes := alvo.san
+		var pv_antes := alvo.pv
+		alvo.sofrer_dano_mental(dano)
+		return (san_antes - alvo.san) + (pv_antes - alvo.pv)
 	var paranormal: bool = tipo_dano in TIPOS_PARANORMAIS
 	if _reducoes_declaradas.has(alvo):
 		var hab_id: String = _reducoes_declaradas[alvo]
@@ -1541,6 +1674,14 @@ func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 
 	if atacante != null:
 		_danificados_na_rodada[alvo] = atacante.lado
 	alvo.sofrer_dano(final)
+	if atacante is Ameaca and (atacante as Ameaca).tem_hab("sadismo"):
+		atacante.mods_cena["sadismo"] = true
+	if amea_alvo != null and amea_alvo.tem_hab("faixas_da_permanencia") and amea_alvo.pv == 0 and not amea_alvo.tem(Ser.MORTO):
+		amea_alvo.condicoes.erase(Ser.INCONSCIENTE)   # Faixas da Permanência: ainda age até o fim do próximo turno
+		amea_alvo.condicoes.erase(Ser.MORRENDO)
+		if not amea_alvo.mods_cena.has("permanencia"):
+			amea_alvo.mods_cena["permanencia"] = "aguardando"
+			_log("[color=#ec7063]%s cai a 0 PV... e continua de pé.[/color]" % amea_alvo.nome)
 	if amea_alvo != null:
 		if amea_alvo.tem_hab("ferocidade"):
 			amea_alvo.mods_cena["ferocidade"] = true

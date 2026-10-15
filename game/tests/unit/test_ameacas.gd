@@ -24,12 +24,12 @@ func _combate(regras: Dictionary = {}) -> Combate:
 # --- Fichas -----------------------------------------------------------------------
 
 func test_fichas_do_livro_carregam():
-	assert_eq(rs.lista_ameacas().size(), 23)
+	assert_eq(rs.lista_ameacas().size(), 35)
 	for a in rs.lista_ameacas():
 		var info := DadosJogo.ameaca(rs, a.id)
 		var amea := Ameaca.criar(rs, info.nome, info.ficha)
 		assert_gt(amea.pv_maximo, 0, a.id)
-		assert_false(amea.ataques.is_empty(), "%s tem ataques" % a.id)
+		assert_true(not amea.ataques.is_empty() or amea.tem_hab("enxame"), "%s tem ataques" % a.id)
 		for at in amea.ataques:
 			assert_true(at.has("teste"), "%s: ataque com teste da ficha" % a.id)
 		assert_eq(info.vd, int(a.vd))
