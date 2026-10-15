@@ -26,6 +26,11 @@ var aumentos: Array[String] = [] ## Aumentos de atributo já feitos (NEX 20/50/8
 var graus_feitos := 0            ## Escolhas de Grau de Treinamento já feitas (NEX 35/70)
 var versatilidade := ""          ## "", "poder" ou "trilha:<id>" (NEX 50%)
 var rituais: Array[String] = []  ## Rituais conhecidos
+## Poderes paranormais (Transcender, Cultista Arrependido): [{"id": ..., "escolha": ...}]
+var poderes_paranormais: Array[Dictionary] = []
+var afinidade := ""              ## Elemento de afinidade (NEX 50%, p.114)
+var em_acao := false             ## Dentro de uma cena de ação (Encarar a Morte)
+var _dano_massivo := false       ## Escapar da Morte não vale contra dano massivo
 var san_perdida := 0             ## Sanidade máxima perdida para sempre (Custo do Paranormal, Medo)
 var arma_id := ""                ## Arma empunhada ("" = desarmado)
 var equipamento: Array[String] = []   ## Ids requisitados para a missão (armas, proteção, itens)
@@ -74,11 +79,114 @@ func habilidades() -> Array[Dictionary]:
 				lista.append(hab[nivel])
 	if trilha_versatil != "" and ruleset.tem_trilha(classe_id, trilha_versatil):
 		lista.append(ruleset.trilha(classe_id, trilha_versatil).habilidades["10"])
+	lista.append_array(_habilidades_paranormais())
+	var mald := _habilidade_das_maldicoes()
+	if not mald.is_empty():
+		lista.append(mald)
 	return lista
 
 
+## Poderes paranormais viram habilidades; a 2ª escolha de um poder do elemento de afinidade
+## soma o efeito "afinidade". "{escolha}" nos efeitos é trocado pela escolha do agente.
+func _habilidades_paranormais() -> Array[Dictionary]:
+	var lista: Array[Dictionary] = []
+	var vistos: Dictionary = {}
+	for entrada in poderes_paranormais:
+		var p := ruleset.poder_paranormal(entrada.id)
+		if p.is_empty():
+			continue
+		var escolha := String(entrada.get("escolha", ""))
+		var h := {"id": p.id, "nome": p.nome, "implementado": p.get("implementado", false), "efeitos": _com_escolha(p.get("efeitos", []), escolha)}
+		if vistos.has(p.id) and afinidade != "" and elemento_do_poder(entrada) == afinidade and p.has("afinidade"):
+			h.id = p.id + "_afinidade"
+			h.nome = p.nome + " (afinidade)"
+			h.efeitos = _com_escolha(p.afinidade, escolha)
+		vistos[p.id] = true
+		lista.append(h)
+		if p.id == "expansao_de_conhecimento" and escolha.contains(":"):
+			var partes := escolha.split(":")
+			if ruleset.tem_poder(partes[0], partes[1]):
+				lista.append(ruleset.poder(partes[0], partes[1]))
+	return lista
+
+
+static func _com_escolha(efeitos_brutos: Array, escolha: String) -> Array:
+	var lista: Array = []
+	for e in efeitos_brutos:
+		var c: Dictionary = e.duplicate()
+		for k in c:
+			if c[k] is String and c[k] == "{escolha}":
+				c[k] = escolha
+		lista.append(c)
+	return lista
+
+
+## Elemento que o poder paranormal conta (Aprender Ritual: o do ritual; Resistir: o escolhido).
+func elemento_do_poder(entrada: Dictionary) -> String:
+	var p := ruleset.poder_paranormal(entrada.id)
+	match String(p.get("elemento", "")):
+		"ritual":
+			return ruleset.ritual(entrada.get("escolha", "")).get("elemento", "")
+		"escolha":
+			return entrada.get("escolha", "")
+	return p.get("elemento", "")
+
+
+func contagem_elemento(elemento: String) -> int:
+	return poderes_paranormais.filter(func(e): return elemento_do_poder(e) == elemento).size()
+
+
+## Maldições dos itens em uso (arma empunhada, proteção vestida e acessórios) como uma
+## habilidade. Bônus de itens amaldiçoados não acumulam entre si: vale o maior (p.155).
+func _habilidade_das_maldicoes() -> Dictionary:
+	var melhores: Dictionary = {}
+	for m in maldicoes_em_uso():
+		if not m.get("implementado", false):
+			continue
+		for e in m.get("efeitos", []):
+			var chave := "%s|%s|%s|%s" % [e.tipo, e.get("atributo", ""), e.get("pericia", ""), e.get("dano", "")]
+			if not melhores.has(chave) or int(e.get("valor", 0)) > int(melhores[chave].get("valor", 0)):
+				melhores[chave] = e
+	if melhores.is_empty():
+		return {}
+	return {"id": "maldicoes", "nome": "Itens amaldiçoados", "implementado": true, "efeitos": melhores.values()}
+
+
+## Maldições ativas: da arma empunhada, da proteção e dos acessórios equipados.
+func maldicoes_em_uso() -> Array:
+	var lista: Array = []
+	for item_id in equipamento:
+		var e := ruleset.equipamento(item_id)
+		if not e.has("maldicoes"):
+			continue
+		if e.tipo == "arma" and item_id != arma_id:
+			continue
+		lista.append_array(e.maldicoes)
+	return lista
+
+
+## Preço da maldição (p.155): falhar num teste do atributo ligado ao elemento custa 2 SAN
+## por maldição desse elemento nos itens em uso.
+func pagar_preco_da_maldicao(atributo_base: String) -> int:
+	var cfg := ruleset.cfg_maldicoes()
+	var total := 0
+	for m in maldicoes_em_uso():
+		if atributo_base in cfg.get("atributo_do_preco", {}).get(m.elemento, []):
+			total += int(cfg.get("preco_san", 2))
+	if total > 0:
+		perder_sanidade(total)
+	return total
+
+
 func tem_habilidade(habilidade_id: String) -> bool:
-	return habilidades().any(func(h): return h.id == habilidade_id)
+	var hs := habilidades()
+	if hs.any(func(h): return h.id == habilidade_id):
+		return true
+	for h in hs:
+		for e in h.get("efeitos", []):
+			if e.tipo == "concede_habilidade" and e.habilidade == habilidade_id:
+				return true
+	return false
 
 
 ## Efeitos implementados de um tipo, vindos de todas as habilidades.
@@ -129,6 +237,10 @@ func recalcular_maximos(encher: bool = false) -> void:
 	san_maximo -= san_perdida
 	if not efeitos("san_inicial_metade").is_empty():
 		san_maximo -= int(ruleset.classe(classe_id).san.inicial) / 2
+	pv_maximo += _soma_efeitos("pv_fixo")
+	# Transcender: não recebe a Sanidade daquele NEX (p.114)
+	if classe_id != "mundano" and ruleset.tem_classe(classe_id):
+		san_maximo -= poderes.count("transcender") * int(ruleset.classe(classe_id).san.get("por_nex", 0))
 	pv_maximo = maxi(1, pv_maximo)
 	pe_maximo = maxi(0, pe_maximo)
 	if encher:
@@ -142,7 +254,13 @@ func recalcular_maximos(encher: bool = false) -> void:
 
 
 func atributo(atributo_id: String) -> int:
-	return int(atributos.get(atributo_id, 0)) + int(mods_cena.get("atributos", {}).get(atributo_id, 0)) + efeito_ritual("atributo_" + atributo_id)
+	var v := int(atributos.get(atributo_id, 0)) + int(mods_cena.get("atributos", {}).get(atributo_id, 0)) + efeito_ritual("atributo_" + atributo_id)
+	v += _soma_efeitos("atributo_item", func(e): return e.atributo == atributo_id)
+	if tem(Ser.MACHUCADO) and atributo_id in ["for", "agi"]:
+		var maior := "for" if int(atributos.get("for", 0)) >= int(atributos.get("agi", 0)) else "agi"
+		if atributo_id == maior:
+			v += _soma_efeitos("sangue_fervente")   # Sangue Fervente (p.116)
+	return v
 
 
 func dados_da_pericia(pericia_id: String) -> int:
@@ -211,7 +329,7 @@ func bonus_resistencia_paranormal() -> int:
 ## DT para resistir às habilidades do agente: 10 + limite de PE + atributo (p.88).
 ## O bônus de limite da Dedicação não conta para DT.
 func dt_habilidade(atributo_id: String) -> int:
-	return 10 + ruleset.limite_pe(nex) + atributo(atributo_id)
+	return 10 + ruleset.limite_pe(nex) + atributo(atributo_id) + _soma_efeitos("dt_bonus")
 
 
 ## Deslocamento: 9 m, ou o fixado por efeitos (criança: 6 m), mais modificadores ("Devagar, Jovem!").
@@ -296,7 +414,9 @@ func patente() -> Dictionary:
 ## Arma empunhada (ou ataque desarmado).
 func arma() -> Dictionary:
 	if arma_id != "" and arma_id in equipamento:
-		return ruleset.arma(arma_id)
+		var e := ruleset.equipamento(arma_id)
+		if e.get("tipo", "") == "arma":
+			return e
 	return ruleset.arma("desarmado")
 
 
@@ -358,6 +478,8 @@ func validar_equipamento(lista: Array) -> Array[String]:
 		espacos += int(e.get("espacos", 1))
 		if e.tipo == "protecao":
 			protecoes += 1
+		if e.has("maldicoes") and pp < int(ruleset.cfg_maldicoes().get("patente_minima_pp", 50)):
+			erros.append("Itens amaldiçoados só são liberados a partir de Agente Especial: %s" % e.nome)
 	for cat in por_categoria:
 		var limite := int(limites.get(str(cat), 0))
 		if por_categoria[cat] > limite:
@@ -383,6 +505,7 @@ func para_dicionario() -> Dictionary:
 		"transicao_mundano": transicao_mundano.duplicate(),
 		"pp": pp, "arma": arma_id, "equipamento": Array(equipamento),
 		"rituais": Array(rituais), "san_perdida": san_perdida,
+		"poderes_paranormais": poderes_paranormais.duplicate(true), "afinidade": afinidade,
 		"pv": pv, "pe": pe, "san": san, "condicoes": condicoes.keys(),
 	}
 
@@ -423,6 +546,9 @@ static func de_dicionario(p_ruleset: Ruleset, d: Dictionary) -> Agente:
 	for x in d.get("rituais", []):
 		a.rituais.append(x)
 	a.san_perdida = int(d.get("san_perdida", 0))
+	for x in d.get("poderes_paranormais", []):
+		a.poderes_paranormais.append(x)
+	a.afinidade = d.get("afinidade", "")
 	a.arma_id = d.get("arma", "")
 	for x in d.get("equipamento", []):
 		a.equipamento.append(x)
@@ -447,6 +573,8 @@ func defesa() -> int:
 		d += int(ruleset.regra_carga().get("sobrecarga", {}).get("defesa", 0))
 	if tem(Ser.MACHUCADO) and tem_habilidade("inquebravel"):
 		d += 5
+	if not efeitos("imune_desprevenido").is_empty() and (tem(Ser.DESPREVENIDO) or tem(Ser.SURPREENDIDO)) and not esta_indefeso():
+		d += 5   # Precognição com afinidade
 	return d
 
 
@@ -458,7 +586,22 @@ func resistencia(tipo_dano: String) -> int:
 	if tem(Ser.MACHUCADO) and tem_habilidade("inquebravel"):
 		total += 5   # Inquebrável: RD 5 contra qualquer dano enquanto machucado
 	total += int(protecao().get("resistencias", {}).get(tipo_dano, 0))
+	for e in efeitos("resistencia_todas"):
+		total += int(e.get("valor_pesada", e.valor)) if protecao().get("id", "") == "protecao_pesada" or protecao().get("base", "") == "protecao_pesada" else int(e.valor)
 	return total
+
+
+## Escapar da Morte (p.115): uma vez por cena, um dano que o deixaria a 0 PV o deixa com 1
+## (com afinidade, evita o dano todo). Não funciona contra dano massivo.
+func sofrer_dano(quantidade: int) -> void:
+	var antes := pv
+	super.sofrer_dano(quantidade)
+	if pv == 0 and antes > 0 and not _dano_massivo and tem_habilidade("escapar_da_morte") and not usos_na_cena.has("escapar_da_morte"):
+		usos_na_cena["escapar_da_morte"] = 1
+		pv = antes if tem_habilidade("escapar_da_morte_afinidade") else 1
+		condicoes.erase(Ser.INCONSCIENTE)
+		condicoes.erase(Ser.MORRENDO)
+		_atualizar_pv()
 
 
 ## Inquebrável (Tropa de Choque 99%): morrendo, o agente não cai inconsciente.
@@ -477,7 +620,10 @@ func tem_proficiencia(prof: String) -> bool:
 # --- PE --------------------------------------------------------------------
 
 func limite_pe() -> int:
-	return ruleset.limite_pe(nex) + _soma_efeitos("limite_pe")
+	var l := ruleset.limite_pe(nex) + _soma_efeitos("limite_pe")
+	if em_acao:
+		l += _soma_efeitos("limite_pe_acao")   # Encarar a Morte
+	return l
 
 
 ## PE que ainda podem ser gastos neste turno (PE temporários contam).
@@ -524,6 +670,7 @@ func ganhar_pe_temporario(quantidade: int) -> void:
 func encerrar_cena() -> void:
 	usos_na_cena.clear()
 	pe_temporario = 0
+	em_acao = false
 	super.encerrar_cena()
 
 
@@ -558,7 +705,14 @@ func testar(dados: Dados, pericia_id: String, dt: int, pe_foco: int = 0, opcoes:
 		r.somar_bonus(extra)
 	if pericia_id == "reflexos" and esta_indefeso():
 		r.sucesso = false   # indefeso falha automaticamente em Reflexos (p.320)
+	# Percepção Paranormal: ao procurar pistas, sem nenhum dado acima de 9, rola de novo o pior
+	if opcoes.get("contexto", "") == "procurar_pistas" and r.escolhido < 10 and not r.usa_pior:
+		var n := _soma_efeitos("rerrolar_procurar_pistas")
+		if n > 0:
+			Teste.rerrolar_piores(dados, r, n)
 	sofrer_dano_por_teste(dados, ruleset.atributo_da_pericia(pericia_id))
+	if not r.sucesso:
+		pagar_preco_da_maldicao(plano.atributo_base if plano.atributo_base != "" else ruleset.atributo_da_pericia(pericia_id))
 	return r
 
 

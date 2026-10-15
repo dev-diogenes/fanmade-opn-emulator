@@ -17,6 +17,8 @@ extends RefCounted
 ##   "graus": [[...], [...]],               # perícias que sobem de grau em NEX 35% e 70%
 ##   "escolhas": {"ferramenta_de_trabalho": "machado"},
 ##   "rituais": ["eletrocussao", "cicatrizacao", "armadura_de_sangue"],   # ocultista: 3 + 1 por NEX
+##   "poderes_paranormais": [{"id": "resistir_a_elemento", "escolha": "sangue"}],   # 1 por Transcender (+1 Cultista Arrependido)
+##   "afinidade": "sangue",                 # NEX 50%
 ##   # Regra opcional Idade Variada (p.182-184):
 ##   "idade": "adulto", "desvantagens_idade": ["catarata"],
 ##   "beneficios_origem": ["pericia:investigacao"],   # criança (1) / adolescente (2): perícias e/ou "poder"
@@ -247,6 +249,13 @@ static func criar(ruleset: Ruleset, ficha: Dictionary) -> Dictionary:
 	for rid in lista_rituais:
 		a.rituais.append(rid)
 	erros.append_array(_validar_rituais(ruleset, a, lista_rituais))
+	a.afinidade = ficha.get("afinidade", "")
+	var paranormais: Array = ficha.get("poderes_paranormais", [])
+	if paranormais.size() != Progressao.paranormais_esperados(a):
+		erros.append("Informe %d poder(es) paranormal(is) (1 por Transcender%s)" % [Progressao.paranormais_esperados(a), ", +1 da origem" if a.origem_id == "cultista_arrependido" else ""])
+	for pp_ in paranormais:
+		var e2 := Progressao.adicionar_poder_paranormal(a, pp_.get("id", ""), String(pp_.get("escolha", "")))
+		erros.append_array(e2)
 
 	if trilha_id != "":
 		erros.append_array(_checar_pre(ruleset.trilha(classe_id, trilha_id).get("pre", {}), a, "trilha " + trilha_id))

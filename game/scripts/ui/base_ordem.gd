@@ -99,7 +99,9 @@ func _montar_interface() -> void:
 	c2.add_child(_lbl_requisicao)
 	for item in _catalogo():
 		var chk := CheckBox.new()
-		chk.text = "%s  [cat %s, %d esp.]" % [item.nome, ["0", "I", "II", "III", "IV"][int(item.get("categoria", 0))], int(item.get("espacos", 1))]
+		chk.text = "%s%s  [cat %s, %d esp.]" % ["☠ " if item.has("maldicoes") else "", item.nome, ["0", "I", "II", "III", "IV", "V"][mini(5, int(item.get("categoria", 0)))], int(item.get("espacos", 1))]
+		if item.has("maldicoes"):
+			chk.tooltip_text = "Maldições: %s" % ", ".join(PackedStringArray(item.maldicoes.map(func(m): return "%s (%s) — %s" % [m.nome, m.elemento, m.descricao])))
 		chk.toggled.connect(func(_v): _atualizar_armas_requisicao())
 		_checks_itens[item.id] = chk
 		_caixa_requisicao.add_child(chk)
@@ -170,6 +172,8 @@ func _catalogo() -> Array:
 		lista.append(rs.equipamento(p.id))
 	for i in rs.itens_gerais():
 		lista.append(rs.equipamento(i.id))
+	for am in rs.lista_amaldicoados():
+		lista.append(rs.equipamento(am.id))   # itens amaldiçoados: a partir de Agente Especial
 	return lista
 
 
@@ -229,6 +233,11 @@ func _atualizar_agente() -> void:
 	for h in a.habilidades():
 		habs.append(h.nome + ("" if h.get("implementado", false) else "*"))
 	linhas.append("[color=#aab7b8]Habilidades:[/color] " + ", ".join(habs))
+	if not a.poderes_paranormais.is_empty():
+		var pps := PackedStringArray()
+		for e in a.poderes_paranormais:
+			pps.append(rs.poder_paranormal(e.id).get("nome", e.id) + ("" if String(e.get("escolha", "")) == "" else " (%s)" % e.escolha))
+		linhas.append("[color=#c39bd3]Poderes paranormais:[/color] %s%s" % [", ".join(pps), "  ·  afinidade: " + a.afinidade if a.afinidade != "" else ""])
 	if not a.rituais.is_empty():
 		var rits := PackedStringArray()
 		for rid in a.rituais:
@@ -268,6 +277,7 @@ func _montar_pendencia(a: Agente) -> void:
 	var p: Dictionary = pend[0]
 	var rs := carreira.ruleset
 	var titulos := {"trilha": "Escolha a trilha (NEX 10%)", "poder": "Escolha um poder de classe", "aumento": "Aumente um atributo", "ritual": "Aprenda um ritual",
+		"poder_paranormal": "Escolha um poder paranormal", "afinidade": "Afinidade elemental (NEX 50%)",
 		"grau": "Grau de Treinamento: escolha %d perícias" % int(p.get("quantidade", 0)), "versatilidade": "Versatilidade (NEX 50%)"}
 	var lbl := _titulo("[%d pendente(s)] %s" % [pend.size(), titulos[p.tipo]])
 	lbl.add_theme_color_override("font_color", Color("f7dc6f"))
@@ -293,16 +303,33 @@ func _montar_pendencia(a: Agente) -> void:
 			"poder": nome = rs.poder(a.classe_id, o).nome + ("" if rs.poder(a.classe_id, o).get("implementado", false) else " *")
 			"aumento": nome = String(o).to_upper()
 			"ritual": nome = "%s (%dº, %s)%s" % [rs.ritual(o).nome, int(rs.ritual(o).circulo), rs.ritual(o).elemento, "" if rs.ritual(o).get("implementado", false) else " *"]
+			"poder_paranormal": nome = "%s (%s)%s" % [rs.poder_paranormal(o).nome, rs.poder_paranormal(o).elemento, "" if rs.poder_paranormal(o).get("implementado", false) else " *"]
+			"afinidade": nome = String(o).capitalize()
 		opt.add_item(nome)
 	_caixa_pendencia.add_child(opt)
+	# Transcender pede um poder paranormal; outras escolhas usam o campo de texto
+	var opt_para := OptionButton.new()
+	if p.tipo == "poder":
+		opt_para.add_item("(para Transcender) escolha o poder paranormal")
+		opt_para.set_item_metadata(0, "")
+		for pid in Progressao.poderes_paranormais_possiveis(a):
+			opt_para.add_item(rs.poder_paranormal(pid).nome)
+			opt_para.set_item_metadata(opt_para.item_count - 1, pid)
+		_caixa_pendencia.add_child(opt_para)
 	var extra := LineEdit.new()
-	extra.placeholder_text = "Treinamento em Perícia: duas perícias separadas por vírgula (ids)"
+	extra.placeholder_text = "Escolha extra: perícias (Treinamento) · ritual/elemento/classe:poder (poderes paranormais)"
 	_caixa_pendencia.add_child(extra)
 	_caixa_pendencia.add_child(_botao("Confirmar", func():
 		var escolha = p.opcoes[opt.selected]
 		var pares: Array = []
-		for t in extra.text.split(",", false):
-			pares.append(t.strip_edges())
+		if p.tipo == "poder" and escolha == "transcender":
+			pares.append(opt_para.get_item_metadata(opt_para.selected) if opt_para.selected >= 0 else "")
+			pares.append(extra.text.strip_edges())
+		elif p.tipo == "poder_paranormal":
+			pares.append(extra.text.strip_edges())
+		else:
+			for t in extra.text.split(",", false):
+				pares.append(t.strip_edges())
 		_aplicar(a, p.tipo, escolha, pares)))
 
 

@@ -237,8 +237,59 @@ func lista_armas() -> Array:
 	return dados.get("armas", {}).get("armas", []).filter(func(a): return a.id != "desarmado")
 
 
+func lista_poderes_paranormais() -> Array:
+	return dados.get("poderes_paranormais", {}).get("poderes", [])
+
+
+func poder_paranormal(poder_id: String) -> Dictionary:
+	for p in lista_poderes_paranormais():
+		if p.id == poder_id:
+			return p
+	return {}
+
+
+func cfg_maldicoes() -> Dictionary:
+	return dados.get("equipamentos", {}).get("maldicoes", {})
+
+
+func maldicao(maldicao_id: String) -> Dictionary:
+	for m in cfg_maldicoes().get("lista", []):
+		if m.id == maldicao_id:
+			return m
+	return {}
+
+
+func lista_amaldicoados() -> Array:
+	return dados.get("equipamentos", {}).get("amaldicoados", [])
+
+
 ## Qualquer equipamento pelo id, com "tipo": "arma" | "protecao" | "item". {} se não existir.
+## Itens amaldiçoados (p.154) são montados a partir da base: a primeira maldição soma II à
+## categoria e as seguintes, I; o item recebe a lista "maldicoes".
 func equipamento(item_id: String) -> Dictionary:
+	for am in lista_amaldicoados():
+		if am.id == item_id:
+			var base := equipamento(am.base)
+			if base.is_empty():
+				return {}
+			base = base.duplicate(true)
+			base.id = am.id
+			base.base = am.base
+			base.nome = am.nome
+			var lista: Array = []
+			for mid in am.maldicoes:
+				var m := maldicao(mid)
+				if not m.is_empty():
+					lista.append(m)
+			base.maldicoes = lista
+			if not lista.is_empty():
+				base.categoria = int(base.get("categoria", 0)) + 2 + (lista.size() - 1)
+			return base
+	for ac in dados.get("equipamentos", {}).get("acessorios_base", []):
+		if ac.id == item_id:
+			var d: Dictionary = ac.duplicate()
+			d["tipo"] = "item"
+			return d
 	if _armas.has(item_id):
 		var a: Dictionary = _armas[item_id].duplicate()
 		a["tipo"] = "arma"

@@ -20,7 +20,7 @@
       {"id": "tanque_de_guerra", "nome": "Tanque de Guerra", "descricao": "Proteção pesada fornece +2 de Defesa e de resistência a dano.", "pre": {"poder": "protecao_pesada"}, "implementado": false, "pendente": "proteções (equipamento)", "efeitos": []},
       {"id": "tiro_certeiro", "nome": "Tiro Certeiro", "descricao": "Com armas de disparo, soma Agilidade no dano e ignora a penalidade por alvo em corpo a corpo.", "pre": {"treinado": ["pontaria"]}, "implementado": true, "efeitos": [{"tipo": "bonus_dano_atributo", "atributo": "agi", "ataques": ["disparo"]}]},
       {"id": "tiro_de_cobertura", "nome": "Tiro de Cobertura", "descricao": "Ação padrão + 1 PE: prende o alvo no lugar e atrapalha seus ataques.", "implementado": true, "efeitos": [{"tipo": "tiro_de_cobertura"}], "pendente": "distância/alcance não verificados (grade, Fase 2)"},
-      {"id": "transcender", "nome": "Transcender", "descricao": "Recebe um poder paranormal, mas não ganha Sanidade neste NEX.", "repetivel": true, "implementado": false, "pendente": "poderes paranormais (Fase 4)", "efeitos": [{"tipo": "transcender"}]},
+      {"id": "transcender", "nome": "Transcender", "descricao": "Recebe um poder paranormal, mas não ganha Sanidade neste NEX.", "repetivel": true, "implementado": true, "efeitos": [{"tipo": "transcender"}]},
       {"id": "treinamento_em_pericia", "nome": "Treinamento em Perícia", "descricao": "Treina duas perícias (ou sobe o grau, a partir de NEX 35%).", "repetivel": true, "implementado": true, "efeitos": [{"tipo": "treinar_pericias", "quantidade": 2}]}
     ],
     "especialista": [
@@ -37,7 +37,7 @@
       {"id": "pensamento_agil", "nome": "Pensamento Ágil", "descricao": "Uma vez por rodada de investigação, 2 PE: procura pistas de novo.", "implementado": true, "efeitos": []},
       {"id": "perito_em_explosivos", "nome": "Perito em Explosivos", "descricao": "Explosivos mais difíceis de resistir e que poupam aliados.", "implementado": false, "efeitos": []},
       {"id": "primeira_impressao", "nome": "Primeira Impressão", "descricao": "Dois dados extras no primeiro teste social da cena.", "implementado": false, "efeitos": []},
-      {"id": "transcender", "nome": "Transcender", "descricao": "Recebe um poder paranormal, mas não ganha Sanidade neste NEX.", "repetivel": true, "implementado": false, "pendente": "poderes paranormais (Fase 4)", "efeitos": [{"tipo": "transcender"}]},
+      {"id": "transcender", "nome": "Transcender", "descricao": "Recebe um poder paranormal, mas não ganha Sanidade neste NEX.", "repetivel": true, "implementado": true, "efeitos": [{"tipo": "transcender"}]},
       {"id": "treinamento_em_pericia", "nome": "Treinamento em Perícia", "descricao": "Treina duas perícias (ou sobe o grau, a partir de NEX 35%).", "repetivel": true, "implementado": true, "efeitos": [{"tipo": "treinar_pericias", "quantidade": 2}]}
     ],
     "ocultista": [
@@ -55,7 +55,7 @@
       {"id": "ritual_potente", "nome": "Ritual Potente", "descricao": "Soma Intelecto no dano e na cura dos rituais.", "pre": {"atributos": {"int": 2}}, "implementado": true, "efeitos": []},
       {"id": "ritual_predileto", "nome": "Ritual Predileto", "descricao": "Um ritual escolhido custa 1 PE a menos.", "implementado": true, "escolha": "ritual", "efeitos": []},
       {"id": "tatuagem_ritualistica", "nome": "Tatuagem Ritualística", "descricao": "Rituais pessoais em si mesmo custam 1 PE a menos.", "implementado": true, "efeitos": []},
-      {"id": "transcender", "nome": "Transcender", "descricao": "Recebe um poder paranormal, mas não ganha Sanidade neste NEX.", "repetivel": true, "implementado": false, "pendente": "poderes paranormais (Fase 4)", "efeitos": [{"tipo": "transcender"}]},
+      {"id": "transcender", "nome": "Transcender", "descricao": "Recebe um poder paranormal, mas não ganha Sanidade neste NEX.", "repetivel": true, "implementado": true, "efeitos": [{"tipo": "transcender"}]},
       {"id": "treinamento_em_pericia", "nome": "Treinamento em Perícia", "descricao": "Treina duas perícias (ou sobe o grau, a partir de NEX 35%).", "repetivel": true, "implementado": true, "efeitos": [{"tipo": "treinar_pericias", "quantidade": 2}]}
     ]
   }

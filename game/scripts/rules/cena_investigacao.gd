@@ -172,7 +172,13 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 	op["dados_extras"] = int(op.get("dados_extras", 0)) + extras
 	if _atributo_forcado != "":
 		op["atributo_base"] = _atributo_forcado
-	var teste := a.testar(dados, pericia, int(p.pericias[pericia]), pe_foco, op)
+	var dt := int(p.pericias[pericia])
+	# Causalidade Fortuita (p.115): −5 na DT até achar uma pista (afinidade: sempre)
+	if not a.efeitos("causalidade_fortuita").is_empty():
+		var achou := pistas_encontradas.any(func(x): return x.get("agente", "") == a.nome)
+		if not achou or not a.efeitos("causalidade_sempre").is_empty():
+			dt -= 5
+	var teste := a.testar(dados, pericia, dt, pe_foco, op)
 	if teste == null:
 		return {}
 	_facilitar.erase(a)
@@ -186,7 +192,7 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 	if teste.sucesso:
 		var texto := caso.formatar(p.pista)
 		pontos_restantes.erase(ponto_id)
-		pistas_encontradas.append({"ponto": ponto_id, "texto": texto, "responde": p.responde})
+		pistas_encontradas.append({"ponto": ponto_id, "texto": texto, "responde": p.responde, "agente": a.nome})
 		var resp := caso.registrar_pista(p.pista, p.responde, cena.id)
 		resultado.pista = texto
 		_log("[color=#58d68d]Pista:[/color] %s" % texto)

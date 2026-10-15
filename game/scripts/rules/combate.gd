@@ -103,6 +103,9 @@ func iniciar(surpreendidos: Array = []) -> void:
 		return desempate[a] > desempate[b])
 	rodada = 1
 	_indice = -1
+	for s in participantes:
+		if s is Agente:
+			(s as Agente).em_acao = true   # Encarar a Morte vale em cenas de ação
 
 
 func ser_atual() -> Ser:
@@ -142,6 +145,7 @@ func proximo_turno() -> Ser:
 		_ao_iniciar_turno(ser)
 		_processar_hemorragia(ser)
 		_manter_sustentados(ser)
+		_cura_acelerada(ser)
 		_verificar_lesao(ser)
 		if _verificar_fim():
 			return null
@@ -312,7 +316,7 @@ func pode_conjurar(conjurador: Agente, ritual_id: String, alvo: Ser, forma: Stri
 			return "forma %s indisponível" % forma
 	if conjurador.efeito_ritual("ataque_corpo_a_corpo") > 0 and conjurador.rituais_ativos.has("odio_incontrolavel"):
 		return "em frenesi, não dá para se concentrar"
-	if r.elemento != "medo" and not conjurador.equipamento.any(func(i): return ruleset.equipamento(i).get("componentes", "") == r.elemento):
+	if r.elemento != "medo" and conjurador.afinidade != r.elemento and not conjurador.equipamento.any(func(i): return ruleset.equipamento(i).get("componentes", "") == r.elemento):
 		return "faltam componentes ritualísticos de %s" % r.elemento
 	var custo := conjurador.custo_ritual(ritual_id, forma)
 	if custo > conjurador.limite_pe_rituais():
@@ -401,7 +405,91 @@ func _resistir_ritual(conjurador: Agente, ritual_id: String, r: Dictionary, alvo
 			mod = -int(vantagem.dados)
 		elif r.elemento == el:
 			mod = int(vantagem.dados)
-	return Teste.rolar(dados, alvo.dados_da_pericia(pericia), alvo.bonus_pericia(pericia), conjurador.dt_ritual(ritual_id), mod)
+	var bonus := alvo.bonus_pericia(pericia)
+	if alvo is Agente:
+		var ag := alvo as Agente
+		var cfg_af: Dictionary = ruleset.dados.get("poderes_paranormais", {}).get("afinidade", {})
+		var vantagem: Dictionary = ruleset.dados.rituais.vantagem_elemental
+		if ag.afinidade != "" and ag.afinidade == r.elemento:
+			mod += int(cfg_af.get("dados_resistencia", 2))
+		elif ag.afinidade != "" and vantagem.get(r.elemento, "") == ag.afinidade:
+			mod -= int(cfg_af.get("dados_resistencia", 2))
+		bonus += ag._soma_efeitos("bonus_resistencia_rituais")   # Abascanta
+	var t := Teste.rolar(dados, alvo.dados_da_pericia(pericia), bonus, conjurador.dt_ritual(ritual_id), mod)
+	if t.sucesso:
+		_ao_passar_resistencia(alvo)
+	elif alvo is Agente:
+		(alvo as Agente).pagar_preco_da_maldicao(ruleset.atributo_da_pericia(pericia))
+	return t
+
+
+## Potencial Reaproveitado (p.115): uma vez por rodada, passar num teste de resistência dá PE temporários.
+func _ao_passar_resistencia(ser: Ser) -> void:
+	if not ser is Agente or _usou_na_rodada(ser, "potencial_reaproveitado"):
+		return
+	var ganho := (ser as Agente)._soma_efeitos("potencial_reaproveitado")
+	if ganho > 0:
+		_marcar_uso_rodada(ser, "potencial_reaproveitado")
+		(ser as Agente).ganhar_pe_temporario(ganho)
+
+
+## Sangue Vivo (p.116): machucado, regenera alguns PV por turno, sem passar da metade.
+func _cura_acelerada(ser: Ser) -> void:
+	if not ser is Agente or not ser.tem(Ser.MACHUCADO):
+		return
+	var valor := (ser as Agente)._soma_efeitos("cura_acelerada_machucado")
+	var teto := ser.pv_maximo / 2
+	if valor > 0 and ser.pv > 0 and ser.pv < teto:
+		ser.curar(mini(valor, teto - ser.pv))
+
+
+## Manipular Entropia (p.115): 2 PE para outro ser em alcance curto rolar de novo um dado do teste.
+func manipular_entropia(agente: Agente, alvo: Ser, resultado: ResultadoTeste) -> bool:
+	if not agente.tem_habilidade("manipular_entropia") or not _perto(agente, alvo, "curto") or not agente.gastar_pe(2, true):
+		return false
+	Teste.rerrolar_escolhido(dados, resultado)
+	return true
+
+
+## Surto Temporal (p.115): uma vez por cena, no seu turno, 3 PE por uma ação padrão a mais.
+func surto_temporal(agente: Agente) -> bool:
+	if not agente.tem_habilidade("surto_temporal") or agente.usos_na_cena.has("surto_temporal"):
+		return false
+	if not acoes.has(agente) or not agente.gastar_pe(3, true):
+		return false
+	agente.usos_na_cena["surto_temporal"] = 1
+	acoes[agente].padrao += 1
+	return true
+
+
+## Arma de Sangue (p.116): ação de movimento + 2 PE; garras de sangue até o fim da cena.
+func criar_arma_de_sangue(agente: Agente) -> bool:
+	var ef := agente.efeitos("arma_de_sangue")
+	if ef.is_empty() or agente.mods_cena.has("arma_de_sangue") or not gastar_acao(agente, "movimento"):
+		return false
+	if not agente.gastar_pe(2, true):
+		acoes[agente].movimento += 1
+		return false
+	agente.mods_cena["arma_de_sangue"] = String(ef[ef.size() - 1].dano)
+	return true
+
+
+func arma_de_sangue(agente: Agente) -> Dictionary:
+	if not agente.mods_cena.has("arma_de_sangue"):
+		return {}
+	return {"id": "arma_de_sangue", "nome": "Arma de Sangue", "dano": agente.mods_cena.arma_de_sangue, "margem": 20, "multiplicador": 2,
+		"tipo_dano": "sangue", "pericia": "luta", "soma_forca": true, "ataque": "corpo_a_corpo", "leve": true}
+
+
+## Ataque extra com a Arma de Sangue: uma vez por turno, depois de agredir, 1 PE.
+func ataque_arma_de_sangue(agente: Agente, alvo: Ser) -> ResultadoAtaque:
+	var arma := arma_de_sangue(agente)
+	if arma.is_empty() or int(_ataques_no_turno.get(agente, 0)) == 0 or _usou_na_rodada(agente, "arma_de_sangue_extra"):
+		return _ataque_invalido(agente, alvo, arma)
+	if not agente.gastar_pe(1, true):
+		return _ataque_invalido(agente, alvo, arma)
+	_marcar_uso_rodada(agente, "arma_de_sangue_extra")
+	return atacar(agente, alvo, arma)
 
 
 func _aplicar_efeito_ritual(conjurador: Agente, ritual_id: String, r: Dictionary, e: Dictionary, alvo: Ser, res: Dictionary) -> void:
@@ -636,6 +724,10 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 				defesa += alvo.bonus_pericia("reflexos")
 				res.reacao = "esquiva"
 				if alvo is Agente:
+					var campo := (alvo as Agente).efeitos("campo_protetor")
+					if not campo.is_empty() and (alvo as Agente).gastar_pe(1, true):
+						defesa += int(campo[0].valor)   # Campo Protetor (p.115)
+				if alvo is Agente:
 					(alvo as Agente).sofrer_dano_por_teste(dados, "agi", true)   # Gota
 			"bloqueio":
 				if eh_corpo_a_corpo:
@@ -652,12 +744,29 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	if agente != null:
 		agente.sofrer_dano_por_teste(dados, ruleset.atributo_da_pericia(pericia_id))   # Gota, Pulmão Ruim
 	res.acertou = res.teste.sucesso
+	if agente != null and not res.acertou:
+		agente.pagar_preco_da_maldicao(ruleset.atributo_da_pericia(pericia_id))
 	_ataques_no_turno[atacante] = int(_ataques_no_turno.get(atacante, 0)) + 1
 	_ultimo_ataque[atacante] = res
 	if res.acertou:
-		var margem := int(arma.get("margem", 20)) - margem_extra
+		var margem_base := int(arma.get("margem", 20))
+		var maldicoes_arma: Array = arma.get("maldicoes", [])
+		if maldicoes_arma.any(func(m): return m.get("implementado", false) and m.efeitos.any(func(x): return x.tipo == "arma_margem_dobrada")):
+			margem_base = 21 - 2 * (21 - margem_base)   # Predadora: dobra a margem antes dos aumentos
+		var margem := margem_base - margem_extra
 		res.critico = res.teste.escolhido >= margem
-		var mult := int(arma.get("multiplicador", 2)) if res.critico else 1
+		if res.critico and alvo is Agente:
+			var chance := 0
+			for ef in (alvo as Agente).efeitos("ignora_critico"):
+				var pesada: bool = (alvo as Agente).protecao().get("base", (alvo as Agente).protecao().get("id", "")) == "protecao_pesada"
+				chance += int(ef.get("chance_pesada", ef.chance)) if pesada else int(ef.chance)
+			if chance > 0 and dados.rolar(100) <= chance:
+				res.critico = false   # Anatomia Insana / Letárgica
+				res.critico_ignorado = true
+		var mult_critico := int(arma.get("multiplicador", 2))
+		if agente != null:
+			mult_critico += agente._soma_efeitos("multiplicador_critico")
+		var mult := mult_critico if res.critico else 1
 		var e := Dados.interpretar(arma.get("dano", "1d3"))
 		var qtd: int = e.quantidade + int(mods.dados_dano_extra)
 		var dano := 0
@@ -672,6 +781,12 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 			dano += dados.rolar_expressao("%dd6" % furtivo_dados)   # dados extras não multiplicam
 		for expr in String(mods.get("dados_dano_ritual", "")).split("+", false):
 			dano += dados.rolar_expressao(expr)   # Amaldiçoar Arma (não multiplica no crítico)
+		for m in maldicoes_arma:
+			if not m.get("implementado", false):
+				continue
+			for ef in m.efeitos:
+				if ef.tipo == "arma_dano_extra":
+					dano += dados.rolar_expressao(ef.dados, mult if ef.get("multiplica", false) else 1)
 		res.dano_bruto = maxi(1, dano)
 		res.dano = aplicar_dano(alvo, res.dano_bruto, arma.get("tipo_dano", ""), rd_extra, atacante)
 		if eh_corpo_a_corpo and agente != null and agente.tem_habilidade("gladiador_paranormal"):
@@ -721,7 +836,12 @@ func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 
 		var dt := 15 + 2 * (final / 10)
 		var r := Teste.rolar(dados, alvo.dados_da_pericia("fortitude"), alvo.bonus_pericia("fortitude"), dt)
 		if not r.sucesso:
+			(alvo as Agente)._dano_massivo = true
 			alvo.sofrer_dano(alvo.pv)
+			(alvo as Agente)._dano_massivo = false
+			(alvo as Agente).pagar_preco_da_maldicao("vig")
+		else:
+			_ao_passar_resistencia(alvo)
 	return final
 
 

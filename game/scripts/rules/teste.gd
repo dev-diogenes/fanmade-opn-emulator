@@ -35,6 +35,29 @@ static func rerrolar(dados: Dados, anterior: ResultadoTeste) -> ResultadoTeste:
 	return rolar(dados, anterior.atributo, base_bonus, anterior.dt, anterior.dados_extras)
 
 
+## Rola de novo os `n` piores dados de um teste (Percepção Paranormal). O novo valor vale.
+static func rerrolar_piores(dados: Dados, r: ResultadoTeste, n: int) -> void:
+	for _i in mini(n, r.slots.size()):
+		var idx := r.slots.find(r.slots.min())
+		r.slots[idx] = dados.rolar(20)
+	var antes := r.escolhido
+	r.escolhido = r.slots.min() if r.usa_pior else r.slots.max()
+	r.total += r.escolhido - antes
+	r.natural_20 = r.escolhido == 20
+	r.sucesso = r.natural_20 or r.total >= r.dt
+
+
+## Rola de novo o dado escolhido de um teste (Manipular Entropia): o resultado novo vale.
+static func rerrolar_escolhido(dados: Dados, r: ResultadoTeste) -> void:
+	var idx := r.slots.find(r.escolhido)
+	r.slots[idx] = dados.rolar(20)
+	var antes := r.escolhido
+	r.escolhido = r.slots.min() if r.usa_pior else r.slots.max()
+	r.total += r.escolhido - antes
+	r.natural_20 = r.escolhido == 20
+	r.sucesso = r.natural_20 or r.total >= r.dt
+
+
 ## Probabilidade (0..1) de passar, para a dica "chance de passar" da UI.
 static func chance_de_passar(atributo: int, bonus: int, dt: int, dados_extras: int = 0) -> float:
 	var reserva := atributo + dados_extras

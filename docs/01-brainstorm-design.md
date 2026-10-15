@@ -170,6 +170,10 @@ Pontos em que o livro é ambíguo e escolhemos uma leitura (revisar se surgir er
 | Rituais em armas (Amaldiçoar Arma, Arma Atroz) | Ficam no ser que empunha a arma; os dados extras não multiplicam no crítico |
 | Coincidência Forçada | O +2 em testes de perícia também vale para testes de ataque (Luta/Pontaria são perícias) |
 | Concentração | Só é testada por causa de proteção (leve/pesada); ser ferido durante a execução fica para rituais com execução maior que padrão |
+| Transcender | O agente não ganha a SAN do NEX em que pegou o poder (perde a SAN de classe por NEX, por Transcender) |
+| Afinidade e poder repetido | A 2ª escolha só vale para poderes que têm efeito de afinidade, e do elemento da afinidade (ou de elemento à escolha) |
+| Itens amaldiçoados | A 1ª maldição soma +2 de categoria e cada extra +1. O preço: falhar num teste do atributo do elemento custa 2 SAN (Conhecimento→INT, Energia→AGI, Morte→PRE, Sangue→FOR/VIG) |
+| Bônus de itens amaldiçoados | Efeitos iguais não se somam; vale o maior |
 | Reforços da Ordem (modo Normal) | 2 por missão. Um agente caído num combate perdido (ou morto) é resgatado: sai da missão com uma lesão (1d6 no atributo, como a regra de Lesões) |
 
 ## 14. Ferramentas: Godot e o Tabletop Simulator ✅

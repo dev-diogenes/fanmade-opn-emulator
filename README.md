@@ -67,6 +67,10 @@ Uma missão acontece num mapa hexagonal em 3D low poly, gerado por seed. Câmera
 
 Ocultistas (Rita, Cecília) conhecem 3 rituais de 1º círculo e aprendem mais a cada NEX. Na arena, escolha o ritual no seletor e clique em **Conjurar**; rituais pessoais saem na hora, os outros pedem o alvo. Cada conjuração gasta PE pelo círculo, exige componentes ritualísticos do elemento (requisitados na Base), cobra o **Custo do Paranormal** (teste de Ocultismo; falhar custa Sanidade) e enfraquece a Membrana. Criaturas do elemento oprimido resistem pior (Morte contra Sangue, por exemplo).
 
+### Poderes paranormais e itens amaldiçoados
+
+Quem escolhe **Transcender** ao subir de NEX recebe um poder paranormal (Precognição, Sangue de Ferro, Golpe de Sorte…), mas não ganha a Sanidade daquele NEX. Em NEX 50% o agente escolhe uma **afinidade elemental**: pode pegar de novo um poder do elemento, para um efeito maior, e conjura rituais dele sem componentes. A partir de **Agente Especial** (50 PP), a Base libera os itens amaldiçoados (☠ no catálogo). Eles são fortes, mas cada falha num teste do atributo ligado ao elemento custa Sanidade.
+
 ### Investigação
 
 Os hexes com o **anel verde-água** são cenas de investigação. Ao entrar, o grupo (agentes a até 2 hexes) vai para uma cena 3D escura, com a luz curta:

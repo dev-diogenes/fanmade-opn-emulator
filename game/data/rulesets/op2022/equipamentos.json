@@ -169,5 +169,549 @@
       "componentes": "energia",
       "descricao": "Materiais para conjurar rituais de Energia (p.129)."
     }
+  ],
+  "acessorios_base": [
+    {
+      "id": "amuleto",
+      "nome": "Amuleto (utensílio)",
+      "categoria": 1,
+      "espacos": 1,
+      "acessorio": true,
+      "descricao": "Base para maldições de acessório."
+    },
+    {
+      "id": "anel",
+      "nome": "Anel (vestimenta)",
+      "categoria": 1,
+      "espacos": 1,
+      "acessorio": true,
+      "descricao": "Base para maldições de acessório."
+    }
+  ],
+  "maldicoes": {
+    "ref": "p.154-157",
+    "nota": "A primeira maldição aumenta a categoria em II; as seguintes, em I. Liberados a partir de Agente Especial. Preço: falhar num teste do atributo do elemento custa 2 de SAN por maldição daquele elemento.",
+    "patente_minima_pp": 50,
+    "preco_san": 2,
+    "atributo_do_preco": {
+      "conhecimento": [
+        "int"
+      ],
+      "energia": [
+        "agi"
+      ],
+      "morte": [
+        "pre"
+      ],
+      "sangue": [
+        "for",
+        "vig"
+      ]
+    },
+    "lista": [
+      {
+        "id": "lancinante",
+        "nome": "Lancinante",
+        "elemento": "sangue",
+        "aplica": "arma",
+        "descricao": "+1d8 de dano de Sangue, multiplicado no crítico.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "arma_dano_extra",
+            "dados": "1d8",
+            "multiplica": true
+          }
+        ]
+      },
+      {
+        "id": "erosiva",
+        "nome": "Erosiva",
+        "elemento": "morte",
+        "aplica": "arma",
+        "descricao": "+1d8 de dano de Morte.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "arma_dano_extra",
+            "dados": "1d8",
+            "multiplica": false
+          }
+        ],
+        "pendente": "dano contínuo por 2 PE"
+      },
+      {
+        "id": "predadora",
+        "nome": "Predadora",
+        "elemento": "sangue",
+        "aplica": "arma",
+        "descricao": "Dobra a margem de ameaça e ignora camuflagem e cobertura leves.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "arma_margem_dobrada"
+          }
+        ],
+        "pendente": "camuflagem/cobertura e alcance"
+      },
+      {
+        "id": "vibrante",
+        "nome": "Vibrante",
+        "elemento": "energia",
+        "aplica": "arma",
+        "descricao": "Concede a habilidade Ataque Extra.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "concede_habilidade",
+            "habilidade": "ataque_extra"
+          }
+        ]
+      },
+      {
+        "id": "repulsora",
+        "nome": "Repulsora",
+        "elemento": "morte",
+        "aplica": "arma",
+        "descricao": "+2 na Defesa enquanto empunhada.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "bonus_defesa",
+            "valor": 2
+          }
+        ],
+        "pendente": "+5 ao bloquear por 2 PE"
+      },
+      {
+        "id": "antielemento",
+        "nome": "Antielemento",
+        "elemento": "conhecimento",
+        "aplica": "arma",
+        "descricao": "Contra criaturas de um elemento, 2 PE: +4d8 de dano.",
+        "implementado": false,
+        "efeitos": []
+      },
+      {
+        "id": "energetica",
+        "nome": "Energética",
+        "elemento": "energia",
+        "aplica": "arma",
+        "descricao": "2 PE: o ataque vira Energia pura (+5, ignora resistência).",
+        "implementado": false,
+        "efeitos": []
+      },
+      {
+        "id": "cinetica",
+        "nome": "Cinética",
+        "elemento": "energia",
+        "aplica": "protecao",
+        "descricao": "+2 na Defesa e resistência a dano 2 (5 na proteção pesada).",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "bonus_defesa",
+            "valor": 2
+          },
+          {
+            "tipo": "resistencia_todas",
+            "valor": 2,
+            "valor_pesada": 5
+          }
+        ]
+      },
+      {
+        "id": "letargica",
+        "nome": "Letárgica",
+        "elemento": "morte",
+        "aplica": "protecao",
+        "descricao": "+2 na Defesa e chance de ignorar críticos (25%; 50% na pesada).",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "bonus_defesa",
+            "valor": 2
+          },
+          {
+            "tipo": "ignora_critico",
+            "chance": 25,
+            "chance_pesada": 50
+          }
+        ]
+      },
+      {
+        "id": "profetica",
+        "nome": "Profética",
+        "elemento": "conhecimento",
+        "aplica": "protecao",
+        "descricao": "Resistência a Conhecimento 10.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "resistencia",
+            "dano": "conhecimento",
+            "valor": 10
+          }
+        ],
+        "pendente": "rerrolar resistência por 2 PE"
+      },
+      {
+        "id": "abascanta",
+        "nome": "Abascanta",
+        "elemento": "conhecimento",
+        "aplica": "protecao",
+        "descricao": "+5 nos testes de resistência contra rituais.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "bonus_resistencia_rituais",
+            "valor": 5
+          }
+        ],
+        "pendente": "refletir ritual"
+      },
+      {
+        "id": "voltaica",
+        "nome": "Voltaica",
+        "elemento": "energia",
+        "aplica": "protecao",
+        "descricao": "Resistência a Energia 10.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "resistencia",
+            "dano": "energia",
+            "valor": 10
+          }
+        ],
+        "pendente": "arcos de Energia"
+      },
+      {
+        "id": "repulsiva",
+        "nome": "Repulsiva",
+        "elemento": "morte",
+        "aplica": "protecao",
+        "descricao": "Resistência a Morte 10.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "resistencia",
+            "dano": "morte",
+            "valor": 10
+          }
+        ],
+        "pendente": "camada de Lodo"
+      },
+      {
+        "id": "regenerativa",
+        "nome": "Regenerativa",
+        "elemento": "sangue",
+        "aplica": "protecao",
+        "descricao": "Resistência a Sangue 10.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "resistencia",
+            "dano": "sangue",
+            "valor": 10
+          }
+        ],
+        "pendente": "cura por 1 PE"
+      },
+      {
+        "id": "sombria",
+        "nome": "Sombria",
+        "elemento": "conhecimento",
+        "aplica": "protecao",
+        "descricao": "+5 em Furtividade.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "bonus_pericia",
+            "pericia": "furtividade",
+            "valor": 5
+          }
+        ]
+      },
+      {
+        "id": "lepida",
+        "nome": "Lépida",
+        "elemento": "energia",
+        "aplica": "protecao",
+        "descricao": "+10 em Atletismo e +3 m de deslocamento.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "bonus_pericia",
+            "pericia": "atletismo",
+            "valor": 10
+          },
+          {
+            "tipo": "deslocamento_mod",
+            "valor": 3
+          }
+        ]
+      },
+      {
+        "id": "carisma",
+        "nome": "Carisma",
+        "elemento": "conhecimento",
+        "aplica": "acessorio",
+        "descricao": "+1 em Presença (sem PE extras).",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "atributo_item",
+            "atributo": "pre",
+            "valor": 1
+          }
+        ]
+      },
+      {
+        "id": "sagacidade",
+        "nome": "Sagacidade",
+        "elemento": "conhecimento",
+        "aplica": "acessorio",
+        "descricao": "+1 em Intelecto (sem perícias extras).",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "atributo_item",
+            "atributo": "int",
+            "valor": 1
+          }
+        ]
+      },
+      {
+        "id": "escudo_mental",
+        "nome": "Escudo Mental",
+        "elemento": "conhecimento",
+        "aplica": "acessorio",
+        "descricao": "Resistência mental 10.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "resistencia",
+            "dano": "mental",
+            "valor": 10
+          }
+        ]
+      },
+      {
+        "id": "defesa",
+        "nome": "Defesa",
+        "elemento": "energia",
+        "aplica": "acessorio",
+        "descricao": "+5 na Defesa.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "bonus_defesa",
+            "valor": 5
+          }
+        ]
+      },
+      {
+        "id": "destreza",
+        "nome": "Destreza",
+        "elemento": "energia",
+        "aplica": "acessorio",
+        "descricao": "+1 em Agilidade.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "atributo_item",
+            "atributo": "agi",
+            "valor": 1
+          }
+        ]
+      },
+      {
+        "id": "potencia",
+        "nome": "Potência",
+        "elemento": "energia",
+        "aplica": "acessorio",
+        "descricao": "+1 na DT das suas habilidades e rituais.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "dt_bonus",
+            "valor": 1
+          }
+        ]
+      },
+      {
+        "id": "esforco_adicional",
+        "nome": "Esforço Adicional",
+        "elemento": "morte",
+        "aplica": "acessorio",
+        "descricao": "+5 PE.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "pe_fixo",
+            "valor": 5
+          }
+        ]
+      },
+      {
+        "id": "disposicao",
+        "nome": "Disposição",
+        "elemento": "sangue",
+        "aplica": "acessorio",
+        "descricao": "+1 em Vigor.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "atributo_item",
+            "atributo": "vig",
+            "valor": 1
+          }
+        ]
+      },
+      {
+        "id": "pujanca",
+        "nome": "Pujança",
+        "elemento": "sangue",
+        "aplica": "acessorio",
+        "descricao": "+1 em Força.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "atributo_item",
+            "atributo": "for",
+            "valor": 1
+          }
+        ]
+      },
+      {
+        "id": "vitalidade",
+        "nome": "Vitalidade",
+        "elemento": "sangue",
+        "aplica": "acessorio",
+        "descricao": "+15 PV.",
+        "implementado": true,
+        "efeitos": [
+          {
+            "tipo": "pv_fixo",
+            "valor": 15
+          }
+        ]
+      }
+    ]
+  },
+  "amaldicoados": [
+    {
+      "id": "machado_lancinante",
+      "nome": "Machado lancinante",
+      "base": "machado",
+      "maldicoes": [
+        "lancinante"
+      ]
+    },
+    {
+      "id": "faca_erosiva",
+      "nome": "Faca erosiva",
+      "base": "faca",
+      "maldicoes": [
+        "erosiva"
+      ]
+    },
+    {
+      "id": "pistola_predadora",
+      "nome": "Pistola predadora",
+      "base": "pistola",
+      "maldicoes": [
+        "predadora"
+      ]
+    },
+    {
+      "id": "espada_vibrante",
+      "nome": "Espada vibrante",
+      "base": "espada",
+      "maldicoes": [
+        "vibrante"
+      ]
+    },
+    {
+      "id": "revolver_repulsor",
+      "nome": "Revólver repulsor",
+      "base": "revolver",
+      "maldicoes": [
+        "repulsora"
+      ]
+    },
+    {
+      "id": "protecao_leve_cinetica",
+      "nome": "Proteção leve cinética",
+      "base": "protecao_leve",
+      "maldicoes": [
+        "cinetica"
+      ]
+    },
+    {
+      "id": "protecao_leve_letargica",
+      "nome": "Proteção leve letárgica",
+      "base": "protecao_leve",
+      "maldicoes": [
+        "letargica"
+      ]
+    },
+    {
+      "id": "protecao_leve_abascanta",
+      "nome": "Proteção leve abascanta",
+      "base": "protecao_leve",
+      "maldicoes": [
+        "abascanta"
+      ]
+    },
+    {
+      "id": "amuleto_do_carisma",
+      "nome": "Amuleto do carisma",
+      "base": "amuleto",
+      "maldicoes": [
+        "carisma"
+      ]
+    },
+    {
+      "id": "amuleto_escudo_mental",
+      "nome": "Amuleto do escudo mental",
+      "base": "amuleto",
+      "maldicoes": [
+        "escudo_mental"
+      ]
+    },
+    {
+      "id": "anel_da_sagacidade",
+      "nome": "Anel da sagacidade",
+      "base": "anel",
+      "maldicoes": [
+        "sagacidade"
+      ]
+    },
+    {
+      "id": "anel_da_pujanca",
+      "nome": "Anel da pujança",
+      "base": "anel",
+      "maldicoes": [
+        "pujanca"
+      ]
+    },
+    {
+      "id": "anel_da_vitalidade",
+      "nome": "Anel da vitalidade",
+      "base": "anel",
+      "maldicoes": [
+        "vitalidade"
+      ]
+    },
+    {
+      "id": "amuleto_da_defesa",
+      "nome": "Amuleto da defesa",
+      "base": "amuleto",
+      "maldicoes": [
+        "defesa"
+      ]
+    }
   ]
 }
