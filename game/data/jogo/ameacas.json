@@ -1,0 +1,28 @@
+{
+  "nota": "Fichas criadas para o jogo (não são do livro). Ameaças do livro entram nas fases seguintes, com números do cap. 7 e descrições próprias.",
+  "armas_extras": {
+    "garras": { "id": "garras", "nome": "Garras", "dano": "1d8", "margem": 19, "multiplicador": 2, "pericia": "luta", "soma_forca": true, "ataque": "corpo_a_corpo", "tipo_dano": "corte" },
+    "mordida_sangue": { "id": "mordida_sangue", "nome": "Mordida", "dano": "2d6", "margem": 20, "multiplicador": 2, "pericia": "luta", "soma_forca": true, "ataque": "corpo_a_corpo", "tipo_dano": "sangue" }
+  },
+  "ameacas": {
+    "cultista": { "nome": "Cultista", "nivel": 1, "arma": "faca",
+      "ficha": { "pv": 14, "defesa": 12, "atributos": { "agi": 1, "for": 2, "vig": 1 },
+        "pericias": { "luta": { "dados": 1, "bonus": 5 }, "vontade": { "dados": 1, "bonus": 2 } } } },
+    "cultista_machete": { "nome": "Cultista", "nivel": 1, "arma": "machete",
+      "ficha": { "pv": 14, "defesa": 12, "atributos": { "agi": 1, "for": 2, "vig": 1 },
+        "pericias": { "luta": { "dados": 1, "bonus": 5 }, "vontade": { "dados": 1, "bonus": 2 } } } },
+    "atirador": { "nome": "Atirador", "nivel": 1, "arma": "pistola",
+      "ficha": { "pv": 12, "defesa": 13, "atributos": { "agi": 2, "for": 1, "vig": 1 },
+        "pericias": { "pontaria": { "dados": 2, "bonus": 5 }, "reflexos": { "dados": 2, "bonus": 5 } } } },
+    "aberracao": { "nome": "Aberração", "nivel": 2, "arma": "garras",
+      "ficha": { "pv": 30, "defesa": 14, "deslocamento": 12, "atributos": { "agi": 1, "for": 3, "vig": 3 },
+        "pericias": { "luta": { "dados": 2, "bonus": 8 }, "fortitude": { "dados": 3, "bonus": 5 } }, "resistencias": { "balistico": 2 } } },
+    "cria_de_sangue": { "nome": "Cria de Sangue", "nivel": 2, "arma": "mordida_sangue",
+      "ficha": { "pv": 22, "defesa": 13, "deslocamento": 12, "atributos": { "agi": 2, "for": 2, "vig": 2 },
+        "pericias": { "luta": { "dados": 2, "bonus": 5 }, "iniciativa": { "dados": 2, "bonus": 5 } } } },
+    "horror_carmesim": { "nome": "Horror Carmesim", "nivel": 4, "arma": "mordida_sangue", "chefe": true,
+      "ficha": { "pv": 70, "defesa": 16, "deslocamento": 12, "atributos": { "agi": 2, "for": 4, "vig": 4 },
+        "pericias": { "luta": { "dados": 3, "bonus": 10 }, "fortitude": { "dados": 4, "bonus": 10 }, "vontade": { "dados": 2, "bonus": 5 } },
+        "resistencias": { "balistico": 5, "corte": 2 } } }
+  }
+}

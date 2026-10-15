@@ -1,0 +1,44 @@
+{
+  "nota": "Design do jogo (o livro não tem regras de viagem). Mapa-múndi em hexágonos, estilo For The King.",
+  "tamanho": { "colunas": 16, "linhas": 11 },
+  "movimento": {
+    "descricao": "No início do turno no mapa, o agente rola 1 d20 por ponto de Agilidade (mínimo 1), mais 1 por PE de Foco. Cada slot com resultado igual ou maior que a DT vale 1 ponto de movimento, somado à base.",
+    "base": 1,
+    "dt_slot": 11,
+    "atributo": "agi"
+  },
+  "visao": 2,
+  "aliados_entram_no_combate_ate": 1,
+  "terrenos": {
+    "campo":    { "nome": "Campo",    "custo": 1, "cor": "4f6b3a", "arena": { "cobertura": 2, "dificil": 0, "parede": 0 } },
+    "estrada":  { "nome": "Estrada",  "custo": 1, "cor": "8a7d5c", "arena": { "cobertura": 3, "dificil": 0, "parede": 0 } },
+    "floresta": { "nome": "Mata fechada", "custo": 2, "cor": "24452b", "arena": { "cobertura": 6, "dificil": 6, "parede": 0 } },
+    "pantano":  { "nome": "Pântano",  "custo": 2, "cor": "3b4a3f", "arena": { "cobertura": 1, "dificil": 12, "parede": 0 } },
+    "morro":    { "nome": "Morro",    "custo": 2, "cor": "6d6457", "arena": { "cobertura": 4, "dificil": 4, "parede": 3 } },
+    "cidade":   { "nome": "Cidade",   "custo": 1, "cor": "7f8c8d", "arena": { "cobertura": 4, "dificil": 0, "parede": 6 } },
+    "ruina":    { "nome": "Ruínas",   "custo": 1, "cor": "5d4e60", "arena": { "cobertura": 5, "dificil": 2, "parede": 5 } },
+    "agua":     { "nome": "Água",     "custo": -1, "cor": "1f3a5f" }
+  },
+  "geracao": {
+    "encontros": 7,
+    "eventos": 7,
+    "vilas": 1,
+    "distancia_minima_do_inicio": 3,
+    "limiares_ruido": [
+      { "ate": -0.45, "terreno": "agua" },
+      { "ate": -0.2,  "terreno": "pantano" },
+      { "ate": 0.25,  "terreno": "campo" },
+      { "ate": 0.5,   "terreno": "floresta" },
+      { "ate": 1.0,   "terreno": "morro" }
+    ],
+    "ruinas_por_mapa": 4
+  },
+  "mundo": {
+    "descricao": "Depois que todos os agentes jogam, o mundo age: a Membrana enfraquece e, conforme o estado dela, novas ameaças surgem perto do grupo.",
+    "surgimento_a_cada_turnos": 3
+  },
+  "descanso": {
+    "descricao": "Numa cidade, o agente pode descansar uma vez por visita: recupera parte dos PV, PE e SAN.",
+    "fracao": 0.25
+  }
+}

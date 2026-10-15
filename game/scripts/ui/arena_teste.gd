@@ -33,6 +33,9 @@ var membrana: Membrana
 var autoplay := false
 ## Semente das rolagens (-1 = aleatória)
 var semente := -1
+## Configuração vinda do mapa (Jogo.combate_config); vazia = demonstração
+var config: Dictionary = {}
+var _vencedor := ""
 
 var _modo := ""            ## "", "mover" ou "atacar"
 var _selecionado: Ser
@@ -55,10 +58,16 @@ var _lbl_membrana: Label
 var _log: RichTextLabel
 var _painel_fim: PanelContainer
 var _lbl_fim: Label
+var _btn_fim: Button
 
 
 func _ready() -> void:
 	_montar_interface()
+	var jogo := get_node_or_null("/root/Jogo")
+	if config.is_empty() and jogo != null and not jogo.combate_config.is_empty():
+		config = jogo.combate_config
+	if not config.is_empty() and semente < 0:
+		semente = int(config.get("semente", -1))
 	iniciar_combate(semente if semente >= 0 else randi())
 
 
@@ -67,13 +76,21 @@ func _ready() -> void:
 func iniciar_combate(semente: int) -> void:
 	ruleset = RulesetOp2022.carregar_padrao()
 	dados = Dados.new(semente)
-	membrana = Membrana.carregar_padrao()
+	var jogo := get_node_or_null("/root/Jogo")
+	if not config.is_empty() and jogo != null and jogo.missao != null:
+		membrana = jogo.missao.membrana   # o combate também enfraquece a Membrana da missão
+	else:
+		membrana = Membrana.carregar_padrao()
 	membrana.estado_mudou.connect(func(e, _ant): _registrar("[color=#c39bd3]A Membrana está %s: %s[/color]" % [e.nome, e.descricao]))
 	combate = Combate.new(ruleset, dados, {"lesoes": true, "inspiracao_resoluta": true})
 	grade = Grade.new(COLUNAS, LINHAS)
 	combate.grade = grade
-	_montar_mapa()
-	_criar_lados()
+	if config.is_empty():
+		_montar_mapa()
+		_criar_lados()
+	else:
+		_montar_mapa_do_terreno(config.get("terreno", "campo"))
+		_criar_lados_da_missao()
 	combate.ataque_resolvido.connect(_ao_atacar)
 	combate.combate_encerrado.connect(_ao_encerrar)
 	combate.turno_perdido.connect(func(s, motivo): _registrar("%s perde o turno (%s)." % [s.nome, motivo]))
@@ -126,6 +143,32 @@ func _criar_lados() -> void:
 	_adicionar(Ameaca.criar(ruleset, "Cultista", cultista), ruleset.arma("machete"), Vector2i(12, 6))
 	_adicionar(Ameaca.criar(ruleset, "Atirador", atirador), ruleset.arma("pistola"), Vector2i(13, 4))
 	_adicionar(Ameaca.criar(ruleset, "Aberração", aberracao), garras, Vector2i(11, 4))
+
+
+## Campo de batalha a partir do terreno do hex (parâmetros "arena" em mapa.json).
+func _montar_mapa_do_terreno(terreno_id: String) -> void:
+	var t: Dictionary = DadosJogo.ler("mapa").terrenos.get(terreno_id, {})
+	var param: Dictionary = t.get("arena", {})
+	var tipos := {Grade.PAREDE: int(param.get("parede", 0)), Grade.COBERTURA: int(param.get("cobertura", 2)), Grade.DIFICIL: int(param.get("dificil", 0))}
+	for tipo in tipos:
+		for i in tipos[tipo]:
+			# Colunas 0-1 e 12-13 ficam livres para os dois lados se posicionarem.
+			var c := Vector2i(2 + dados.rolar(COLUNAS - 4) - 1, dados.rolar(LINHAS) - 1)
+			if not grade.terreno.has(c):
+				grade.terreno[c] = tipo
+
+
+func _criar_lados_da_missao() -> void:
+	var linhas_livres := [4, 2, 6, 3, 5, 1, 7]
+	var i := 0
+	for a in config.agentes:
+		_adicionar(a, config.armas[a], Vector2i(1, linhas_livres[i % linhas_livres.size()]))
+		i += 1
+	i = 0
+	for info in config.ameacas:
+		var amea := Ameaca.criar(ruleset, info.nome, info.ficha)
+		_adicionar(amea, info.arma, Vector2i(COLUNAS - 2 - (i / 7), linhas_livres[i % linhas_livres.size()]))
+		i += 1
 
 
 func _adicionar(ser: Ser, arma: Dictionary, pos: Vector2i) -> void:
@@ -259,7 +302,10 @@ func _ao_inspirar(morto: Agente, efeito: String) -> void:
 
 
 func _ao_encerrar(vencedor: String) -> void:
+	_vencedor = vencedor
 	var texto := "VITÓRIA DA ORDEM" if vencedor == "agentes" else "OS AGENTES CAÍRAM"
+	if _btn_fim != null and not config.is_empty():
+		_btn_fim.text = "Voltar ao mapa"
 	_registrar("[b]%s[/b]" % texto)
 	if _lbl_fim != null:
 		_lbl_fim.text = texto
@@ -354,7 +400,8 @@ func _montar_interface() -> void:
 	_lbl_fim = Label.new()
 	_lbl_fim.add_theme_font_size_override("font_size", 28)
 	caixa.add_child(_lbl_fim)
-	caixa.add_child(_botao("Jogar de novo", _reiniciar))
+	_btn_fim = _botao("Jogar de novo", _reiniciar)
+	caixa.add_child(_btn_fim)
 	add_child(_painel_fim)
 
 
@@ -374,7 +421,11 @@ func _encerrar_turno() -> void:
 
 
 func _reiniciar() -> void:
-	get_tree().reload_current_scene()
+	var jogo := get_node_or_null("/root/Jogo")
+	if not config.is_empty() and jogo != null:
+		jogo.voltar_do_combate(_vencedor)
+	else:
+		get_tree().reload_current_scene()
 
 
 func _titulo(texto: String) -> Label:

@@ -41,9 +41,19 @@ reference/            Material pago LOCAL, ignorado pelo Git
 2. Instale o [Git LFS](https://git-lfs.com) e rode `git lfs install`.
 3. Clone o repositório e abra `game/project.godot` no Godot.
 
-### Arena de Teste (primeira cena jogável)
+### Missão no mapa (cena principal)
 
-Ao apertar **Play (F5)**, abre a Arena de Teste: 3 agentes (Mauro, Bianca e Rita) contra cultistas, um atirador e uma aberração, numa grade tática 2D provisória.
+Ao apertar **Play (F5)**, começa uma missão num mapa hexagonal gerado por seed (interface 2D provisória):
+
+- Na vez de cada agente, **Rolar movimento**: 1 d20 por ponto de Agilidade (+1 por PE de Foco); cada resultado 11+ vale 1 passo, além do passo base.
+- Clique num hex azul para andar. **?** são eventos (um teste de perícia), **!** são encontros (vão para o combate tático), **V** são vilas onde dá para **Descansar**, e **X** é o covil: vencê-lo cumpre a missão.
+- Depois que todos jogam, o mundo age: a Membrana enfraquece e, conforme o estado dela, surgem ameaças perto do grupo.
+
+![Mapa da missão](docs/mapa_mundo.png)
+
+### Arena de Teste (combate tático)
+
+Os encontros do mapa abrem a arena com o grupo e as ameaças do encontro. Abrindo `scenes/arena_teste.tscn` direto (F6), roda um combate de demonstração: 3 agentes (Mauro, Bianca e Rita) contra cultistas, um atirador e uma aberração, numa grade tática 2D provisória.
 
 - Clique num ser para ver a ficha.
 - **Mover**: clique numa célula azul. **Atacar**: clique num inimigo destacado em vermelho.

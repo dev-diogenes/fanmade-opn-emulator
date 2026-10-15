@@ -8,7 +8,11 @@ config_version=5
 config/name="Ordem Paranormal: Fanmade (WIP)"
 config/description="RPG fanmade de Ordem Paranormal no estilo For The King. Não oficial."
 config/features=PackedStringArray("4.6", "Forward Plus")
-run/main_scene="res://scenes/arena_teste.tscn"
+run/main_scene="res://scenes/mapa_mundo.tscn"
+
+[autoload]
+
+Jogo="*res://scripts/core/jogo.gd"
 
 [internationalization]
 

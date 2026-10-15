@@ -122,6 +122,16 @@ A geração segue a **estrutura do Gerador de Missões** (p.165–167): `Sujeito
 
 Como as **tabelas** do livro são conteúdo do livro, usamos a estrutura e escrevemos **tabelas próprias**.
 
+## 11b. Viagem no mapa ✅ (implementado na Fase 2.2)
+
+- **Movimento em slots:** no turno de cada agente, 1 d20 por ponto de AGI (mínimo 1), +1 por PE de Foco. Cada slot com 11+ vale 1 ponto de movimento, mais 1 de base. Terreno: campo, estrada, cidade e ruína custam 1; mata, pântano e morro custam 2; água bloqueia.
+- **Conteúdo para o movimento:** ao entrar num hex com evento, encontro, vila ou covil, o agente para ali.
+- **Aliados entram no combate** se estiverem até 1 hex do encontro, como no FTK.
+- **Turno do mundo:** depois de todos os agentes, a Membrana perde 1. A cada 3 turnos, se a Membrana estiver Instável ou pior, surge um encontro perto de um agente, com nível até o da Membrana.
+- **Derrota:** perder um encontro encerra a missão nesta fatia vertical. Os Reforços da Ordem (§6) entram com a Base (Fase 2.3).
+- **Vitória com aliados caídos:** quem ficou com 0 PV é socorrido com 1 PV (simplificação até existir a regra de Medicina/primeiros socorros fora do combate).
+- Números em `game/data/jogo/mapa.json`; eventos em `eventos.json`; encontros em `encontros.json`; fichas de ameaças (criadas por nós) em `ameacas.json`.
+
 ## 12. Missões da comunidade e Modo Mestre 💡
 
 - **Formato:** um pacote com `mission.json` (metadados, ficha de investigação, cenas, encontros, pistas) e, opcionalmente, assets próprios. O formato é **versionado** (`format_version`) e declara o **ruleset**.
