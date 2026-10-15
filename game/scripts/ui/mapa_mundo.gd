@@ -1,23 +1,18 @@
 extends Control
-## Mapa-múndi da missão (provisório em 2D; a versão 3D low poly vem na Fase 2.4).
-## Mostra o mapa hexagonal com névoa, os agentes e o que há em cada hex; o jogador
-## rola o movimento (slots de d20), clica para andar e resolve eventos e encontros.
+## Mapa-múndi da missão em 3D low poly (Mapa3D) com o painel de controle ao lado.
+## O jogador rola o movimento (slots de d20), clica num hex para andar e resolve
+## eventos e encontros. Câmera: roda = zoom, botão direito = girar, botão do meio
+## ou WASD/setas = deslizar, Q/E = girar.
 
-const TAMANHO_HEX := 25.0
-const ORIGEM := Vector2(32, 34)
 const COR_FUNDO := Color("0e1014")
-const COR_NEVOA := Color("1a1d24")
-const COR_BORDA := Color(0, 0, 0, 0.35)
-const COR_ALCANCE := Color(0.35, 0.6, 1.0, 0.35)
 const CORES_AGENTES := [Color("3d7bd9"), Color("27ae60"), Color("af7ac5"), Color("e67e22")]
-const ICONES := {"inicio": "I", "vila": "V", "encontro": "!", "evento": "?", "objetivo": "X"}
-const CORES_ICONES := {"inicio": Color("ecf0f1"), "vila": Color("ecf0f1"), "encontro": Color("ff6b6b"), "evento": Color("f7dc6f"), "objetivo": Color("ff2e2e")}
 
 var missao: Missao
 var _jogo: Node
 var _terrenos: Dictionary
 
-var _mapa: Control
+var _vista: SubViewportContainer
+var _mapa3d: Mapa3D
 var _lbl_turno: Label
 var _lbl_ficha: Label
 var _slots: HBoxContainer
@@ -51,7 +46,10 @@ func _ready() -> void:
 	missao.registro.connect(_registrar_sem_guardar)
 	missao.encontro_iniciado.connect(_ao_encontro)
 	missao.missao_encerrada.connect(_ao_encerrar)
-	missao.turno_mudou.connect(func(_a): _atualizar())
+	missao.turno_mudou.connect(func(_a):
+		_mapa3d.focar_agente(missao)
+		_atualizar())
+	_mapa3d.focar_agente(missao, true)
 	if missao.encerrada:
 		_ao_encerrar(missao.vitoria)
 	_atualizar()
@@ -102,9 +100,18 @@ func _nova_missao() -> void:
 
 func _clicar(evento: InputEvent) -> void:
 	if evento is InputEventMouseButton and evento.pressed and evento.button_index == MOUSE_BUTTON_LEFT:
-		var h := Hex.de_pixel(evento.position - ORIGEM, TAMANHO_HEX)
+		var h := _mapa3d.hex_em(evento.position)
 		if missao.mover(h):
+			_mapa3d.focar_agente(missao)
 			_atualizar()
+		return
+	if _mapa3d.rig.tratar_entrada(evento):
+		_vista.accept_event()
+
+
+func _unhandled_input(evento: InputEvent) -> void:
+	if _mapa3d != null and evento is InputEventKey and _mapa3d.rig.tratar_entrada(evento):
+		get_viewport().set_input_as_handled()
 
 
 func _registrar(texto: String) -> void:
@@ -131,11 +138,18 @@ func _montar_interface() -> void:
 	raiz.add_theme_constant_override("separation", 10)
 	add_child(raiz)
 
-	_mapa = Control.new()
-	_mapa.custom_minimum_size = Vector2(sqrt(3.0) * TAMANHO_HEX * 16.5 + ORIGEM.x, 1.5 * TAMANHO_HEX * 10 + ORIGEM.y * 2)
-	_mapa.draw.connect(_desenhar_mapa)
-	_mapa.gui_input.connect(_clicar)
-	raiz.add_child(_mapa)
+	_vista = SubViewportContainer.new()
+	_vista.stretch = true
+	_vista.custom_minimum_size = Vector2(680, 0)
+	_vista.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var vp := SubViewport.new()
+	vp.msaa_3d = Viewport.MSAA_4X
+	_vista.add_child(vp)
+	_mapa3d = Mapa3D.new()
+	vp.add_child(_mapa3d)
+	_mapa3d.construir(missao.mapa, _terrenos)
+	_vista.gui_input.connect(_clicar)
+	raiz.add_child(_vista)
 
 	var painel := VBoxContainer.new()
 	painel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -187,6 +201,7 @@ func _montar_interface() -> void:
 	_barra_membrana.custom_minimum_size = Vector2(0, 16)
 	painel.add_child(_barra_membrana)
 	_lbl_membrana = Label.new()
+	_lbl_membrana.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	painel.add_child(_lbl_membrana)
 
 	_log = RichTextLabel.new()
@@ -196,8 +211,9 @@ func _montar_interface() -> void:
 	painel.add_child(_log)
 
 	var legenda := Label.new()
-	legenda.text = "I início  V vila  ! encontro  ? evento  X covil"
+	legenda.text = "Vermelho: encontro · amarelo: evento · azul: início · branco: vila · esfera escura: covil\nCâmera: roda = zoom, botão direito = girar, WASD = deslizar"
 	legenda.add_theme_color_override("font_color", Color("7f8c8d"))
+	legenda.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	painel.add_child(legenda)
 
 	_painel_fim = PanelContainer.new()
@@ -239,8 +255,9 @@ func _atualizar() -> void:
 		_lbl_evento.text = "%s — %s" % [ev.evento.titulo, ev.evento.texto]
 		_btn_testar.text = "%s testa %s (DT %d)" % [ev.agente.nome, missao.ruleset.pericia(ev.evento.pericia).nome, int(ev.evento.dt)]
 	_barra_membrana.value = missao.membrana.valor
-	_lbl_membrana.text = "%d — %s   |   Reforços da Ordem: %d   |   Pistas: %d" % [missao.membrana.valor, missao.membrana.estado().get("nome", ""), missao.reforcos, missao.pistas]
-	_mapa.queue_redraw()
+	_lbl_membrana.text = "%d — %s
+Reforços da Ordem: %d   ·   Pistas: %d" % [missao.membrana.valor, missao.membrana.estado().get("nome", ""), missao.reforcos, missao.pistas]
+	_mapa3d.atualizar(missao, missao.destinos())
 
 
 func _desenhar_slots() -> void:
@@ -259,41 +276,3 @@ func _desenhar_slots() -> void:
 		l.text = str(v)
 		caixa.add_child(l)
 		_slots.add_child(caixa)
-
-
-func _desenhar_mapa() -> void:
-	var fonte := ThemeDB.fallback_font
-	var destinos := missao.destinos()
-	for h in missao.mapa.celulas:
-		var centro := ORIGEM + Hex.para_pixel(h, TAMANHO_HEX)
-		var pts := Hex.vertices(centro, TAMANHO_HEX - 1)
-		if not missao.mapa.revelado(h):
-			_mapa.draw_colored_polygon(pts, COR_NEVOA)
-			continue
-		var t: Dictionary = _terrenos.get(missao.mapa.terreno(h), {})
-		_mapa.draw_colored_polygon(pts, Color(t.get("cor", "444444")))
-		if destinos.has(h):
-			_mapa.draw_colored_polygon(pts, COR_ALCANCE)
-		var contorno := pts.duplicate()
-		contorno.append(pts[0])
-		_mapa.draw_polyline(contorno, COR_BORDA, 1.0)
-		var tipo: String = missao.mapa.conteudo(h).get("tipo", "")
-		if ICONES.has(tipo):
-			_mapa.draw_string(fonte, centro + Vector2(-5, 6), ICONES[tipo], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, CORES_ICONES[tipo])
-	# Agentes (deslocados quando dividem o hex)
-	var por_hex: Dictionary = {}
-	for i in missao.agentes.size():
-		var a: Agente = missao.agentes[i]
-		if a.tem(Ser.MORTO):
-			continue
-		var h := missao.posicao(a)
-		var n: int = por_hex.get(h, 0)
-		por_hex[h] = n + 1
-		var centro := ORIGEM + Hex.para_pixel(h, TAMANHO_HEX) + Vector2(-9 + 9 * n, -9 + 6 * (n % 2))
-		var cor: Color = CORES_AGENTES[i % CORES_AGENTES.size()]
-		if a.esta_fora_de_combate():
-			cor = cor.darkened(0.6)
-		_mapa.draw_circle(centro, 7, cor)
-		if a == missao.agente_atual():
-			_mapa.draw_arc(centro, 9, 0, TAU, 20, Color("f1c40f"), 2.0)
-		_mapa.draw_string(fonte, centro + Vector2(-4, 4), a.nome.substr(0, 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)

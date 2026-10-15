@@ -6,21 +6,10 @@ extends Control
 ## Controles: clique num agente/inimigo para ver a ficha; "Mover" e clique numa célula
 ## destacada; "Atacar" e clique num inimigo; "Encerrar turno". Foco = PE gastos como +1 d20.
 
-const CELULA := 48
+const COR_FUNDO := Color("12141a")
 const COLUNAS := 14
 const LINHAS := 9
 
-const COR_FUNDO := Color("12141a")
-const COR_GRADE := Color("2a2f3a")
-const COR_PAREDE := Color("4a4f5c")
-const COR_COBERTURA := Color("6b5a3a")
-const COR_DIFICIL := Color("1f3326")
-const COR_AGENTE := Color("3d7bd9")
-const COR_AMEACA := Color("c0392b")
-const COR_ATUAL := Color("f1c40f")
-const COR_MOVER := Color(0.24, 0.48, 0.85, 0.35)
-const COR_ALVO := Color(0.85, 0.2, 0.2, 0.35)
-const COR_SANGUE := Color("8e1b1b")
 
 ## Arma de cada ser na arena
 var armas: Dictionary = {}
@@ -43,7 +32,8 @@ var _ultimo_teste: ResultadoTeste
 var _turnos_jogados := 0
 
 # Nós da interface
-var _tabuleiro: Control
+var _vista: SubViewportContainer
+var _tab3d: Tabuleiro3D
 var _lbl_turno: Label
 var _lbl_ficha: Label
 var _slots: HBoxContainer
@@ -93,6 +83,8 @@ func iniciar_combate(semente: int) -> void:
 	else:
 		_montar_mapa_do_terreno(config.get("terreno", "campo"))
 		_criar_lados_da_missao()
+	if _tab3d != null:
+		_tab3d.construir(grade)
 	combate.ataque_resolvido.connect(_ao_atacar)
 	combate.combate_encerrado.connect(_ao_encerrar)
 	combate.turno_perdido.connect(func(s, motivo): _registrar("%s perde o turno (%s)." % [s.nome, motivo]))
@@ -333,11 +325,17 @@ func _montar_interface() -> void:
 	raiz.add_theme_constant_override("separation", 12)
 	add_child(raiz)
 
-	_tabuleiro = Control.new()
-	_tabuleiro.custom_minimum_size = Vector2(COLUNAS * CELULA + 16, LINHAS * CELULA + 16)
-	_tabuleiro.draw.connect(_desenhar_tabuleiro)
-	_tabuleiro.gui_input.connect(_entrada_tabuleiro)
-	raiz.add_child(_tabuleiro)
+	_vista = SubViewportContainer.new()
+	_vista.stretch = true
+	_vista.custom_minimum_size = Vector2(680, 0)
+	_vista.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var vp := SubViewport.new()
+	vp.msaa_3d = Viewport.MSAA_4X
+	_vista.add_child(vp)
+	_tab3d = Tabuleiro3D.new()
+	vp.add_child(_tab3d)
+	_vista.gui_input.connect(_entrada_tabuleiro)
+	raiz.add_child(_vista)
 
 	var painel := VBoxContainer.new()
 	painel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -483,7 +481,7 @@ func _atualizar() -> void:
 	_barra_membrana.value = membrana.valor
 	_lbl_membrana.text = "%d — %s" % [membrana.valor, membrana.estado().get("nome", "")]
 	_desenhar_slots()
-	_tabuleiro.queue_redraw()
+	_atualizar_3d()
 
 
 func _ficha(ser: Ser) -> String:
@@ -527,46 +525,32 @@ func _desenhar_slots() -> void:
 
 
 func _entrada_tabuleiro(evento: InputEvent) -> void:
+	if _tab3d == null:
+		return
 	if evento is InputEventMouseButton and evento.pressed and evento.button_index == MOUSE_BUTTON_LEFT:
-		var c := Vector2i(((evento.position - Vector2(8, 8)) / CELULA).floor())
+		var c := _tab3d.celula_em(evento.position)
 		if grade.dentro(c):
 			_clicar_celula(c)
+		return
+	if _tab3d.rig.tratar_entrada(evento):
+		_vista.accept_event()
 
 
-func _desenhar_tabuleiro() -> void:
-	var t := _tabuleiro
-	var origem := Vector2(8, 8)
-	var fonte := ThemeDB.fallback_font
+func _unhandled_input(evento: InputEvent) -> void:
+	if _tab3d != null and _tab3d.rig != null and evento is InputEventKey and _tab3d.rig.tratar_entrada(evento):
+		get_viewport().set_input_as_handled()
+
+
+func _atualizar_3d() -> void:
+	if _tab3d == null or _tab3d.grade == null:
+		return
 	var agente := _agente_da_vez()
-	var destinos: Array[Vector2i] = []
-	if _modo == "mover" and agente != null and combate.acoes_restantes(agente).movimento + combate.acoes_restantes(agente).padrao > 0:
+	var destinos: Array = []
+	var alvos: Array = []
+	if agente != null and _modo == "mover" and combate.acoes_restantes(agente).movimento + combate.acoes_restantes(agente).padrao > 0:
 		destinos = grade.destinos(agente, agente.deslocamento_quadrados())
-	for x in COLUNAS:
-		for y in LINHAS:
-			var c := Vector2i(x, y)
-			var r := Rect2(origem + Vector2(x, y) * CELULA, Vector2(CELULA, CELULA))
-			match grade.terreno.get(c, ""):
-				Grade.PAREDE: t.draw_rect(r, COR_PAREDE)
-				Grade.COBERTURA: t.draw_rect(r, COR_COBERTURA)
-				Grade.DIFICIL: t.draw_rect(r, COR_DIFICIL)
-			if c in destinos:
-				t.draw_rect(r, COR_MOVER)
-			t.draw_rect(r, COR_GRADE, false, 1.0)
-	for s in grade.seres():
-		var pos := grade.posicao(s)
-		var r := Rect2(origem + Vector2(pos) * CELULA + Vector2(4, 4), Vector2(CELULA - 8, CELULA - 8))
-		var cor := COR_AGENTE if s is Agente else COR_AMEACA
-		if s.tem(Ser.MORTO):
-			cor = COR_SANGUE.darkened(0.4)
-		elif s.esta_fora_de_combate() or s.tem(Ser.MORRENDO):
-			cor = cor.darkened(0.5)
-		if _modo == "atacar" and agente != null and s.lado != agente.lado and _pode_atacar(agente, s, armas[agente]):
-			t.draw_rect(r.grow(3), COR_ALVO)
-		t.draw_rect(r, cor)
-		if s == combate.ser_atual():
-			t.draw_rect(r.grow(2), COR_ATUAL, false, 3.0)
-		if s == _selecionado:
-			t.draw_rect(r.grow(5), Color.WHITE, false, 1.0)
-		t.draw_string(fonte, r.position + Vector2(3, 14), s.nome.substr(0, 6), HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
-		var frac := float(s.pv) / float(maxi(1, s.pv_maximo))
-		t.draw_rect(Rect2(r.position + Vector2(2, r.size.y - 7), Vector2((r.size.x - 4) * frac, 4)), Color("2ecc71") if frac > 0.5 else Color("e67e22"))
+	if agente != null and _modo == "atacar":
+		for s in grade.seres():
+			if s.lado != agente.lado and _pode_atacar(agente, s, armas[agente]):
+				alvos.append(s)
+	_tab3d.atualizar(destinos, alvos, combate.ser_atual(), _selecionado)
