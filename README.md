@@ -83,7 +83,7 @@ Os encontros usam as fichas do livro (zumbis de Sangue, esqueletos de Lodo, vult
 
 Algumas criaturas só caem quando o grupo resolve o **Enigma de Medo** delas (botão do enigma na arena, que mostra o próximo passo): fingir dormir e fechar a fresta do Espreitador, fechar o registro e abrir as torneiras contra a Mulher Afogada, fotografar o Viajante, tocar a melodia proibida por 4 rodadas enquanto o Escutado se multiplica. O Carniçal hipnotiza agentes, que passam a lutar do lado dele até se libertarem.
 
-Granadas (de fragmentação, incendiária e de atordoamento) são requisitadas na Base e usadas pelo seletor de itens da arena: atingem todos num raio de 6 m, aliados inclusive. O fogo é a única coisa que fere a Aracnasita e ajuda a murchar uma das flores da Dama de Sangue; as outras flores murcham com fertilizante, agrotóxico, um bulbo raro ou água corrente. O covil do fim da missão muda com a experiência do grupo, até o Portão do Inferno guardado pelo Kerberos.
+Granadas (de fragmentação, incendiária e de atordoamento) são requisitadas na Base e usadas pelo seletor de itens da arena: atingem todos num raio de 6 m, aliados inclusive. O fogo é a única coisa que fere a Aracnasita e ajuda a murchar uma das flores da Dama de Sangue; as outras flores murcham com fertilizante, agrotóxico, um bulbo raro ou água corrente. O covil do fim da missão muda com a experiência do grupo: Portão do Inferno, o Julgamento do Anjo, o Apocalipse da Aniquilação, o Deus da Morte e, para um grupo no auge (NEX somado 390), O Pacto com o Diabo — que só cede a uma força de Morte equivalente.
 
 ### Investigação
 

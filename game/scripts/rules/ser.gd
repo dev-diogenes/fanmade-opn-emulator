@@ -35,6 +35,7 @@ const SANGRANDO := "sangrando"  ## p.321: Vigor DT 20 no início do turno ou per
 const POCA := "poca"
 const ASFIXIADO := "asfixiado"  ## Afogar em Sangue (Mulher Afogada)
 const EM_CHAMAS := "em_chamas"  ## p.320: 1d6 de fogo no início do turno; ação padrão para apagar
+const FASCINADO := "fascinado"  ## p.321: não age (no jogo, enquanto estiver agarrado pelo anjo)
 const CONFUSO := "confuso"      ## p.320: age de modo aleatório (no jogo: perde o turno, exceto com 6 no 1d6)
 const LENTO := "lento"
 const PARALISADO_ := "paralisado"           ## Imortalidade (esqueleto de Lodo, enraizado): desfeito, mas volta
@@ -153,7 +154,7 @@ func penalidade_dados_atributo(atributo_id: String) -> int:
 		p += 2
 	elif tem(ABALADO):
 		p += 1
-	return p
+	return p + int(mods_cena.get("penalidade_aura", 0))   # Aura Manifestada (lembrado)
 
 
 func imune_a_condicao(_condicao: String) -> bool:
@@ -222,6 +223,8 @@ func bonus_testes_resistencia() -> int:
 
 func resistencia(tipo_dano: String) -> int:
 	var total := int(resistencias_base.get(tipo_dano, 0)) + int(mods_cena.get("resistencias", {}).get(tipo_dano, 0)) + int(mods_cena.get("resistencia_extra", 0))
+	if tipo_dano != "mental":
+		total += int(resistencias_base.get("dano", 0))   # "Resistência a dano N": vale para todos os tipos
 	if tipo_dano in DANO_FISICO:
 		total += efeito_ritual("resistencia_fisica")   # Ódio Incontrolável
 	return total

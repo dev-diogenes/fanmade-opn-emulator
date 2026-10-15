@@ -186,6 +186,12 @@ func proximo_turno() -> Ser:
 		if ser.tem(Ser.SURPREENDIDO):
 			turno_perdido.emit(ser, "surpreendido")
 			continue
+		if ser.tem(Ser.FASCINADO):
+			if ser.tem(Ser.AGARRADO):
+				ser.iniciar_turno()
+				turno_perdido.emit(ser, "fascinado")
+				continue
+			ser.condicoes.erase(Ser.FASCINADO)
 		if ser.tem(Ser.CONFUSO) and not ser.tem(Ser.MORTO):
 			if dados.rolar(6) == 6:
 				ser.condicoes.erase(Ser.CONFUSO)   # p.320: com 6, a condição termina
@@ -249,6 +255,9 @@ func _ao_iniciar_turno(ser: Ser) -> void:
 			movimento += 1
 		if ag.tem_habilidade("sempre_alerta"):
 			padrao += 1
+	if ser is Ameaca and (ser as Ameaca).tem_hab("senhor_do_tempo"):
+		padrao += 1      # Senhor do Tempo: o turno adicional vira ações a mais
+		movimento += 1
 	acoes[ser] = {"padrao": padrao, "movimento": movimento}
 
 
@@ -357,6 +366,11 @@ func mover(ser: Ser, destino: Vector2i) -> bool:
 		if outro.lado != ser.lado and not outro.esta_fora_de_combate() and Grade.adjacentes(origem, grade.posicao(outro)):
 			vizinhos_antes.append(outro)
 	grade.mover(ser, destino, ser.deslocamento_quadrados())
+	for outro in grade.seres():   # Reflexos Guiados por Corda: quem chega ao lado leva um golpe
+		if outro is Ameaca and (outro as Ameaca).tem_hab("reflexos_guiados") and outro.lado != ser.lado and not outro.esta_fora_de_combate():
+			if grade.estao_adjacentes(ser, outro) and not outro in vizinhos_antes and not _usou_na_rodada(outro, "reflexos_guiados"):
+				_marcar_uso_rodada(outro, "reflexos_guiados")
+				atacar(outro, ser, (outro as Ameaca).ataques[0])
 	oportunidades_pendentes.clear()
 	for outro in vizinhos_antes:
 		if not grade.estao_adjacentes(ser, outro) and outro is Agente and (outro as Agente).tem_habilidade("ataque_de_oportunidade"):
@@ -971,6 +985,25 @@ func _ao_acertar(atacante: Ser, alvo: Ser, arma: Dictionary, res: ResultadoAtaqu
 	var aa: Dictionary = arma.get("ao_acertar", {})
 	if aa.is_empty() or alvo.tem(Ser.MORTO):
 		return
+	if aa.has("condicao") and res.dano > 0:
+		alvo.aplicar_condicao(String(aa.condicao.condicao), int(aa.condicao.get("rodadas", 0)))
+	if aa.has("contra_perturbado") and alvo.tem(Ser.PERTURBADO):   # Destruir Mente (bicho-papão)
+		alvo.sofrer_dano_mental(dados.rolar_expressao(String(aa.contra_perturbado.dano)))
+	if aa.has("explodir") and res.dano > 0 and int(_usos_rodada.get(atacante, {}).get("explodir", 0)) < int(aa.explodir.get("por_turno", 1)):
+		var usos_r: Dictionary = _usos_rodada.get(atacante, {})
+		usos_r["explodir"] = int(usos_r.get("explodir", 0)) + 1   # Explodir em Sangue: duas vezes por turno
+		_usos_rodada[atacante] = usos_r
+		res.dano += aplicar_dano(alvo, dados.rolar_expressao(String(aa.explodir.dano)), String(aa.explodir.tipo_dano), 0, atacante)
+	if aa.has("vulnerabilidade") and res.dano > 0:   # o chifre do Diabo fica preso: vulnerável a Sangue
+		var vul_c: Array = alvo.mods_cena.get("vulnerabilidades", [])
+		if not aa.vulnerabilidade in vul_c:
+			vul_c.append(aa.vulnerabilidade)
+		alvo.mods_cena["vulnerabilidades"] = vul_c
+	if aa.has("comandar") and res.dano > 0 and alvo.atributo("int") < int(aa.comandar.get("int_imune", 99)):
+		if not Teste.rolar(dados, alvo.dados_da_pericia("vontade"), alvo.bonus_pericia("vontade"), int(aa.comandar.dt)).sucesso:
+			_hipnotizar(atacante as Ameaca, alvo, int(aa.comandar.dt), true)   # Comandar: ataca um aliado no próximo turno
+	if aa.has("envelhecer") and res.dano > 0:
+		_envelhecer(alvo, dados.rolar_expressao(String(aa.envelhecer.dados)))
 	if aa.has("agarrar") and not alvo.tem(Ser.AGARRADO) and not alvo.imune_a_condicao(Ser.AGARRADO):
 		var lista: Array = atacante.mods_cena.get("agarrando", [])
 		if lista.size() < int(aa.agarrar.get("maximo", 1)):
@@ -982,6 +1015,8 @@ func _ao_acertar(atacante: Ser, alvo: Ser, arma: Dictionary, res: ResultadoAtaqu
 				alvo.mods_cena["agarrado_teste"] = t
 				lista.append(alvo)
 				atacante.mods_cena["agarrando"] = lista
+				if aa.agarrar.has("condicao"):
+					alvo.aplicar_condicao(String(aa.agarrar.condicao))   # Faixas Detentoras: fascinado
 				_log("%s agarra %s." % [atacante.nome, alvo.nome])
 	if aa.has("cravar") and not alvo.tem(Ser.AGARRADO) and not alvo.imune_a_condicao(Ser.AGARRADO):
 		alvo.aplicar_condicao(Ser.AGARRADO)   # Cravar Chifres (minotauro)
@@ -1071,7 +1106,9 @@ func _fim_de_turno(ser: Ser) -> void:
 			_log("Os chifres cravados rasgam %s: %d de dano." % [ser.nome, d])
 		else:
 			ser.mods_cena.erase("cravado")
-	if ser.mods_cena.has("hipnotizado_por"):
+	if ser.mods_cena.get("hipnose_um_turno", false):
+		_libertar_hipnose(ser)
+	elif ser.mods_cena.has("hipnotizado_por"):
 		var tentativas := int(ser.mods_cena.get("hipnose_testes", 0))
 		ser.mods_cena["hipnose_testes"] = tentativas + 1
 		var dt_h := int(ser.mods_cena.get("hipnose_dt", 29))
@@ -1116,6 +1153,18 @@ func _soltar_succao(succ: Ser) -> void:
 ## Início do turno: veneno de qualquer ser; constrição, sucção e aceleração.
 func _inicio_de_turno_ameacas(ser: Ser) -> void:
 	ser.mods_cena.erase("resistencia_extra")
+	ser.mods_cena.erase("penalidade_aura")
+	for outro in participantes:   # Aura Manifestada (lembrado): −2 dados em alcance curto
+		if outro is Ameaca and outro.lado != ser.lado and not outro.esta_fora_de_combate():
+			var ap := (outro as Ameaca).habilidade("aura_manifestada")
+			if not ap.is_empty() and _perto(outro, ser, String(ap.get("alcance", "curto"))):
+				ser.mods_cena["penalidade_aura"] = maxi(int(ser.mods_cena.get("penalidade_aura", 0)), int(ap.dados))
+	if ser is Ameaca and (ser as Ameaca).tem_hab("controlar_relogio"):
+		var removidas := 0
+		for cond in [Ser.ATORDOADO, Ser.PASMO, Ser.AGARRADO, Ser.ENJOADO, Ser.FRACO, Ser.DEBILITADO, Ser.VULNERAVEL, Ser.EM_CHAMAS, Ser.SANGRANDO, Ser.LENTO]:
+			if removidas < 2 and ser.tem(cond):
+				ser.condicoes.erase(cond)
+				removidas += 1
 	ser.mods_cena.erase("queimada")
 	if ser.tem(Ser.EM_CHAMAS):
 		var fogo := aplicar_dano(ser, dados.rolar(6), "fogo")
@@ -1309,6 +1358,37 @@ func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = nu
 		amea.rituais_ativos[hab_id] = h.buff.duplicate()
 		_log("[color=#ec7063]%s usa %s.[/color]" % [amea.nome, nome])
 		return {"ok": true, "atingidos": []}
+	if tipo_h == "invocar":   # Senhor do Sangue: chama criaturas que agem junto com ele
+		var novos: Array[Ser] = []
+		for id_inv in h.ameacas:
+			var info := DadosJogo.ameaca(ruleset, id_inv)
+			var inv := Ameaca.criar(ruleset, info.nome, info.ficha)
+			inv.lado = amea.lado
+			adicionar_durante(inv, amea)
+			novos.append(inv)
+		_log("[color=#ec7063]%s invoca %d criatura(s)![/color]" % [amea.nome, novos.size()])
+		return {"ok": true, "atingidos": novos}
+	if tipo_h == "dois_ataques_agarra":   # Ironia do Destino (marionete)
+		var arma_d: Dictionary = amea.ataques[0].duplicate()
+		arma_d.erase("vezes")
+		atacar(amea, alvo, arma_d, 0, {"ignorar_distancia": true})
+		var segundo := atacar(amea, alvo, arma_d, 0, {"ignorar_distancia": true})
+		if segundo.acertou and not alvo.esta_fora_de_combate() and not alvo.imune_a_condicao(Ser.AGARRADO):
+			alvo.aplicar_condicao(Ser.AGARRADO)
+			alvo.mods_cena["agarrado_por"] = amea
+			alvo.mods_cena["agarrado_teste"] = {"dados": 5, "bonus": 30}
+			var lista_m: Array = amea.mods_cena.get("agarrando", [])
+			lista_m.append(alvo)
+			amea.mods_cena["agarrando"] = lista_m
+			amea.mods_cena["divide_dano"] = alvo
+			_log("[color=#ec7063]%s prende %s na foice.[/color]" % [amea.nome, alvo.nome])
+		return {"ok": true, "atingidos": [alvo]}
+	if h.has("envelhecer") and tipo_h == "alvo":   # Espiral Descendente: 1 de dano mental por ano
+		var anos := dados.rolar_expressao(String(h.envelhecer))
+		alvo.sofrer_dano_mental(anos)
+		_envelhecer(alvo, anos)
+		_log("[color=#ec7063]%s envelhece %d anos em segundos.[/color]" % [alvo.nome, anos])
+		return {"ok": true, "atingidos": [alvo]}
 	if tipo_h == "manobra_ataques":   # Derrubar e Devorar (kerberos)
 		var t: Dictionary = h.teste
 		var venceu := Teste.rolar(dados, int(t.dados), int(t.bonus), 0).total > _teste_melhor(alvo, ["atletismo", "acrobacia"]).total
@@ -1380,7 +1460,19 @@ func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = nu
 					amea.mods_cena["efeito_" + hab_id] = true
 				textos.append("%s −%d SAN" % [x.nome, antes - x.san])
 			else:
+				var estava_machucado := x.tem(Ser.MACHUCADO)
 				textos.append("%s %d" % [x.nome, aplicar_dano(x, d, String(h.tipo_dano), 0, amea)])
+				if h.has("vulneravel_se_machucado") and not estava_machucado and x.tem(Ser.MACHUCADO):
+					var vul_m: Array = x.mods_cena.get("vulnerabilidades", [])
+					vul_m.append(h.vulneravel_se_machucado)
+					x.mods_cena["vulnerabilidades"] = vul_m
+				if h.get("desintegra", false) and x.pv <= 0 and not x.tem(Ser.MORTO):
+					x._morrer()
+					textos.append("%s é desintegrado" % x.nome)
+		if h.get("furia", false) and not passou:
+			_hipnotizar(amea, x, int(h.dt), true)   # Desejos de Sangue: no próximo turno, ataca os aliados
+			textos.append("%s entra em fúria" % x.nome)
+			continue
 		if h.has("hipnose") and not passou:
 			_hipnotizar(amea, x, int(h.dt))
 			textos.append("%s é hipnotizado" % x.nome)
@@ -1450,6 +1542,9 @@ func decifrar_enigma(agente: Agente, criatura: Ameaca, pericia: String = "") -> 
 		return null
 	if criatura.enigma.get("tipo", "") == "melodia":
 		return tocar_melodia(agente)
+	if criatura.enigma.get("tipo", "") == "acumular_dano":
+		_log("O enigma de %s não se resolve com testes: %s" % [criatura.nome, criatura.enigma.get("texto", "")])
+		return null
 	var etapa := criatura.etapa_atual()
 	var pericias: Array = etapa.get("pericias", ["ocultismo"])
 	if pericia == "":
@@ -1480,7 +1575,28 @@ func decifrar_enigma(agente: Agente, criatura: Ameaca, pericia: String = "") -> 
 
 func _resolver_enigma(criatura: Ameaca, agente: Ser = null) -> void:
 	criatura.enigma.resolvido = true
-	match String(criatura.enigma.get("efeito", "remove_imunidade")):
+	var ef = criatura.enigma.get("efeito", "remove_imunidade")
+	if ef is Dictionary:
+		if ef.get("remove_imunidade", true):
+			criatura.imunidades.erase("dano")
+			for t in ef.get("mantem_imunidade", []):
+				if not t in criatura.imunidades:
+					criatura.imunidades.append(t)
+		if ef.get("remove_resistencia_dano", false):
+			criatura.resistencias_base = criatura.resistencias_base.duplicate()
+			criatura.resistencias_base.erase("dano")
+		var tirar: Array = ef.get("remove_habilidades", [])
+		criatura.habilidades = criatura.habilidades.filter(func(h): return not h.id in tirar)
+		var pen: Dictionary = ef.get("penalidades", {})
+		if pen.has("menos_defesa"):
+			criatura.mods_cena["menos_defesa"] = int(criatura.mods_cena.get("menos_defesa", 0)) + int(pen.menos_defesa)
+		for per in pen.get("menos_dados", {}):
+			var md: Dictionary = criatura.mods_cena.get("menos_dados", {})
+			md[per] = int(md.get(per, 0)) + int(pen.menos_dados[per])
+			criatura.mods_cena["menos_dados"] = md
+		_log("[color=#f5b041]O enigma de %s foi resolvido: ele enfraquece![/color]" % criatura.nome)
+		return
+	match String(ef):
 		"remove_imunidade":
 			criatura.imunidades.erase("dano")
 			_log("[color=#f5b041]%s decifra o enigma: %s perde a proteção![/color]" % [agente.nome if agente != null else "O grupo", criatura.nome])
@@ -1670,11 +1786,86 @@ func apagar_chamas(ser: Ser) -> bool:
 	return true
 
 
+## Toque Acelerador (sempiternal): envelhecer 20+ anos deixa fraco, 40+ debilitado, 60+ mata.
+func _envelhecer(ser: Ser, anos: int) -> void:
+	if ser is Agente and (ser as Agente).afinidade == "morte":
+		return   # afinidade com a Morte protege
+	var total := int(ser.mods_cena.get("anos_envelhecidos", 0)) + anos
+	ser.mods_cena["anos_envelhecidos"] = total
+	if total >= 60:
+		ser._morrer()
+		_log("[color=#ec7063]%s envelhece até virar pó.[/color]" % ser.nome)
+	elif total >= 40:
+		ser.aplicar_condicao(Ser.DEBILITADO)
+	elif total >= 20:
+		ser.condicoes[Ser.FRACO] = true
+
+
+## Comportamento Errático (anárquico, p.267): uma rolagem de 1d6 no começo do turno.
+## Se não puder agir, fica se contorcendo com resistência a dano 5 até o próximo turno.
+func comportamento_anarquico(amea: Ameaca) -> int:
+	var r := dados.rolar(6)
+	var inimigos: Array[Ser] = []
+	for x in participantes:
+		if x.lado != amea.lado and not x.esta_fora_de_combate():
+			inimigos.append(x)
+	if inimigos.is_empty():
+		return r
+	var perto: Ser = inimigos[0]
+	if grade != null and grade.tem(amea):
+		for x in inimigos:
+			if grade.tem(x) and grade.distancia_entre(amea, x) < grade.distancia_entre(amea, perto):
+				perto = x
+	var agiu := true
+	match r:
+		1, 2, 6:
+			if grade != null and grade.tem(amea) and not grade.estao_adjacentes(amea, perto):
+				var destino := grade.aproximar(amea, perto, amea.deslocamento_quadrados())
+				if destino != grade.posicao(amea):
+					grade.remover(amea)
+					grade.colocar(amea, destino)
+			if grade == null or grade.estao_adjacentes(amea, perto):
+				atacar(amea, perto, amea.ataques[0])
+			else:
+				agiu = false
+			if r == 6:
+				amea.aplicar_condicao(Ser.DESPREVENIDO, 1)
+		3, 4:
+			if _perto(amea, perto, "medio"):
+				var d := dados.rolar_expressao("2d8")
+				if Teste.rolar(dados, perto.dados_da_pericia("fortitude"), perto.bonus_pericia("fortitude"), 14).sucesso:
+					d /= 2
+				else:
+					perto.aplicar_condicao(Ser.ATORDOADO, 1)
+				_log("%s dispara luz prismática em %s: %d." % [amea.nome, perto.nome, aplicar_dano(perto, d, "energia", 0, amea)])
+			else:
+				agiu = false
+		5:
+			var textos := PackedStringArray()
+			for x in inimigos:
+				if not _perto(amea, x, "curto"):
+					continue
+				var d := dados.rolar_expressao("2d6")
+				if grade != null and grade.estao_adjacentes(amea, x):
+					d += dados.rolar(6)
+				if Teste.rolar(dados, x.dados_da_pericia("reflexos"), x.bonus_pericia("reflexos"), 14).sucesso:
+					d /= 2
+				textos.append("%s %d" % [x.nome, aplicar_dano(x, d, "energia", 0, amea)])
+			_log("%s explode em Energia: %s" % [amea.nome, ", ".join(textos)])
+			agiu = not textos.is_empty()
+	if not agiu:
+		amea.mods_cena["resistencia_extra"] = 5
+		_log("%s se contorce." % amea.nome)
+	_verificar_fim()
+	return r
+
+
 # --- Hipnose (carniçal) --------------------------------------------------------
 
-func _hipnotizar(amea: Ameaca, ser: Ser, dt: int) -> void:
+func _hipnotizar(amea: Ameaca, ser: Ser, dt: int, um_turno: bool = false) -> void:
 	if ser.mods_cena.has("hipnotizado_por"):
 		return
+	ser.mods_cena["hipnose_um_turno"] = um_turno
 	ser.mods_cena["hipnotizado_por"] = amea
 	ser.mods_cena["lado_original"] = ser.lado
 	ser.mods_cena["hipnose_dt"] = dt
@@ -1687,7 +1878,7 @@ func _libertar_hipnose(ser: Ser) -> void:
 	if not ser.mods_cena.has("hipnotizado_por"):
 		return
 	ser.lado = ser.mods_cena.lado_original
-	for k in ["hipnotizado_por", "lado_original", "hipnose_dt", "hipnose_testes"]:
+	for k in ["hipnotizado_por", "lado_original", "hipnose_dt", "hipnose_testes", "hipnose_um_turno"]:
 		ser.mods_cena.erase(k)
 
 
@@ -2133,6 +2324,21 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 		res.contra_ataque = atacar(alvo, atacante, reacao.arma)
 	elif res.reacao == "bloqueio" and reacao.get("revidar", false) and (alvo as Agente).gastar_pe(2):
 		res.contra_ataque = atacar(alvo, atacante, reacao.arma)
+	if res.acertou and amea != null and amea.tem_hab("julgamento") and String(arma.get("tipo_dano", "")) == "conhecimento" and res.dano > 0 and alvo.tem_sanidade:
+		alvo.sofrer_dano_mental(res.dano / 2)   # Julgamento: metade também fere a mente
+		if alvo.san <= 0 and not alvo.tem(Ser.MORTO):
+			alvo._morrer()
+			_log("[color=#f5b041]%s é julgado e deixa de existir.[/color]" % alvo.nome)
+	if alvo is Ameaca and (alvo as Ameaca).tem_hab("aura_de_toque") and eh_corpo_a_corpo and not _usou_na_rodada(atacante, "toque_silhueta"):
+		_marcar_uso_rodada(atacante, "toque_silhueta")   # tocar a silhueta apaga quem toca
+		var aura := (alvo as Ameaca).habilidade("aura_de_toque")
+		var d_aura := dados.rolar_expressao(String(aura.dano))
+		if Teste.rolar(dados, atacante.dados_da_pericia(aura.resistencia), atacante.bonus_pericia(aura.resistencia), int(aura.dt)).sucesso:
+			d_aura /= 2
+		_log("%s toca a silhueta: %d de dano." % [atacante.nome, aplicar_dano(atacante, d_aura, String(aura.tipo_dano), 0, alvo)])
+		if atacante.pv <= 0 and aura.get("desintegra", false) and not atacante.tem(Ser.MORTO):
+			atacante._morrer()
+			_log("[color=#ec7063]%s é desintegrado.[/color]" % atacante.nome)
 	ataque_resolvido.emit(res)
 	if alvo is Ameaca and (alvo as Ameaca).tem_hab("retaliacao") and atacante.lado != alvo.lado:
 		_retaliar(alvo as Ameaca, atacante)
@@ -2154,6 +2360,22 @@ func _ataque_invalido(atacante: Ser, alvo: Ser, arma: Dictionary) -> ResultadoAt
 func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 0, atacante: Ser = null) -> int:
 	if alvo.tem(Ser.POCA):
 		return _danificar_poca(alvo as Ameaca, dano, tipo_dano)
+	if alvo is Ameaca and (alvo as Ameaca).enigma_pendente() and (alvo as Ameaca).enigma.get("tipo", "") == "acumular_dano" and tipo_dano == (alvo as Ameaca).enigma.get("tipo_dano", ""):
+		var en: Dictionary = (alvo as Ameaca).enigma
+		en["acumulado"] = int(en.get("acumulado", 0)) + dano   # a força oposta se acumula mesmo sem ferir
+		_log("O %s sente a %s (%d/%d)." % [alvo.nome, tipo_dano.capitalize(), int(en.acumulado), int(en.limite)])
+		if int(en.acumulado) >= int(en.limite):
+			_resolver_enigma(alvo as Ameaca, atacante)
+	if alvo.mods_cena.has("divide_dano"):   # Ironia do Destino: a marionete divide a dor com quem agarra
+		var vitima: Ser = alvo.mods_cena.divide_dano
+		if vitima.tem(Ser.AGARRADO) and vitima.mods_cena.get("agarrado_por") == alvo and not vitima.tem(Ser.MORTO):
+			var metade := dano / 2
+			dano -= metade
+			alvo.mods_cena.erase("divide_dano")
+			aplicar_dano(vitima, metade, tipo_dano, 0, atacante)
+			alvo.mods_cena["divide_dano"] = vitima
+		else:
+			alvo.mods_cena.erase("divide_dano")
 	if tipo_dano == "mental":   # dano mental de ataques e habilidades vai para a Sanidade (p.82)
 		var san_antes := alvo.san
 		var pv_antes := alvo.pv

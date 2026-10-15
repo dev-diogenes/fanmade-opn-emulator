@@ -149,7 +149,8 @@ func etapa_atual() -> Dictionary:
 
 
 func resistencia(tipo_dano: String) -> int:
-	if enigma_pendente() and String(enigma.get("efeito", "remove_imunidade")) == "remove_imunidade":
+	var efeito_enigma = enigma.get("efeito", "remove_imunidade")
+	if enigma_pendente() and efeito_enigma is String and efeito_enigma == "remove_imunidade":
 		return 1 << 20   # Enigma de Medo: nada fere a criatura antes de ser resolvido
 	if tipo_dano in imunidades or "dano" in imunidades:
 		return 1 << 20   # imunidade da ficha

@@ -44,7 +44,10 @@ static func agir_antes(c: Combate, ser: Ameaca, alvo: Ser) -> bool:
 	if ser.tem_hab("consumir") and int(ser.mods_cena.get("flores", 0)) < 7 and c.usar_habilidade(ser, "consumir").ok:
 		return true   # a Dama consome os corpos que encontra
 	if ser.tem_hab("comportamento_erratico"):
-		c.comportamento_erratico(ser)   # o anomiático não planeja: rola a tabela
+		if ser.habilidade("comportamento_erratico").get("tipo", "") == "erratico_simples":
+			c.comportamento_anarquico(ser)
+		else:
+			c.comportamento_erratico(ser)   # o anomiático não planeja: rola a tabela
 		return true
 	if ser.tem_hab("sempre_presente") and (ser.mods_cena.get("alvo_ocioso") == null or ser.mods_cena.alvo_ocioso.esta_fora_de_combate()):
 		c._escolher_alvo_ocioso(ser)
@@ -90,6 +93,10 @@ static func agir_antes(c: Combate, ser: Ameaca, alvo: Ser) -> bool:
 					if ser.tem(Ser.MACHUCADO) and atingiria > 0 and c.usar_habilidade(ser, h.id, alvo).ok:
 						return true   # autodestruição
 			"padrao":
+				if t_h == "invocar":
+					if int(ser.usos.get(h.id, 0)) == 0 and c.usar_habilidade(ser, h.id).ok:
+						return true
+					continue
 				if t_h == "alvo":
 					if alvo != null and not alvo.mods_cena.has("hipnotizado_por") and not alvo.tem(String(h.get("condicao", "_"))) and (not h.has("hipnose") or c.dados.rolar(2) == 1):
 						if c.usar_habilidade(ser, h.id, alvo).ok:
@@ -102,7 +109,7 @@ static func agir_antes(c: Combate, ser: Ameaca, alvo: Ser) -> bool:
 						if c.usar_habilidade(ser, h.id, vit).ok:
 							return true
 					continue
-				if t_h in ["alvo", "manobra_ataques"]:
+				if t_h in ["alvo", "manobra_ataques", "dois_ataques_agarra"]:
 					if alvo != null and c.usar_habilidade(ser, h.id, alvo).ok:
 						return true
 					continue
