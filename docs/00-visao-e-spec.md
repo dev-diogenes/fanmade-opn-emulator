@@ -1,6 +1,6 @@
 # Visão e Especificação (PRD)
 
-> Status: **rascunho v0.1**, 14/10/2026. Documento vivo: decisões fechadas ficam aqui, discussões abertas ficam em [01-brainstorm-design.md](01-brainstorm-design.md).
+> Status: **rascunho v0.2**, 14/10/2026. As decisões de design do brainstorm foram fechadas. Documento vivo: decisões fechadas ficam aqui, discussões abertas ficam em [01-brainstorm-design.md](01-brainstorm-design.md).
 
 ## 1. Resumo
 
@@ -57,19 +57,23 @@ Um RPG eletrônico **fanmade e gratuito** ambientado no universo de *Ordem Paran
 ### P0: fatia vertical (V1)
 - Criação de agente: atributos (AGI, FOR, INT, PRE, VIG), origem, classe (Combatente, Especialista, Ocultista), NEX 5%.
 - **Teste de OP como slots**: cada ponto no atributo-base vira 1 slot de d20, vale o maior resultado e a perícia treinada soma bônus. Com atributo 0, rola 2d20 e vale o menor.
-- **PE como Foco** (detalhes no brainstorm, seção 2).
+- **PE como Foco**: cada PE adiciona +1 d20 ao teste, dentro do limite de PE por turno do NEX.
 - Mapa hexagonal 3D low poly, com 1 mapa e 1 elemento (Sangue).
 - Combate em grade, como no FTK II, com 4 agentes, 5 tipos de ameaça e 1 chefe.
 - PV, PE, SAN, condições básicas, morrendo e enlouquecendo.
 - Medidor de **Membrana** no lugar do medidor de Caos do FTK.
-- Base da Ordem como hub entre missões. Recompensas: NEX e Patente.
+- Base da Ordem como hub entre missões. Recompensas: NEX e **Patente completa** (5 patentes, itens por categoria, crédito, PP e rebaixamento).
+- **Roster persistente** de agentes, como uma carreira na Ordem.
+- **Opções da run**: modo de morte (Normal, com Reforços da Ordem, ou Hardcore) e regras opcionais (Lesões, Inspiração Resoluta, Idade Variada).
 - Co-op local com até 4 jogadores.
 - Salvar e carregar.
 
 ### P1
 - **Cena de investigação** com zoom aproximado e visão reduzida (seção 3 do brainstorm).
 - Gerador procedural de missões.
-- Os 4 elementos, rituais como habilidades e itens amaldiçoados.
+- Os 4 elementos, rituais como habilidades e itens amaldiçoados. Medo aparece só como ameaça e evento.
+- Modo **"Pessoas Comuns"** (NEX 0% / Mundano) e prólogo/tutorial.
+- Aposentadoria (o agente vira aliado ou mentor). A Desconjuração entra como evento raro mais tarde.
 - Formato de missão versionado e um editor mínimo dentro do jogo.
 
 ### P2
