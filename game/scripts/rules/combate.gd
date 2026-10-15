@@ -14,6 +14,7 @@ signal combate_encerrado(lado_vencedor: String)
 signal oportunidade_de_ataque(atacante: Ser, alvo: Ser)
 signal ritual_conjurado(resultado: Dictionary)
 signal registro(texto: String)
+signal ser_adicionado(ser: Ser)   ## um ser entrou no meio do combate (cópias do escutado)
 
 const REACOES := ["bloqueio", "esquiva", "contra_ataque"]
 const ORDEM_LESAO := ["agi", "for", "int", "pre", "vig"]   ## 1d6: 1..5; 6 = nenhuma (p.184)
@@ -56,6 +57,8 @@ var _sustentados: Array[Dictionary] = []
 ## Áreas persistentes de rituais (Poeira da Podridão, Purgatório, Tentáculos de Lodo…):
 ## {conjurador, ritual, efeito, celulas, gatilho ("turno_conjurador"|"turno_ser"|"nenhum"), rodadas, agarrados}
 var _zonas: Array[Dictionary] = []
+var _melodia_rodada := -10          ## última rodada em que a melodia do escutado tocou
+var _melodia_quem: Ser               ## quem toca a melodia (o escutado vai atrás)
 
 
 func _init(p_ruleset: Ruleset, p_dados: Dados, p_regras: Dictionary = {}) -> void:
@@ -109,6 +112,9 @@ func iniciar(surpreendidos: Array = []) -> void:
 	for s in participantes:
 		if s is Agente:
 			(s as Agente).em_acao = true   # Encarar a Morte vale em cenas de ação
+	for s in participantes:
+		if s is Ameaca and (s as Ameaca).tem_hab("sempre_presente"):
+			_escolher_alvo_ocioso(s as Ameaca)
 	if regras.get("presenca_perturbadora", false):
 		presenca_perturbadora()
 
@@ -116,11 +122,11 @@ func iniciar(surpreendidos: Array = []) -> void:
 ## Presença Perturbadora (p.190): ao ver criaturas paranormais, cada agente testa Vontade
 ## contra a DT da criatura de maior VD; falha sofre o dano mental, sucesso sofre metade.
 ## Cada criatura a mais na cena soma +1d6. Agentes com o NEX indicado são imunes.
-func presenca_perturbadora() -> Array[Dictionary]:
+func presenca_perturbadora(fonte: Ameaca = null) -> Array[Dictionary]:
 	var resultados: Array[Dictionary] = []
 	var criaturas: Array[Ameaca] = []
 	for s in participantes:
-		if s is Ameaca and not (s as Ameaca).presenca.is_empty() and not s.esta_fora_de_combate():
+		if s is Ameaca and not (s as Ameaca).presenca.is_empty() and not s.esta_fora_de_combate() and (fonte == null or s == fonte):
 			criaturas.append(s as Ameaca)
 	if criaturas.is_empty():
 		return resultados
@@ -985,11 +991,13 @@ func _ao_acertar(atacante: Ser, alvo: Ser, arma: Dictionary, res: ResultadoAtaqu
 	if aa.has("efeito_extra"):   # Estraçalhar (titã)
 		var ex: Dictionary = aa.efeito_extra
 		var passou := ex.has("resistencia") and Teste.rolar(dados, alvo.dados_da_pericia(ex.resistencia), alvo.bonus_pericia(ex.resistencia), int(ex.dt)).sucesso
-		var d := dados.rolar_expressao(String(ex.dano))
-		res.dano += aplicar_dano(alvo, d / 2 if passou else d, String(ex.tipo_dano), 0, atacante)
-		if not passou and ex.has("condicao"):
-			alvo.aplicar_condicao(ex.condicao)
-			_log("%s fica %s." % [alvo.nome, ex.condicao])
+		if ex.has("dano"):
+			var d := dados.rolar_expressao(String(ex.dano))
+			res.dano += aplicar_dano(alvo, d / 2 if passou else d, String(ex.tipo_dano), 0, atacante)
+		if not passou:
+			for cond in ([ex.condicao] if ex.has("condicao") else []) + ex.get("condicoes", []):
+				alvo.aplicar_condicao(cond)
+				_log("%s fica %s." % [alvo.nome, cond])
 
 
 func _tem_evasao(ser: Ser, resistencia: String) -> bool:
@@ -1013,6 +1021,13 @@ func _fim_de_turno(ser: Ser) -> void:
 					var af: Dictionary = enx.ao_ferir
 					if not Teste.rolar(dados, x.dados_da_pericia(af.resistencia), x.bonus_pericia(af.resistencia), int(af.dt)).sucesso:
 						x.aplicar_condicao(af.condicao, int(af.get("rodadas", 0)))
+	if ser.mods_cena.has("hipnotizado_por"):
+		var tentativas := int(ser.mods_cena.get("hipnose_testes", 0))
+		ser.mods_cena["hipnose_testes"] = tentativas + 1
+		var dt_h := int(ser.mods_cena.get("hipnose_dt", 29))
+		if Teste.rolar(dados, ser.dados_da_pericia("vontade"), ser.bonus_pericia("vontade") + tentativas, dt_h).sucesso:
+			_libertar_hipnose(ser)
+			_log("[color=#5dade2]%s recobra o controle da própria mente.[/color]" % ser.nome)
 	if ser.mods_cena.get("permanencia", "") == "neste_turno":
 		if ser.pv <= 0:
 			ser._morrer()
@@ -1050,6 +1065,36 @@ func _soltar_succao(succ: Ser) -> void:
 
 ## Início do turno: veneno de qualquer ser; constrição, sucção e aceleração.
 func _inicio_de_turno_ameacas(ser: Ser) -> void:
+	ser.mods_cena.erase("resistencia_extra")
+	for outro in participantes:   # a foto do viajante vale até o início do próximo turno de quem fotografou
+		if outro.mods_cena.get("visivel_ate") == ser:
+			outro.mods_cena.erase("visivel_ate")
+	if ser.tem(Ser.ASFIXIADO):
+		var afog: Dictionary = ser.mods_cena.get("asfixia", {})
+		var quem = ser.mods_cena.get("asfixiado_por")
+		if Teste.rolar(dados, ser.dados_da_pericia("fortitude"), ser.bonus_pericia("fortitude"), int(afog.get("dt", 20))).sucesso:
+			ser.condicoes.erase(Ser.ASFIXIADO)
+			ser.mods_cena.erase("asfixiado_por")
+			if afog.has("arrancar"):   # Arrancar Sangue: ao ser expelida, leva sangue da vítima
+				var ar: Dictionary = afog.arrancar
+				var d := aplicar_dano(ser, dados.rolar_expressao(String(ar.dano)), String(ar.tipo_dano), 0, quem)
+				ser.aplicar_condicao(String(ar.get("condicao", "")))
+				_log("%s expulsa o Sangue, que arranca %d de dano ao sair." % [ser.nome, d])
+		else:
+			var perda := dados.rolar_expressao(String(afog.get("dano_afogando", "1d6")))
+			ser.sofrer_dano(perda)
+			_log("%s se afoga em Sangue: −%d PV." % [ser.nome, perda])
+	if ser is Ameaca:
+		var am := ser as Ameaca
+		var cura := am.habilidade("cura_acelerada")
+		var valor := 0
+		if not cura.is_empty() and not am.mods_cena.get("cura_desligada", false) and not am.tem(Ser.INCONSCIENTE):
+			valor = int(cura.valor)
+		if am.na_forma_de_sangue():
+			valor = maxi(valor, int(am.forma_de_sangue.get("cura_acelerada", 0)))
+		if valor > 0 and am.pv > 0 and am.pv < am.pv_maximo:
+			am.curar(valor)
+		_multiplicacao_melodica(am)
 	if ser.mods_cena.get("permanencia", "") == "aguardando":
 		ser.mods_cena["permanencia"] = "neste_turno"
 	if ser.tem(Ser.SANGRANDO):
@@ -1150,7 +1195,7 @@ func _processar_pocas() -> void:
 
 ## Usa uma habilidade ativa da ficha (área, condição ou fortalecimento). Retorna {ok, atingidos, ...}.
 ## `celula`: ponto de uma esfera; linhas usam o alvo como direção.
-func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = null) -> Dictionary:
+func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = null, livre: bool = false) -> Dictionary:
 	var h := amea.habilidade(hab_id)
 	if h.is_empty() or amea.esta_fora_de_combate() or not h.has("acao"):
 		return {"ok": false, "erro": "sem esta habilidade"}
@@ -1160,12 +1205,24 @@ func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = nu
 		return {"ok": false, "erro": "já usou nesta cena"}
 	if h.has("requer") and not amea.mods_cena.get("efeito_" + String(h.requer), false):
 		return {"ok": false, "erro": "requer %s" % h.requer}
+	if h.get("requer_forma", false) and not amea.na_forma_de_sangue():
+		return {"ok": false, "erro": "só na forma de Sangue"}
+	if h.get("so_copia", false) and not amea.mods_cena.get("copia", false):
+		return {"ok": false, "erro": "só as cópias"}
 	if String(h.get("tipo", "")) in ["alvo", "marcar"]:
-		if alvo == null or alvo.esta_fora_de_combate() or (h.has("alcance") and not _perto(amea, alvo, String(h.alcance))):
+		if alvo == null or alvo.esta_fora_de_combate() or (h.has("alcance") and not _alcance_hab(amea, alvo, String(h.alcance))):
 			return {"ok": false, "erro": "alvo inválido"}
+		if h.get("requer_adjacente", false) and grade != null and grade.tem(amea) and grade.tem(alvo) and not grade.estao_adjacentes(amea, alvo):
+			return {"ok": false, "erro": "precisa estar ao lado"}
+		if h.get("so_alvo_proprio", false) and amea.mods_cena.get("alvo_ocioso") != alvo:
+			return {"ok": false, "erro": "só contra o seu alvo"}
+		if h.has("requer_condicao") and (not alvo.tem(h.requer_condicao) or alvo.mods_cena.get("asfixiado_por") != amea):
+			return {"ok": false, "erro": "o alvo precisa estar %s" % h.requer_condicao}
+		if h.has("hipnose") and _hipnotizados_por(amea).size() >= int(h.hipnose.get("maximo", 3)):
+			return {"ok": false, "erro": "já controla o máximo de mentes"}
 		if h.get("requer_agarrado", false) and alvo.mods_cena.get("agarrado_por") != amea:
 			return {"ok": false, "erro": "precisa estar agarrando o alvo"}
-	if h.acao != "livre" and acoes.has(amea) and not gastar_acao(amea, h.acao):
+	if h.acao != "livre" and not livre and acoes.has(amea) and not gastar_acao(amea, h.acao):
 		return {"ok": false, "erro": "sem ação"}
 	_marcar_uso_rodada(amea, hab_id)
 	amea.usos[hab_id] = int(amea.usos.get(hab_id, 0)) + 1
@@ -1182,6 +1239,15 @@ func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = nu
 	if h.has("buff"):
 		amea.rituais_ativos[hab_id] = h.buff.duplicate()
 		_log("[color=#ec7063]%s usa %s.[/color]" % [amea.nome, nome])
+		return {"ok": true, "atingidos": []}
+	if tipo_h == "teleporte":   # Correr pelas Frestas: reaparece perto do alvo
+		if alvo != null and grade != null:
+			_teleportar_para_perto(amea, alvo)
+		return {"ok": true, "atingidos": []}
+	if tipo_h == "teleporte_alvo":   # Permanecer Próximo (ocioso)
+		var dele = amea.mods_cena.get("alvo_ocioso")
+		if dele != null and grade != null:
+			_teleportar_para_perto(amea, dele)
 		return {"ok": true, "atingidos": []}
 	if tipo_h == "marcar":   # Assassinar
 		amea.mods_cena[hab_id] = alvo
@@ -1227,8 +1293,17 @@ func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = nu
 				textos.append("%s −%d SAN" % [x.nome, antes - x.san])
 			else:
 				textos.append("%s %d" % [x.nome, aplicar_dano(x, d, String(h.tipo_dano), 0, amea)])
+		if h.has("hipnose") and not passou:
+			_hipnotizar(amea, x, int(h.dt))
+			textos.append("%s é hipnotizado" % x.nome)
+			continue
 		if h.has("condicao") and not passou:
 			x.aplicar_condicao(h.condicao, int(h.get("rodadas", 0)))
+			if h.has("asfixia"):
+				x.mods_cena["asfixia"] = h.asfixia
+				x.mods_cena["asfixiado_por"] = amea
+			if h.get("abraco", false):
+				amea.mods_cena["abracando"] = x
 			textos.append("%s fica %s" % [x.nome, x.condicoes.keys()[-1] if not x.condicoes.is_empty() else h.condicao])
 	_log("[color=#ec7063]%s usa %s:[/color] %s" % [amea.nome, nome, ", ".join(textos) if not textos.is_empty() else "ninguém é atingido"])
 	if h.get("morre", false):
@@ -1277,7 +1352,10 @@ func conjurar_ameaca(amea: Ameaca, ritual_id: String, alvo: Ser, opcoes: Diction
 func decifrar_enigma(agente: Agente, criatura: Ameaca, pericia: String = "") -> ResultadoTeste:
 	if not criatura.enigma_pendente():
 		return null
-	var pericias: Array = criatura.enigma.get("pericias", ["ocultismo"])
+	if criatura.enigma.get("tipo", "") == "melodia":
+		return tocar_melodia(agente)
+	var etapa := criatura.etapa_atual()
+	var pericias: Array = etapa.get("pericias", ["ocultismo"])
 	if pericia == "":
 		pericia = pericias[0]
 		for p_id in pericias:
@@ -1285,16 +1363,248 @@ func decifrar_enigma(agente: Agente, criatura: Ameaca, pericia: String = "") -> 
 				pericia = p_id
 	if not pericia in pericias or (acoes.has(agente) and not gastar_acao(agente, "padrao")):
 		return null
-	var dt := int(criatura.enigma.get("dt", 20)) - int(regras.get("bonus_enigma", 0))
+	var dt := int(etapa.get("dt", 20)) - int(regras.get("bonus_enigma", 0))
 	if criatura.enigma.has("pergunta") and criatura.enigma.pergunta in regras.get("perguntas_respondidas", []):
 		dt -= 5   # a investigação já respondeu a pergunta ligada ao enigma
 	var t := agente.testar(dados, pericia, dt)
-	if t != null and t.sucesso:
-		criatura.enigma.resolvido = true
-		_log("[color=#f5b041]%s decifra o enigma: %s perde a proteção![/color]" % [agente.nome, criatura.nome])
+	if t == null or not t.sucesso:
+		_log("%s tenta: %s (%s), sem sucesso." % [agente.nome, etapa.get("texto", "decifrar o enigma"), ruleset.pericia(pericia).nome])
+		return t
+	if criatura.enigma.get("tipo", "") == "temporario":
+		criatura.mods_cena["visivel_ate"] = agente   # Viajante: fotografado, fica visível até o próximo turno de quem fotografou
+		_log("[color=#f5b041]%s consegue: %s. %s fica à vista por um instante![/color]" % [agente.nome, etapa.get("texto", ""), criatura.nome])
+		return t
+	criatura.enigma["etapa"] = int(criatura.enigma.get("etapa", 0)) + 1
+	if criatura.etapa_atual().is_empty():
+		_resolver_enigma(criatura, agente)
 	else:
-		_log("%s tenta decifrar o enigma (%s), sem sucesso." % [agente.nome, ruleset.pericia(pericia).nome])
+		_log("[color=#f5b041]%s consegue: %s. Próximo passo: %s.[/color]" % [agente.nome, etapa.get("texto", ""), criatura.etapa_atual().get("texto", "")])
 	return t
+
+
+func _resolver_enigma(criatura: Ameaca, agente: Ser = null) -> void:
+	criatura.enigma.resolvido = true
+	match String(criatura.enigma.get("efeito", "remove_imunidade")):
+		"remove_imunidade":
+			criatura.imunidades.erase("dano")
+			_log("[color=#f5b041]%s decifra o enigma: %s perde a proteção![/color]" % [agente.nome if agente != null else "O grupo", criatura.nome])
+		"forma_fisica":
+			_log("[color=#f5b041]%s é forçada à forma física: agora pode ser vencida![/color]" % criatura.nome)
+
+
+## Escutado: ação padrão e Artes (DT 25) para tocar a melodia nesta rodada.
+func tocar_melodia(agente: Agente) -> ResultadoTeste:
+	var escutado: Ameaca = null
+	for s in participantes:
+		if s is Ameaca and (s as Ameaca).enigma.get("tipo", "") == "melodia" and (s as Ameaca).enigma_pendente():
+			escutado = s
+	if escutado == null or (acoes.has(agente) and not gastar_acao(agente, "padrao")):
+		return null
+	var t := agente.testar(dados, String(escutado.enigma.get("pericia", "artes")), int(escutado.enigma.get("dt", 25)))
+	if t != null and t.sucesso:
+		_melodia_rodada = rodada
+		_melodia_quem = agente
+		_log("[color=#f5b041]%s toca a melodia proibida.[/color]" % agente.nome)
+	else:
+		_log("%s erra as notas da melodia." % agente.nome)
+	return t
+
+
+## No início do turno do escutado (e das cópias): se a melodia tocou desde o turno anterior,
+## surge uma cópia; o original conta as rodadas seguidas e, com 4, perde a imunidade.
+func _multiplicacao_melodica(am: Ameaca) -> void:
+	var h := am.habilidade("multiplicacao_melodica")
+	if h.is_empty():
+		return
+	var ouviu := _melodia_rodada >= rodada - 1
+	if am.enigma.get("tipo", "") == "melodia" and am.enigma_pendente():
+		am.enigma["rodadas"] = int(am.enigma.get("rodadas", 0)) + 1 if ouviu else 0
+	if not ouviu:
+		return
+	var ficha: Dictionary = am.ficha_original.duplicate(true)
+	ficha.pv = int(h.get("pv_copia", 145))
+	ficha.erase("imunidades")
+	ficha.erase("enigma")
+	ficha.erase("presenca_perturbadora")
+	var copia := Ameaca.criar(ruleset, "%s (cópia)" % am.nome.trim_suffix(" (cópia)"), ficha)
+	copia.mods_cena["copia"] = true
+	adicionar_durante(copia, am)
+	_log("[color=#ec7063]A melodia faz surgir outra cópia do %s![/color]" % am.nome.trim_suffix(" (cópia)"))
+	if am.enigma.get("tipo", "") == "melodia" and int(am.enigma.get("rodadas", 0)) >= int(am.enigma.get("rodadas_necessarias", 4)):
+		_resolver_enigma(am, _melodia_quem)
+
+
+## Coloca um ser no meio do combate: age logo depois de `perto_de`, numa célula livre próxima.
+func adicionar_durante(ser: Ser, perto_de: Ser) -> void:
+	adicionar(ser)
+	iniciativas[ser] = iniciativas.get(perto_de, 0)
+	var i := ordem.find(perto_de)
+	ordem.insert(i + 1 if i >= 0 else ordem.size(), ser)
+	if i >= 0 and i < _indice:
+		_indice += 1
+	if grade != null and grade.tem(perto_de):
+		_teleportar_para_perto(ser, perto_de, true)
+	ser_adicionado.emit(ser)
+
+
+## Põe o ser na célula livre mais próxima de `alvo` (teleporte; não gasta deslocamento).
+func _teleportar_para_perto(ser: Ser, alvo: Ser, novo: bool = false) -> void:
+	if grade == null or not grade.tem(alvo):
+		return
+	var centro := grade.posicao(alvo)
+	var melhor := Vector2i(-1, -1)
+	for raio in range(1, 8):
+		for dx in range(-raio, raio + 1):
+			for dy in range(-raio, raio + 1):
+				var c := centro + Vector2i(dx, dy)
+				if grade.dentro(c) and not grade.bloqueada(c) and grade.ocupante(c) == null:
+					if melhor == Vector2i(-1, -1) or Grade.distancia(c, centro) < Grade.distancia(melhor, centro):
+						melhor = c
+		if melhor != Vector2i(-1, -1):
+			break
+	if melhor == Vector2i(-1, -1):
+		return
+	if not novo and grade.tem(ser):
+		grade.remover(ser)
+	grade.colocar(ser, melhor)
+
+
+func _alcance_hab(amea: Ser, alvo: Ser, alcance: String) -> bool:
+	if alcance == "adjacente":
+		return grade == null or not grade.tem(amea) or not grade.tem(alvo) or grade.estao_adjacentes(amea, alvo)
+	return _perto(amea, alvo, alcance)
+
+
+# --- Hipnose (carniçal) --------------------------------------------------------
+
+func _hipnotizar(amea: Ameaca, ser: Ser, dt: int) -> void:
+	if ser.mods_cena.has("hipnotizado_por"):
+		return
+	ser.mods_cena["hipnotizado_por"] = amea
+	ser.mods_cena["lado_original"] = ser.lado
+	ser.mods_cena["hipnose_dt"] = dt
+	ser.mods_cena["hipnose_testes"] = 0
+	ser.lado = amea.lado
+	_log("[color=#ec7063]%s cai sob o controle de %s![/color]" % [ser.nome, amea.nome])
+
+
+func _libertar_hipnose(ser: Ser) -> void:
+	if not ser.mods_cena.has("hipnotizado_por"):
+		return
+	ser.lado = ser.mods_cena.lado_original
+	for k in ["hipnotizado_por", "lado_original", "hipnose_dt", "hipnose_testes"]:
+		ser.mods_cena.erase(k)
+
+
+func _hipnotizados_por(amea: Ameaca) -> Array:
+	return participantes.filter(func(s): return s.mods_cena.get("hipnotizado_por") == amea)
+
+
+# --- Transformação, retaliação e comportamento errático ------------------------
+
+## Enpap-X: a 0 PV, em vez de cair, assume a outra ficha com todos os PV e mostra sua presença.
+func _transformar(amea: Ameaca) -> void:
+	var t: Dictionary = amea.transformacao
+	amea.aplicar_ficha(t.ficha)
+	amea.transformacao = {}
+	amea.nome = String(t.get("nome", amea.nome))
+	for c in [Ser.INCONSCIENTE, Ser.MORRENDO, Ser.MACHUCADO]:
+		amea.condicoes.erase(c)
+	amea.pv = amea.pv_maximo
+	_log("[color=#ec7063][b]As correntes se partem: surge o %s![/b][/color]" % amea.nome)
+	if regras.get("presenca_perturbadora", false):
+		presenca_perturbadora(amea)
+
+
+func _escolher_alvo_ocioso(amea: Ameaca) -> void:
+	for s in participantes:
+		if s.lado != amea.lado and s is Agente and not s.esta_fora_de_combate():
+			amea.mods_cena["alvo_ocioso"] = s
+			_log("[color=#a569bd]Só %s enxerga %s.[/color]" % [s.nome, amea.nome])
+			return
+
+
+## Retaliação (ocioso): atacado, aparece ao lado de quem atacou e golpeia.
+func _retaliar(amea: Ameaca, atacante: Ser) -> void:
+	if amea.esta_fora_de_combate() or atacante.esta_fora_de_combate() or _usou_na_rodada(amea, "retaliando"):
+		return
+	_marcar_uso_rodada(amea, "retaliando")
+	_teleportar_para_perto(amea, atacante)
+	var arma: Dictionary = amea.ataques[0] if not amea.ataques.is_empty() else ruleset.arma("desarmado")
+	_log("[color=#ec7063]%s está de repente ao lado de %s.[/color]" % [amea.nome, atacante.nome])
+	atacar(amea, atacante, arma, 0, {"ignorar_distancia": true})
+	_usos_rodada.get(amea, {}).erase("retaliando")
+
+
+## Comportamento Errático (anomiático, p.273): três rolagens de 1d6, executadas em ordem.
+## Cada ação que não puder fazer dá +10 de resistência a dano até o próximo turno.
+func comportamento_erratico(amea: Ameaca) -> Array[int]:
+	var rolagens: Array[int] = []
+	var perdidas := 0
+	for _i in 3:
+		if encerrado or amea.esta_fora_de_combate():
+			break
+		var r := dados.rolar(6)
+		rolagens.append(r)
+		var inimigos: Array[Ser] = []
+		for x in participantes:
+			if x.lado != amea.lado and not x.esta_fora_de_combate():
+				inimigos.append(x)
+		if inimigos.is_empty():
+			break
+		var adjacentes: Array[Ser] = []
+		for x in inimigos:
+			if grade == null or not grade.tem(amea) or not grade.tem(x) or grade.estao_adjacentes(amea, x):
+				adjacentes.append(x)
+		match r:
+			1, 2:   # salta até 18 m na direção do mais próximo e ataca se chegar
+				var perto: Ser = inimigos[0]
+				if grade != null and grade.tem(amea):
+					for x in inimigos:
+						if grade.tem(x) and grade.distancia_entre(amea, x) < grade.distancia_entre(amea, perto):
+							perto = x
+					var destino := grade.aproximar(amea, perto, 12)
+					if destino != grade.posicao(amea):
+						grade.remover(amea)
+						grade.colocar(amea, destino)
+				if grade == null or grade.estao_adjacentes(amea, perto):
+					for _k in int(amea.ataques[0].get("vezes", 1)):
+						atacar(amea, perto, amea.ataques[0])
+				else:
+					perdidas += 1
+			3:   # vira um facho de Energia e aparece ao lado de alguém sorteado
+				_teleportar_para_perto(amea, inimigos[dados.rolar(inimigos.size()) - 1])
+			4:   # parte do corpo explode
+				var textos := PackedStringArray()
+				for x in inimigos:
+					var faixa := "curto"
+					if grade != null and grade.tem(amea) and grade.tem(x):
+						faixa = "adjacente" if grade.estao_adjacentes(amea, x) else ("curto" if grade.em_alcance(amea, x, "curto") else ("medio" if grade.em_alcance(amea, x, "medio") else "fora"))
+					if faixa == "fora":
+						continue
+					var d := dados.rolar_expressao({"adjacente": "8d12+20", "curto": "6d12+20", "medio": "4d12+20"}[faixa])
+					if faixa != "adjacente" and Teste.rolar(dados, x.dados_da_pericia("reflexos"), x.bonus_pericia("reflexos"), 30).sucesso:
+						d /= 2
+					textos.append("%s %d" % [x.nome, aplicar_dano(x, d, "energia", 0, amea)])
+				amea.sofrer_dano(50)
+				_log("[color=#ec7063]%s explode em parte:[/color] %s (e perde 50 PV)" % [amea.nome, ", ".join(textos)])
+			5:   # gargalhada: fica desprevenido
+				amea.aplicar_condicao(Ser.DESPREVENIDO, 1)
+				_log("%s gargalha, descontrolado." % amea.nome)
+			6:   # toque de Energia pura
+				if adjacentes.is_empty():
+					perdidas += 1
+				else:
+					var alvo: Ser = adjacentes[0]
+					var d := dados.rolar_expressao("10d12+20")
+					if Teste.rolar(dados, alvo.dados_da_pericia("fortitude"), alvo.bonus_pericia("fortitude"), 30).sucesso:
+						d /= 2
+					_log("[color=#ec7063]%s toca %s com Energia pura: %d de dano.[/color]" % [amea.nome, alvo.nome, aplicar_dano(alvo, d, "energia", 0, amea)])
+	if perdidas > 0:
+		amea.mods_cena["resistencia_extra"] = 10 * perdidas
+		_log("%s se contorce (+%d de resistência)." % [amea.nome, 10 * perdidas])
+	_verificar_fim()
+	return rolagens
 
 
 ## Sustentado (p.130): 1 PE no início de cada turno do conjurador, ou o ritual termina.
@@ -1517,7 +1827,7 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 			amea.mods_cena.erase("sadismo")   # Sadismo: +1 dado e um dado de dano depois de ferir
 			dados_extras += 1
 			mods.dados_dano_extra = int(mods.dados_dano_extra) + 1
-		if amea.tem_hab("invisivel"):
+		if amea.tem_hab("invisivel") and not amea.mods_cena.has("visivel_ate"):
 			desprevenido = true   # quem não vê o atacante fica desprevenido contra ele
 			defesa -= 5
 		if amea.tem_hab("furtivo_e_letal") and desprevenido:
@@ -1542,8 +1852,13 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	if agente != null:
 		agente.sofrer_dano_por_teste(dados, ruleset.atributo_da_pericia(pericia_id))   # Gota, Pulmão Ruim
 	res.acertou = res.teste.sucesso
-	if res.acertou and alvo is Ameaca and (alvo as Ameaca).tem_hab("invisivel"):
-		if dados.rolar(100) <= int((alvo as Ameaca).habilidade("invisivel").get("chance_erro", 50)):
+	var invisivel_para_ele := false
+	if alvo is Ameaca:
+		var aa_ := alvo as Ameaca
+		invisivel_para_ele = (aa_.tem_hab("invisivel") and not aa_.mods_cena.has("visivel_ate")) or (aa_.tem_hab("sempre_presente") and aa_.mods_cena.get("alvo_ocioso") != atacante)
+	if res.acertou and invisivel_para_ele:
+		var hab_inv := (alvo as Ameaca).habilidade("invisivel") if (alvo as Ameaca).tem_hab("invisivel") else (alvo as Ameaca).habilidade("sempre_presente")
+		if dados.rolar(100) <= int(hab_inv.get("chance_erro", 50)):
 			res.acertou = false   # camuflagem total: o golpe passa pelo vazio
 			_log("%s ataca o vazio: %s é invisível." % [atacante.nome, alvo.nome])
 	if agente != null and not res.acertou:
@@ -1624,6 +1939,8 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	elif res.reacao == "bloqueio" and reacao.get("revidar", false) and (alvo as Agente).gastar_pe(2):
 		res.contra_ataque = atacar(alvo, atacante, reacao.arma)
 	ataque_resolvido.emit(res)
+	if alvo is Ameaca and (alvo as Ameaca).tem_hab("retaliacao") and atacante.lado != alvo.lado:
+		_retaliar(alvo as Ameaca, atacante)
 	_verificar_fim()
 	return res
 
@@ -1676,6 +1993,17 @@ func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 
 	alvo.sofrer_dano(final)
 	if atacante is Ameaca and (atacante as Ameaca).tem_hab("sadismo"):
 		atacante.mods_cena["sadismo"] = true
+	if amea_alvo != null:
+		var cura := amea_alvo.habilidade("cura_acelerada")
+		if not cura.is_empty() and tipo_dano in cura.get("desliga_com", []):
+			amea_alvo.mods_cena["cura_desligada"] = true   # Regeneração de Sangue para até o fim da cena
+		if tipo_dano == "energia" and amea_alvo.mods_cena.has("abracando"):
+			var abracado: Ser = amea_alvo.mods_cena.abracando
+			abracado.condicoes.erase(Ser.PARALISADO)
+			amea_alvo.mods_cena.erase("abracando")
+			_log("%s solta %s." % [amea_alvo.nome, abracado.nome])
+		if amea_alvo.pv == 0 and not amea_alvo.transformacao.is_empty() and not amea_alvo.tem(Ser.MORTO):
+			_transformar(amea_alvo)
 	if amea_alvo != null and amea_alvo.tem_hab("faixas_da_permanencia") and amea_alvo.pv == 0 and not amea_alvo.tem(Ser.MORTO):
 		amea_alvo.condicoes.erase(Ser.INCONSCIENTE)   # Faixas da Permanência: ainda age até o fim do próximo turno
 		amea_alvo.condicoes.erase(Ser.MORRENDO)
@@ -2040,6 +2368,8 @@ func _verificar_fim() -> bool:
 	var vencedor := lado_vencedor()
 	if vencedor != "":
 		encerrado = true
+		for ser in participantes:
+			_libertar_hipnose(ser)
 		for ef in _efeitos_ate_turno:
 			_desfazer_efeito(ef)
 		_efeitos_ate_turno.clear()

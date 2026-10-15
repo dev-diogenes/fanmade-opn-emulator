@@ -83,6 +83,7 @@ func iniciar_combate(semente: int) -> void:
 	combate.grade = grade
 	combate.membrana = membrana
 	combate.registro.connect(_registrar)
+	combate.ser_adicionado.connect(_ao_adicionar)
 	if config.is_empty():
 		_montar_mapa()
 		_criar_lados()
@@ -167,6 +168,13 @@ func _criar_lados_da_missao() -> void:
 		i += 1
 
 
+## Seres que surgem no meio do combate (cópias do escutado).
+func _ao_adicionar(ser: Ser) -> void:
+	var lista: Array = (ser as Ameaca).ataques if ser is Ameaca else []
+	armas[ser] = lista[0] if not lista.is_empty() else ruleset.arma("desarmado")
+	_registrar("%s entra no combate." % ser.nome)
+
+
 func _adicionar(ser: Ser, arma: Dictionary, pos: Vector2i) -> void:
 	combate.adicionar(ser)
 	grade.colocar(ser, pos)
@@ -204,10 +212,10 @@ func _avancar() -> void:
 
 ## IA simples: vai até o agente (ou inimigo) mais próximo e ataca se puder.
 func _jogar_ia(ser: Ser) -> void:
-	var alvo := _inimigo_mais_proximo(ser)
+	var alvo := IaAmeaca.alvo_preferido(combate, ser, _inimigo_mais_proximo(ser))
 	if alvo == null:
 		return
-	var arma: Dictionary = armas[ser]
+	var arma: Dictionary = armas.get(ser, ruleset.arma("desarmado"))
 	if ser is Ameaca:
 		if IaAmeaca.agir_antes(combate, ser as Ameaca, alvo) or combate.encerrado:
 			return
@@ -261,7 +269,7 @@ func _pode_atacar(ser: Ser, alvo: Ser, arma: Dictionary) -> bool:
 
 func _agente_da_vez() -> Agente:
 	var s := combate.ser_atual()
-	return s as Agente if s is Agente and not autoplay else null
+	return s as Agente if s is Agente and not autoplay and s.lado == "agentes" else null   # hipnotizados jogam pela IA
 
 
 func _clicar_celula(celula: Vector2i) -> void:
@@ -606,7 +614,10 @@ func _atualizar() -> void:
 				if [rid, forma] == selecionado_antes:
 					_opt_ritual.select(_opt_ritual.item_count - 1)
 	_btn_ritual.disabled = agente == null or _opt_ritual.item_count == 0
-	_btn_enigma.visible = _criatura_com_enigma() != null
+	var com_enigma := _criatura_com_enigma()
+	_btn_enigma.visible = com_enigma != null
+	if com_enigma != null:
+		_btn_enigma.text = "Tocar a melodia" if com_enigma.enigma.get("tipo", "") == "melodia" else "Enigma: %s" % com_enigma.etapa_atual().get("texto", "decifrar")
 	_btn_enigma.disabled = agente == null
 	_btn_soltar.visible = agente != null and agente.tem(Ser.AGARRADO)
 	_opt_ritual.get_parent().visible = _opt_ritual.item_count > 0

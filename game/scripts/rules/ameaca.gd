@@ -22,6 +22,10 @@ var habilidades: Array = []        ## [{id, ...}] habilidades da ficha (cap. 7)
 var conjurador: Dictionary = {}    ## {"rituais", "dt", "limite_pe"}: cultistas conjuram sem gastar PE (p.296)
 var vd_valor := 0
 var usos: Dictionary = {}          ## habilidade -> usos na cena
+var ficha_original: Dictionary = {}   ## ficha usada para criar (cópias do escutado)
+## Forma de Sangue (Mulher Afogada): {"resistencias", "cura_acelerada", "deslocamento"} até o enigma ser resolvido
+var forma_de_sangue: Dictionary = {}
+var transformacao: Dictionary = {}   ## {"nome", "ficha"}: a 0 PV vira outra criatura (Enpap-X)
 
 const CONDICOES_PARALISIA := ["agarrado", "enredado", "imovel", "lento", "paralisado"]
 
@@ -31,28 +35,38 @@ static func criar(p_ruleset: Ruleset, p_nome: String, ficha: Dictionary) -> Amea
 	a.ruleset = p_ruleset
 	a.nome = p_nome
 	a.lado = "ameacas"
-	a.pv_maximo = int(ficha.get("pv", 10))
+	a.ficha_original = ficha
+	a.aplicar_ficha(ficha)
 	a.pv = a.pv_maximo
-	a.defesa_fixa = int(ficha.get("defesa", 10))
-	a.atributos = ficha.get("atributos", {})
-	a.pericias = ficha.get("pericias", {})
-	for at in ficha.get("ataques", []):
-		a.ataques.append(at)
-	a.resistencias_base = ficha.get("resistencias", {})
-	a.deslocamento = float(ficha.get("deslocamento", 9))
-	a.elemento = ficha.get("elemento", "")
-	a.criatura = ficha.get("criatura", false)
-	a.vd = int(ficha.get("vd", 0))
-	a.presenca = ficha.get("presenca_perturbadora", {}).duplicate()
-	a.enigma = ficha.get("enigma", {}).duplicate()
-	if not a.enigma.is_empty():
-		a.enigma["resolvido"] = false
-	a.vulnerabilidades = ficha.get("vulnerabilidades", []).duplicate()
-	a.imunidades = ficha.get("imunidades", []).duplicate()
-	a.habilidades = ficha.get("habilidades", []).duplicate(true)
-	a.conjurador = ficha.get("conjurador", {}).duplicate(true)
 	a.tem_sanidade = false
 	return a
+
+
+## Usa os números de uma ficha (na criação e na transformação). Não mexe nos PV atuais.
+func aplicar_ficha(ficha: Dictionary) -> void:
+	pv_maximo = int(ficha.get("pv", 10))
+	defesa_fixa = int(ficha.get("defesa", 10))
+	atributos = ficha.get("atributos", {})
+	pericias = ficha.get("pericias", {})
+	ataques.clear()
+	for at in ficha.get("ataques", []):
+		ataques.append(at)
+	resistencias_base = ficha.get("resistencias", {})
+	deslocamento = float(ficha.get("deslocamento", 9))
+	elemento = ficha.get("elemento", "")
+	criatura = ficha.get("criatura", false)
+	vd = int(ficha.get("vd", 0))
+	presenca = ficha.get("presenca_perturbadora", {}).duplicate()
+	enigma = ficha.get("enigma", {}).duplicate(true)
+	if not enigma.is_empty():
+		enigma["resolvido"] = false
+		enigma["etapa"] = 0
+	vulnerabilidades = ficha.get("vulnerabilidades", []).duplicate()
+	imunidades = ficha.get("imunidades", []).duplicate()
+	habilidades = ficha.get("habilidades", []).duplicate(true)
+	conjurador = ficha.get("conjurador", {}).duplicate(true)
+	forma_de_sangue = ficha.get("forma_de_sangue", {}).duplicate(true)
+	transformacao = ficha.get("transformacao", {})
 
 
 func atributo(atributo_id: String) -> int:
@@ -79,7 +93,13 @@ func defesa() -> int:
 
 
 func deslocamento_m() -> float:
+	if na_forma_de_sangue():
+		return float(forma_de_sangue.get("deslocamento", deslocamento))
 	return deslocamento
+
+
+func na_forma_de_sangue() -> bool:
+	return not forma_de_sangue.is_empty() and enigma_pendente()
 
 
 func imune_a_condicao(condicao: String) -> bool:
@@ -115,7 +135,24 @@ func enigma_pendente() -> bool:
 	return not enigma.is_empty() and not enigma.get("resolvido", false)
 
 
+## Etapas do enigma (o formato antigo, com "pericias" e "dt", é uma etapa só).
+func etapas_do_enigma() -> Array:
+	if enigma.has("etapas"):
+		return enigma.etapas
+	return [{"texto": enigma.get("texto", ""), "pericias": enigma.get("pericias", ["ocultismo"]), "dt": enigma.get("dt", 20)}]
+
+
+func etapa_atual() -> Dictionary:
+	var etapas := etapas_do_enigma()
+	var i := int(enigma.get("etapa", 0))
+	return etapas[i] if i < etapas.size() else {}
+
+
 func resistencia(tipo_dano: String) -> int:
-	if enigma_pendente() or tipo_dano in imunidades:
-		return 1 << 20   # imune a dano (Enigma de Medo ou imunidade da ficha)
+	if enigma_pendente() and String(enigma.get("efeito", "remove_imunidade")) == "remove_imunidade":
+		return 1 << 20   # Enigma de Medo: nada fere a criatura antes de ser resolvido
+	if tipo_dano in imunidades or "dano" in imunidades:
+		return 1 << 20   # imunidade da ficha
+	if na_forma_de_sangue():
+		return int(forma_de_sangue.get("resistencias", {}).get(tipo_dano, 0)) + int(mods_cena.get("resistencia_extra", 0))
 	return super(tipo_dano)

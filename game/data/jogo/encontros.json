@@ -36,7 +36,14 @@
     { "id": "esquecidos", "nome": "Os esquecidos", "nivel": 3, "ameacas": ["viajante"] },
     { "id": "sigilo", "nome": "O sigilo na testa", "nivel": 3, "ameacas": ["carnical_preto_da_morte", "esqueleto_de_lodo", "esqueleto_de_lodo"] },
     { "id": "massacre", "nome": "Massacre", "nivel": 3, "ameacas": ["tita_de_sangue", "zumbi_de_sangue"] },
-    { "id": "tumba", "nome": "Tumba", "nivel": 3, "ameacas": ["mumia_xipofaga"] }
+    { "id": "tumba", "nome": "Tumba", "nivel": 3, "ameacas": ["mumia_xipofaga"] },
+    { "id": "a_melodia", "nome": "A melodia", "nivel": 3, "ameacas": ["escutado"] },
+    { "id": "frestas", "nome": "Frestas", "nivel": 3, "ameacas": ["espreitador"] },
+    { "id": "canos", "nome": "Os canos", "nivel": 3, "ameacas": ["mulher_afogada"] },
+    { "id": "acorrentado", "nome": "O acorrentado", "nivel": 3, "ameacas": ["enpap_x", "investido"] },
+    { "id": "anomalia", "nome": "Riso elétrico", "nivel": 3, "ameacas": ["anomiatico"] },
+    { "id": "sempre_la", "nome": "Sempre lá", "nivel": 3, "ameacas": ["ocioso"] },
+    { "id": "nao_abra", "nome": "Não abra a porta", "nivel": 3, "ameacas": ["carente"] }
   ],
   "chefe": {"id": "covil", "nome": "O Covil Carmesim", "ameacas": ["horror_carmesim", "investido", "zumbi_de_sangue"]}
 }

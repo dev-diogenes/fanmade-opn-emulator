@@ -32,7 +32,10 @@ const DEBILITADO := "debilitado"
 const OFUSCADO := "ofuscado"
 const SEM_CURA := "sem_cura"   ## Poeira da Podridão: não recupera PV
 const SANGRANDO := "sangrando"  ## p.321: Vigor DT 20 no início do turno ou perde 1d6 PV
-const POCA := "poca"           ## Imortalidade (esqueleto de Lodo, enraizado): desfeito, mas volta
+const POCA := "poca"
+const ASFIXIADO := "asfixiado"  ## Afogar em Sangue (Mulher Afogada)
+const LENTO := "lento"
+const PARALISADO_ := "paralisado"           ## Imortalidade (esqueleto de Lodo, enraizado): desfeito, mas volta
 ## Condições mentais e de medo (p.320-321): criaturas paranormais são imunes (p.190)
 const CONDICOES_MENTAIS := ["abalado", "apavorado", "alquebrado", "atordoado", "confuso", "esmorecido", "fascinado", "frustrado", "pasmo"]
 ## Condição repetida vira a seguinte (p.320-321)
@@ -216,7 +219,7 @@ func bonus_testes_resistencia() -> int:
 
 
 func resistencia(tipo_dano: String) -> int:
-	var total := int(resistencias_base.get(tipo_dano, 0)) + int(mods_cena.get("resistencias", {}).get(tipo_dano, 0))
+	var total := int(resistencias_base.get(tipo_dano, 0)) + int(mods_cena.get("resistencias", {}).get(tipo_dano, 0)) + int(mods_cena.get("resistencia_extra", 0))
 	if tipo_dano in DANO_FISICO:
 		total += efeito_ritual("resistencia_fisica")   # Ódio Incontrolável
 	return total

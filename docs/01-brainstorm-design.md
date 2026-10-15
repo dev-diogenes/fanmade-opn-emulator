@@ -198,6 +198,12 @@ Pontos em que o livro é ambíguo e escolhemos uma leitura (revisar se surgir er
 | Surgimentos | Com a Membrana fraca, só surgem encontros cuja ameaça mais fraca tenha VD de até o dobro do NEX somado do grupo |
 | Sangrando | Teste de Vigor (dados de Vigor, sem bônus) DT 20 no início do turno: passou, para; falhou, perde 1d6 PV |
 | Ordens (comandante) | Uma vez por cena; +1 dado em testes (inclusive ataques) e um dado de dano a mais para os aliados em alcance médio |
+| Enigmas sem número no livro | Espreitador: Enganação ou Furtividade DT 25 para fingir dormir, Atletismo ou Reflexos DT 20 para fechar a fresta. Mulher Afogada: Tecnologia ou Atletismo DT 20, Tecnologia ou Crime DT 20, Atletismo ou Reflexos DT 15. Viajante: fotografar com Percepção ou Tecnologia DT 25. Cada passo é uma ação padrão, na ordem |
+| Mulher Afogada na forma de Sangue | "Se recupera dos ferimentos" vira cura acelerada 20 enquanto o enigma não é resolvido. Asfixiado: Fortitude DT 24 no início do turno; falhando, perde 1d6 PV |
+| Escutado | As rodadas contam no início do turno do original: se a melodia tocou desde o turno anterior, conta mais uma e surge uma cópia; se não tocou, zera |
+| Hipnose | O hipnotizado muda de lado e é jogado pela IA. Se todos os agentes ficarem hipnotizados, o combate é perdido; no fim do combate, todos voltam ao normal |
+| Ocioso | Escolhe como alvo o primeiro agente do combate (outro, se ele cair). A Retaliação vale uma vez por ataque e o dano não é não letal ainda |
+| Enpap-X | No mapa aparece como "Prisioneiro Marcado" (um existido); a transformação acontece a 0 PV, com todos os PV da nova ficha |
 | Sustentado com vários alvos | Custa 1 PE por turno pelo ritual inteiro, não por alvo; conjurar outro ritual sustentado encerra o anterior |
 | Reforços da Ordem (modo Normal) | 2 por missão. Um agente caído num combate perdido (ou morto) é resgatado: sai da missão com uma lesão (1d6 no atributo, como a regra de Lesões) |
 

@@ -81,6 +81,8 @@ O **Medo** é só ameaça: ao ver criaturas, cada agente testa Vontade contra a 
 
 Os encontros usam as fichas do livro (zumbis de Sangue, esqueletos de Lodo, vultos, cultistas que conjuram rituais, policiais, onças…), cada uma com as próprias habilidades: esqueletos viram poça e voltam se você não usar fogo ou Energia, a aberração agarra e abocanha, o succ prende a vítima até alguém ferir ele. O tamanho do encontro segue a regra do livro: a soma do VD das ameaças fica perto da soma do NEX de quem entra no combate. Com o grupo mais experiente aparecem ameaças maiores: o titã de Sangue, a múmia que ainda age a 0 PV, o viajante invisível que devora memórias, líderes de culto que cobrem o campo de Poeira da Podridão e enxames que ferem quem está por perto.
 
+Algumas criaturas só caem quando o grupo resolve o **Enigma de Medo** delas (botão do enigma na arena, que mostra o próximo passo): fingir dormir e fechar a fresta do Espreitador, fechar o registro e abrir as torneiras contra a Mulher Afogada, fotografar o Viajante, tocar a melodia proibida por 4 rodadas enquanto o Escutado se multiplica. O Carniçal hipnotiza agentes, que passam a lutar do lado dele até se libertarem.
+
 ### Investigação
 
 Os hexes com o **anel verde-água** são cenas de investigação. Ao entrar, o grupo (agentes a até 2 hexes) vai para uma cena 3D escura, com a luz curta:
