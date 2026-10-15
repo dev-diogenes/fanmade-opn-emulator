@@ -31,6 +31,7 @@ const FRACO := "fraco"
 const DEBILITADO := "debilitado"
 const OFUSCADO := "ofuscado"
 const SEM_CURA := "sem_cura"   ## Poeira da Podridão: não recupera PV
+const POCA := "poca"           ## Imortalidade (esqueleto de Lodo, enraizado): desfeito, mas volta
 ## Condições mentais e de medo (p.320-321): criaturas paranormais são imunes (p.190)
 const CONDICOES_MENTAIS := ["abalado", "apavorado", "alquebrado", "atordoado", "confuso", "esmorecido", "fascinado", "frustrado", "pasmo"]
 ## Condição repetida vira a seguinte (p.320-321)
@@ -151,6 +152,20 @@ func penalidade_dados_atributo(atributo_id: String) -> int:
 
 func imune_a_condicao(_condicao: String) -> bool:
 	return false
+
+
+## Vulnerabilidade (p.190): sofre o dobro do dano desse tipo. Efeitos de cena podem dar uma.
+func vulneravel_a(tipo_dano: String) -> bool:
+	return tipo_dano in mods_cena.get("vulnerabilidades", [])
+
+
+## DT dos rituais que o ser conjura (Agente: Presença e limite de PE; ameaças: valor fixo da ficha).
+func dt_ritual(_ritual_id: String) -> int:
+	return 10
+
+
+func bonus_ritual_potente() -> int:
+	return 0
 
 
 ## Aplica uma condição; `rodadas` 0 = até o fim da cena. Repetir abalado, fatigado ou fraco agrava.
@@ -313,7 +328,7 @@ func encerrar_cena() -> void:
 	mods_cena.clear()
 	defesa_temporaria = 0
 	penalidade_ataque_temporaria = 0
-	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL, FATIGADO, ATORDOADO, PASMO]:
+	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL, FATIGADO, ATORDOADO, PASMO, ABALADO, APAVORADO, ENJOADO, AGARRADO, OFUSCADO, SEM_CURA]:
 		condicoes.erase(c)   # condições terminam no fim da cena (p.321)
 	duracoes.clear()
 	rituais_ativos.clear()

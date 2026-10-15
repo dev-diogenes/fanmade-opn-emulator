@@ -77,6 +77,10 @@ No seletor da arena, cada ritual aparece também nas formas **discente** e **ver
 
 O **Medo** é só ameaça: ao ver criaturas, cada agente testa Vontade contra a **Presença Perturbadora** (falhar custa Sanidade; NEX alto dá imunidade). A **Sombra Sussurrante** não sofre dano até alguém usar **Decifrar enigma**, e as pistas da missão ajudam. Com a Membrana Fina surgem eventos de pavor; Rompendo, o Medo ataca a Sanidade de todos a cada turno do mundo.
 
+### Ameaças
+
+Os encontros usam as fichas do livro (zumbis de Sangue, esqueletos de Lodo, vultos, cultistas que conjuram rituais, policiais, onças…), cada uma com as próprias habilidades: esqueletos viram poça e voltam se você não usar fogo ou Energia, a aberração agarra e abocanha, o succ prende a vítima até alguém ferir ele. O tamanho do encontro segue a regra do livro: a soma do VD das ameaças fica perto da soma do NEX de quem entra no combate.
+
 ### Investigação
 
 Os hexes com o **anel verde-água** são cenas de investigação. Ao entrar, o grupo (agentes a até 2 hexes) vai para uma cena 3D escura, com a luz curta:

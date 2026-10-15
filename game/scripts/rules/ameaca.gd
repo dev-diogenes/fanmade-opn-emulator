@@ -16,6 +16,14 @@ var vd := 0             ## Valor de dificuldade (escolhe a Presença Perturbador
 var presenca: Dictionary = {}
 ## Enigma de Medo (p.190): {"texto", "pericias", "dt", "resolvido"}; enquanto não resolvido, imune a dano
 var enigma: Dictionary = {}
+var vulnerabilidades: Array = []   ## tipos de dano que causam o dobro
+var imunidades: Array = []         ## tipos de dano, condições ou "paralisia" (todas as condições de paralisia)
+var habilidades: Array = []        ## [{id, ...}] habilidades da ficha (cap. 7)
+var conjurador: Dictionary = {}    ## {"rituais", "dt", "limite_pe"}: cultistas conjuram sem gastar PE (p.296)
+var vd_valor := 0
+var usos: Dictionary = {}          ## habilidade -> usos na cena
+
+const CONDICOES_PARALISIA := ["agarrado", "enredado", "imovel", "lento", "paralisado"]
 
 
 static func criar(p_ruleset: Ruleset, p_nome: String, ficha: Dictionary) -> Ameaca:
@@ -39,6 +47,10 @@ static func criar(p_ruleset: Ruleset, p_nome: String, ficha: Dictionary) -> Amea
 	a.enigma = ficha.get("enigma", {}).duplicate()
 	if not a.enigma.is_empty():
 		a.enigma["resolvido"] = false
+	a.vulnerabilidades = ficha.get("vulnerabilidades", []).duplicate()
+	a.imunidades = ficha.get("imunidades", []).duplicate()
+	a.habilidades = ficha.get("habilidades", []).duplicate(true)
+	a.conjurador = ficha.get("conjurador", {}).duplicate(true)
 	a.tem_sanidade = false
 	return a
 
@@ -71,7 +83,32 @@ func deslocamento_m() -> float:
 
 
 func imune_a_condicao(condicao: String) -> bool:
+	if condicao in imunidades or ("paralisia" in imunidades and condicao in CONDICOES_PARALISIA):
+		return true
 	return criatura and condicao in CONDICOES_MENTAIS
+
+
+func habilidade(hab_id: String) -> Dictionary:
+	for h in habilidades:
+		if h.id == hab_id:
+			return h
+	return {}
+
+
+func tem_hab(hab_id: String) -> bool:
+	return not habilidade(hab_id).is_empty()
+
+
+func vulneravel_a(tipo_dano: String) -> bool:
+	return tipo_dano in vulnerabilidades or super(tipo_dano)
+
+
+func dt_ritual(_ritual_id: String) -> int:
+	return int(conjurador.get("dt", 10))
+
+
+func conhece_ritual(ritual_id: String) -> bool:
+	return ritual_id in conjurador.get("rituais", [])
 
 
 func enigma_pendente() -> bool:
@@ -79,6 +116,6 @@ func enigma_pendente() -> bool:
 
 
 func resistencia(tipo_dano: String) -> int:
-	if enigma_pendente():
-		return 1 << 20   # imune a dano até o enigma ser resolvido
+	if enigma_pendente() or tipo_dano in imunidades:
+		return 1 << 20   # imune a dano (Enigma de Medo ou imunidade da ficha)
 	return super(tipo_dano)

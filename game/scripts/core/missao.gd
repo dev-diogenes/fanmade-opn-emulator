@@ -306,21 +306,45 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool) -> void:
 			if caso != null and caso.pergunta("quem").get("respondida", false):
 				am.nome = caso.sujeito.get("chefe_titulo", am.nome)
 		ameacas.append(am)
-	# Balanceamento: fora do covil, no máximo N ameaças por agente que entra no combate
-	# (as mais fracas saem primeiro), para quem chega sozinho não enfrentar o grupo inteiro.
+	# Balanceamento (p.187): fora do covil, a soma do VD das ameaças não passa da soma do NEX
+	# de quem entra no combate (× dificuldade); sempre sobra ao menos a mais fraca.
 	if not chefe and not participantes.is_empty():
-		var limite := maxi(1, participantes.size() * int(_cfg.get("ameacas_por_agente", 1)))
-		ameacas.sort_custom(func(a, b): return int(a.nivel) > int(b.nivel))
-		ameacas = ameacas.slice(0, limite)
+		var orcamento := 0
+		for a in participantes:
+			orcamento += a.nex
+		ameacas = escolher_por_vd(ameacas, int(orcamento * float(_cfg.get("dificuldade_encontro", 1.0))))
 	encontro_pendente = {
 		"hex": h, "nome": info.nome, "chefe": chefe, "terreno": mapa.terreno(h),
 		"agentes": participantes, "armas": armas, "ameacas": ameacas, "encontro": encontro_id,
 		"regras": {"lesoes": opcoes.get("lesoes", true), "inspiracao_resoluta": opcoes.get("inspiracao_resoluta", true),
-			"presenca_perturbadora": true, "bonus_enigma": mini(10, pistas * 2)},
+			"presenca_perturbadora": true, "bonus_enigma": mini(10, pistas * 2), "perguntas_respondidas": _perguntas_respondidas()},
 		"nivel_membrana": membrana.nivel_ameaca(), "semente": dados.rolar(1000000),
 	}
 	_log("[color=#ec7063][b]Encontro: %s![/b][/color] (%d agente(s) entram no combate)" % [info.nome, participantes.size()])
 	encontro_iniciado.emit(encontro_pendente)
+
+
+## Escolhe ameaças da lista, da mais forte para a mais fraca, sem passar do orçamento de VD.
+static func escolher_por_vd(lista: Array, orcamento: int) -> Array:
+	var ordenadas := lista.duplicate()
+	ordenadas.sort_custom(func(a, b): return int(a.get("vd", 0)) > int(b.get("vd", 0)))
+	var escolhidas: Array = []
+	var total := 0
+	for am in ordenadas:
+		if total + int(am.get("vd", 0)) <= orcamento:
+			escolhidas.append(am)
+			total += int(am.get("vd", 0))
+	if escolhidas.is_empty() and not ordenadas.is_empty():
+		escolhidas.append(ordenadas[-1])
+	return escolhidas
+
+
+func _perguntas_respondidas() -> Array:
+	var ids: Array = []
+	if caso != null:
+		for p in caso.respondidas():
+			ids.append(p.id)
+	return ids
 
 
 func _encontro(encontro_id: String) -> Dictionary:

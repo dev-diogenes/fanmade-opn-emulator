@@ -78,7 +78,7 @@ func test_encontro_monta_combate_com_aliados_proximos():
 	assert_signal_emitted(m, "encontro_iniciado")
 	var cfg := m.encontro_pendente
 	assert_eq(cfg.agentes.size(), 3, "os outros dois estão a até 2 hexes e entram no combate")
-	assert_eq(cfg.ameacas.size(), 2)
+	assert_eq(cfg.ameacas.size(), 1, "3 agentes de NEX 5% = orçamento de VD 15 (p.187): só a ameaça mais fraca")
 	m.concluir_encontro("agentes")
 	assert_true(m.mapa.conteudo(h).is_empty())
 	assert_false(m.encerrada)

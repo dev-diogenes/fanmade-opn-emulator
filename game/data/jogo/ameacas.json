@@ -33,6 +33,17 @@
       "soma_forca": false,
       "ataque": "corpo_a_corpo",
       "tipo_dano": "medo"
+    },
+    "lamento": {
+      "id": "lamento",
+      "nome": "Lamento",
+      "dano": "3d6",
+      "margem": 20,
+      "multiplicador": 2,
+      "pericia": "luta",
+      "soma_forca": false,
+      "ataque": "corpo_a_corpo",
+      "tipo_dano": "medo"
     }
   },
   "ameacas": {
@@ -57,7 +68,8 @@
             "dados": 1,
             "bonus": 2
           }
-        }
+        },
+        "vd": 10
       }
     },
     "cultista_machete": {
@@ -81,7 +93,8 @@
             "dados": 1,
             "bonus": 2
           }
-        }
+        },
+        "vd": 10
       }
     },
     "atirador": {
@@ -105,7 +118,8 @@
             "dados": 2,
             "bonus": 5
           }
-        }
+        },
+        "vd": 10
       }
     },
     "aberracao": {
@@ -262,8 +276,78 @@
             "intuicao",
             "investigacao"
           ],
-          "dt": 22
+          "dt": 22,
+          "pergunta": "quem"
         }
+      }
+    },
+    "o_que_ficou": {
+      "nome": "O Que Ficou",
+      "nivel": 3,
+      "arma": "lamento",
+      "descricao": "O que restou de um ritual que deu certo demais: uma presença que imita o objeto do culto e repete o que ele prometia. Só cede a quem entende o que o culto queria.",
+      "ficha": {
+        "pv": 90,
+        "defesa": 20,
+        "deslocamento": 9,
+        "atributos": {
+          "agi": 2,
+          "for": 2,
+          "vig": 3
+        },
+        "pericias": {
+          "luta": {
+            "dados": 3,
+            "bonus": 10
+          },
+          "iniciativa": {
+            "dados": 2,
+            "bonus": 5
+          },
+          "vontade": {
+            "dados": 3,
+            "bonus": 15
+          },
+          "fortitude": {
+            "dados": 3,
+            "bonus": 10
+          }
+        },
+        "elemento": "medo",
+        "criatura": true,
+        "vd": 100,
+        "presenca_perturbadora": {
+          "dt": 20,
+          "dano": "3d6",
+          "nex": 50
+        },
+        "enigma": {
+          "texto": "O que o culto queria trazer para este lado?",
+          "pericias": [
+            "ocultismo",
+            "investigacao",
+            "intuicao"
+          ],
+          "dt": 24,
+          "pergunta": "o_que"
+        },
+        "habilidades": [
+          {
+            "id": "eco_do_ritual",
+            "acao": "livre",
+            "por_rodada": 1,
+            "area": {
+              "forma": "explosao",
+              "raio": 9
+            },
+            "dano": "1d6",
+            "tipo_dano": "mental",
+            "resistencia": "vontade",
+            "dt": 18,
+            "ao_passar": "metade",
+            "descricao": "Uma vez por rodada, repete a promessa do culto: 1d6 de dano mental em alcance curto (Vontade DT 18: metade)."
+          }
+        ]
       }
     }
   }

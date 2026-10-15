@@ -18,6 +18,7 @@
     "equipamentos.json",
     "investigacao.json",
     "rituais.json",
-    "poderes_paranormais.json"
+    "poderes_paranormais.json",
+    "ameacas.json"
   ]
 }

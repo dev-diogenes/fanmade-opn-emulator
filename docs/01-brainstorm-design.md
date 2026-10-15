@@ -183,6 +183,15 @@ Pontos em que o livro é ambíguo e escolhemos uma leitura (revisar se surgir er
 | Decadência e Hemofagia discentes | O dano do ritual soma ao da arma e usa o tipo de dano da arma; não multiplica no crítico |
 | Presença Perturbadora | Testada no início de cada combate, não só na primeira vez que o agente vê a criatura |
 | Enigma de Medo | No jogo, decifrar é uma ação padrão (Ocultismo, Intuição ou Investigação). Cada pista da missão reduz a DT em 2, até −10 |
+| Ameaças do livro | Os números vêm das fichas do cap. 7; as descrições são nossas. Ataques usam o "Teste" da ficha, que já inclui tudo; "x2" são dois ataques na mesma ação Agredir |
+| Orçamento de VD | Soma do VD ≤ soma do NEX de quem entra no combate (p.187, dificuldade 1 = equilibrado). As ameaças entram da mais forte para a mais fraca; se nenhuma cabe, vem só a mais fraca. O covil ignora o orçamento |
+| Imortalidade | A poça não impede a vitória: o combate acaba se todas as outras ameaças caírem. Na poça, só fogo e Energia contam (o enraizado precisa de 20 somados) |
+| Agarrões de ameaças | Teste da ficha contra o melhor entre Atletismo e Acrobacia do alvo (oposto). Soltar-se é o mesmo teste, como ação padrão. Abocanhar (aberração) acontece sozinho no início do turno dela |
+| Succ | Ao soltar a vítima antes do próximo turno do succ, ela acorda. Se não, vai a 0 PV e o succ a solta |
+| Implantar Confusão | O agarrão vira só um teste oposto: o perturbado não mantém a vítima agarrada |
+| Aceleração | Vale no turno seguinte ao golpe: gastar ação de movimento e padrão (ou completa) causa o dano uma vez |
+| Habilidades com "capazes de vê-lo" ou "em alcance médio" | Explosão centrada na ameaça com o raio do alcance (médio = 18 m); só atinge inimigos dela |
+| Cultistas | Conjuram só a forma básica dos rituais da ficha, sem PE, com a DT da ficha. Escolhemos Decadência e Definhar (iniciado) e Decadência, Definhar, Hemofagia e Descarnar (investido) |
 | Sustentado com vários alvos | Custa 1 PE por turno pelo ritual inteiro, não por alvo; conjurar outro ritual sustentado encerra o anterior |
 | Reforços da Ordem (modo Normal) | 2 por missão. Um agente caído num combate perdido (ou morto) é resgatado: sai da missão com uma lesão (1d6 no atributo, como a regra de Lesões) |
 

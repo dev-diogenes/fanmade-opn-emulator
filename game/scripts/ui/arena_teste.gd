@@ -208,6 +208,10 @@ func _jogar_ia(ser: Ser) -> void:
 	if alvo == null:
 		return
 	var arma: Dictionary = armas[ser]
+	if ser is Ameaca:
+		if IaAmeaca.agir_antes(combate, ser as Ameaca, alvo) or combate.encerrado:
+			return
+		arma = IaAmeaca.escolher_arma(combate, ser, alvo, arma)
 	if ser is Agente:
 		for rid in (ser as Agente).rituais:
 			var rr := ruleset.ritual(rid)
@@ -241,7 +245,7 @@ func _inimigo_mais_proximo(ser: Ser) -> Ser:
 
 
 func _pode_atacar(ser: Ser, alvo: Ser, arma: Dictionary) -> bool:
-	if combate.acoes_restantes(ser).padrao <= 0 or alvo.esta_fora_de_combate():
+	if combate.acoes_restantes(ser).padrao <= 0 or (alvo.esta_fora_de_combate() and not alvo.tem(Ser.POCA)):
 		return false
 	if arma.get("ataque", "corpo_a_corpo") == "corpo_a_corpo":
 		return grade.estao_adjacentes(ser, alvo)
@@ -281,6 +285,8 @@ func _clicar_celula(celula: Vector2i) -> void:
 		if _chk_ae.button_pressed and agente.classe_id == "combatente":
 			opcoes["ataque_especial"] = {"ataque": 5}
 		var r := combate.agredir(agente, alvo, armas[agente], int(_spin_foco.value), opcoes)
+		for extra in r.ataques_extras:
+			_ultimo_teste = extra.teste
 		if r.teste == null:
 			_registrar("[color=#e67e22]Ataque inválido (fora de alcance, sem ação ou PE).[/color]")
 		_modo = ""

@@ -237,6 +237,18 @@ func lista_armas() -> Array:
 	return dados.get("armas", {}).get("armas", []).filter(func(a): return a.id != "desarmado")
 
 
+## Ameaças do livro (cap. 7): fichas com números do livro e descrições próprias.
+func lista_ameacas() -> Array:
+	return dados.get("ameacas", {}).get("ameacas", [])
+
+
+func ameaca(ameaca_id: String) -> Dictionary:
+	for a in lista_ameacas():
+		if a.id == ameaca_id:
+			return a
+	return {}
+
+
 func lista_poderes_paranormais() -> Array:
 	return dados.get("poderes_paranormais", {}).get("poderes", [])
 

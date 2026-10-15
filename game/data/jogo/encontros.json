@@ -1,14 +1,30 @@
 {
-  "nota": "Grupos de ameaças para o mapa. 'nivel' mínimo de ameaça da Membrana para surgir pelo mundo (0 = sempre).",
+  "nota": "Grupos de ameaças para o mapa. 'nivel' mínimo de ameaça da Membrana para surgir pelo mundo (0 = sempre). As ameaças vêm do livro (ruleset) ou de data/jogo/ameacas.json; o combate usa só as que cabem no orçamento de VD (p.187).",
   "encontros": [
-    { "id": "celula_cultista", "nome": "Célula cultista", "nivel": 0, "ameacas": ["cultista", "cultista_machete"] },
-    { "id": "emboscada", "nome": "Emboscada", "nivel": 0, "ameacas": ["cultista", "atirador"] },
-    { "id": "cria_solitaria", "nome": "Cria de Sangue", "nivel": 0, "ameacas": ["cria_de_sangue"] },
-    { "id": "ritual_interrompido", "nome": "Ritual interrompido", "nivel": 1, "ameacas": ["cultista", "cultista_machete", "atirador"] },
-    { "id": "ninho", "nome": "Ninho", "nivel": 1, "ameacas": ["cria_de_sangue", "cria_de_sangue"] },
-    { "id": "aberracao_faminta", "nome": "Aberração faminta", "nivel": 2, "ameacas": ["aberracao", "cultista"] },
+    { "id": "celula_cultista", "nome": "Célula cultista", "nivel": 0, "ameacas": ["iniciado", "iniciado", "capanga"] },
+    { "id": "emboscada", "nome": "Emboscada", "nivel": 0, "ameacas": ["bandido", "capanga"] },
+    { "id": "caes_de_guarda", "nome": "Cães de guarda", "nivel": 0, "ameacas": ["cao_de_guarda", "cao_de_guarda"] },
+    { "id": "javaporcos", "nome": "Javaporcos", "nivel": 0, "ameacas": ["javaporco", "javaporco"] },
+    { "id": "cria_solitaria", "nome": "Zumbi de Sangue", "nivel": 0, "ameacas": ["zumbi_de_sangue"] },
+    { "id": "ritual_interrompido", "nome": "Ritual interrompido", "nivel": 1, "ameacas": ["investido", "iniciado", "iniciado"] },
+    { "id": "patrulha", "nome": "Patrulha", "nivel": 1, "ameacas": ["policial", "policial"] },
+    { "id": "ossos_de_lodo", "nome": "Ossos de Lodo", "nivel": 1, "ameacas": ["esqueleto_de_lodo", "esqueleto_de_lodo"] },
+    { "id": "marcas_douradas", "nome": "Marcas douradas", "nivel": 1, "ameacas": ["existido", "iniciado"] },
+    { "id": "vulto", "nome": "Vulto", "nivel": 1, "ameacas": ["vulto"] },
+    { "id": "succ", "nome": "Succ", "nivel": 1, "ameacas": ["succ"] },
+    { "id": "predador", "nome": "Predador", "nivel": 1, "ameacas": ["onca_pintada"] },
+    { "id": "mascote_do_culto", "nome": "Mascote do culto", "nivel": 1, "ameacas": ["sucuri", "iniciado"] },
+    { "id": "ninho", "nome": "Ninho", "nivel": 1, "ameacas": ["zumbi_de_sangue", "zumbi_de_sangue"] },
+    { "id": "aberracao_faminta", "nome": "Aberração faminta", "nivel": 2, "ameacas": ["aberracao_de_carne", "zumbi_de_sangue"] },
+    { "id": "plasma", "nome": "Plasma", "nivel": 2, "ameacas": ["perturbado_de_energia"] },
+    { "id": "tropa_de_elite", "nome": "Tropa de elite", "nivel": 2, "ameacas": ["policial_de_elite", "policial"] },
     { "id": "manifestacao_do_medo", "nome": "Manifestação do Medo", "nivel": 2, "ameacas": ["sombra_sussurrante"] },
-    { "id": "transbordamento", "nome": "Transbordamento", "nivel": 3, "ameacas": ["aberracao", "cria_de_sangue", "cria_de_sangue"] }
+    { "id": "dama", "nome": "A Dama", "nivel": 3, "ameacas": ["dama_de_sangue", "zumbi_de_sangue"] },
+    { "id": "transbordamento", "nome": "Transbordamento", "nivel": 3, "ameacas": ["zumbi_de_sangue_bestial", "zumbi_de_sangue"] },
+    { "id": "raizes", "nome": "Raízes", "nivel": 3, "ameacas": ["enraizado", "esqueleto_de_lodo"] },
+    { "id": "caos", "nome": "Caos", "nivel": 3, "ameacas": ["anarquico_descontrolado"] },
+    { "id": "delegacia", "nome": "Delegacia comprometida", "nivel": 3, "ameacas": ["chefe_de_policia", "policial", "policial"] },
+    { "id": "o_que_ficou", "nome": "O Que Ficou", "nivel": 3, "ameacas": ["o_que_ficou"] }
   ],
-  "chefe": { "id": "covil", "nome": "O Covil Carmesim", "ameacas": ["horror_carmesim", "cultista", "cultista_machete"] }
+  "chefe": {"id": "covil", "nome": "O Covil Carmesim", "ameacas": ["horror_carmesim", "investido", "zumbi_de_sangue"]}
 }
