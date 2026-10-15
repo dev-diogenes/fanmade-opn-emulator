@@ -13,6 +13,7 @@ var pe_gasto := 0
 var critico_ignorado := false   ## Anatomia Insana / proteção letárgica anulou o crítico
 var reacao := ""        ## Reação usada pelo alvo: "esquiva", "bloqueio", "contra_ataque" ou ""
 var contra_ataque: ResultadoAtaque
+var ataque_adicional: ResultadoAtaque   ## Ódio Incontrolável (discente): o segundo golpe do Agredir
 
 
 func descrever() -> String:

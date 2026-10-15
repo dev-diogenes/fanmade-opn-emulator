@@ -10,6 +10,12 @@ var ataques: Array[Dictionary] = []   ## Mesmo formato de armas.json
 var ruleset: Ruleset
 var deslocamento := 9.0
 var elemento := ""   ## Elemento da criatura (rituais opressores/do mesmo elemento, p.128)
+var criatura := false   ## Origem Paranormal (p.190): imune a dano mental e a condições mentais e de medo
+var vd := 0             ## Valor de dificuldade (escolhe a Presença Perturbadora da cena)
+## Presença Perturbadora (p.190): {"dt", "dano", "nex"}; vazio = não tem
+var presenca: Dictionary = {}
+## Enigma de Medo (p.190): {"texto", "pericias", "dt", "resolvido"}; enquanto não resolvido, imune a dano
+var enigma: Dictionary = {}
 
 
 static func criar(p_ruleset: Ruleset, p_nome: String, ficha: Dictionary) -> Ameaca:
@@ -27,6 +33,12 @@ static func criar(p_ruleset: Ruleset, p_nome: String, ficha: Dictionary) -> Amea
 	a.resistencias_base = ficha.get("resistencias", {})
 	a.deslocamento = float(ficha.get("deslocamento", 9))
 	a.elemento = ficha.get("elemento", "")
+	a.criatura = ficha.get("criatura", false)
+	a.vd = int(ficha.get("vd", 0))
+	a.presenca = ficha.get("presenca_perturbadora", {}).duplicate()
+	a.enigma = ficha.get("enigma", {}).duplicate()
+	if not a.enigma.is_empty():
+		a.enigma["resolvido"] = false
 	a.tem_sanidade = false
 	return a
 
@@ -56,3 +68,17 @@ func defesa() -> int:
 
 func deslocamento_m() -> float:
 	return deslocamento
+
+
+func imune_a_condicao(condicao: String) -> bool:
+	return criatura and condicao in CONDICOES_MENTAIS
+
+
+func enigma_pendente() -> bool:
+	return not enigma.is_empty() and not enigma.get("resolvido", false)
+
+
+func resistencia(tipo_dano: String) -> int:
+	if enigma_pendente():
+		return 1 << 20   # imune a dano até o enigma ser resolvido
+	return super(tipo_dano)

@@ -43,6 +43,8 @@ var _btn_atacar: Button
 var _btn_encerrar: Button
 var _btn_item: Button
 var _btn_ritual: Button
+var _btn_enigma: Button
+var _btn_soltar: Button
 var _opt_ritual: OptionButton
 var _spin_foco: SpinBox
 var _chk_ae: CheckBox
@@ -75,7 +77,7 @@ func iniciar_combate(semente: int) -> void:
 	else:
 		membrana = Membrana.carregar_padrao()
 	membrana.estado_mudou.connect(func(e, _ant): _registrar("[color=#c39bd3]A Membrana está %s: %s[/color]" % [e.nome, e.descricao]))
-	var regras: Dictionary = config.get("regras", {"lesoes": true, "inspiracao_resoluta": true})
+	var regras: Dictionary = config.get("regras", {"lesoes": true, "inspiracao_resoluta": true, "presenca_perturbadora": true})
 	combate = Combate.new(ruleset, dados, regras)
 	grade = Grade.new(COLUNAS, LINHAS)
 	combate.grade = grade
@@ -95,6 +97,9 @@ func iniciar_combate(semente: int) -> void:
 	combate.lesao_sofrida.connect(func(a, attr): _registrar("[color=#e67e22]%s sofre uma lesão: −1 %s permanente.[/color]" % [a.nome, attr.to_upper()]))
 	combate.inspiracao_disponivel.connect(_ao_inspirar)
 	combate.iniciar()
+	for s in combate.participantes:
+		if s is Ameaca and (s as Ameaca).enigma_pendente():
+			_registrar("[color=#f5b041]Enigma de Medo — %s: %s Nada a fere até alguém decifrar (botão Decifrar).[/color]" % [s.nome, (s as Ameaca).enigma.get("texto", "")])
 	var nomes := PackedStringArray()
 	for s in combate.ordem:
 		nomes.append("%s (%d)" % [s.nome, combate.iniciativas[s]])
@@ -206,7 +211,7 @@ func _jogar_ia(ser: Ser) -> void:
 	if ser is Agente:
 		for rid in (ser as Agente).rituais:
 			var rr := ruleset.ritual(rid)
-			if rr.get("implementado", false) and rr.efeitos[0].tipo == "dano" and combate.pode_conjurar(ser, rid, alvo) == "":
+			if rr.get("implementado", false) and rr.efeitos[0].tipo == "dano" and not rr.efeitos[0].has("area") and combate.pode_conjurar(ser, rid, alvo) == "":
 				combate.conjurar(ser, rid, alvo)
 				return
 	if not _pode_atacar(ser, alvo, arma):
@@ -259,8 +264,17 @@ func _clicar_celula(celula: Vector2i) -> void:
 			for op in combate.oportunidades_pendentes:
 				_registrar("%s pode fazer um ataque de oportunidade." % op.atacante.nome)
 		_modo = ""
+	elif _modo == "ritual_area" and agente != null:
+		var escolha: Array = _opt_ritual.get_item_metadata(_opt_ritual.selected)
+		_conjurar(agente, escolha[0], escolha[1], alvo, {"celula": celula})
+		return
 	elif _modo == "ritual" and agente != null and alvo != null:
-		_conjurar(agente, _opt_ritual.get_item_metadata(_opt_ritual.selected), alvo)
+		var escolha: Array = _opt_ritual.get_item_metadata(_opt_ritual.selected)
+		var opcoes := {}
+		var e := combate.efeito_do_ritual(escolha[0], escolha[1])
+		if e.has("alvos"):
+			opcoes["alvos"] = _alvos_do_lado(agente, alvo, e)
+		_conjurar(agente, escolha[0], escolha[1], alvo, opcoes)
 		return
 	elif _modo == "atacar" and agente != null and alvo != null and alvo.lado != agente.lado:
 		var opcoes := {}
@@ -370,6 +384,12 @@ func _montar_interface() -> void:
 	_btn_item = _botao("Cicatrizante", _usar_cicatrizante)
 	for b in [_btn_mover, _btn_atacar, _btn_item, _btn_encerrar]:
 		botoes.add_child(b)
+	var botoes2 := HBoxContainer.new()
+	painel.add_child(botoes2)
+	_btn_enigma = _botao("Decifrar enigma", _decifrar)
+	_btn_soltar = _botao("Soltar-se", _soltar)
+	botoes2.add_child(_btn_enigma)
+	botoes2.add_child(_btn_soltar)
 	var linha_ritual := HBoxContainer.new()
 	painel.add_child(linha_ritual)
 	_opt_ritual = OptionButton.new()
@@ -447,25 +467,72 @@ func _usar_cicatrizante() -> void:
 	_atualizar()
 
 
-## Conjurar: rituais pessoais saem na hora; os outros esperam o clique no alvo.
+## Conjurar: rituais pessoais e explosões saem na hora; áreas esperam o clique no ponto;
+## os outros, o clique no alvo (com vários alvos, vale o lado do alvo clicado).
 func _modo_ritual() -> void:
 	var agente := _agente_da_vez()
 	if agente == null or _opt_ritual.selected < 0:
 		return
-	var rid: String = _opt_ritual.get_item_metadata(_opt_ritual.selected)
-	if String(ruleset.ritual(rid).get("alcance", "")).begins_with("pessoal"):
-		_conjurar(agente, rid, agente)
+	var escolha: Array = _opt_ritual.get_item_metadata(_opt_ritual.selected)
+	var e := combate.efeito_do_ritual(escolha[0], escolha[1])
+	var nome: String = ruleset.ritual(escolha[0]).nome
+	if e.has("area") and e.area.forma == "explosao" or (not e.has("area") and String(e.get("alcance", "")).begins_with("pessoal")):
+		_conjurar(agente, escolha[0], escolha[1], agente, {})
+	elif e.has("area"):
+		_modo = "ritual_area"
+		_registrar("Escolha o ponto de %s no tabuleiro (%s de %s m)." % [nome, e.area.forma, e.area.get("raio", e.area.get("comprimento", 0))])
 	else:
 		_modo = "ritual"
-		_registrar("Escolha o alvo de %s no tabuleiro." % ruleset.ritual(rid).nome)
+		_registrar("Escolha o alvo de %s no tabuleiro%s." % [nome, " (afeta os do mesmo lado em alcance)" if e.has("alvos") else ""])
 	_atualizar()
 
 
-func _conjurar(agente: Agente, rid: String, alvo: Ser) -> void:
-	var r := combate.conjurar(agente, rid, alvo)
+## "Alvos escolhidos": os seres do lado do alvo clicado, do mais perto ao mais longe, até o limite.
+func _alvos_do_lado(agente: Agente, clicado: Ser, e: Dictionary) -> Array:
+	var lista: Array = []
+	for s in grade.seres():
+		if s.lado == clicado.lado and not s.esta_fora_de_combate():
+			lista.append(s)
+	lista.sort_custom(func(a, b): return grade.distancia_entre(agente, a) < grade.distancia_entre(agente, b))
+	lista.erase(clicado)
+	lista.push_front(clicado)
+	var limite: int = int(e.alvos) if (e.alvos is int or e.alvos is float) else lista.size()
+	var cat := combate._categoria(String(e.get("alcance", "")))
+	return lista.filter(func(s): return combate._erro_de_alcance(agente, s, String(e.get("alcance", ""))) == "" or cat == "").slice(0, limite)
+
+
+func _conjurar(agente: Agente, rid: String, forma: String, alvo: Ser, opcoes: Dictionary) -> void:
+	var r := combate.conjurar(agente, rid, alvo, forma, opcoes)
 	if not r.ok:
 		_registrar("[color=#e67e22]Não deu para conjurar: %s.[/color]" % r.get("erro", "?"))
 	_modo = ""
+	_atualizar()
+
+
+func _criatura_com_enigma() -> Ameaca:
+	for s in combate.participantes:
+		if s is Ameaca and (s as Ameaca).enigma_pendente() and not s.esta_fora_de_combate():
+			return s as Ameaca
+	return null
+
+
+func _decifrar() -> void:
+	var agente := _agente_da_vez()
+	var criatura := _criatura_com_enigma()
+	if agente == null or criatura == null:
+		return
+	var t := combate.decifrar_enigma(agente, criatura)
+	if t != null:
+		_ultimo_teste = t
+	else:
+		_registrar("[color=#e67e22]Sem ação padrão para decifrar o enigma.[/color]")
+	_atualizar()
+
+
+func _soltar() -> void:
+	var agente := _agente_da_vez()
+	if agente != null:
+		combate.escapar(agente)
 	_atualizar()
 
 
@@ -511,17 +578,26 @@ func _atualizar() -> void:
 	_btn_atacar.disabled = agente == null
 	_btn_encerrar.disabled = agente == null
 	_btn_item.disabled = agente == null or not agente.tem_item("cicatrizante")
-	var selecionado_antes: String = _opt_ritual.get_item_metadata(_opt_ritual.selected) if _opt_ritual.selected >= 0 else ""
+	var selecionado_antes = _opt_ritual.get_item_metadata(_opt_ritual.selected) if _opt_ritual.selected >= 0 else []
 	_opt_ritual.clear()
 	if agente != null:
 		for rid in agente.rituais:
 			var rr := ruleset.ritual(rid)
-			if rr.get("implementado", false):
-				_opt_ritual.add_item("%s (%d PE)" % [rr.nome, agente.custo_ritual(rid)])
-				_opt_ritual.set_item_metadata(_opt_ritual.item_count - 1, rid)
-				if rid == selecionado_antes:
+			if not rr.get("implementado", false):
+				continue
+			for forma in [""] + rr.get("formas", {}).keys():
+				if forma != "":
+					var f: Dictionary = rr.formas[forma]
+					if int(f.get("circulo", 1)) > agente.circulo_maximo() or (f.get("afinidade", false) and agente.afinidade != rr.elemento):
+						continue
+				_opt_ritual.add_item("%s%s (%d PE)" % [rr.nome, "" if forma == "" else " — " + forma, agente.custo_ritual(rid, forma)])
+				_opt_ritual.set_item_metadata(_opt_ritual.item_count - 1, [rid, forma])
+				if [rid, forma] == selecionado_antes:
 					_opt_ritual.select(_opt_ritual.item_count - 1)
 	_btn_ritual.disabled = agente == null or _opt_ritual.item_count == 0
+	_btn_enigma.visible = _criatura_com_enigma() != null
+	_btn_enigma.disabled = agente == null
+	_btn_soltar.visible = agente != null and agente.tem(Ser.AGARRADO)
 	_opt_ritual.get_parent().visible = _opt_ritual.item_count > 0
 	_btn_item.text = "Cicatrizante (%d)" % (agente.equipamento.count("cicatrizante") if agente != null else 0)
 	_spin_foco.max_value = agente.pe_disponivel_no_turno() if agente != null else 0
@@ -542,6 +618,8 @@ func _ficha(ser: Ser) -> String:
 	linhas.append("Arma: %s (%s)" % [armas[ser].get("nome", "?"), armas[ser].get("dano", "?")])
 	if not ser.condicoes.is_empty():
 		linhas.append("Condições: %s" % ", ".join(PackedStringArray(ser.condicoes.keys())))
+	if ser is Ameaca and (ser as Ameaca).enigma_pendente():
+		linhas.append("Enigma de Medo: imune a dano até alguém decifrar.")
 	return "\n".join(PackedStringArray(linhas))
 
 
@@ -601,4 +679,7 @@ func _atualizar_3d() -> void:
 		for s in grade.seres():
 			if s.lado != agente.lado and _pode_atacar(agente, s, armas[agente]):
 				alvos.append(s)
-	_tab3d.atualizar(destinos, alvos, combate.ser_atual(), _selecionado)
+	var zonas: Array = []
+	for z in combate.zonas():
+		zonas.append({"celulas": z.celulas, "elemento": ruleset.ritual(z.ritual).elemento})
+	_tab3d.atualizar(destinos, alvos, combate.ser_atual(), _selecionado, zonas)

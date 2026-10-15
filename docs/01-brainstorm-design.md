@@ -174,6 +174,16 @@ Pontos em que o livro é ambíguo e escolhemos uma leitura (revisar se surgir er
 | Afinidade e poder repetido | A 2ª escolha só vale para poderes que têm efeito de afinidade, e do elemento da afinidade (ou de elemento à escolha) |
 | Itens amaldiçoados | A 1ª maldição soma +2 de categoria e cada extra +1. O preço: falhar num teste do atributo do elemento custa 2 SAN (Conhecimento→INT, Energia→AGI, Morte→PRE, Sangue→FOR/VIG) |
 | Bônus de itens amaldiçoados | Efeitos iguais não se somam; vale o maior |
+| Áreas na grade | Raio em quadrados de 1,5 m com a distância da grade (diagonal conta 2), então esferas viram losangos. Nuvem, círculo e esfera usam a mesma forma no chão. Uma rolagem de dano vale para todos na área; cada alvo resiste em separado |
+| "Alvos escolhidos" na arena | O jogador clica um alvo e o ritual pega os seres do mesmo lado em alcance, do mais perto ao mais longe, até o limite da forma |
+| Explosões | Centradas no conjurador, que não é atingido. Aliados na área são atingidos, exceto quando a forma diz "só alvos à sua escolha" |
+| Arma Atroz verdadeira | "+2 na margem de ameaça e no multiplicador de crítico" lido ao pé da letra: +2 em cada |
+| Tentáculos de Lodo | Manobra agarrar com Ocultismo contra o melhor entre Atletismo e Acrobacia do alvo. Soltar-se: ação padrão, Atletismo ou Acrobacia contra a DT do ritual |
+| Purgatório | "Vulneráveis a dano físico" = dano em dobro (vulnerabilidade, p.190), não a condição vulnerável. Quem sai sofre 6d6 e, se falhar em Fortitude, perde o movimento |
+| Decadência e Hemofagia discentes | O dano do ritual soma ao da arma e usa o tipo de dano da arma; não multiplica no crítico |
+| Presença Perturbadora | Testada no início de cada combate, não só na primeira vez que o agente vê a criatura |
+| Enigma de Medo | No jogo, decifrar é uma ação padrão (Ocultismo, Intuição ou Investigação). Cada pista da missão reduz a DT em 2, até −10 |
+| Sustentado com vários alvos | Custa 1 PE por turno pelo ritual inteiro, não por alvo; conjurar outro ritual sustentado encerra o anterior |
 | Reforços da Ordem (modo Normal) | 2 por missão. Um agente caído num combate perdido (ou morto) é resgatado: sai da missão com uma lesão (1d6 no atributo, como a regra de Lesões) |
 
 ## 14. Ferramentas: Godot e o Tabletop Simulator ✅

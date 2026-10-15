@@ -7,6 +7,7 @@
     { "id": "ritual_interrompido", "nome": "Ritual interrompido", "nivel": 1, "ameacas": ["cultista", "cultista_machete", "atirador"] },
     { "id": "ninho", "nome": "Ninho", "nivel": 1, "ameacas": ["cria_de_sangue", "cria_de_sangue"] },
     { "id": "aberracao_faminta", "nome": "Aberração faminta", "nivel": 2, "ameacas": ["aberracao", "cultista"] },
+    { "id": "manifestacao_do_medo", "nome": "Manifestação do Medo", "nivel": 2, "ameacas": ["sombra_sussurrante"] },
     { "id": "transbordamento", "nome": "Transbordamento", "nivel": 3, "ameacas": ["aberracao", "cria_de_sangue", "cria_de_sangue"] }
   ],
   "chefe": { "id": "covil", "nome": "O Covil Carmesim", "ameacas": ["horror_carmesim", "cultista", "cultista_machete"] }

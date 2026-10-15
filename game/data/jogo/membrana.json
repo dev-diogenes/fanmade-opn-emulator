@@ -16,6 +16,11 @@
     "portal_fechado": 15,
     "ritual_de_contencao": 8
   },
+  "medo": {
+    "nota": "O Medo na V1 é só ameaça e evento (docs/01-brainstorm-design.md §8).",
+    "manifestacoes": { "nivel": 2, "chance_em": 3, "descricao": "Com a Membrana Fina, 1 em cada 3 surgimentos é um evento de Medo em vez de um encontro." },
+    "ataque_sanidade": { "nivel": 3, "pericia": "vontade", "dt": 15, "dano": "1d4", "descricao": "Com a Membrana Rompendo, a cada turno do mundo cada agente testa Vontade ou perde Sanidade." }
+  },
   "estados": [
     {
       "id": "estavel",

@@ -22,6 +22,19 @@ const IMOVEL := "imovel"
 const FATIGADO := "fatigado"
 const ATORDOADO := "atordoado"
 const PASMO := "pasmo"
+const ABALADO := "abalado"
+const APAVORADO := "apavorado"
+const ENJOADO := "enjoado"
+const AGARRADO := "agarrado"
+const EXAUSTO := "exausto"
+const FRACO := "fraco"
+const DEBILITADO := "debilitado"
+const OFUSCADO := "ofuscado"
+const SEM_CURA := "sem_cura"   ## Poeira da Podridão: não recupera PV
+## Condições mentais e de medo (p.320-321): criaturas paranormais são imunes (p.190)
+const CONDICOES_MENTAIS := ["abalado", "apavorado", "alquebrado", "atordoado", "confuso", "esmorecido", "fascinado", "frustrado", "pasmo"]
+## Condição repetida vira a seguinte (p.320-321)
+const AGRAVA := {"abalado": "apavorado", "fatigado": "exausto", "fraco": "debilitado"}
 
 const DANO_FISICO := ["balistico", "corte", "impacto", "perfuracao"]
 
@@ -105,8 +118,10 @@ func ajustes_de_defesa() -> int:
 		total -= 10
 	elif tem(DESPREVENIDO) or tem(SURPREENDIDO):
 		total -= 5
-	if tem(VULNERAVEL) or tem(FATIGADO):
-		total -= 2   # fatigado inclui vulnerável (p.320)
+	elif tem(AGARRADO):
+		total -= 5   # agarrado inclui desprevenido
+	if tem(VULNERAVEL) or tem(FATIGADO) or tem(EXAUSTO):
+		total -= 2   # fatigado e exausto incluem vulnerável (p.320)
 	return total
 
 
@@ -118,15 +133,34 @@ func efeito_ritual(chave: String) -> int:
 	return total
 
 
-## Penalidade de dados por condições (fatigado = fraco: −1 dado em Agilidade, Força e Vigor).
+## Penalidade de dados por condições (p.320-321): fraco/fatigado −1 e debilitado/exausto −2 em
+## Agilidade, Força e Vigor; abalado −1 e apavorado −2 em todos os testes.
 func penalidade_dados_atributo(atributo_id: String) -> int:
-	if tem(FATIGADO) and atributo_id in ["agi", "for", "vig"]:
-		return 1
-	return 0
+	var p := 0
+	if atributo_id in ["agi", "for", "vig"]:
+		if tem(DEBILITADO) or tem(EXAUSTO):
+			p += 2
+		elif tem(FATIGADO) or tem(FRACO):
+			p += 1
+	if tem(APAVORADO):
+		p += 2
+	elif tem(ABALADO):
+		p += 1
+	return p
 
 
-## Aplica uma condição; `rodadas` 0 = até o fim da cena.
+func imune_a_condicao(_condicao: String) -> bool:
+	return false
+
+
+## Aplica uma condição; `rodadas` 0 = até o fim da cena. Repetir abalado, fatigado ou fraco agrava.
 func aplicar_condicao(condicao: String, rodadas: int = 0) -> void:
+	if condicao == "" or imune_a_condicao(condicao):
+		return
+	if tem(condicao) and AGRAVA.has(condicao):
+		condicoes.erase(condicao)
+		duracoes.erase(condicao)
+		condicao = AGRAVA[condicao]
 	condicoes[condicao] = true
 	if rodadas > 0:
 		duracoes[condicao] = rodadas
@@ -143,6 +177,10 @@ func modificar_ataque(arma: Dictionary, alvo: Ser) -> Dictionary:
 	mods.bonus_ataque += int(mods_cena.get("ataque_contra", {}).get(alvo, 0))
 	mods.bonus_ataque -= int(mods_cena.get("penalidade_ataque", 0))
 	mods.dados_extras += efeito_ritual("dados_ataque")
+	if tem(AGARRADO):
+		mods.dados_extras -= 1
+	if tem(OFUSCADO):
+		mods.dados_extras -= 1
 	mods.bonus_ataque += efeito_ritual("pericias")   # Coincidência Forçada vale para testes de ataque
 	var corpo_a_corpo: bool = arma.get("ataque", "corpo_a_corpo") == "corpo_a_corpo"
 	if corpo_a_corpo:
@@ -204,6 +242,8 @@ func sofrer_dano(quantidade: int) -> void:
 
 ## Dano mental: reduzido pela resistência mental; vai para a SAN (ou para os PV de ameaças da Realidade, p.82).
 func sofrer_dano_mental(quantidade: int) -> void:
+	if imune_a_condicao("abalado"):
+		return   # Origem Paranormal: criaturas são imunes a dano mental (p.190)
 	quantidade -= resistencia("mental")
 	if quantidade <= 0:
 		return
@@ -215,7 +255,7 @@ func sofrer_dano_mental(quantidade: int) -> void:
 
 
 func curar(quantidade: int) -> void:
-	if quantidade <= 0 or tem(MORTO):
+	if quantidade <= 0 or tem(MORTO) or tem(SEM_CURA):
 		return
 	pv = mini(pv_maximo, pv + quantidade)
 	condicoes.erase(INCONSCIENTE)  # curar 1 PV encerra inconsciente; morrendo exige Medicina

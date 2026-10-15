@@ -9,6 +9,9 @@ const COR_DIFICIL := Color("22352a")
 const COR_MOVER := Color(0.3, 0.6, 1.0, 0.45)
 const COR_AGENTE := Color("3d7bd9")
 const COR_AMEACA := Color("b03a2e")
+## Cor das áreas de rituais por elemento
+const COR_ZONA := {"sangue": Color(0.75, 0.1, 0.15, 0.4), "morte": Color(0.35, 0.3, 0.3, 0.45),
+	"energia": Color(0.6, 0.2, 0.9, 0.4), "conhecimento": Color(0.95, 0.75, 0.2, 0.4), "medo": Color(0.9, 0.9, 0.95, 0.35)}
 
 var rig: CameraRig
 var grade: Grade
@@ -70,11 +73,20 @@ func celula_em(pos_tela: Vector2) -> Vector2i:
 	return c if grade.dentro(c) else Vector2i(-1, -1)
 
 
-func atualizar(destinos: Array, alvos: Array, atual: Ser, selecionado: Ser) -> void:
+func atualizar(destinos: Array, alvos: Array, atual: Ser, selecionado: Ser, zonas: Array = []) -> void:
 	for s in grade.seres():
 		_atualizar_unidade(s)
 	for filho in _destaques.get_children():
 		filho.queue_free()
+	for z in zonas:
+		for c in z.celulas:
+			var bz := BoxMesh.new()
+			bz.size = Vector3(0.96, 0.02, 0.96)
+			var mz := MeshInstance3D.new()
+			mz.mesh = bz
+			mz.material_override = Pecas.material(COR_ZONA.get(z.elemento, Color(1, 1, 1, 0.3)), true)
+			mz.position = posicao(c) + Vector3(0, 0.012, 0)
+			_destaques.add_child(mz)
 	for c in destinos:
 		var b := BoxMesh.new()
 		b.size = Vector3(0.9, 0.02, 0.9)

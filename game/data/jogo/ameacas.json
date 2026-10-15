@@ -1,5 +1,5 @@
 {
-  "nota": "Fichas criadas para o jogo (não são do livro). Ameaças do livro entram nas fases seguintes, com números do cap. 7 e descrições próprias.",
+  "nota": "Fichas criadas para o jogo (não são do livro). Ameaças do livro entram nas fases seguintes, com números do cap. 7 e descrições próprias. Criaturas paranormais têm Origem Paranormal e Presença Perturbadora (p.190); a Sombra Sussurrante é uma criatura de Medo com Enigma de Medo.",
   "armas_extras": {
     "garras": {
       "id": "garras",
@@ -22,6 +22,17 @@
       "soma_forca": true,
       "ataque": "corpo_a_corpo",
       "tipo_dano": "sangue"
+    },
+    "toque_do_medo": {
+      "id": "toque_do_medo",
+      "nome": "Toque do Medo",
+      "dano": "2d6",
+      "margem": 20,
+      "multiplicador": 2,
+      "pericia": "luta",
+      "soma_forca": false,
+      "ataque": "corpo_a_corpo",
+      "tipo_dano": "medo"
     }
   },
   "ameacas": {
@@ -123,7 +134,14 @@
         "resistencias": {
           "balistico": 2
         },
-        "elemento": "sangue"
+        "elemento": "sangue",
+        "criatura": true,
+        "vd": 60,
+        "presenca_perturbadora": {
+          "dt": 17,
+          "dano": "2d4",
+          "nex": 35
+        }
       }
     },
     "cria_de_sangue": {
@@ -149,7 +167,14 @@
             "bonus": 5
           }
         },
-        "elemento": "sangue"
+        "elemento": "sangue",
+        "criatura": true,
+        "vd": 40,
+        "presenca_perturbadora": {
+          "dt": 15,
+          "dano": "1d6",
+          "nex": 25
+        }
       }
     },
     "horror_carmesim": {
@@ -184,7 +209,61 @@
           "balistico": 5,
           "corte": 2
         },
-        "elemento": "sangue"
+        "elemento": "sangue",
+        "criatura": true,
+        "vd": 160,
+        "presenca_perturbadora": {
+          "dt": 20,
+          "dano": "2d6",
+          "nex": 50
+        }
+      }
+    },
+    "sombra_sussurrante": {
+      "nome": "Sombra Sussurrante",
+      "nivel": 3,
+      "arma": "toque_do_medo",
+      "descricao": "Uma silhueta sem rosto que repete, sem parar, a última frase de alguém que morreu ali. Enquanto ninguém descobre de quem é a voz, nada a fere.",
+      "ficha": {
+        "pv": 40,
+        "defesa": 15,
+        "deslocamento": 9,
+        "atributos": {
+          "agi": 3,
+          "for": 1,
+          "vig": 2
+        },
+        "pericias": {
+          "luta": {
+            "dados": 3,
+            "bonus": 5
+          },
+          "iniciativa": {
+            "dados": 3,
+            "bonus": 5
+          },
+          "vontade": {
+            "dados": 3,
+            "bonus": 10
+          }
+        },
+        "elemento": "medo",
+        "criatura": true,
+        "vd": 120,
+        "presenca_perturbadora": {
+          "dt": 22,
+          "dano": "2d8",
+          "nex": 60
+        },
+        "enigma": {
+          "texto": "De quem é a voz que a Sombra repete?",
+          "pericias": [
+            "ocultismo",
+            "intuicao",
+            "investigacao"
+          ],
+          "dt": 22
+        }
       }
     }
   }

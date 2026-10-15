@@ -15,6 +15,8 @@ const DIFICIL := "dificil"                ## terreno difícil: custo dobrado
 var largura := 0
 var altura := 0
 var terreno: Dictionary = {}   ## Vector2i -> PAREDE | COBERTURA | DIFICIL
+## Terreno difícil criado por efeitos (Tentáculos de Lodo): Vector2i -> quantos efeitos o criam
+var dificil_por_efeito: Dictionary = {}
 var _posicoes: Dictionary = {} ## Ser -> Vector2i
 
 
@@ -142,6 +144,69 @@ static func linha(a: Vector2i, b: Vector2i) -> Array[Vector2i]:
 	return celulas
 
 
+# --- Áreas (p.130) ---------------------------------------------------------
+
+## Células de uma área de efeito. Medidas em metros (1,5 m por quadrado, distância da grade).
+## - "esfera": centrada em `alvo` (nuvem, círculo e esfera usam a mesma forma no chão);
+## - "explosao": centrada em `origem` (o conjurador), sem a célula dele;
+## - "linha": de `origem` na direção de `alvo`, até o comprimento;
+## - "cone": de `origem` na direção de `alvo`, abrindo 90°.
+## Paredes bloqueiam a área (a célula precisa de linha livre até o centro ou a origem).
+func celulas_da_area(forma: String, origem: Vector2i, alvo: Vector2i, metros: float) -> Array[Vector2i]:
+	var n := int(metros / METROS_POR_QUADRADO)
+	var lista: Array[Vector2i] = []
+	match forma:
+		"esfera", "explosao":
+			var centro := origem if forma == "explosao" else alvo
+			for x in range(centro.x - n, centro.x + n + 1):
+				for y in range(centro.y - n, centro.y + n + 1):
+					var c := Vector2i(x, y)
+					if dentro(c) and distancia(centro, c) <= n and terreno.get(c, "") != PAREDE and _livre_ate(centro, c):
+						if not (forma == "explosao" and c == origem):
+							lista.append(c)
+		"linha":
+			var dir := alvo - origem
+			var passos := maxi(absi(dir.x), absi(dir.y))
+			if passos == 0:
+				return lista
+			var fim := origem + Vector2i(roundi(dir.x * float(n) / passos), roundi(dir.y * float(n) / passos))
+			var reta := linha(origem, fim)
+			reta.append(fim)
+			for c in reta:
+				if not dentro(c) or terreno.get(c, "") == PAREDE:
+					break
+				lista.append(c)
+		"cone":
+			var dir := Vector2(alvo - origem)
+			if dir == Vector2.ZERO:
+				return lista
+			dir = dir.normalized()
+			for x in range(origem.x - n, origem.x + n + 1):
+				for y in range(origem.y - n, origem.y + n + 1):
+					var c := Vector2i(x, y)
+					if c == origem or not dentro(c) or distancia(origem, c) > n or terreno.get(c, "") == PAREDE:
+						continue
+					if Vector2(c - origem).normalized().dot(dir) >= 0.7071 and _livre_ate(origem, c):
+						lista.append(c)
+	return lista
+
+
+## Seres de pé nas células.
+func seres_em(celulas: Array) -> Array[Ser]:
+	var lista: Array[Ser] = []
+	for s in _posicoes:
+		if _posicoes[s] in celulas and not s.tem(Ser.MORTO):
+			lista.append(s)
+	return lista
+
+
+func _livre_ate(a: Vector2i, b: Vector2i) -> bool:
+	for c in linha(a, b):
+		if terreno.get(c, "") == PAREDE:
+			return false
+	return true
+
+
 ## "nenhuma", "leve" (+5 Defesa) ou "total" (não pode ser alvo) para um ataque à distância (p.99).
 ## Simplificação: a linha liga os centros dos quadrados em vez dos cantos.
 func cobertura(atacante: Ser, alvo: Ser) -> String:
@@ -161,9 +226,18 @@ func cobertura(atacante: Ser, alvo: Ser) -> String:
 ## Custo de entrar numa célula vinda de `de`: 1 (ortogonal) ou 2 (diagonal), dobrado em terreno difícil.
 func custo_passo(de: Vector2i, para: Vector2i) -> int:
 	var custo := 2 if de.x != para.x and de.y != para.y else 1
-	if terreno.get(para, "") == DIFICIL:
+	if terreno.get(para, "") == DIFICIL or dificil_por_efeito.has(para):
 		custo *= 2
 	return custo
+
+
+func marcar_dificil(celulas: Array, ligar: bool) -> void:
+	for c in celulas:
+		var n := int(dificil_por_efeito.get(c, 0)) + (1 if ligar else -1)
+		if n > 0:
+			dificil_por_efeito[c] = n
+		else:
+			dificil_por_efeito.erase(c)
 
 
 ## Custos mínimos (em quadrados) a partir da posição do ser, até `limite`.

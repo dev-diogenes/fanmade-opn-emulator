@@ -71,6 +71,12 @@ Ocultistas (Rita, Cecília) conhecem 3 rituais de 1º círculo e aprendem mais a
 
 Quem escolhe **Transcender** ao subir de NEX recebe um poder paranormal (Precognição, Sangue de Ferro, Golpe de Sorte…), mas não ganha a Sanidade daquele NEX. Em NEX 50% o agente escolhe uma **afinidade elemental**: pode pegar de novo um poder do elemento, para um efeito maior, e conjura rituais dele sem componentes. A partir de **Agente Especial** (50 PP), a Base libera os itens amaldiçoados (☠ no catálogo). Eles são fortes, mas cada falha num teste do atributo ligado ao elemento custa Sanidade.
 
+### Rituais de área e o Medo
+
+No seletor da arena, cada ritual aparece também nas formas **discente** e **verdadeira** que o NEX permite (a verdadeira costuma exigir afinidade). Rituais de área pedem um ponto no tabuleiro e atingem **todos** na área, aliados inclusive; explosões saem ao redor do conjurador. Algumas áreas ficam no chão, coloridas pelo elemento: Poeira da Podridão, Purgatório e Tentáculos de Lodo agem a cada turno enquanto durarem.
+
+O **Medo** é só ameaça: ao ver criaturas, cada agente testa Vontade contra a **Presença Perturbadora** (falhar custa Sanidade; NEX alto dá imunidade). A **Sombra Sussurrante** não sofre dano até alguém usar **Decifrar enigma**, e as pistas da missão ajudam. Com a Membrana Fina surgem eventos de pavor; Rompendo, o Medo ataca a Sanidade de todos a cada turno do mundo.
+
 ### Investigação
 
 Os hexes com o **anel verde-água** são cenas de investigação. Ao entrar, o grupo (agentes a até 2 hexes) vai para uma cena 3D escura, com a luz curta:

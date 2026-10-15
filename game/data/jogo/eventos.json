@@ -1,5 +1,5 @@
 {
-  "nota": "Eventos do mapa (conteúdo original). Um agente faz o teste; os efeitos valem para quem testou, exceto os de mundo (membrana, revelar).",
+  "nota": "Eventos do mapa (conteúdo original). Um agente faz o teste; os efeitos valem para quem testou, exceto os de mundo (membrana, revelar). 'eventos_medo' são manifestações do Medo: só surgem com a Membrana Fina ou pior.",
   "efeitos_possiveis": ["dano", "dano_mental", "cura", "recupera_pe", "recupera_san", "membrana", "revelar_raio", "revelar_objetivo"],
   "eventos": [
     { "id": "pegadas", "titulo": "Pegadas no barro",
@@ -42,5 +42,22 @@
       "pericia": "tecnologia", "dt": 15,
       "sucesso": { "texto": "Você sintoniza: coordenadas de uma vila segura.", "efeitos": [{ "tipo": "revelar_raio", "valor": 5 }] },
       "falha": { "texto": "Só estática… e uma respiração do outro lado.", "efeitos": [{ "tipo": "dano_mental", "valor": "1d4" }] } }
+  ],
+  "eventos_medo": [
+    { "id": "reflexo_errado", "titulo": "Reflexo errado",
+      "texto": "Na vitrine, o seu reflexo vira a cabeça um segundo depois de você.",
+      "pericia": "vontade", "dt": 18,
+      "sucesso": { "texto": "Você desvia o olhar e segue em frente, sem correr.", "efeitos": [] },
+      "falha": { "texto": "O reflexo sorri. Você não.", "efeitos": [{ "tipo": "dano_mental", "valor": "2d6" }] } },
+    { "id": "silencio_absoluto", "titulo": "Silêncio",
+      "texto": "Os pássaros param. O vento para. Até o seu coração parece esperar.",
+      "pericia": "vontade", "dt": 17,
+      "sucesso": { "texto": "Você respira fundo e o mundo volta a fazer barulho.", "efeitos": [] },
+      "falha": { "texto": "Por um instante, você esquece como se respira.", "efeitos": [{ "tipo": "dano_mental", "valor": "1d8" }, { "tipo": "membrana", "valor": -2 }] } },
+    { "id": "nome_na_parede", "titulo": "Seu nome na parede",
+      "texto": "Alguém escreveu o seu nome completo, em letras ainda molhadas, num muro de tijolos.",
+      "pericia": "ocultismo", "dt": 18,
+      "sucesso": { "texto": "Você reconhece o sigilo e o apaga antes que se complete.", "efeitos": [{ "tipo": "membrana", "valor": 3 }] },
+      "falha": { "texto": "A tinta escorre e forma uma data. A de hoje.", "efeitos": [{ "tipo": "dano_mental", "valor": "2d4" }, { "tipo": "membrana", "valor": -3 }] } }
   ]
 }

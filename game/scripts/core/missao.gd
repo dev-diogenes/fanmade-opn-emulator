@@ -227,7 +227,8 @@ func _iniciar_turno_do_agente() -> void:
 # --- Eventos ---------------------------------------------------------------
 
 func _evento(evento_id: String) -> Dictionary:
-	for e in DadosJogo.ler("eventos").eventos:
+	var d := DadosJogo.ler("eventos")
+	for e in d.eventos + d.get("eventos_medo", []):
 		if e.id == evento_id:
 			return e
 	return {}
@@ -314,7 +315,8 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool) -> void:
 	encontro_pendente = {
 		"hex": h, "nome": info.nome, "chefe": chefe, "terreno": mapa.terreno(h),
 		"agentes": participantes, "armas": armas, "ameacas": ameacas, "encontro": encontro_id,
-		"regras": {"lesoes": opcoes.get("lesoes", true), "inspiracao_resoluta": opcoes.get("inspiracao_resoluta", true)},
+		"regras": {"lesoes": opcoes.get("lesoes", true), "inspiracao_resoluta": opcoes.get("inspiracao_resoluta", true),
+			"presenca_perturbadora": true, "bonus_enigma": mini(10, pistas * 2)},
 		"nivel_membrana": membrana.nivel_ameaca(), "semente": dados.rolar(1000000),
 	}
 	_log("[color=#ec7063][b]Encontro: %s![/b][/color] (%d agente(s) entram no combate)" % [info.nome, participantes.size()])
@@ -472,6 +474,23 @@ func _turno_do_mundo() -> void:
 	if _turnos_sem_surgimento >= int(_cfg.mundo.surgimento_a_cada_turnos) and membrana.nivel_ameaca() >= 1:
 		_turnos_sem_surgimento = 0
 		_surgir_ameaca()
+	_ataque_a_sanidade()
+
+
+## Membrana Rompendo: o Outro Lado ataca a mente de todos (Vontade ou perde Sanidade).
+func _ataque_a_sanidade() -> void:
+	var cfg: Dictionary = DadosJogo.ler("membrana").get("medo", {}).get("ataque_sanidade", {})
+	if cfg.is_empty() or membrana.nivel_ameaca() < int(cfg.nivel):
+		return
+	for a in agentes:
+		if a.esta_fora_de_combate():
+			continue
+		var t := a.testar(dados, String(cfg.pericia), int(cfg.dt))
+		if t == null or not t.sucesso:
+			var antes := a.san
+			a.sofrer_dano_mental(dados.rolar_expressao(String(cfg.dano)))
+			_log("[color=#a569bd]O Medo sussurra para %s: −%d de Sanidade.[/color]" % [a.nome, antes - a.san])
+	_verificar_derrota()
 
 
 ## Uma nova ameaça surge perto de um agente vivo, com nível até o da Membrana.
@@ -489,6 +508,14 @@ func _surgir_ameaca() -> void:
 	if candidatos.is_empty() or opcoes.is_empty():
 		return
 	var h := candidatos[dados.rolar(candidatos.size()) - 1]
+	var medo: Dictionary = DadosJogo.ler("membrana").get("medo", {}).get("manifestacoes", {})
+	var eventos_medo: Array = DadosJogo.ler("eventos").get("eventos_medo", [])
+	if not medo.is_empty() and nivel >= int(medo.nivel) and not eventos_medo.is_empty() and dados.rolar(int(medo.chance_em)) == 1:
+		var ev: Dictionary = eventos_medo[dados.rolar(eventos_medo.size()) - 1]
+		mapa.definir_conteudo(h, {"tipo": "evento", "evento": ev.id})
+		mapa.revelar(h, 0)
+		_log("[color=#a569bd]O Medo se manifesta perto de %s: %s.[/color]" % [alvo.nome, ev.titulo])
+		return
 	var e: Dictionary = opcoes[dados.rolar(opcoes.size()) - 1]
 	mapa.definir_conteudo(h, {"tipo": "encontro", "encontro": e.id})
 	mapa.revelar(h, 0)
