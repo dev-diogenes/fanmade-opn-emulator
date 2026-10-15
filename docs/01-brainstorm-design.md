@@ -141,7 +141,10 @@ Pontos em que o livro é ambíguo e escolhemos uma leitura (revisar se surgir er
 | Iniciativa das ameaças | Um teste só, com o menor bônus entre elas (p.93) |
 | PE fora do turno (reações) | Contam no limite do turno atual do agente e zeram no início do turno dele |
 | Golpe Pesado no crítico | O dado extra faz parte do dano da arma e também é multiplicado |
-| Distância e alcance | Não verificados até existir a grade (Fase 2) |
+| Distância e alcance | Verificados só quando o combate tem uma grade. Distância = quadrados ortogonais + 2 por diagonal; adjacência = 8 vizinhos |
+| Tiro além do alcance | Até o dobro do alcance: −1 dado (p.66). A p.85 fala em −5; ficamos com a regra do capítulo de equipamento |
+| Cobertura | Linha entre os centros dos quadrados (o livro usa os cantos) |
+| Flanquear | O aliado precisa estar exatamente no quadrado oposto ao atacante |
 
 ## 14. Ferramentas: Godot e o Tabletop Simulator ✅
 

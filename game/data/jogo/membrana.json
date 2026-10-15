@@ -1,0 +1,56 @@
+{
+  "nota": "Design do jogo (não é regra do livro): substitui o medidor de Caos do For The King. Ver docs/01-brainstorm-design.md §7.",
+  "valor_inicial": 100,
+  "minimo": 0,
+  "maximo": 100,
+  "eventos": {
+    "rodada_combate": -1,
+    "turno_mapa": -1,
+    "rodada_investigacao": -2,
+    "ritual_conjurado": -2,
+    "ritual_por_circulo": -1,
+    "morte_civil": -10,
+    "urgencia_estourada": -10,
+    "agente_enlouqueceu": -8,
+    "item_amaldicoado_destruido": 10,
+    "portal_fechado": 15,
+    "ritual_de_contencao": 8
+  },
+  "estados": [
+    {
+      "id": "estavel",
+      "nome": "Estável",
+      "a_partir_de": 76,
+      "nivel_ameaca": 0,
+      "descricao": "A Realidade resiste. Encontros comuns."
+    },
+    {
+      "id": "instavel",
+      "nome": "Instável",
+      "a_partir_de": 51,
+      "nivel_ameaca": 1,
+      "descricao": "Pequenas falhas: manifestações leves e criaturas um pouco mais fortes."
+    },
+    {
+      "id": "fina",
+      "nome": "Fina",
+      "a_partir_de": 26,
+      "nivel_ameaca": 2,
+      "descricao": "O Outro Lado espreita: eventos de Medo e ameaças fortes."
+    },
+    {
+      "id": "rompendo",
+      "nome": "Rompendo",
+      "a_partir_de": 1,
+      "nivel_ameaca": 3,
+      "descricao": "A Membrana cede: criaturas poderosas surgem e a Sanidade é atacada."
+    },
+    {
+      "id": "rompida",
+      "nome": "Rompida",
+      "a_partir_de": 0,
+      "nivel_ameaca": 4,
+      "descricao": "O Outro Lado invade. A missão entra no confronto final, preparada ou não."
+    }
+  ]
+}

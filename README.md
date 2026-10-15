@@ -41,6 +41,17 @@ reference/            Material pago LOCAL, ignorado pelo Git
 2. Instale o [Git LFS](https://git-lfs.com) e rode `git lfs install`.
 3. Clone o repositório e abra `game/project.godot` no Godot.
 
+### Arena de Teste (primeira cena jogável)
+
+Ao apertar **Play (F5)**, abre a Arena de Teste: 3 agentes (Mauro, Bianca e Rita) contra cultistas, um atirador e uma aberração, numa grade tática 2D provisória.
+
+- Clique num ser para ver a ficha.
+- **Mover**: clique numa célula azul. **Atacar**: clique num inimigo destacado em vermelho.
+- **Foco**: PE gastos para somar +1 d20 ao ataque. **Ataque Especial**: só para combatentes.
+- O painel mostra os slots de d20 do último teste e a Membrana, que cai a cada rodada.
+
+![Arena de Teste](docs/arena_teste.png)
+
 ### Testes
 
 Os testes usam o [GUT](https://github.com/bitwes/Gut) 9.6.1, que já vem em `game/addons/gut`. Para rodar:

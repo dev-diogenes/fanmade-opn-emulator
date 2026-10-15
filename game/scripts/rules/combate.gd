@@ -2,8 +2,8 @@ class_name Combate
 extends RefCounted
 ## Cena de combate sem interface: iniciativa, turnos, ações, ataques, reações,
 ## poderes de combate e regras opcionais (cap. 1, cap. 4 p.92–99, cap. 6 p.184).
-## Distâncias e alcances ("adjacente", "alcance curto") ainda NÃO são verificados:
-## isso fica para a grade da Fase 2, numa camada acima desta.
+## Com uma `grade` definida, o combate verifica distância, alcance, flanco, cobertura e
+## alvo em corpo a corpo automaticamente. Sem grade (testes, cenas abstratas), nada disso é checado.
 
 signal turno_iniciado(ser: Ser)
 signal turno_perdido(ser: Ser, motivo: String)
@@ -11,6 +11,7 @@ signal ataque_resolvido(resultado: ResultadoAtaque)
 signal lesao_sofrida(agente: Agente, atributo_id: String)
 signal inspiracao_disponivel(morto: Agente, efeito: String)
 signal combate_encerrado(lado_vencedor: String)
+signal oportunidade_de_ataque(atacante: Ser, alvo: Ser)
 
 const REACOES := ["bloqueio", "esquiva", "contra_ataque"]
 const ORDEM_LESAO := ["agi", "for", "int", "pre", "vig"]   ## 1d6: 1..5; 6 = nenhuma (p.184)
@@ -20,6 +21,7 @@ const TIPOS_PARANORMAIS := ["paranormal", "sangue", "morte", "conhecimento", "en
 
 var ruleset: Ruleset
 var dados: Dados
+var grade: Grade   ## Opcional: posicionamento tático
 ## Regras opcionais ativas nesta run: {"lesoes": true, "inspiracao_resoluta": true}
 var regras: Dictionary = {}
 var participantes: Array[Ser] = []
@@ -44,6 +46,8 @@ var _danificados_na_rodada: Dictionary = {}  ## Ser (alvo) -> lado de quem causo
 var _miras: Dictionary = {}                ## Ser -> {"alvo": Ser, "margem": int, "turnos": int}
 var _efeitos_ate_turno: Array[Dictionary] = []  ## {origem: Ser, alvo: Ser, tipo: String}
 var _imunes_cai_dentro: Dictionary = {}    ## Ser -> true
+## Ataques de oportunidade liberados pelo último movimento: [{atacante, alvo}]
+var oportunidades_pendentes: Array[Dictionary] = []
 
 
 func _init(p_ruleset: Ruleset, p_dados: Dados, p_regras: Dictionary = {}) -> void:
@@ -213,6 +217,48 @@ func agredir(atacante: Ser, alvo: Ser, arma: Dictionary, pe_foco: int = 0, opcoe
 	return atacar(atacante, alvo, arma, pe_foco, opcoes)
 
 
+## Ação de movimento: anda até `destino` dentro do deslocamento (precisa de grade).
+## Sair de perto de um inimigo com Ataque de Oportunidade libera o ataque (veja oportunidades_pendentes).
+func mover(ser: Ser, destino: Vector2i) -> bool:
+	if grade == null or ser.tem(Ser.IMOVEL) or ser.esta_fora_de_combate():
+		return false
+	var origem := grade.posicao(ser)
+	if not grade.alcancaveis(ser, ser.deslocamento_quadrados()).has(destino) or grade.ocupante(destino) != null:
+		return false
+	if not gastar_acao(ser, "movimento"):
+		return false
+	var vizinhos_antes: Array[Ser] = []
+	for outro in grade.seres():
+		if outro.lado != ser.lado and not outro.esta_fora_de_combate() and Grade.adjacentes(origem, grade.posicao(outro)):
+			vizinhos_antes.append(outro)
+	grade.mover(ser, destino, ser.deslocamento_quadrados())
+	oportunidades_pendentes.clear()
+	for outro in vizinhos_antes:
+		if not grade.estao_adjacentes(ser, outro) and outro is Agente and (outro as Agente).tem_habilidade("ataque_de_oportunidade"):
+			oportunidades_pendentes.append({"atacante": outro, "alvo": ser})
+			oportunidade_de_ataque.emit(outro, ser)
+	return true
+
+
+## Ataque de Oportunidade (poder de combatente): reação + 1 PE para um ataque corpo a corpo
+## contra quem saiu do espaço adjacente (só logo após o movimento que o liberou).
+func ataque_de_oportunidade(atacante: Agente, alvo: Ser, arma: Dictionary) -> ResultadoAtaque:
+	var idx := -1
+	for i in oportunidades_pendentes.size():
+		if oportunidades_pendentes[i].atacante == atacante and oportunidades_pendentes[i].alvo == alvo:
+			idx = i
+	if idx < 0 or arma.get("ataque", "") != "corpo_a_corpo" or not atacante.gastar_pe(1, true):
+		return _ataque_invalido(atacante, alvo, arma)
+	oportunidades_pendentes.remove_at(idx)
+	# O alvo acabou de sair: o ataque acontece antes, então não exige adjacência agora.
+	return atacar(atacante, alvo, arma, 0, {"ignorar_distancia": true})
+
+
+## Sem grade, tudo está "perto". Com grade, verifica a categoria de alcance.
+func _perto(a: Ser, b: Ser, categoria: String) -> bool:
+	return grade == null or not grade.tem(a) or not grade.tem(b) or grade.em_alcance(a, b, categoria)
+
+
 # --- Reações (p.88) --------------------------------------------------------
 
 ## O alvo declara uma reação de defesa contra o PRÓXIMO ataque que sofrer.
@@ -273,7 +319,25 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	var no_minimo := false   # o gasto é só uma habilidade no custo mínimo (regra da p.33)
 	var fontes := 0
 
-	# Situação
+	# Situação na grade: distância, alcance, flanco, cobertura (p.85-89, p.99)
+	var cobertura_leve := false
+	if grade != null and grade.tem(atacante) and grade.tem(alvo) and not opcoes.get("ignorar_distancia", false):
+		opcoes = opcoes.duplicate()
+		if eh_corpo_a_corpo:
+			if not grade.estao_adjacentes(atacante, alvo):
+				return _ataque_invalido(atacante, alvo, arma)
+			opcoes["flanqueando"] = grade.flanqueando(atacante, alvo)
+		else:
+			var faixa := grade.faixa_de_alcance(atacante, alvo, arma.get("alcance", "curto"))
+			if faixa == "fora":
+				return _ataque_invalido(atacante, alvo, arma)
+			if faixa == "longe":
+				dados_extras -= 1
+			var cob := grade.cobertura(atacante, alvo)
+			if cob == "total":
+				return _ataque_invalido(atacante, alvo, arma)
+			cobertura_leve = cob == "leve"
+			opcoes["alvo_em_corpo_a_corpo"] = grade.em_corpo_a_corpo(alvo)
 	if opcoes.get("flanqueando", false) and eh_corpo_a_corpo:
 		dados_extras += 1
 	var mira: Dictionary = _miras.get(atacante, {})
@@ -325,7 +389,7 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	# Reação declarada pelo alvo
 	var reacao: Dictionary = _reacoes_declaradas.get(alvo, {})
 	_reacoes_declaradas.erase(alvo)
-	var defesa := alvo.defesa()
+	var defesa := alvo.defesa() + (5 if cobertura_leve else 0)
 	var rd_extra := 0
 	if not reacao.is_empty():
 		match reacao.tipo:
@@ -439,7 +503,7 @@ func _dados_ataque_furtivo(agente: Agente, alvo: Ser, arma: Dictionary, opcoes: 
 	if agente == null or not agente.tem_habilidade("ataque_furtivo") or _usou_na_rodada(agente, "ataque_furtivo"):
 		return 0
 	var vulneravel: bool = alvo.tem(Ser.DESPREVENIDO) or alvo.tem(Ser.SURPREENDIDO) or alvo.esta_indefeso() or opcoes.get("flanqueando", false)
-	var perto: bool = arma.get("ataque", "corpo_a_corpo") == "corpo_a_corpo" or arma.get("alcance", "") == "curto"
+	var perto: bool = arma.get("ataque", "corpo_a_corpo") == "corpo_a_corpo" or _perto(agente, alvo, "curto")
 	if not vulneravel or not perto:
 		return 0
 	return [10, 40, 65, 99].filter(func(n): return agente.nex >= n).size()
@@ -573,6 +637,9 @@ func tiro_de_cobertura(atirador: Agente, alvo: Ser, arma: Dictionary, lugar_peri
 func estrategista(comandante: Agente, aliados: Array) -> bool:
 	if not comandante.tem_habilidade("estrategista") or aliados.is_empty() or aliados.size() > comandante.atributo("int"):
 		return false
+	var alcance := "medio" if comandante.tem_habilidade("brecha_na_guarda") else "curto"
+	if aliados.any(func(a): return not _perto(comandante, a, alcance)):
+		return false
 	if not gastar_acao(comandante, "padrao"):
 		return false
 	if not comandante.gastar_pe(aliados.size(), aliados.size() == 1):
@@ -592,13 +659,16 @@ func oficial_comandante(comandante: Agente) -> bool:
 		acoes[comandante].padrao += 1
 		return false
 	for s in participantes:
-		if s != comandante and s.lado == comandante.lado and not s.esta_fora_de_combate():
+		if s != comandante and s.lado == comandante.lado and not s.esta_fora_de_combate() and _perto(comandante, s, "medio"):
 			s.acoes_padrao_extras += 1
 	return true
 
 
 ## Inspirar Confiança (Comandante de Campo 10%): reação + 2 PE: um aliado rerrola um teste recém-feito.
-func inspirar_confianca(comandante: Agente, resultado: ResultadoTeste) -> ResultadoTeste:
+func inspirar_confianca(comandante: Agente, resultado: ResultadoTeste, aliado: Ser = null) -> ResultadoTeste:
+	var alcance := "medio" if comandante.tem_habilidade("brecha_na_guarda") else "curto"
+	if aliado != null and not _perto(comandante, aliado, alcance):
+		return null
 	if not comandante.tem_habilidade("inspirar_confianca") or not comandante.gastar_pe(2, true):
 		return null
 	return Teste.rerrolar(dados, resultado)
@@ -611,6 +681,8 @@ func brecha_na_guarda(comandante: Agente, atacante: Ser, alvo: Ser, arma: Dictio
 		return _ataque_invalido(atacante, alvo, arma)
 	if _danificados_na_rodada.get(alvo, "") != comandante.lado or atacante.lado != comandante.lado:
 		return _ataque_invalido(atacante, alvo, arma)
+	if not _perto(comandante, alvo, "curto") or (atacante != comandante and not _perto(comandante, atacante, "curto")):
+		return _ataque_invalido(atacante, alvo, arma)
 	if not comandante.gastar_pe(2, true):
 		return _ataque_invalido(atacante, alvo, arma)
 	_marcar_uso_rodada(comandante, "brecha_na_guarda")
@@ -621,6 +693,8 @@ func brecha_na_guarda(comandante: Agente, atacante: Ser, alvo: Ser, arma: Dictio
 ## faz Vontade contra DT Vig. Falhando, deve atacar você (retorna true). Passando, fica imune na cena.
 func cai_dentro(tropa: Agente, inimigo: Ser) -> bool:
 	if not tropa.tem_habilidade("cai_dentro") or _imunes_cai_dentro.has(inimigo) or tropa.esta_fora_de_combate():
+		return false
+	if not _perto(tropa, inimigo, "curto"):
 		return false
 	if not tropa.gastar_pe(1, true):
 		return false

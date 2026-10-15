@@ -5,7 +5,7 @@
     "combatente": [
       {"id": "armamento_pesado", "nome": "Armamento Pesado", "descricao": "Proficiência com armas pesadas.", "pre": {"atributos": {"for": 2}}, "implementado": true, "efeitos": [{"tipo": "proficiencia", "valor": "armas_pesadas"}]},
       {"id": "artista_marcial", "nome": "Artista Marcial", "descricao": "Golpes desarmados ficam letais, ágeis e mais fortes conforme o NEX.", "implementado": true, "efeitos": [{"tipo": "artista_marcial"}]},
-      {"id": "ataque_de_oportunidade", "nome": "Ataque de Oportunidade", "descricao": "Reação + 1 PE: ataca quem sai do espaço adjacente.", "implementado": false, "pendente": "grade (Fase 2)", "efeitos": []},
+      {"id": "ataque_de_oportunidade", "nome": "Ataque de Oportunidade", "descricao": "Reação + 1 PE: ataca quem sai do espaço adjacente.", "implementado": true, "efeitos": [{"tipo": "ataque_de_oportunidade"}]},
       {"id": "combater_com_duas_armas", "nome": "Combater com Duas Armas", "descricao": "Ataca com as duas armas na mesma ação, perdendo 1 dado nos ataques até o próximo turno.", "pre": {"atributos": {"agi": 3}, "treinado_algum": ["luta", "pontaria"]}, "implementado": true, "efeitos": [{"tipo": "duas_armas"}]},
       {"id": "combate_defensivo", "nome": "Combate Defensivo", "descricao": "Ao atacar, pode perder 1 dado no ataque para ganhar +5 na Defesa até o próximo turno.", "pre": {"atributos": {"int": 2}}, "implementado": true, "efeitos": [{"tipo": "opcao_combate_defensivo"}]},
       {"id": "golpe_demolidor", "nome": "Golpe Demolidor", "descricao": "1 PE: dois dados extras de dano ao quebrar objetos.", "pre": {"atributos": {"for": 2}, "treinado": ["luta"]}, "implementado": false, "efeitos": []},

@@ -8,6 +8,7 @@ var atributos: Dictionary = {}
 var pericias: Dictionary = {}
 var ataques: Array[Dictionary] = []   ## Mesmo formato de armas.json
 var ruleset: Ruleset
+var deslocamento := 9.0
 
 
 static func criar(p_ruleset: Ruleset, p_nome: String, ficha: Dictionary) -> Ameaca:
@@ -23,6 +24,7 @@ static func criar(p_ruleset: Ruleset, p_nome: String, ficha: Dictionary) -> Amea
 	for at in ficha.get("ataques", []):
 		a.ataques.append(at)
 	a.resistencias_base = ficha.get("resistencias", {})
+	a.deslocamento = float(ficha.get("deslocamento", 9))
 	a.tem_sanidade = false
 	return a
 
@@ -49,3 +51,7 @@ func treinado_em(pericia_id: String) -> bool:
 
 func defesa() -> int:
 	return defesa_fixa + ajustes_de_defesa()
+
+
+func deslocamento_m() -> float:
+	return deslocamento

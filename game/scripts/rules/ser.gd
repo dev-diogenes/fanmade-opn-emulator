@@ -75,6 +75,16 @@ func defesa() -> int:
 	return 10 + ajustes_de_defesa()
 
 
+## Deslocamento em metros (padrão 9 m, p.46).
+func deslocamento_m() -> float:
+	return 9.0
+
+
+## Deslocamento em quadrados de 1,5 m (9 m = 6 quadrados).
+func deslocamento_quadrados() -> int:
+	return int(deslocamento_m() / 1.5)
+
+
 ## Ajustes comuns a todos os seres: temporários, de cena e condições (p.89, p.320).
 func ajustes_de_defesa() -> int:
 	var total := defesa_temporaria + int(mods_cena.get("defesa", 0))

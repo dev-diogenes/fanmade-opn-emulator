@@ -179,6 +179,16 @@ func dt_habilidade(atributo_id: String) -> int:
 	return 10 + ruleset.limite_pe(nex) + atributo(atributo_id)
 
 
+## Deslocamento: 9 m, ou o fixado por efeitos (criança: 6 m), mais modificadores ("Devagar, Jovem!").
+func deslocamento_m() -> float:
+	var base := 9.0
+	for e in efeitos("deslocamento"):
+		base = float(e.valor)
+	for e in efeitos("deslocamento_mod"):
+		base += float(e.valor)
+	return maxf(1.5, base)
+
+
 func pode_usar_pericia(pericia_id: String) -> bool:
 	return not ruleset.pericia(pericia_id).somente_treinada or treinado_em(pericia_id)
 
