@@ -55,7 +55,7 @@ Ao apertar **Play (F5)**, abre a Base da Ordem, o hub da carreira:
 
 ### Missão no mapa
 
-Uma missão acontece num mapa hexagonal gerado por seed (interface 2D provisória):
+Uma missão acontece num mapa hexagonal em 3D low poly, gerado por seed. Câmera: **roda** = zoom, **botão direito** arrastando = girar, **botão do meio** ou **WASD/setas** = deslizar, **Q/E** = girar.
 
 - Na vez de cada agente, **Rolar movimento**: 1 d20 por ponto de Agilidade (+1 por PE de Foco); cada resultado 11+ vale 1 passo, além do passo base.
 - Clique num hex azul para andar. **?** são eventos (um teste de perícia), **!** são encontros (vão para o combate tático), **V** são vilas onde dá para **Descansar**, e **X** é o covil: vencê-lo cumpre a missão.
@@ -65,7 +65,7 @@ Uma missão acontece num mapa hexagonal gerado por seed (interface 2D provisóri
 
 ### Arena de Teste (combate tático)
 
-Os encontros do mapa abrem a arena com o grupo e as ameaças do encontro. Abrindo `scenes/arena_teste.tscn` direto (F6), roda um combate de demonstração: 3 agentes (Mauro, Bianca e Rita) contra cultistas, um atirador e uma aberração, numa grade tática 2D provisória.
+Os encontros do mapa abrem o combate tático em 3D, com o grupo e as ameaças do encontro (mesmos controles de câmera). Abrindo `scenes/arena_teste.tscn` direto (F6), roda um combate de demonstração: 3 agentes (Mauro, Bianca e Rita) contra cultistas, um atirador e uma aberração.
 
 - Clique num ser para ver a ficha.
 - **Mover**: clique numa célula azul. **Atacar**: clique num inimigo destacado em vermelho.
