@@ -174,6 +174,60 @@ func bonus_grau(grau: String) -> int:
 	return _graus.get(grau, 0)
 
 
+# --- Patente e equipamento (cap. 3) -----------------------------------------
+
+func patentes() -> Array:
+	return dados.get("patentes", {}).get("patentes", [])
+
+
+## Patente correspondente a um total de Pontos de Prestígio (p.61).
+func patente_por_pp(pp: int) -> Dictionary:
+	var atual: Dictionary = {}
+	for p in patentes():
+		if pp >= int(p.pp):
+			atual = p
+	return atual
+
+
+func pp_por_evento(evento: String) -> int:
+	return int(dados.get("patentes", {}).get("pp_por_missao", {}).get(evento, 0))
+
+
+func regra_carga() -> Dictionary:
+	return dados.get("patentes", {}).get("carga", {})
+
+
+func protecoes() -> Array:
+	return dados.get("equipamentos", {}).get("protecoes", [])
+
+
+func itens_gerais() -> Array:
+	return dados.get("equipamentos", {}).get("itens", [])
+
+
+func lista_armas() -> Array:
+	return dados.get("armas", {}).get("armas", []).filter(func(a): return a.id != "desarmado")
+
+
+## Qualquer equipamento pelo id, com "tipo": "arma" | "protecao" | "item". {} se não existir.
+func equipamento(item_id: String) -> Dictionary:
+	if _armas.has(item_id):
+		var a: Dictionary = _armas[item_id].duplicate()
+		a["tipo"] = "arma"
+		return a
+	for p in protecoes():
+		if p.id == item_id:
+			var d: Dictionary = p.duplicate()
+			d["tipo"] = "protecao"
+			return d
+	for i in itens_gerais():
+		if i.id == item_id:
+			var d: Dictionary = i.duplicate()
+			d["tipo"] = "item"
+			return d
+	return {}
+
+
 ## Próximo grau de treinamento ("treinado" -> "veterano" -> "expert").
 func proximo_grau(grau: String) -> String:
 	var ordem := ["destreinado", "treinado", "veterano", "expert"]

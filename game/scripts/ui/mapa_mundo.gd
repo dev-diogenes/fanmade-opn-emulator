@@ -95,8 +95,9 @@ func _ao_encerrar(venceu: bool) -> void:
 
 func _nova_missao() -> void:
 	if _jogo != null:
-		_jogo.nova_missao()
-	get_tree().reload_current_scene()
+		_jogo.voltar_para_base()
+	else:
+		get_tree().reload_current_scene()
 
 
 func _clicar(evento: InputEvent) -> void:
@@ -207,7 +208,7 @@ func _montar_interface() -> void:
 	_lbl_fim = Label.new()
 	_lbl_fim.add_theme_font_size_override("font_size", 28)
 	caixa.add_child(_lbl_fim)
-	caixa.add_child(_botao("Nova missão", _nova_missao))
+	caixa.add_child(_botao("Voltar à Base", _nova_missao))
 	add_child(_painel_fim)
 
 
@@ -238,7 +239,7 @@ func _atualizar() -> void:
 		_lbl_evento.text = "%s — %s" % [ev.evento.titulo, ev.evento.texto]
 		_btn_testar.text = "%s testa %s (DT %d)" % [ev.agente.nome, missao.ruleset.pericia(ev.evento.pericia).nome, int(ev.evento.dt)]
 	_barra_membrana.value = missao.membrana.valor
-	_lbl_membrana.text = "%d — %s" % [missao.membrana.valor, missao.membrana.estado().get("nome", "")]
+	_lbl_membrana.text = "%d — %s   |   Reforços da Ordem: %d   |   Pistas: %d" % [missao.membrana.valor, missao.membrana.estado().get("nome", ""), missao.reforcos, missao.pistas]
 	_mapa.queue_redraw()
 
 

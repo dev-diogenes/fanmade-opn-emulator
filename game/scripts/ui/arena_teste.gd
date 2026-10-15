@@ -51,6 +51,7 @@ var _lbl_resultado: Label
 var _btn_mover: Button
 var _btn_atacar: Button
 var _btn_encerrar: Button
+var _btn_item: Button
 var _spin_foco: SpinBox
 var _chk_ae: CheckBox
 var _barra_membrana: ProgressBar
@@ -82,7 +83,8 @@ func iniciar_combate(semente: int) -> void:
 	else:
 		membrana = Membrana.carregar_padrao()
 	membrana.estado_mudou.connect(func(e, _ant): _registrar("[color=#c39bd3]A Membrana está %s: %s[/color]" % [e.nome, e.descricao]))
-	combate = Combate.new(ruleset, dados, {"lesoes": true, "inspiracao_resoluta": true})
+	var regras: Dictionary = config.get("regras", {"lesoes": true, "inspiracao_resoluta": true})
+	combate = Combate.new(ruleset, dados, regras)
 	grade = Grade.new(COLUNAS, LINHAS)
 	combate.grade = grade
 	if config.is_empty():
@@ -361,7 +363,8 @@ func _montar_interface() -> void:
 	_btn_mover = _botao("Mover", _modo_mover)
 	_btn_atacar = _botao("Atacar", _modo_atacar)
 	_btn_encerrar = _botao("Encerrar turno", _encerrar_turno)
-	for b in [_btn_mover, _btn_atacar, _btn_encerrar]:
+	_btn_item = _botao("Cicatrizante", _usar_cicatrizante)
+	for b in [_btn_mover, _btn_atacar, _btn_item, _btn_encerrar]:
 		botoes.add_child(b)
 
 	var opcoes := HBoxContainer.new()
@@ -415,6 +418,23 @@ func _modo_atacar() -> void:
 	_atualizar()
 
 
+## Usa um Cicatrizante em si ou no aliado adjacente mais ferido.
+func _usar_cicatrizante() -> void:
+	var agente := _agente_da_vez()
+	if agente == null or not agente.tem_item("cicatrizante"):
+		return
+	var alvo: Ser = agente
+	for s in grade.seres():
+		if s.lado == agente.lado and not s.tem(Ser.MORTO) and grade.estao_adjacentes(agente, s) and s.pv * agente.pv_maximo < agente.pv * s.pv_maximo:
+			alvo = s
+	var cura := combate.usar_item(agente, "cicatrizante", alvo)
+	if cura >= 0:
+		_registrar("%s usa um Cicatrizante em %s: +%d PV." % [agente.nome, alvo.nome, cura])
+	else:
+		_registrar("[color=#e67e22]Não dá para usar o Cicatrizante agora.[/color]")
+	_atualizar()
+
+
 func _encerrar_turno() -> void:
 	if _agente_da_vez() != null:
 		_avancar()
@@ -456,6 +476,8 @@ func _atualizar() -> void:
 	_btn_mover.disabled = agente == null
 	_btn_atacar.disabled = agente == null
 	_btn_encerrar.disabled = agente == null
+	_btn_item.disabled = agente == null or not agente.tem_item("cicatrizante")
+	_btn_item.text = "Cicatrizante (%d)" % (agente.equipamento.count("cicatrizante") if agente != null else 0)
 	_spin_foco.max_value = agente.pe_disponivel_no_turno() if agente != null else 0
 	_chk_ae.visible = agente != null and agente.classe_id == "combatente"
 	_barra_membrana.value = membrana.valor

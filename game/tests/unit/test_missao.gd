@@ -84,12 +84,41 @@ func test_encontro_monta_combate_com_aliados_proximos():
 	assert_false(m.encerrada)
 
 
-func test_derrota_no_encontro_encerra_a_missao():
-	var m := _missao()
+func test_derrota_no_hardcore_mata_e_encerra_a_missao():
+	var m := Missao.nova(42, null, [], {"modo_morte": "hardcore"})
 	m._preparar_encontro(m.posicao(m.agente_atual()), "emboscada", false)
+	for a in m.encontro_pendente.agentes:
+		a.sofrer_dano(1000)
 	m.concluir_encontro("ameacas")
+	assert_eq(m.mortos.size(), 3)
 	assert_true(m.encerrada)
 	assert_false(m.vitoria)
+
+
+func test_derrota_no_modo_normal_gasta_reforcos():
+	var m := Missao.nova(42)   # modo Normal: 2 Reforços da Ordem
+	assert_eq(m.reforcos, 2)
+	m._preparar_encontro(m.posicao(m.agente_atual()), "emboscada", false)
+	for a in m.encontro_pendente.agentes:
+		a.sofrer_dano(1000)
+	m.concluir_encontro("ameacas")
+	assert_eq(m.resgatados.size(), 2, "dois agentes resgatados")
+	assert_eq(m.mortos.size(), 1, "o terceiro, sem reforço, morre")
+	assert_eq(m.reforcos, 0)
+	for a in m.resgatados:
+		assert_false(a.tem(Ser.MORTO))
+	assert_true(m.encerrada, "ninguém sobrou em campo")
+
+
+func test_quem_nao_caiu_continua_a_missao():
+	var m := Missao.nova(42)
+	var a := m.agente_atual()
+	m._preparar_encontro(m.posicao(a), "emboscada", false)
+	a.sofrer_dano(1000)
+	m.concluir_encontro("ameacas")
+	assert_eq(m.resgatados, [a] as Array[Agente])
+	assert_eq(m.agentes.size(), 2)
+	assert_false(m.encerrada)
 
 
 func test_vencer_o_covil_cumpre_a_missao():

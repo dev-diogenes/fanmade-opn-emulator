@@ -1,0 +1,24 @@
+{
+  "ref": "p.61-63",
+  "patentes": [
+    { "id": "recruta", "nome": "Recruta", "pp": 0, "credito": "baixo", "itens_por_categoria": { "1": 2, "2": 0, "3": 0, "4": 0 } },
+    { "id": "operador", "nome": "Operador", "pp": 20, "credito": "medio", "itens_por_categoria": { "1": 3, "2": 1, "3": 0, "4": 0 } },
+    { "id": "agente_especial", "nome": "Agente especial", "pp": 50, "credito": "medio", "itens_por_categoria": { "1": 3, "2": 2, "3": 1, "4": 0 } },
+    { "id": "oficial_de_operacoes", "nome": "Oficial de operações", "pp": 100, "credito": "alto", "itens_por_categoria": { "1": 3, "2": 3, "3": 2, "4": 1 } },
+    { "id": "agente_de_elite", "nome": "Agente de elite", "pp": 200, "credito": "ilimitado", "itens_por_categoria": { "1": 3, "2": 3, "3": 3, "4": 2 } }
+  ],
+  "pp_por_missao": {
+    "ref": "p.63",
+    "solucao_do_caso": 10,
+    "pista_adicional": 2,
+    "morte_de_inocente": -2,
+    "morte_de_membro_do_grupo": -5
+  },
+  "carga": {
+    "ref": "p.63",
+    "espacos_por_forca": 5,
+    "espacos_com_forca_zero": 2,
+    "sobrecarga": { "defesa": -5, "pericias_de_carga": -5, "deslocamento_m": -3 },
+    "maximo_multiplicador": 2
+  }
+}

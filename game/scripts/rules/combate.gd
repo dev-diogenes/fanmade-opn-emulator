@@ -254,6 +254,23 @@ func ataque_de_oportunidade(atacante: Agente, alvo: Ser, arma: Dictionary) -> Re
 	return atacar(atacante, alvo, arma, 0, {"ignorar_distancia": true})
 
 
+## Usa um item consumível de cura (ex.: Cicatrizante, p.75) em si ou num aliado adjacente.
+## Gasta a ação do item. Retorna os PV curados (-1 se não pôde usar).
+func usar_item(ser: Agente, item_id: String, alvo: Ser) -> int:
+	var info := ruleset.equipamento(item_id)
+	var uso: Dictionary = info.get("uso", {})
+	if uso.is_empty() or not ser.tem_item(item_id) or alvo.tem(Ser.MORTO):
+		return -1
+	if alvo != ser and grade != null and grade.tem(ser) and grade.tem(alvo) and not grade.estao_adjacentes(ser, alvo):
+		return -1
+	if not gastar_acao(ser, uso.get("acao", "padrao")):
+		return -1
+	ser.consumir_item(item_id)
+	var cura := dados.rolar_expressao(uso.get("cura", "0"))
+	alvo.curar(cura)
+	return cura
+
+
 ## Sem grade, tudo está "perto". Com grade, verifica a categoria de alcance.
 func _perto(a: Ser, b: Ser, categoria: String) -> bool:
 	return grade == null or not grade.tem(a) or not grade.tem(b) or grade.em_alcance(a, b, categoria)

@@ -20,6 +20,15 @@ func forcar(resultados: Array) -> void:
 		_fila.append(int(r))
 
 
+## Estado do gerador, para salvar e continuar a mesma sequência depois.
+func estado() -> int:
+	return _rng.state
+
+
+func restaurar_estado(valor: int) -> void:
+	_rng.state = valor
+
+
 func tem_resultados_forcados() -> bool:
 	return not _fila.is_empty()
 

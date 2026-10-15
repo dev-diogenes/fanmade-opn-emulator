@@ -1,0 +1,31 @@
+{
+  "nota": "Agentes recrutáveis na Base (fichas no formato de CriacaoAgente, NEX 5%). Os 3 primeiros formam o grupo inicial de uma carreira nova. Criação livre de agentes entra numa fase futura.",
+  "recrutas": [
+    { "nome": "Mauro", "classe": "combatente", "origem": "lutador", "nex": 5,
+      "atributos": { "agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 3 },
+      "pericias_classe": ["luta", "fortitude"],
+      "pericias_livres": ["atletismo", "intimidacao", "percepcao"],
+      "equipamento": ["machado", "protecao_leve"], "arma": "machado" },
+    { "nome": "Bianca", "classe": "especialista", "origem": "investigador", "nex": 5,
+      "atributos": { "agi": 2, "for": 0, "int": 3, "pre": 3, "vig": 1 },
+      "pericias_livres": ["atualidades", "ciencias", "diplomacia", "intuicao", "medicina", "pilotagem", "pontaria", "tecnologia", "vontade", "reflexos"],
+      "perito": ["ciencias", "investigacao"], "equipamento": ["pistola", "kit_medicina"], "arma": "pistola" },
+    { "nome": "Rita", "classe": "ocultista", "origem": "policial", "nex": 5,
+      "atributos": { "agi": 2, "for": 1, "int": 2, "pre": 2, "vig": 2 },
+      "pericias_livres": ["luta", "reflexos", "fortitude", "atletismo", "intuicao"],
+      "equipamento": ["revolver", "cicatrizante"], "arma": "revolver" },
+    { "nome": "Tiago", "classe": "combatente", "origem": "militar", "nex": 5,
+      "atributos": { "agi": 3, "for": 1, "int": 1, "pre": 1, "vig": 3 },
+      "pericias_classe": ["pontaria", "reflexos"],
+      "pericias_livres": ["iniciativa", "percepcao", "atletismo"],
+      "equipamento": ["fuzil_de_caca", "protecao_leve"], "arma": "fuzil_de_caca" },
+    { "nome": "Joana", "classe": "especialista", "origem": "agente_de_saude", "nex": 5,
+      "atributos": { "agi": 2, "for": 1, "int": 3, "pre": 2, "vig": 1 },
+      "pericias_livres": ["ciencias", "diplomacia", "percepcao", "investigacao", "vontade", "reflexos", "pontaria", "atualidades", "sobrevivencia", "luta"],
+      "perito": ["medicina", "percepcao"], "equipamento": ["revolver", "kit_medicina", "cicatrizante"], "arma": "revolver" },
+    { "nome": "Cecília", "classe": "ocultista", "origem": "academico", "nex": 5,
+      "atributos": { "agi": 1, "for": 1, "int": 3, "pre": 3, "vig": 1 },
+      "pericias_livres": ["religiao", "intuicao", "atualidades", "percepcao", "diplomacia", "tecnologia"],
+      "equipamento": ["faca", "manto_de_glifos"], "arma": "faca" }
+  ]
+}

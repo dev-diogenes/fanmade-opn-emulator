@@ -4,6 +4,7 @@ extends Ser
 ## Para criar com validação completa (origem, classe, poderes, trilha), use CriacaoAgente.
 
 var ruleset: Ruleset
+var id := ""                     ## Identificador único na carreira (para salvar)
 var classe_id := ""
 var origem_id := ""
 var trilha_id := ""
@@ -20,6 +21,12 @@ var trilha_versatil := ""        ## Versatilidade (NEX 50%): trilha alheia da qu
 var sem_poder_origem := false    ## Criança/adolescente que não escolheu o poder da origem
 ## Ex-mundano (regra NEX 0%): bônus recebidos ao virar agente, ex.: {"pv": 12, "pe": 1, "san": 4}
 var transicao_mundano: Dictionary = {}
+var pp := 0                      ## Pontos de Prestígio (definem a patente)
+var aumentos: Array[String] = [] ## Aumentos de atributo já feitos (NEX 20/50/80/95)
+var graus_feitos := 0            ## Escolhas de Grau de Treinamento já feitas (NEX 35/70)
+var versatilidade := ""          ## "", "poder" ou "trilha:<id>" (NEX 50%)
+var arma_id := ""                ## Arma empunhada ("" = desarmado)
+var equipamento: Array[String] = []   ## Ids requisitados para a missão (armas, proteção, itens)
 var pe := 0
 var pe_temporario := 0           ## Gastos antes dos PE normais; somem no fim da cena
 var pe_maximo := 0
@@ -136,7 +143,11 @@ func atributo(atributo_id: String) -> int:
 
 
 func dados_da_pericia(pericia_id: String) -> int:
-	var d := atributo(ruleset.atributo_da_pericia(pericia_id))
+	var attr_base := ruleset.atributo_da_pericia(pericia_id)
+	var d := atributo(attr_base)
+	var prot := protecao()
+	if not prot.is_empty() and attr_base in ["for", "agi"] and not tem_proficiencia(prot.get("proficiencia", "")):
+		d -= 2   # proteção sem proficiência: −2 dados em Força e Agilidade (p.72)
 	if pericia_id == "reflexos" and (tem(Ser.DESPREVENIDO) or tem(Ser.SURPREENDIDO)):
 		d -= 1   # desprevenido: −1 dado em Reflexos (p.320)
 	return d
@@ -161,7 +172,27 @@ func bonus_pericia(pericia_id: String, grau_usado: String = "") -> int:
 			bonus += int(e.get("furtividade", 0))
 	if ruleset.eh_teste_de_resistencia(pericia_id):
 		bonus += bonus_testes_resistencia()
+	bonus += _bonus_de_equipamento(pericia_id)
 	return bonus
+
+
+## Itens (p.63, p.73): bônus de itens não acumulam (vale o maior); kit faltando dá −5;
+## proteção pesada e sobrecarga pesam nas perícias de carga.
+func _bonus_de_equipamento(pericia_id: String) -> int:
+	var info := ruleset.pericia(pericia_id)
+	var total := 0
+	var melhor_item := 0
+	for item_id in equipamento:
+		var e := ruleset.equipamento(item_id)
+		melhor_item = maxi(melhor_item, int(e.get("bonus_pericia", {}).get(pericia_id, 0)))
+	total += melhor_item
+	if info.get("kit", false) and not equipamento.any(func(i): return ruleset.equipamento(i).get("kit", "") == pericia_id):
+		total += int(ruleset.dados.pericias.get("penalidade_sem_kit", -5))
+	if info.get("carga", false):
+		total += int(protecao().get("penalidade_carga", 0))
+		if sobrecarregado():
+			total += int(ruleset.regra_carga().get("sobrecarga", {}).get("pericias_de_carga", 0))
+	return total
 
 
 func bonus_testes_resistencia() -> int:
@@ -186,7 +217,153 @@ func deslocamento_m() -> float:
 		base = float(e.valor)
 	for e in efeitos("deslocamento_mod"):
 		base += float(e.valor)
+	if sobrecarregado():
+		base += float(ruleset.regra_carga().get("sobrecarga", {}).get("deslocamento_m", 0))
 	return maxf(1.5, base)
+
+
+# --- Equipamento e patente --------------------------------------------------
+
+func patente() -> Dictionary:
+	return ruleset.patente_por_pp(pp)
+
+
+## Arma empunhada (ou ataque desarmado).
+func arma() -> Dictionary:
+	if arma_id != "" and arma_id in equipamento:
+		return ruleset.arma(arma_id)
+	return ruleset.arma("desarmado")
+
+
+func protecao() -> Dictionary:
+	for item_id in equipamento:
+		var e := ruleset.equipamento(item_id)
+		if e.get("tipo", "") == "protecao":
+			return e
+	return {}
+
+
+## Espaços de carga: 5 por ponto de Força (2 com Força 0), p.63.
+func capacidade_carga() -> int:
+	var regra := ruleset.regra_carga()
+	var forca := atributo("for")
+	for e in efeitos("carga_soma_atributo"):
+		forca += atributo(e.atributo)
+	return int(regra.get("espacos_com_forca_zero", 2)) if forca <= 0 else forca * int(regra.get("espacos_por_forca", 5))
+
+
+func espacos_usados() -> int:
+	var total := 0
+	for item_id in equipamento:
+		total += int(ruleset.equipamento(item_id).get("espacos", 1))
+	return total
+
+
+func sobrecarregado() -> bool:
+	return espacos_usados() > capacidade_carga()
+
+
+func tem_item(item_id: String) -> bool:
+	return item_id in equipamento
+
+
+## Gasta um item consumível (remove uma unidade do equipamento).
+func consumir_item(item_id: String) -> bool:
+	if not tem_item(item_id) or not ruleset.equipamento(item_id).get("consumivel", false):
+		return false
+	equipamento.erase(item_id)
+	return true
+
+
+## Erros de uma requisição de equipamento para a patente atual (p.61-63).
+func validar_equipamento(lista: Array) -> Array[String]:
+	var erros: Array[String] = []
+	var limites: Dictionary = patente().get("itens_por_categoria", {})
+	var por_categoria: Dictionary = {}
+	var espacos := 0
+	var protecoes := 0
+	for item_id in lista:
+		var e := ruleset.equipamento(item_id)
+		if e.is_empty():
+			erros.append("Item desconhecido: %s" % item_id)
+			continue
+		var cat := int(e.get("categoria", 0))
+		if cat > 0:
+			por_categoria[cat] = int(por_categoria.get(cat, 0)) + 1
+		espacos += int(e.get("espacos", 1))
+		if e.tipo == "protecao":
+			protecoes += 1
+	for cat in por_categoria:
+		var limite := int(limites.get(str(cat), 0))
+		if por_categoria[cat] > limite:
+			erros.append("A patente %s libera %d item(ns) de categoria %s (pediu %d)" % [patente().get("nome", "?"), limite, ["0", "I", "II", "III", "IV"][cat], por_categoria[cat]])
+	if protecoes > 1:
+		erros.append("Só dá para vestir uma proteção")
+	var maximo := capacidade_carga() * int(ruleset.regra_carga().get("maximo_multiplicador", 2))
+	if espacos > maximo:
+		erros.append("Carga máxima é %d espaços (pediu %d)" % [maximo, espacos])
+	return erros
+
+
+# --- Salvar / carregar ------------------------------------------------------
+
+func para_dicionario() -> Dictionary:
+	return {
+		"id": id, "aumentos": Array(aumentos), "graus_feitos": graus_feitos, "versatilidade": versatilidade,
+		"nome": nome, "classe": classe_id, "origem": origem_id, "trilha": trilha_id, "nex": nex,
+		"atributos": atributos.duplicate(), "pericias": pericias.duplicate(),
+		"poderes": Array(poderes), "perito": Array(perito), "escolhas": escolhas.duplicate(),
+		"lesoes": Array(lesoes), "idade": idade, "desvantagens_idade": Array(desvantagens_idade),
+		"trilha_versatil": trilha_versatil, "sem_poder_origem": sem_poder_origem,
+		"transicao_mundano": transicao_mundano.duplicate(),
+		"pp": pp, "arma": arma_id, "equipamento": Array(equipamento),
+		"pv": pv, "pe": pe, "san": san, "condicoes": condicoes.keys(),
+	}
+
+
+static func de_dicionario(p_ruleset: Ruleset, d: Dictionary) -> Agente:
+	var a := Agente.new()
+	a.ruleset = p_ruleset
+	a.lado = "agentes"
+	a.nome = d.get("nome", "Agente")
+	a.id = d.get("id", "")
+	for x in d.get("aumentos", []):
+		a.aumentos.append(x)
+	a.graus_feitos = int(d.get("graus_feitos", 0))
+	a.versatilidade = d.get("versatilidade", "")
+	a.classe_id = d.get("classe", "combatente")
+	a.origem_id = d.get("origem", "")
+	a.trilha_id = d.get("trilha", "")
+	a.nex = int(d.get("nex", 5))
+	for k in d.get("atributos", {}):
+		a.atributos[k] = int(d.atributos[k])
+	a.pericias = d.get("pericias", {}).duplicate()
+	for x in d.get("poderes", []):
+		a.poderes.append(x)
+	for x in d.get("perito", []):
+		a.perito.append(x)
+	a.escolhas = d.get("escolhas", {}).duplicate()
+	for x in d.get("lesoes", []):
+		a.lesoes.append(x)
+	a.idade = d.get("idade", "")
+	for x in d.get("desvantagens_idade", []):
+		a.desvantagens_idade.append(x)
+	a.trilha_versatil = d.get("trilha_versatil", "")
+	a.sem_poder_origem = d.get("sem_poder_origem", false)
+	var trans: Dictionary = d.get("transicao_mundano", {})
+	for k in trans:
+		a.transicao_mundano[k] = int(trans[k])
+	a.pp = int(d.get("pp", 0))
+	a.arma_id = d.get("arma", "")
+	for x in d.get("equipamento", []):
+		a.equipamento.append(x)
+	a.recalcular_maximos(true)
+	a.pv = int(d.get("pv", a.pv_maximo))
+	a.pe = int(d.get("pe", a.pe_maximo))
+	a.san = int(d.get("san", a.san_maximo))
+	for c in d.get("condicoes", []):
+		a.condicoes[c] = true
+	return a
 
 
 func pode_usar_pericia(pericia_id: String) -> bool:
@@ -195,6 +372,9 @@ func pode_usar_pericia(pericia_id: String) -> bool:
 
 func defesa() -> int:
 	var d := ruleset.defesa_base(atributos) + _soma_efeitos("bonus_defesa") + ajustes_de_defesa()
+	d += int(protecao().get("defesa", 0))
+	if sobrecarregado():
+		d += int(ruleset.regra_carga().get("sobrecarga", {}).get("defesa", 0))
 	if tem(Ser.MACHUCADO) and tem_habilidade("inquebravel"):
 		d += 5
 	return d
@@ -207,6 +387,7 @@ func resistencia(tipo_dano: String) -> int:
 			total += atributo(e.atributo) if e.has("atributo") else int(e.get("valor", 0))
 	if tem(Ser.MACHUCADO) and tem_habilidade("inquebravel"):
 		total += 5   # Inquebrável: RD 5 contra qualquer dano enquanto machucado
+	total += int(protecao().get("resistencias", {}).get(tipo_dano, 0))
 	return total
 
 

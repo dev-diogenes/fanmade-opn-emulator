@@ -13,6 +13,8 @@
     "poderes_classe.json",
     "trilhas.json",
     "idades.json",
-    "armas.json"
+    "armas.json",
+    "patentes.json",
+    "equipamentos.json"
   ]
 }

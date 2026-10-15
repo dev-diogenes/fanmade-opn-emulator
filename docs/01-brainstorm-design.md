@@ -155,6 +155,10 @@ Pontos em que o livro é ambíguo e escolhemos uma leitura (revisar se surgir er
 | Tiro além do alcance | Até o dobro do alcance: −1 dado (p.66). A p.85 fala em −5; ficamos com a regra do capítulo de equipamento |
 | Cobertura | Linha entre os centros dos quadrados (o livro usa os cantos) |
 | Flanquear | O aliado precisa estar exatamente no quadrado oposto ao atacante |
+| PP por missão | O grupo é avaliado junto (p.61): cada agente que volta recebe o total da tabela 3.2. "Pista adicional" = evento resolvido com sucesso |
+| NEX por missão | +5% só para quem volta de uma missão cumprida (p.33: "missão concluída com sucesso") |
+| Recuperação | Na Base, entre missões, todos recuperam PV, PE e SAN e as condições acabam |
+| Reforços da Ordem (modo Normal) | 2 por missão. Um agente caído num combate perdido (ou morto) é resgatado: sai da missão com uma lesão (1d6 no atributo, como a regra de Lesões) |
 
 ## 14. Ferramentas: Godot e o Tabletop Simulator ✅
 

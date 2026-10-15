@@ -41,9 +41,21 @@ reference/            Material pago LOCAL, ignorado pelo Git
 2. Instale o [Git LFS](https://git-lfs.com) e rode `git lfs install`.
 3. Clone o repositório e abra `game/project.godot` no Godot.
 
-### Missão no mapa (cena principal)
+### Base da Ordem (cena principal)
 
-Ao apertar **Play (F5)**, começa uma missão num mapa hexagonal gerado por seed (interface 2D provisória):
+Ao apertar **Play (F5)**, abre a Base da Ordem, o hub da carreira:
+
+- **Agentes:** roster persistente (começa com Mauro, Bianca e Rita; dá para recrutar mais até 8). Clique num agente para ver a ficha.
+- **Escolhas de NEX:** quando um agente sobe de NEX, a ficha mostra o que escolher (trilha, poder, aumento de atributo, grau de treinamento).
+- **Requisição:** marque armas, proteção e itens dentro do limite da patente (Recruta: 2 itens de categoria I) e da carga.
+- **Missão:** escolha até 4 agentes e as opções da run (modo Normal com 2 Reforços da Ordem, ou Hardcore). Ao voltar, o relatório mostra PP, NEX e promoções.
+- O jogo salva sozinho em `user://carreira.json` (no Windows: `%APPDATA%\Godot\app_userdata\Ordem Paranormal- Fanmade (WIP)`).
+
+![Base da Ordem](docs/base_ordem.png)
+
+### Missão no mapa
+
+Uma missão acontece num mapa hexagonal gerado por seed (interface 2D provisória):
 
 - Na vez de cada agente, **Rolar movimento**: 1 d20 por ponto de Agilidade (+1 por PE de Foco); cada resultado 11+ vale 1 passo, além do passo base.
 - Clique num hex azul para andar. **?** são eventos (um teste de perícia), **!** são encontros (vão para o combate tático), **V** são vilas onde dá para **Descansar**, e **X** é o covil: vencê-lo cumpre a missão.

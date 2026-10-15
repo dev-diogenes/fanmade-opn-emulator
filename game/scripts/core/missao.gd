@@ -27,6 +27,14 @@ var evento_pendente: Dictionary = {}    ## {"hex", "evento", "agente"}
 var encontro_pendente: Dictionary = {}  ## config para a arena
 var encerrada := false
 var vitoria := false
+## Opções da run (Carreira): modo_morte, lesoes, inspiracao_resoluta
+var opcoes: Dictionary = {"modo_morte": "normal", "lesoes": true, "inspiracao_resoluta": true}
+var semente := 0
+var agentes_iniciais: Array[Agente] = []
+var reforcos := 0                        ## Reforços da Ordem restantes (modo Normal)
+var pistas := 0                          ## Eventos resolvidos com sucesso (pistas adicionais, p.63)
+var mortos: Array[Agente] = []
+var resgatados: Array[Agente] = []
 
 ## Todas as linhas do registro (a cena do mapa é recriada após cada combate)
 var historico: Array[String] = []
@@ -36,20 +44,31 @@ var _descansou: Dictionary = {}          ## Agente -> hex onde já descansou nes
 var _turnos_sem_surgimento := 0
 
 
-static func nova(semente: int, ruleset_: Ruleset = null) -> Missao:
+## Nova missão. `grupo`: agentes da carreira (vazio = grupo padrão de demonstração).
+static func nova(semente_: int, ruleset_: Ruleset = null, grupo: Array = [], opcoes_: Dictionary = {}) -> Missao:
 	var m := Missao.new()
 	m.ruleset = ruleset_ if ruleset_ != null else RulesetOp2022.carregar_padrao()
-	m.dados = Dados.new(semente)
+	m.semente = semente_
+	m.dados = Dados.new(semente_)
 	m._cfg = DadosJogo.ler("mapa")
-	m.mapa = GeradorMapa.gerar(semente)
+	m.mapa = GeradorMapa.gerar(semente_)
 	m.membrana = Membrana.carregar_padrao()
+	for k in opcoes_:
+		m.opcoes[k] = opcoes_[k]
+	m.reforcos = 2 if m.opcoes.get("modo_morte", "normal") == "normal" else 0
 	var inicio := m.mapa.encontrar("inicio")
-	for ficha in DadosJogo.ler("grupo_inicial").agentes:
-		var r := CriacaoAgente.criar(m.ruleset, ficha)
-		assert(r.agente != null, "Ficha inicial inválida: %s" % [r.erros])
-		var a: Agente = r.agente
+	if grupo.is_empty():
+		for ficha in DadosJogo.ler("grupo_inicial").agentes:
+			var r := CriacaoAgente.criar(m.ruleset, ficha)
+			assert(r.agente != null, "Ficha inicial inválida: %s" % [r.erros])
+			var novo: Agente = r.agente
+			novo.equipamento.append(ficha.arma)
+			novo.arma_id = ficha.arma
+			grupo.append(novo)
+	for a in grupo:
 		m.agentes.append(a)
-		m.armas[a] = m.ruleset.arma(ficha.arma)
+		m.agentes_iniciais.append(a)
+		m.armas[a] = a.arma()
 		m.posicoes[a] = inicio
 	m._iniciar_turno_do_agente()
 	return m
@@ -192,7 +211,7 @@ func _iniciar_turno_do_agente() -> void:
 	ultimo_movimento = {}
 	var a := agente_atual()
 	if a != null:
-		a.pe_gasto_no_turno = 0
+		a.iniciar_turno()   # zera o PE do turno e conta "enlouquecendo" também no mapa
 		turno_mudou.emit(a)
 
 
@@ -214,6 +233,8 @@ func resolver_evento(pe_foco: int = 0) -> Dictionary:
 	var teste := a.testar(dados, ev.pericia, int(ev.dt), pe_foco)
 	var sucesso := teste != null and teste.sucesso
 	var lado: Dictionary = ev.sucesso if sucesso else ev.falha
+	if sucesso:
+		pistas += 1
 	var linha := "%s testa %s (DT %d): %s" % [a.nome, ruleset.pericia(ev.pericia).nome, int(ev.dt),
 		teste.descrever() if teste != null else "sem treino — falha automática"]
 	_log(linha)
@@ -271,7 +292,8 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool) -> void:
 		ameacas.append(DadosJogo.ameaca(ruleset, amea_id))
 	encontro_pendente = {
 		"hex": h, "nome": info.nome, "chefe": chefe, "terreno": mapa.terreno(h),
-		"agentes": participantes, "armas": armas, "ameacas": ameacas,
+		"agentes": participantes, "armas": armas, "ameacas": ameacas, "encontro": encontro_id,
+		"regras": {"lesoes": opcoes.get("lesoes", true), "inspiracao_resoluta": opcoes.get("inspiracao_resoluta", true)},
 		"nivel_membrana": membrana.nivel_ameaca(), "semente": dados.rolar(1000000),
 	}
 	_log("[color=#ec7063][b]Encontro: %s![/b][/color] (%d agente(s) entram no combate)" % [info.nome, participantes.size()])
@@ -294,22 +316,67 @@ func concluir_encontro(vencedor: String) -> void:
 	var chefe: bool = encontro_pendente.chefe
 	for a in encontro_pendente.agentes:
 		a.encerrar_cena()
+	var participantes: Array = encontro_pendente.agentes
+	encontro_pendente = {}
 	if vencedor == "agentes":
-		for a in encontro_pendente.agentes:
-			if not a.tem(Ser.MORTO) and a.pv == 0:
+		for a in participantes:
+			if a.tem(Ser.MORTO):
+				_tratar_queda(a)
+			elif a.pv == 0:
 				a.estabilizar()
 				a.curar(1)
+				a.condicoes.erase(Ser.INCONSCIENTE)
 				_log("%s é socorrido e volta com 1 PV." % a.nome)
 		mapa.limpar_conteudo(h)
 		_log("[color=#58d68d]Encontro vencido.[/color]")
-		encontro_pendente = {}
 		if chefe:
 			_encerrar(true)
 	else:
-		encontro_pendente = {}
 		_log("[color=#ec7063]Os agentes caíram.[/color]")
-		_encerrar(false)
+		for a in participantes:
+			if a.esta_fora_de_combate() or a.tem(Ser.MORTO):
+				_tratar_queda(a)
+	_ajustar_indice()
 	_verificar_derrota()
+
+
+## Agente morto ou caído num combate perdido. Modo Normal: gasta um Reforço da Ordem e o
+## agente é resgatado (sai da missão com uma lesão). Sem reforços, ou no Hardcore, morre.
+func _tratar_queda(a: Agente) -> void:
+	if a.tem(Ser.INSANO):
+		agentes.erase(a)
+		return
+	if opcoes.get("modo_morte", "normal") == "normal" and reforcos > 0:
+		reforcos -= 1
+		agentes.erase(a)
+		resgatados.append(a)
+		a.condicoes.clear()
+		a.pv = maxi(1, a.pv)
+		var ordem := ["agi", "for", "int", "pre", "vig"]
+		var d6 := dados.rolar(6)
+		if d6 <= 5:
+			var attr: String = ordem[d6 - 1]
+			a.atributos[attr] = maxi(0, int(a.atributos.get(attr, 0)) - 1)
+			a.lesoes.append(attr)
+			a.recalcular_maximos()
+			_log("[color=#f5b041]Reforços da Ordem resgatam %s (lesão: −1 %s). Reforços restantes: %d.[/color]" % [a.nome, attr.to_upper(), reforcos])
+		else:
+			_log("[color=#f5b041]Reforços da Ordem resgatam %s, sem sequelas. Reforços restantes: %d.[/color]" % [a.nome, reforcos])
+	else:
+		a.condicoes.clear()
+		a.condicoes[Ser.MORTO] = true
+		agentes.erase(a)
+		mortos.append(a)
+		_log("[color=#c0392b]%s morreu.[/color]" % a.nome)
+
+
+func _ajustar_indice() -> void:
+	if agentes.is_empty():
+		indice = 0
+		return
+	if indice >= agentes.size():
+		indice = 0
+	_iniciar_turno_do_agente()
 
 
 # --- Mundo -----------------------------------------------------------------
@@ -348,7 +415,7 @@ func _surgir_ameaca() -> void:
 func _verificar_derrota() -> void:
 	if encerrada:
 		return
-	if agentes.all(func(a): return a.esta_fora_de_combate()):
+	if agentes.is_empty() or agentes.all(func(a): return a.esta_fora_de_combate()):
 		_encerrar(false)
 
 
@@ -359,3 +426,86 @@ func _encerrar(venceu: bool) -> void:
 	vitoria = venceu
 	_log("[b]%s[/b]" % ("MISSÃO CUMPRIDA" if venceu else "MISSÃO FRACASSADA"))
 	missao_encerrada.emit(venceu)
+
+
+# --- Salvar / carregar ------------------------------------------------------
+
+## Os agentes são referenciados pelo id (eles mesmos são salvos pela Carreira).
+func para_dicionario() -> Dictionary:
+	var pos: Dictionary = {}
+	for a in posicoes:
+		pos[a.id] = [posicoes[a].x, posicoes[a].y]
+	var ev: Dictionary = {}
+	if not evento_pendente.is_empty():
+		ev = {"hex": [evento_pendente.hex.x, evento_pendente.hex.y], "evento": evento_pendente.evento.id, "agente": evento_pendente.agente.id}
+	var enc: Dictionary = {}
+	if not encontro_pendente.is_empty():
+		enc = {"hex": [encontro_pendente.hex.x, encontro_pendente.hex.y], "encontro": encontro_pendente.encontro, "chefe": encontro_pendente.chefe}
+	var descansos: Dictionary = {}
+	for a in _descansou:
+		descansos[a.id] = [_descansou[a].x, _descansou[a].y]
+	return {
+		"semente": semente, "rng": str(dados.estado()), "mapa": mapa.para_dicionario(), "membrana": membrana.para_dicionario(),
+		"opcoes": opcoes.duplicate(), "agentes": agentes.map(func(a): return a.id),
+		"agentes_iniciais": agentes_iniciais.map(func(a): return a.id),
+		"mortos": mortos.map(func(a): return a.id), "resgatados": resgatados.map(func(a): return a.id),
+		"posicoes": pos, "turno_mundo": turno_mundo, "indice": indice,
+		"movimento_restante": movimento_restante, "movimento_rolado": movimento_rolado,
+		"evento_pendente": ev, "encontro_pendente": enc, "reforcos": reforcos, "pistas": pistas,
+		"turnos_sem_surgimento": _turnos_sem_surgimento, "descansos": descansos,
+		"historico": historico.slice(maxi(0, historico.size() - 300)),
+		"encerrada": encerrada, "vitoria": vitoria,
+	}
+
+
+## `por_id`: {id: Agente} vindo da Carreira.
+static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) -> Missao:
+	var m := Missao.new()
+	m.ruleset = ruleset_
+	m._cfg = DadosJogo.ler("mapa")
+	m.semente = int(d.get("semente", 0))
+	m.dados = Dados.new(m.semente)
+	m.dados.restaurar_estado(String(d.get("rng", "0")).to_int())
+	m.mapa = MapaHex.new(m._cfg.terrenos)
+	m.mapa.de_dicionario(d.mapa)
+	m.membrana = Membrana.carregar_padrao()
+	m.membrana.de_dicionario(d.membrana)
+	m.opcoes = d.get("opcoes", m.opcoes)
+	for i in d.get("agentes", []):
+		if por_id.has(i):
+			m.agentes.append(por_id[i])
+	for i in d.get("agentes_iniciais", []):
+		if por_id.has(i):
+			m.agentes_iniciais.append(por_id[i])
+	for i in d.get("mortos", []):
+		if por_id.has(i):
+			m.mortos.append(por_id[i])
+	for i in d.get("resgatados", []):
+		if por_id.has(i):
+			m.resgatados.append(por_id[i])
+	for a in m.agentes_iniciais:
+		m.armas[a] = a.arma()
+		var p: Array = d.posicoes.get(a.id, [0, 0])
+		m.posicoes[a] = Vector2i(int(p[0]), int(p[1]))
+	m.turno_mundo = int(d.get("turno_mundo", 1))
+	m.indice = int(d.get("indice", 0))
+	m.movimento_restante = int(d.get("movimento_restante", 0))
+	m.movimento_rolado = d.get("movimento_rolado", false)
+	m.reforcos = int(d.get("reforcos", 0))
+	m.pistas = int(d.get("pistas", 0))
+	m._turnos_sem_surgimento = int(d.get("turnos_sem_surgimento", 0))
+	for i in d.get("descansos", {}):
+		if por_id.has(i):
+			var hx: Array = d.descansos[i]
+			m._descansou[por_id[i]] = Vector2i(int(hx[0]), int(hx[1]))
+	for linha in d.get("historico", []):
+		m.historico.append(linha)
+	m.encerrada = d.get("encerrada", false)
+	m.vitoria = d.get("vitoria", false)
+	var ev: Dictionary = d.get("evento_pendente", {})
+	if not ev.is_empty() and por_id.has(ev.agente):
+		m.evento_pendente = {"hex": Vector2i(int(ev.hex[0]), int(ev.hex[1])), "evento": m._evento(ev.evento), "agente": por_id[ev.agente]}
+	var enc: Dictionary = d.get("encontro_pendente", {})
+	if not enc.is_empty():
+		m._preparar_encontro(Vector2i(int(enc.hex[0]), int(enc.hex[1])), enc.encontro, enc.chefe)
+	return m

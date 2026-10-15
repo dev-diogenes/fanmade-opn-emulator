@@ -65,7 +65,9 @@ static func criar(ruleset: Ruleset, ficha: Dictionary) -> Dictionary:
 		erros.append("Desvantagens de idade exigem a regra Idade Variada")
 
 	# 1. Atributos iniciais + aumentos
-	var atributos: Dictionary = ficha.get("atributos", {}).duplicate()
+	var atributos: Dictionary = {}
+	for k in ficha.get("atributos", {}):
+		atributos[k] = int(ficha.atributos[k])   # JSON traz números como float
 	var maximos_idade: Dictionary = faixa.get("atributos_maximos", {})
 	erros.append_array(ruleset.validar_atributos_iniciais(atributos, int(classe.get("pontos_atributo", -1)), faixa.get("atributos_zerados", []), maximos_idade))
 	var aumentos: Array = ficha.get("aumentos_atributo", [])
@@ -236,6 +238,10 @@ static func criar(ruleset: Ruleset, ficha: Dictionary) -> Dictionary:
 		a.desvantagens_idade.append(dv)
 	a.trilha_versatil = trilha_versatil
 	a.sem_poder_origem = sem_poder_origem
+	for attr_id in aumentos:
+		a.aumentos.append(attr_id)
+	a.graus_feitos = graus.size()
+	a.versatilidade = versatilidade
 
 	if trilha_id != "":
 		erros.append_array(_checar_pre(ruleset.trilha(classe_id, trilha_id).get("pre", {}), a, "trilha " + trilha_id))
