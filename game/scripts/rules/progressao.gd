@@ -28,6 +28,8 @@ static func pendencias(a: Agente) -> Array[Dictionary]:
 		lista.append({"tipo": "poder", "opcoes": poderes_possiveis(a)})
 	for i in maxi(0, rs.quantos_ate("aumento_atributo", a.nex) - a.aumentos.size()):
 		lista.append({"tipo": "aumento", "opcoes": atributos_aumentaveis(a)})
+	for i in maxi(0, a.rituais_esperados() - a.rituais.size()):
+		lista.append({"tipo": "ritual", "opcoes": rituais_possiveis(a)})
 	for i in maxi(0, rs.quantos_ate("grau_treinamento", a.nex) - a.graus_feitos):
 		var regra: Dictionary = rs.dados.classes.grau_treinamento_qtd.get(a.classe_id, {"base": 0, "soma_atributo": "int"})
 		lista.append({"tipo": "grau", "quantidade": int(regra.base) + a.atributo(regra.soma_atributo), "opcoes": pericias_para_subir(a)})
@@ -50,6 +52,15 @@ static func poderes_possiveis(a: Agente) -> Array:
 			continue
 		if CriacaoAgente._checar_pre(p.get("pre", {}), a, p.id).is_empty():
 			lista.append(p.id)
+	return lista
+
+
+## Rituais que o agente pode aprender agora (círculo acessível, ainda não conhecidos).
+static func rituais_possiveis(a: Agente) -> Array:
+	var lista: Array = []
+	for r in a.ruleset.lista_rituais():
+		if int(r.circulo) <= a.circulo_maximo() and not r.id in a.rituais and not (r.elemento == "medo" and int(r.circulo) == 4):
+			lista.append(r.id)
 	return lista
 
 
@@ -113,6 +124,11 @@ static func aplicar(a: Agente, tipo: String, escolha, extra: Array = []) -> Arra
 						a.poderes.append(escolha)
 			else:
 				a.poderes.append(escolha)
+		"ritual":
+			if not escolha in p.opcoes:
+				erros.append("Ritual indisponível: %s" % escolha)
+			else:
+				a.rituais.append(escolha)
 		"aumento":
 			if not escolha in p.opcoes:
 				erros.append("Atributo não pode aumentar: %s" % escolha)

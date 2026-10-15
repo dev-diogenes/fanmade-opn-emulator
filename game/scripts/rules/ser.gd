@@ -19,6 +19,11 @@ const INDEFESO := "indefeso"
 const SURPREENDIDO := "surpreendido"
 const VULNERAVEL := "vulneravel"
 const IMOVEL := "imovel"
+const FATIGADO := "fatigado"
+const ATORDOADO := "atordoado"
+const PASMO := "pasmo"
+
+const DANO_FISICO := ["balistico", "corte", "impacto", "perfuracao"]
 
 const TURNOS_PARA_MORRER := 3
 const TURNOS_PARA_ENLOUQUECER := 3
@@ -33,6 +38,14 @@ var tem_sanidade := true
 var condicoes: Dictionary = {}
 ## Resistência a dano fixa por tipo ("corte", "mental", "paranormal"…).
 var resistencias_base: Dictionary = {}
+## PV temporários: absorvem dano antes dos PV normais e somem no fim da cena.
+var pv_temporario := 0
+## Condições com duração em rodadas (diminuem no início do turno do ser): {condicao: rodadas}
+var duracoes: Dictionary = {}
+## Rituais ativos sobre o ser: {ritual_id: {efeito..., "conjurador": Ser}}
+var rituais_ativos: Dictionary = {}
+## Hemorragia (Descarnar): {"dados": "2d8", "dt": int, "sucessos": int}
+var hemorragia: Dictionary = {}
 
 ## Modificadores que duram até o fim da cena (Inspiração Resoluta etc.):
 ## {"atributos": {"for": 2}, "resistencias": {"mental": 10}, "ataque_contra": {Ser: 5}}
@@ -87,14 +100,36 @@ func deslocamento_quadrados() -> int:
 
 ## Ajustes comuns a todos os seres: temporários, de cena e condições (p.89, p.320).
 func ajustes_de_defesa() -> int:
-	var total := defesa_temporaria + int(mods_cena.get("defesa", 0))
+	var total := defesa_temporaria + int(mods_cena.get("defesa", 0)) + efeito_ritual("embaralhar")
 	if esta_indefeso():
 		total -= 10
 	elif tem(DESPREVENIDO) or tem(SURPREENDIDO):
 		total -= 5
-	if tem(VULNERAVEL):
-		total -= 2
+	if tem(VULNERAVEL) or tem(FATIGADO):
+		total -= 2   # fatigado inclui vulnerável (p.320)
 	return total
+
+
+## Soma de uma chave de efeito entre os rituais ativos no ser.
+func efeito_ritual(chave: String) -> int:
+	var total := 0
+	for r in rituais_ativos.values():
+		total += int(r.get(chave, 0))
+	return total
+
+
+## Penalidade de dados por condições (fatigado = fraco: −1 dado em Agilidade, Força e Vigor).
+func penalidade_dados_atributo(atributo_id: String) -> int:
+	if tem(FATIGADO) and atributo_id in ["agi", "for", "vig"]:
+		return 1
+	return 0
+
+
+## Aplica uma condição; `rodadas` 0 = até o fim da cena.
+func aplicar_condicao(condicao: String, rodadas: int = 0) -> void:
+	condicoes[condicao] = true
+	if rodadas > 0:
+		duracoes[condicao] = rodadas
 
 
 func esta_indefeso() -> bool:
@@ -103,10 +138,20 @@ func esta_indefeso() -> bool:
 
 ## Modificadores que o ser aplica ao atacar com `arma` contra `alvo`:
 ## {bonus_ataque, dados_extras, margem (redução da margem de ameaça), bonus_dano, dados_dano_extra}
-func modificar_ataque(_arma: Dictionary, alvo: Ser) -> Dictionary:
+func modificar_ataque(arma: Dictionary, alvo: Ser) -> Dictionary:
 	var mods := {"bonus_ataque": 0, "dados_extras": -penalidade_ataque_temporaria, "margem": 0, "bonus_dano": 0, "dados_dano_extra": 0}
 	mods.bonus_ataque += int(mods_cena.get("ataque_contra", {}).get(alvo, 0))
 	mods.bonus_ataque -= int(mods_cena.get("penalidade_ataque", 0))
+	mods.dados_extras += efeito_ritual("dados_ataque")
+	mods.bonus_ataque += efeito_ritual("pericias")   # Coincidência Forçada vale para testes de ataque
+	var corpo_a_corpo: bool = arma.get("ataque", "corpo_a_corpo") == "corpo_a_corpo"
+	if corpo_a_corpo:
+		mods.bonus_ataque += efeito_ritual("ataque_corpo_a_corpo") + efeito_ritual("bonus_ataque")
+		mods.bonus_dano += efeito_ritual("dano_corpo_a_corpo")
+		mods.margem += efeito_ritual("margem")
+	for r in rituais_ativos.values():
+		if r.has("dano_extra") and corpo_a_corpo:
+			mods["dados_dano_ritual"] = String(mods.get("dados_dano_ritual", "")) + ("+" if mods.has("dados_dano_ritual") else "") + String(r.dano_extra)
 	return mods
 
 
@@ -116,7 +161,10 @@ func bonus_testes_resistencia() -> int:
 
 
 func resistencia(tipo_dano: String) -> int:
-	return int(resistencias_base.get(tipo_dano, 0)) + int(mods_cena.get("resistencias", {}).get(tipo_dano, 0))
+	var total := int(resistencias_base.get(tipo_dano, 0)) + int(mods_cena.get("resistencias", {}).get(tipo_dano, 0))
+	if tipo_dano in DANO_FISICO:
+		total += efeito_ritual("resistencia_fisica")   # Ódio Incontrolável
+	return total
 
 
 # --- Estado ----------------------------------------------------------------
@@ -144,6 +192,12 @@ func turnos_morrendo() -> int:
 func sofrer_dano(quantidade: int) -> void:
 	if quantidade <= 0 or tem(MORTO):
 		return
+	if pv_temporario > 0:
+		var absorvido := mini(pv_temporario, quantidade)
+		pv_temporario -= absorvido
+		quantidade -= absorvido
+		if quantidade <= 0:
+			return
 	pv = maxi(0, pv - quantidade)
 	_atualizar_pv()
 
@@ -176,6 +230,14 @@ func recuperar_sanidade(quantidade: int) -> void:
 	_atualizar_san()
 
 
+## Perda direta de Sanidade (custo de rituais): não é dano mental, ignora resistência.
+func perder_sanidade(quantidade: int) -> void:
+	if quantidade <= 0 or not tem_sanidade:
+		return
+	san = maxi(0, san - quantidade)
+	_atualizar_san()
+
+
 ## Encerra a condição morrendo (teste de Medicina DT 20 bem-sucedido, p.98).
 func estabilizar() -> void:
 	condicoes.erase(MORRENDO)
@@ -187,6 +249,11 @@ func iniciar_turno() -> void:
 	defesa_temporaria = 0
 	penalidade_ataque_temporaria = 0
 	reacao_usada = false
+	for c in duracoes.keys():
+		duracoes[c] -= 1
+		if duracoes[c] <= 0:
+			duracoes.erase(c)
+			condicoes.erase(c)
 	if tem(MORRENDO):
 		_turnos_morrendo += 1
 		if _turnos_morrendo >= TURNOS_PARA_MORRER:
@@ -206,8 +273,12 @@ func encerrar_cena() -> void:
 	mods_cena.clear()
 	defesa_temporaria = 0
 	penalidade_ataque_temporaria = 0
-	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL]:
+	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL, FATIGADO, ATORDOADO, PASMO]:
 		condicoes.erase(c)   # condições terminam no fim da cena (p.321)
+	duracoes.clear()
+	rituais_ativos.clear()
+	hemorragia.clear()
+	pv_temporario = 0
 	acoes_padrao_extras = 0
 	reacao_usada = false
 

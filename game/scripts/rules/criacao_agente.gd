@@ -16,6 +16,7 @@ extends RefCounted
 ##   "treinamentos": [["crime", "tatica"]], # um par por Treinamento em Perícia
 ##   "graus": [[...], [...]],               # perícias que sobem de grau em NEX 35% e 70%
 ##   "escolhas": {"ferramenta_de_trabalho": "machado"},
+##   "rituais": ["eletrocussao", "cicatrizacao", "armadura_de_sangue"],   # ocultista: 3 + 1 por NEX
 ##   # Regra opcional Idade Variada (p.182-184):
 ##   "idade": "adulto", "desvantagens_idade": ["catarata"],
 ##   "beneficios_origem": ["pericia:investigacao"],   # criança (1) / adolescente (2): perícias e/ou "poder"
@@ -242,6 +243,10 @@ static func criar(ruleset: Ruleset, ficha: Dictionary) -> Dictionary:
 		a.aumentos.append(attr_id)
 	a.graus_feitos = graus.size()
 	a.versatilidade = versatilidade
+	var lista_rituais: Array = ficha.get("rituais", [])
+	for rid in lista_rituais:
+		a.rituais.append(rid)
+	erros.append_array(_validar_rituais(ruleset, a, lista_rituais))
 
 	if trilha_id != "":
 		erros.append_array(_checar_pre(ruleset.trilha(classe_id, trilha_id).get("pre", {}), a, "trilha " + trilha_id))
@@ -272,6 +277,26 @@ static func _subir_grau(ruleset: Ruleset, pericias: Dictionary, pericia_id: Stri
 		return ""
 	pericias[pericia_id] = novo
 	return novo
+
+
+## Rituais conhecidos (p.42): quantidade esperada pela classe, círculo acessível e sem repetir.
+static func _validar_rituais(ruleset: Ruleset, a: Agente, lista: Array) -> Array[String]:
+	var erros: Array[String] = []
+	var esperado := a.rituais_esperados()
+	if lista.size() != esperado:
+		erros.append("%s conhece %d ritual(is) (recebeu %d)" % [ruleset.classe(a.classe_id).nome, esperado, lista.size()])
+	var vistos: Dictionary = {}
+	for rid in lista:
+		var r := ruleset.ritual(rid)
+		if r.is_empty():
+			erros.append("Ritual desconhecido: %s" % rid)
+			continue
+		if vistos.has(rid):
+			erros.append("Ritual repetido: %s" % rid)
+		vistos[rid] = true
+		if int(r.circulo) > a.circulo_maximo():
+			erros.append("%s é de %dº círculo; o NEX permite até o %dº" % [r.nome, int(r.circulo), a.circulo_maximo()])
+	return erros
 
 
 static func _checar_pre(pre: Dictionary, a: Agente, nome: String) -> Array[String]:

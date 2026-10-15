@@ -63,6 +63,10 @@ Uma missão acontece num mapa hexagonal em 3D low poly, gerado por seed. Câmera
 
 ![Mapa da missão](docs/mapa_mundo.png)
 
+### Rituais
+
+Ocultistas (Rita, Cecília) conhecem 3 rituais de 1º círculo e aprendem mais a cada NEX. Na arena, escolha o ritual no seletor e clique em **Conjurar**; rituais pessoais saem na hora, os outros pedem o alvo. Cada conjuração gasta PE pelo círculo, exige componentes ritualísticos do elemento (requisitados na Base), cobra o **Custo do Paranormal** (teste de Ocultismo; falhar custa Sanidade) e enfraquece a Membrana. Criaturas do elemento oprimido resistem pior (Morte contra Sangue, por exemplo).
+
 ### Investigação
 
 Os hexes com o **anel verde-água** são cenas de investigação. Ao entrar, o grupo (agentes a até 2 hexes) vai para uma cena 3D escura, com a luz curta:

@@ -229,6 +229,11 @@ func _atualizar_agente() -> void:
 	for h in a.habilidades():
 		habs.append(h.nome + ("" if h.get("implementado", false) else "*"))
 	linhas.append("[color=#aab7b8]Habilidades:[/color] " + ", ".join(habs))
+	if not a.rituais.is_empty():
+		var rits := PackedStringArray()
+		for rid in a.rituais:
+			rits.append(rs.ritual(rid).get("nome", rid) + ("" if rs.ritual(rid).get("implementado", false) else "*"))
+		linhas.append("[color=#bb8fce]Rituais:[/color] " + ", ".join(rits))
 	linhas.append("[color=#aab7b8]Equipamento:[/color] %s  (%d/%d espaços)" % [", ".join(PackedStringArray(a.equipamento.map(func(i): return rs.equipamento(i).get("nome", i)))), a.espacos_usados(), a.capacidade_carga()])
 	if not a.lesoes.is_empty():
 		linhas.append("[color=#f5b041]Lesões:[/color] " + ", ".join(PackedStringArray(a.lesoes)))
@@ -262,7 +267,7 @@ func _montar_pendencia(a: Agente) -> void:
 		return
 	var p: Dictionary = pend[0]
 	var rs := carreira.ruleset
-	var titulos := {"trilha": "Escolha a trilha (NEX 10%)", "poder": "Escolha um poder de classe", "aumento": "Aumente um atributo",
+	var titulos := {"trilha": "Escolha a trilha (NEX 10%)", "poder": "Escolha um poder de classe", "aumento": "Aumente um atributo", "ritual": "Aprenda um ritual",
 		"grau": "Grau de Treinamento: escolha %d perícias" % int(p.get("quantidade", 0)), "versatilidade": "Versatilidade (NEX 50%)"}
 	var lbl := _titulo("[%d pendente(s)] %s" % [pend.size(), titulos[p.tipo]])
 	lbl.add_theme_color_override("font_color", Color("f7dc6f"))
@@ -287,6 +292,7 @@ func _montar_pendencia(a: Agente) -> void:
 			"trilha": nome = rs.trilha(a.classe_id, o).nome
 			"poder": nome = rs.poder(a.classe_id, o).nome + ("" if rs.poder(a.classe_id, o).get("implementado", false) else " *")
 			"aumento": nome = String(o).to_upper()
+			"ritual": nome = "%s (%dº, %s)%s" % [rs.ritual(o).nome, int(rs.ritual(o).circulo), rs.ritual(o).elemento, "" if rs.ritual(o).get("implementado", false) else " *"]
 		opt.add_item(nome)
 	_caixa_pendencia.add_child(opt)
 	var extra := LineEdit.new()

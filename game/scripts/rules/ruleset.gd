@@ -147,6 +147,34 @@ func desvantagem_idade(desvantagem_id: String) -> Dictionary:
 	return _desvantagens_idade[desvantagem_id]
 
 
+func tem_ritual(ritual_id: String) -> bool:
+	return not ritual(ritual_id).is_empty()
+
+
+func ritual(ritual_id: String) -> Dictionary:
+	for r in dados.get("rituais", {}).get("rituais", []):
+		if r.id == ritual_id:
+			return r
+	return {}
+
+
+func lista_rituais() -> Array:
+	return dados.get("rituais", {}).get("rituais", [])
+
+
+## Maior círculo de ritual acessível no NEX (p.42: Escolhido pelo Outro Lado).
+func circulo_maximo(nex: int) -> int:
+	var c := 0
+	for n in dados.get("rituais", {}).get("circulo_por_nex", []):
+		if nex >= int(n.nex):
+			c = int(n.circulo)
+	return c
+
+
+func custo_base_ritual(circulo: int) -> int:
+	return int(dados.get("rituais", {}).get("custo_por_circulo", {}).get(str(circulo), 1))
+
+
 func habilidade_classe(habilidade_id: String) -> Dictionary:
 	return dados.classes.habilidades_classe.get(habilidade_id, {})
 

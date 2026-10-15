@@ -9,6 +9,7 @@ var pericias: Dictionary = {}
 var ataques: Array[Dictionary] = []   ## Mesmo formato de armas.json
 var ruleset: Ruleset
 var deslocamento := 9.0
+var elemento := ""   ## Elemento da criatura (rituais opressores/do mesmo elemento, p.128)
 
 
 static func criar(p_ruleset: Ruleset, p_nome: String, ficha: Dictionary) -> Ameaca:
@@ -25,24 +26,24 @@ static func criar(p_ruleset: Ruleset, p_nome: String, ficha: Dictionary) -> Amea
 		a.ataques.append(at)
 	a.resistencias_base = ficha.get("resistencias", {})
 	a.deslocamento = float(ficha.get("deslocamento", 9))
+	a.elemento = ficha.get("elemento", "")
 	a.tem_sanidade = false
 	return a
 
 
 func atributo(atributo_id: String) -> int:
-	return int(atributos.get(atributo_id, 1))
+	return int(atributos.get(atributo_id, 1)) + efeito_ritual("atributo_" + atributo_id)
 
 
 func dados_da_pericia(pericia_id: String) -> int:
-	if pericias.has(pericia_id):
-		return int(pericias[pericia_id].get("dados", 1))
-	return atributo(ruleset.atributo_da_pericia(pericia_id))
+	var attr := ruleset.atributo_da_pericia(pericia_id)
+	var d := int(pericias[pericia_id].get("dados", 1)) if pericias.has(pericia_id) else atributo(attr)
+	return d - penalidade_dados_atributo(attr)
 
 
 func bonus_pericia(pericia_id: String) -> int:
-	if pericias.has(pericia_id):
-		return int(pericias[pericia_id].get("bonus", 0))
-	return 0
+	var b := int(pericias[pericia_id].get("bonus", 0)) if pericias.has(pericia_id) else 0
+	return b + efeito_ritual("pericias")
 
 
 func treinado_em(pericia_id: String) -> bool:
@@ -50,7 +51,7 @@ func treinado_em(pericia_id: String) -> bool:
 
 
 func defesa() -> int:
-	return defesa_fixa + ajustes_de_defesa()
+	return defesa_fixa + ajustes_de_defesa() + efeito_ritual("defesa_ritual")
 
 
 func deslocamento_m() -> float:

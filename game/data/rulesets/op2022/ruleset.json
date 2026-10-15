@@ -16,6 +16,7 @@
     "armas.json",
     "patentes.json",
     "equipamentos.json",
-    "investigacao.json"
+    "investigacao.json",
+    "rituais.json"
   ]
 }

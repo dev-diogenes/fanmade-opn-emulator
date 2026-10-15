@@ -68,7 +68,8 @@ static func nova(semente_: int, ruleset_: Ruleset = null, grupo: Array = [], opc
 			var r := CriacaoAgente.criar(m.ruleset, ficha)
 			assert(r.agente != null, "Ficha inicial inválida: %s" % [r.erros])
 			var novo: Agente = r.agente
-			novo.equipamento.append(ficha.arma)
+			for item in ficha.get("equipamento", [ficha.arma]):
+				novo.equipamento.append(item)
 			novo.arma_id = ficha.arma
 			grupo.append(novo)
 	for a in grupo:

@@ -2,35 +2,172 @@
   "ref": "p.72-75",
   "nota": "Subconjunto inicial de proteções e equipamento geral. Descrições com palavras próprias.",
   "protecoes": [
-    { "id": "protecao_leve", "nome": "Proteção leve", "categoria": 1, "espacos": 2, "defesa": 5, "proficiencia": "protecoes_leves",
-      "descricao": "Jaqueta reforçada ou colete de kevlar." },
-    { "id": "protecao_pesada", "nome": "Proteção pesada", "categoria": 2, "espacos": 5, "defesa": 10, "proficiencia": "protecoes_pesadas",
-      "resistencias": { "balistico": 2, "corte": 2, "impacto": 2, "perfuracao": 2 }, "penalidade_carga": -5,
-      "descricao": "Traje tático completo com capacete e várias camadas de kevlar. Atrapalha perícias de carga." }
+    {
+      "id": "protecao_leve",
+      "nome": "Proteção leve",
+      "categoria": 1,
+      "espacos": 2,
+      "defesa": 5,
+      "proficiencia": "protecoes_leves",
+      "descricao": "Jaqueta reforçada ou colete de kevlar."
+    },
+    {
+      "id": "protecao_pesada",
+      "nome": "Proteção pesada",
+      "categoria": 2,
+      "espacos": 5,
+      "defesa": 10,
+      "proficiencia": "protecoes_pesadas",
+      "resistencias": {
+        "balistico": 2,
+        "corte": 2,
+        "impacto": 2,
+        "perfuracao": 2
+      },
+      "penalidade_carga": -5,
+      "descricao": "Traje tático completo com capacete e várias camadas de kevlar. Atrapalha perícias de carga."
+    }
   ],
   "itens": [
-    { "id": "cicatrizante", "nome": "Cicatrizante", "categoria": 1, "espacos": 1, "consumivel": true,
-      "uso": { "acao": "padrao", "cura": "2d8+2", "alcance": "adjacente" },
-      "descricao": "Spray de remédio: cura 2d8+2 PV em você ou em alguém adjacente (ação padrão, uso único)." },
-    { "id": "kit_medicina", "nome": "Kit de Medicina", "categoria": 0, "espacos": 1, "kit": "medicina",
-      "descricao": "Ferramentas para Medicina; sem ele, −5 no teste." },
-    { "id": "kit_tecnologia", "nome": "Kit de Tecnologia", "categoria": 0, "espacos": 1, "kit": "tecnologia",
-      "descricao": "Ferramentas para Tecnologia; sem ele, −5 no teste." },
-    { "id": "kit_crime", "nome": "Kit de Crime", "categoria": 0, "espacos": 1, "kit": "crime",
-      "descricao": "Gazuas e afins para Crime; sem ele, −5 no teste." },
-    { "id": "binoculos", "nome": "Binóculos", "categoria": 0, "espacos": 1, "bonus_pericia": { "percepcao": 5 }, "condicao": "observar à distância",
-      "descricao": "+5 em Percepção para observar coisas distantes." },
-    { "id": "equipamento_sobrevivencia", "nome": "Equipamento de sobrevivência", "categoria": 0, "espacos": 2, "bonus_pericia": { "sobrevivencia": 5 },
-      "descricao": "+5 em Sobrevivência para acampar e se orientar." },
-    { "id": "smartphone", "nome": "Smartphone (utensílio)", "categoria": 1, "espacos": 1, "bonus_pericia": { "atualidades": 2 },
-      "descricao": "Utensílio: +2 em Atualidades." },
-    { "id": "notebook", "nome": "Notebook (utensílio)", "categoria": 1, "espacos": 1, "bonus_pericia": { "tecnologia": 2 },
-      "descricao": "Utensílio: +2 em Tecnologia." },
-    { "id": "lupa", "nome": "Lupa (utensílio)", "categoria": 1, "espacos": 1, "bonus_pericia": { "investigacao": 2 },
-      "descricao": "Utensílio: +2 em Investigação." },
-    { "id": "botas_militares", "nome": "Botas militares (vestimenta)", "categoria": 1, "espacos": 1, "bonus_pericia": { "atletismo": 2 },
-      "descricao": "Vestimenta: +2 em Atletismo." },
-    { "id": "manto_de_glifos", "nome": "Manto com glifos (vestimenta)", "categoria": 1, "espacos": 1, "bonus_pericia": { "ocultismo": 2 },
-      "descricao": "Vestimenta: +2 em Ocultismo." }
+    {
+      "id": "cicatrizante",
+      "nome": "Cicatrizante",
+      "categoria": 1,
+      "espacos": 1,
+      "consumivel": true,
+      "uso": {
+        "acao": "padrao",
+        "cura": "2d8+2",
+        "alcance": "adjacente"
+      },
+      "descricao": "Spray de remédio: cura 2d8+2 PV em você ou em alguém adjacente (ação padrão, uso único)."
+    },
+    {
+      "id": "kit_medicina",
+      "nome": "Kit de Medicina",
+      "categoria": 0,
+      "espacos": 1,
+      "kit": "medicina",
+      "descricao": "Ferramentas para Medicina; sem ele, −5 no teste."
+    },
+    {
+      "id": "kit_tecnologia",
+      "nome": "Kit de Tecnologia",
+      "categoria": 0,
+      "espacos": 1,
+      "kit": "tecnologia",
+      "descricao": "Ferramentas para Tecnologia; sem ele, −5 no teste."
+    },
+    {
+      "id": "kit_crime",
+      "nome": "Kit de Crime",
+      "categoria": 0,
+      "espacos": 1,
+      "kit": "crime",
+      "descricao": "Gazuas e afins para Crime; sem ele, −5 no teste."
+    },
+    {
+      "id": "binoculos",
+      "nome": "Binóculos",
+      "categoria": 0,
+      "espacos": 1,
+      "bonus_pericia": {
+        "percepcao": 5
+      },
+      "condicao": "observar à distância",
+      "descricao": "+5 em Percepção para observar coisas distantes."
+    },
+    {
+      "id": "equipamento_sobrevivencia",
+      "nome": "Equipamento de sobrevivência",
+      "categoria": 0,
+      "espacos": 2,
+      "bonus_pericia": {
+        "sobrevivencia": 5
+      },
+      "descricao": "+5 em Sobrevivência para acampar e se orientar."
+    },
+    {
+      "id": "smartphone",
+      "nome": "Smartphone (utensílio)",
+      "categoria": 1,
+      "espacos": 1,
+      "bonus_pericia": {
+        "atualidades": 2
+      },
+      "descricao": "Utensílio: +2 em Atualidades."
+    },
+    {
+      "id": "notebook",
+      "nome": "Notebook (utensílio)",
+      "categoria": 1,
+      "espacos": 1,
+      "bonus_pericia": {
+        "tecnologia": 2
+      },
+      "descricao": "Utensílio: +2 em Tecnologia."
+    },
+    {
+      "id": "lupa",
+      "nome": "Lupa (utensílio)",
+      "categoria": 1,
+      "espacos": 1,
+      "bonus_pericia": {
+        "investigacao": 2
+      },
+      "descricao": "Utensílio: +2 em Investigação."
+    },
+    {
+      "id": "botas_militares",
+      "nome": "Botas militares (vestimenta)",
+      "categoria": 1,
+      "espacos": 1,
+      "bonus_pericia": {
+        "atletismo": 2
+      },
+      "descricao": "Vestimenta: +2 em Atletismo."
+    },
+    {
+      "id": "manto_de_glifos",
+      "nome": "Manto com glifos (vestimenta)",
+      "categoria": 1,
+      "espacos": 1,
+      "bonus_pericia": {
+        "ocultismo": 2
+      },
+      "descricao": "Vestimenta: +2 em Ocultismo."
+    },
+    {
+      "id": "componentes_sangue",
+      "nome": "Componentes ritualísticos (Sangue)",
+      "categoria": 0,
+      "espacos": 1,
+      "componentes": "sangue",
+      "descricao": "Materiais para conjurar rituais de Sangue (p.129)."
+    },
+    {
+      "id": "componentes_morte",
+      "nome": "Componentes ritualísticos (Morte)",
+      "categoria": 0,
+      "espacos": 1,
+      "componentes": "morte",
+      "descricao": "Materiais para conjurar rituais de Morte (p.129)."
+    },
+    {
+      "id": "componentes_conhecimento",
+      "nome": "Componentes ritualísticos (Conhecimento)",
+      "categoria": 0,
+      "espacos": 1,
+      "componentes": "conhecimento",
+      "descricao": "Materiais para conjurar rituais de Conhecimento (p.129)."
+    },
+    {
+      "id": "componentes_energia",
+      "nome": "Componentes ritualísticos (Energia)",
+      "categoria": 0,
+      "espacos": 1,
+      "componentes": "energia",
+      "descricao": "Materiais para conjurar rituais de Energia (p.129)."
+    }
   ]
 }

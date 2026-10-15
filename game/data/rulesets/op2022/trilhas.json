@@ -69,13 +69,13 @@
         "65": {"id": "absorver_agonia", "nome": "Absorver Agonia", "descricao": "Derrubar inimigos com rituais rende PE temporários.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
         "99": {"id": "medo_tangivel", "nome": "Medo Tangível", "descricao": "Aprende um ritual de Medo exclusivo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []} } },
       {"id": "graduado", "nome": "Graduado", "descricao": "Conhece mais rituais e os torna mais difíceis de resistir.", "habilidades": {
-        "10": {"id": "saber_ampliado", "nome": "Saber Ampliado", "descricao": "Aprende rituais extras a cada novo círculo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "10": {"id": "saber_ampliado", "nome": "Saber Ampliado", "descricao": "Aprende rituais extras a cada novo círculo.", "implementado": true, "efeitos": []},
         "40": {"id": "grimorio_ritualistico", "nome": "Grimório Ritualístico", "descricao": "Um grimório guarda rituais extras, consultados com tempo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
-        "65": {"id": "rituais_eficientes", "nome": "Rituais Eficientes", "descricao": "+5 na DT para resistir aos seus rituais.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "65": {"id": "rituais_eficientes", "nome": "Rituais Eficientes", "descricao": "+5 na DT para resistir aos seus rituais.", "implementado": true, "efeitos": []},
         "99": {"id": "conhecendo_o_medo", "nome": "Conhecendo o Medo", "descricao": "Aprende um ritual de Medo exclusivo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []} } },
       {"id": "intuitivo", "nome": "Intuitivo", "descricao": "Mente blindada contra o Outro Lado.", "habilidades": {
         "10": {"id": "mente_sa", "nome": "Mente Sã", "descricao": "+5 nos testes de resistência contra efeitos paranormais.", "implementado": true, "efeitos": [{"tipo": "bonus_resistencia_paranormal", "valor": 5}], "pendente": "efeitos paranormais que pedem resistência (Fase 4)"},
-        "40": {"id": "presenca_poderosa", "nome": "Presença Poderosa", "descricao": "Soma Presença ao limite de PE, só para rituais.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []},
+        "40": {"id": "presenca_poderosa", "nome": "Presença Poderosa", "descricao": "Soma Presença ao limite de PE, só para rituais.", "implementado": true, "efeitos": []},
         "65": {"id": "inabalavel", "nome": "Inabalável", "descricao": "Resistência 10 a dano mental e paranormal.", "implementado": true, "efeitos": [{"tipo": "resistencia", "dano": "mental", "valor": 10}, {"tipo": "resistencia", "dano": "paranormal", "valor": 10}]},
         "99": {"id": "presenca_do_medo", "nome": "Presença do Medo", "descricao": "Aprende um ritual de Medo exclusivo.", "implementado": false, "pendente": "rituais (Fase 4)", "efeitos": []} } },
       {"id": "lamina_paranormal", "nome": "Lâmina Paranormal", "descricao": "Mistura rituais e combate corpo a corpo.", "habilidades": {

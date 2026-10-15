@@ -42,6 +42,8 @@ var _btn_mover: Button
 var _btn_atacar: Button
 var _btn_encerrar: Button
 var _btn_item: Button
+var _btn_ritual: Button
+var _opt_ritual: OptionButton
 var _spin_foco: SpinBox
 var _chk_ae: CheckBox
 var _barra_membrana: ProgressBar
@@ -77,6 +79,8 @@ func iniciar_combate(semente: int) -> void:
 	combate = Combate.new(ruleset, dados, regras)
 	grade = Grade.new(COLUNAS, LINHAS)
 	combate.grade = grade
+	combate.membrana = membrana
+	combate.registro.connect(_registrar)
 	if config.is_empty():
 		_montar_mapa()
 		_criar_lados()
@@ -108,23 +112,16 @@ func _montar_mapa() -> void:
 
 
 func _criar_lados() -> void:
-	var fichas := [
-		{"nome": "Mauro", "classe": "combatente", "origem": "lutador", "nex": 5,
-			"atributos": {"agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 3},
-			"pericias_classe": ["luta", "fortitude"],
-			"pericias_livres": ["atletismo", "intimidacao", "percepcao"], "_arma": "machado", "_pos": Vector2i(1, 2)},
-		{"nome": "Bianca", "classe": "especialista", "origem": "investigador", "nex": 5,
-			"atributos": {"agi": 2, "for": 0, "int": 3, "pre": 3, "vig": 1},
-			"pericias_livres": ["atualidades", "ciencias", "diplomacia", "intuicao", "medicina", "pilotagem", "pontaria", "tecnologia", "vontade", "reflexos"],
-			"perito": ["ciencias", "investigacao"], "_arma": "pistola", "_pos": Vector2i(1, 5)},
-		{"nome": "Rita", "classe": "ocultista", "origem": "policial", "nex": 5,
-			"atributos": {"agi": 2, "for": 1, "int": 2, "pre": 2, "vig": 2},
-			"pericias_livres": ["luta", "reflexos", "fortitude", "atletismo", "intuicao"], "_arma": "revolver", "_pos": Vector2i(2, 4)},
-	]
-	for f in fichas:
+	var posicoes := [Vector2i(1, 2), Vector2i(1, 5), Vector2i(2, 4)]
+	var fichas: Array = DadosJogo.ler("grupo_inicial").agentes
+	for k in fichas.size():
+		var f: Dictionary = fichas[k]
 		var r := CriacaoAgente.criar(ruleset, f)
 		assert(r.agente != null, "Ficha inválida %s: %s" % [f.nome, r.erros])
-		_adicionar(r.agente, ruleset.arma(f._arma), f._pos)
+		for item in f.get("equipamento", [f.arma]):
+			r.agente.equipamento.append(item)
+		r.agente.arma_id = f.arma
+		_adicionar(r.agente, ruleset.arma(f.arma), posicoes[k % posicoes.size()])
 	# Fichas de teste criadas para a arena (não são do livro).
 	var cultista := {"pv": 14, "defesa": 12, "atributos": {"agi": 1, "for": 2, "vig": 1},
 		"pericias": {"luta": {"dados": 1, "bonus": 5}, "vontade": {"dados": 1, "bonus": 2}}}
@@ -206,6 +203,12 @@ func _jogar_ia(ser: Ser) -> void:
 	if alvo == null:
 		return
 	var arma: Dictionary = armas[ser]
+	if ser is Agente:
+		for rid in (ser as Agente).rituais:
+			var rr := ruleset.ritual(rid)
+			if rr.get("implementado", false) and rr.efeitos[0].tipo == "dano" and combate.pode_conjurar(ser, rid, alvo) == "":
+				combate.conjurar(ser, rid, alvo)
+				return
 	if not _pode_atacar(ser, alvo, arma):
 		var limite := ser.deslocamento_quadrados()
 		var destino := grade.aproximar(ser, alvo, limite)
@@ -256,6 +259,9 @@ func _clicar_celula(celula: Vector2i) -> void:
 			for op in combate.oportunidades_pendentes:
 				_registrar("%s pode fazer um ataque de oportunidade." % op.atacante.nome)
 		_modo = ""
+	elif _modo == "ritual" and agente != null and alvo != null:
+		_conjurar(agente, _opt_ritual.get_item_metadata(_opt_ritual.selected), alvo)
+		return
 	elif _modo == "atacar" and agente != null and alvo != null and alvo.lado != agente.lado:
 		var opcoes := {}
 		if _chk_ae.button_pressed and agente.classe_id == "combatente":
@@ -364,6 +370,14 @@ func _montar_interface() -> void:
 	_btn_item = _botao("Cicatrizante", _usar_cicatrizante)
 	for b in [_btn_mover, _btn_atacar, _btn_item, _btn_encerrar]:
 		botoes.add_child(b)
+	var linha_ritual := HBoxContainer.new()
+	painel.add_child(linha_ritual)
+	_opt_ritual = OptionButton.new()
+	_opt_ritual.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_opt_ritual.clip_text = true
+	linha_ritual.add_child(_opt_ritual)
+	_btn_ritual = _botao("Conjurar", _modo_ritual)
+	linha_ritual.add_child(_btn_ritual)
 
 	var opcoes := HBoxContainer.new()
 	painel.add_child(opcoes)
@@ -433,6 +447,28 @@ func _usar_cicatrizante() -> void:
 	_atualizar()
 
 
+## Conjurar: rituais pessoais saem na hora; os outros esperam o clique no alvo.
+func _modo_ritual() -> void:
+	var agente := _agente_da_vez()
+	if agente == null or _opt_ritual.selected < 0:
+		return
+	var rid: String = _opt_ritual.get_item_metadata(_opt_ritual.selected)
+	if String(ruleset.ritual(rid).get("alcance", "")).begins_with("pessoal"):
+		_conjurar(agente, rid, agente)
+	else:
+		_modo = "ritual"
+		_registrar("Escolha o alvo de %s no tabuleiro." % ruleset.ritual(rid).nome)
+	_atualizar()
+
+
+func _conjurar(agente: Agente, rid: String, alvo: Ser) -> void:
+	var r := combate.conjurar(agente, rid, alvo)
+	if not r.ok:
+		_registrar("[color=#e67e22]Não deu para conjurar: %s.[/color]" % r.get("erro", "?"))
+	_modo = ""
+	_atualizar()
+
+
 func _encerrar_turno() -> void:
 	if _agente_da_vez() != null:
 		_avancar()
@@ -475,6 +511,18 @@ func _atualizar() -> void:
 	_btn_atacar.disabled = agente == null
 	_btn_encerrar.disabled = agente == null
 	_btn_item.disabled = agente == null or not agente.tem_item("cicatrizante")
+	var selecionado_antes: String = _opt_ritual.get_item_metadata(_opt_ritual.selected) if _opt_ritual.selected >= 0 else ""
+	_opt_ritual.clear()
+	if agente != null:
+		for rid in agente.rituais:
+			var rr := ruleset.ritual(rid)
+			if rr.get("implementado", false):
+				_opt_ritual.add_item("%s (%d PE)" % [rr.nome, agente.custo_ritual(rid)])
+				_opt_ritual.set_item_metadata(_opt_ritual.item_count - 1, rid)
+				if rid == selecionado_antes:
+					_opt_ritual.select(_opt_ritual.item_count - 1)
+	_btn_ritual.disabled = agente == null or _opt_ritual.item_count == 0
+	_opt_ritual.get_parent().visible = _opt_ritual.item_count > 0
 	_btn_item.text = "Cicatrizante (%d)" % (agente.equipamento.count("cicatrizante") if agente != null else 0)
 	_spin_foco.max_value = agente.pe_disponivel_no_turno() if agente != null else 0
 	_chk_ae.visible = agente != null and agente.classe_id == "combatente"

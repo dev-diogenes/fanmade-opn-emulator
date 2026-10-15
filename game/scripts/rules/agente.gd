@@ -25,6 +25,8 @@ var pp := 0                      ## Pontos de Prestígio (definem a patente)
 var aumentos: Array[String] = [] ## Aumentos de atributo já feitos (NEX 20/50/80/95)
 var graus_feitos := 0            ## Escolhas de Grau de Treinamento já feitas (NEX 35/70)
 var versatilidade := ""          ## "", "poder" ou "trilha:<id>" (NEX 50%)
+var rituais: Array[String] = []  ## Rituais conhecidos
+var san_perdida := 0             ## Sanidade máxima perdida para sempre (Custo do Paranormal, Medo)
 var arma_id := ""                ## Arma empunhada ("" = desarmado)
 var equipamento: Array[String] = []   ## Ids requisitados para a missão (armas, proteção, itens)
 var pe := 0
@@ -124,6 +126,7 @@ func recalcular_maximos(encher: bool = false) -> void:
 	if not efeitos("pe_dedicacao").is_empty():
 		pe_maximo += 1 + (niveis - 1) / 2   # +1 PE, e +1 a cada NEX "ímpar" (15%, 25%…)
 	san_maximo += _soma_efeitos("san_por_nex") * niveis
+	san_maximo -= san_perdida
 	if not efeitos("san_inicial_metade").is_empty():
 		san_maximo -= int(ruleset.classe(classe_id).san.inicial) / 2
 	pv_maximo = maxi(1, pv_maximo)
@@ -139,12 +142,12 @@ func recalcular_maximos(encher: bool = false) -> void:
 
 
 func atributo(atributo_id: String) -> int:
-	return int(atributos.get(atributo_id, 0)) + int(mods_cena.get("atributos", {}).get(atributo_id, 0))
+	return int(atributos.get(atributo_id, 0)) + int(mods_cena.get("atributos", {}).get(atributo_id, 0)) + efeito_ritual("atributo_" + atributo_id)
 
 
 func dados_da_pericia(pericia_id: String) -> int:
 	var attr_base := ruleset.atributo_da_pericia(pericia_id)
-	var d := atributo(attr_base)
+	var d := atributo(attr_base) - penalidade_dados_atributo(attr_base)
 	var prot := protecao()
 	if not prot.is_empty() and attr_base in ["for", "agi"] and not tem_proficiencia(prot.get("proficiencia", "")):
 		d -= 2   # proteção sem proficiência: −2 dados em Força e Agilidade (p.72)
@@ -173,6 +176,7 @@ func bonus_pericia(pericia_id: String, grau_usado: String = "") -> int:
 	if ruleset.eh_teste_de_resistencia(pericia_id):
 		bonus += bonus_testes_resistencia()
 	bonus += _bonus_de_equipamento(pericia_id)
+	bonus += efeito_ritual("pericias")   # Coincidência Forçada
 	return bonus
 
 
@@ -220,6 +224,67 @@ func deslocamento_m() -> float:
 	if sobrecarregado():
 		base += float(ruleset.regra_carga().get("sobrecarga", {}).get("deslocamento_m", 0))
 	return maxf(1.5, base)
+
+
+# --- Rituais (cap. 5) -----------------------------------------------------------
+
+func conhece_ritual(ritual_id: String) -> bool:
+	return ritual_id in rituais
+
+
+func circulo_maximo() -> int:
+	return ruleset.circulo_maximo(nex)
+
+
+## Limite de PE para conjurar: Presença Poderosa (Intuitivo 40%) soma a Presença.
+func limite_pe_rituais() -> int:
+	var l := limite_pe()
+	if tem_habilidade("presenca_poderosa"):
+		l += atributo("pre")
+	return l
+
+
+## Custo do ritual (com forma), aplicadas as reduções de poderes. Mínimo 1 PE.
+func custo_ritual(ritual_id: String, forma: String = "") -> int:
+	var r := ruleset.ritual(ritual_id)
+	var custo := ruleset.custo_base_ritual(int(r.circulo))
+	if forma != "":
+		custo += int(r.get("formas", {}).get(forma, {}).get("custo", 0))
+	if tem_habilidade("mestre_em_elemento") and escolhas.get("especialista_em_elemento", "") == r.elemento:
+		custo -= 1
+	if tem_habilidade("ritual_predileto") and escolhas.get("ritual_predileto", "") == ritual_id:
+		custo -= 1
+	if tem_habilidade("tatuagem_ritualistica") and String(r.get("alcance", "")).begins_with("pessoal"):
+		custo -= 1
+	return maxi(1, custo)
+
+
+## DT para resistir aos rituais: DT de habilidade com Presença (p.131) e bônus de poderes.
+func dt_ritual(ritual_id: String) -> int:
+	var r := ruleset.ritual(ritual_id)
+	var dt := dt_habilidade("pre")
+	if tem_habilidade("especialista_em_elemento") and escolhas.get("especialista_em_elemento", "") == r.elemento:
+		dt += 2
+	if tem_habilidade("rituais_eficientes"):
+		dt += 5
+	return dt
+
+
+## Bônus de Ritual Potente (somar Intelecto em dano e cura de rituais).
+func bonus_ritual_potente() -> int:
+	return atributo("int") if tem_habilidade("ritual_potente") else 0
+
+
+## Quantos rituais o agente deveria conhecer pela classe (ocultista: 3 + 1 por NEX acima de 5%;
+## Graduado: +1 por círculo acessível). Outras classes aprendem por poderes (pendente).
+func rituais_esperados() -> int:
+	if classe_id != "ocultista":
+		return 0
+	var hab := ruleset.habilidade_classe("escolhido_pelo_outro_lado")
+	var total := int(hab.get("rituais_iniciais", 3)) + ruleset.niveis_de_exposicao(nex) - 1
+	if trilha_id == "graduado" and nex >= 10:
+		total += circulo_maximo()
+	return total
 
 
 # --- Equipamento e patente --------------------------------------------------
@@ -317,6 +382,7 @@ func para_dicionario() -> Dictionary:
 		"trilha_versatil": trilha_versatil, "sem_poder_origem": sem_poder_origem,
 		"transicao_mundano": transicao_mundano.duplicate(),
 		"pp": pp, "arma": arma_id, "equipamento": Array(equipamento),
+		"rituais": Array(rituais), "san_perdida": san_perdida,
 		"pv": pv, "pe": pe, "san": san, "condicoes": condicoes.keys(),
 	}
 
@@ -354,6 +420,9 @@ static func de_dicionario(p_ruleset: Ruleset, d: Dictionary) -> Agente:
 	for k in trans:
 		a.transicao_mundano[k] = int(trans[k])
 	a.pp = int(d.get("pp", 0))
+	for x in d.get("rituais", []):
+		a.rituais.append(x)
+	a.san_perdida = int(d.get("san_perdida", 0))
 	a.arma_id = d.get("arma", "")
 	for x in d.get("equipamento", []):
 		a.equipamento.append(x)
@@ -372,7 +441,8 @@ func pode_usar_pericia(pericia_id: String) -> bool:
 
 func defesa() -> int:
 	var d := ruleset.defesa_base(atributos) + _soma_efeitos("bonus_defesa") + ajustes_de_defesa()
-	d += int(protecao().get("defesa", 0))
+	# Armadura de Sangue não acumula com proteção: vale a maior (p.135)
+	d += maxi(int(protecao().get("defesa", 0)), efeito_ritual("defesa_ritual"))
 	if sobrecarregado():
 		d += int(ruleset.regra_carga().get("sobrecarga", {}).get("defesa", 0))
 	if tem(Ser.MACHUCADO) and tem_habilidade("inquebravel"):

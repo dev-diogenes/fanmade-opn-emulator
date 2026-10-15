@@ -12,6 +12,8 @@ signal lesao_sofrida(agente: Agente, atributo_id: String)
 signal inspiracao_disponivel(morto: Agente, efeito: String)
 signal combate_encerrado(lado_vencedor: String)
 signal oportunidade_de_ataque(atacante: Ser, alvo: Ser)
+signal ritual_conjurado(resultado: Dictionary)
+signal registro(texto: String)
 
 const REACOES := ["bloqueio", "esquiva", "contra_ataque"]
 const ORDEM_LESAO := ["agi", "for", "int", "pre", "vig"]   ## 1d6: 1..5; 6 = nenhuma (p.184)
@@ -22,6 +24,7 @@ const TIPOS_PARANORMAIS := ["paranormal", "sangue", "morte", "conhecimento", "en
 var ruleset: Ruleset
 var dados: Dados
 var grade: Grade   ## Opcional: posicionamento tático
+var membrana: Membrana   ## Opcional: rituais enfraquecem a Membrana
 ## Regras opcionais ativas nesta run: {"lesoes": true, "inspiracao_resoluta": true}
 var regras: Dictionary = {}
 var participantes: Array[Ser] = []
@@ -48,6 +51,8 @@ var _efeitos_ate_turno: Array[Dictionary] = []  ## {origem: Ser, alvo: Ser, tipo
 var _imunes_cai_dentro: Dictionary = {}    ## Ser -> true
 ## Ataques de oportunidade liberados pelo último movimento: [{atacante, alvo}]
 var oportunidades_pendentes: Array[Dictionary] = []
+## Rituais sustentados em andamento: [{conjurador, alvo, ritual}]
+var _sustentados: Array[Dictionary] = []
 
 
 func _init(p_ruleset: Ruleset, p_dados: Dados, p_regras: Dictionary = {}) -> void:
@@ -124,8 +129,19 @@ func proximo_turno() -> Ser:
 		if ser.tem(Ser.SURPREENDIDO):
 			turno_perdido.emit(ser, "surpreendido")
 			continue
+		if ser.tem(Ser.ATORDOADO) or ser.tem(Ser.PASMO):
+			var motivo := "atordoado" if ser.tem(Ser.ATORDOADO) else "pasmo"
+			ser.condicoes.erase(Ser.ATORDOADO)
+			ser.condicoes.erase(Ser.PASMO)
+			ser.duracoes.erase(Ser.ATORDOADO)
+			ser.duracoes.erase(Ser.PASMO)
+			ser.iniciar_turno()
+			turno_perdido.emit(ser, motivo)
+			continue
 		ser.iniciar_turno()
 		_ao_iniciar_turno(ser)
+		_processar_hemorragia(ser)
+		_manter_sustentados(ser)
 		_verificar_lesao(ser)
 		if _verificar_fim():
 			return null
@@ -158,6 +174,7 @@ func _ao_iniciar_turno(ser: Ser) -> void:
 	ser.acoes_padrao_extras = 0
 	var movimento := 1 + int(_movimentos_extras.get(ser, 0))
 	_movimentos_extras.erase(ser)
+	movimento += ser.efeito_ritual("movimento_extra")   # Velocidade Mortal
 	if rodada == 1 and ser is Agente:
 		var ag := ser as Agente
 		if ag.tem_habilidade("iniciativa_aprimorada"):
@@ -274,6 +291,211 @@ func usar_item(ser: Agente, item_id: String, alvo: Ser) -> int:
 ## Sem grade, tudo está "perto". Com grade, verifica a categoria de alcance.
 func _perto(a: Ser, b: Ser, categoria: String) -> bool:
 	return grade == null or not grade.tem(a) or not grade.tem(b) or grade.em_alcance(a, b, categoria)
+
+
+# --- Rituais (cap. 5, p.127-131) ---------------------------------------------------
+
+## Erro que impede conjurar ("" = pode). Não gasta nada.
+func pode_conjurar(conjurador: Agente, ritual_id: String, alvo: Ser, forma: String = "") -> String:
+	var r := ruleset.ritual(ritual_id)
+	if r.is_empty():
+		return "ritual desconhecido"
+	if not conjurador.conhece_ritual(ritual_id):
+		return "%s não conhece %s" % [conjurador.nome, r.nome]
+	if not r.get("implementado", false):
+		return "%s ainda não tem efeito no jogo" % r.nome
+	if int(r.circulo) > conjurador.circulo_maximo():
+		return "círculo acima do permitido pelo NEX"
+	if forma != "":
+		var f: Dictionary = r.get("formas", {}).get(forma, {})
+		if f.is_empty() or int(f.get("circulo", 1)) > conjurador.circulo_maximo():
+			return "forma %s indisponível" % forma
+	if conjurador.efeito_ritual("ataque_corpo_a_corpo") > 0 and conjurador.rituais_ativos.has("odio_incontrolavel"):
+		return "em frenesi, não dá para se concentrar"
+	if r.elemento != "medo" and not conjurador.equipamento.any(func(i): return ruleset.equipamento(i).get("componentes", "") == r.elemento):
+		return "faltam componentes ritualísticos de %s" % r.elemento
+	var custo := conjurador.custo_ritual(ritual_id, forma)
+	if custo > conjurador.limite_pe_rituais():
+		return "custo (%d PE) acima do limite de PE" % custo
+	if custo > conjurador.pe + conjurador.pe_temporario:
+		return "PE insuficientes"
+	var alcance := String(r.get("alcance", "pessoal"))
+	if alcance.begins_with("pessoal") and alvo != conjurador:
+		return "este ritual só afeta o conjurador"
+	if alcance.begins_with("toque") and alvo != conjurador and grade != null and grade.tem(conjurador) and grade.tem(alvo) and not grade.estao_adjacentes(conjurador, alvo):
+		return "precisa tocar o alvo"
+	for cat in ["curto", "medio", "longo"]:
+		if alcance.begins_with(cat.replace("medio", "médio")) and not _perto(conjurador, alvo, cat):
+			return "alvo fora de alcance"
+	if acoes.has(conjurador) and acoes_restantes(conjurador).padrao <= 0:
+		return "sem ação padrão"
+	return ""
+
+
+## Conjura um ritual (p.129-131): ação padrão, PE pelo círculo, concentração se estiver de
+## proteção, Custo do Paranormal (Ocultismo DT 20 + custo; falha custa SAN), efeito e
+## resistência (DT de habilidade com Presença; −2/+2 dados conforme o elemento da criatura).
+func conjurar(conjurador: Agente, ritual_id: String, alvo: Ser, forma: String = "") -> Dictionary:
+	var erro := pode_conjurar(conjurador, ritual_id, alvo, forma)
+	if erro != "":
+		return {"ok": false, "erro": erro}
+	var r := ruleset.ritual(ritual_id)
+	var cfg: Dictionary = ruleset.dados.rituais
+	var custo := conjurador.custo_ritual(ritual_id, forma)
+	if acoes.has(conjurador):
+		gastar_acao(conjurador, "padrao")
+	conjurador.gastar_pe(custo, true)
+	var res := {"ok": true, "ritual": r, "custo": custo, "alvo": alvo, "conjurador": conjurador, "textos": []}
+	# Concentração: proteção leve = condição ruim, pesada = terrível (p.129)
+	var prot := conjurador.protecao()
+	if not prot.is_empty():
+		var dt_conc := int(cfg.concentracao.protecao_pesada_dt if prot.id == "protecao_pesada" else cfg.concentracao.protecao_leve_dt) + custo
+		var tc := Teste.rolar(dados, conjurador.dados_da_pericia("vontade"), conjurador.bonus_pericia("vontade"), dt_conc)
+		if not tc.sucesso:
+			res.ok = false
+			res.erro = "perdeu a concentração (Vontade %s)" % tc.descrever()
+			_log("%s tenta conjurar %s, mas perde a concentração." % [conjurador.nome, r.nome])
+			return res
+	# Custo do Paranormal (p.131)
+	if r.elemento == "medo":
+		conjurador.perder_sanidade(custo + 1)   # o ponto permanente também sai da SAN atual
+		conjurador.san_perdida += 1
+		conjurador.recalcular_maximos()
+		res.textos.append("O Medo cobra seu preço: −%d SAN, uma delas para sempre." % (custo + 1))
+	else:
+		var dt_custo := int(cfg.custo_paranormal.dt_base) + custo
+		var tp := Teste.rolar(dados, conjurador.dados_da_pericia("ocultismo"), conjurador.bonus_pericia("ocultismo"), dt_custo)
+		res.teste_custo = tp
+		if not tp.sucesso:
+			conjurador.perder_sanidade(custo)
+			var texto := "Custo do Paranormal: −%d SAN" % custo
+			if dt_custo - tp.total >= int(cfg.custo_paranormal.falha_por_permanente):
+				conjurador.perder_sanidade(1)   # p.131: perde 1 ponto de Sanidade permanentemente
+				conjurador.san_perdida += 1
+				conjurador.recalcular_maximos()
+				texto += " e mais 1 para sempre"
+			res.textos.append(texto + ".")
+	if membrana != null:
+		membrana.registrar_ritual(int(r.circulo))
+	# Efeito (forma básica com as mudanças da forma escolhida)
+	var efeito: Dictionary = r.efeitos[0].duplicate(true)
+	if forma != "":
+		for k in r.formas[forma]:
+			if not k in ["custo", "circulo"]:
+				efeito[k] = r.formas[forma][k]
+	_aplicar_efeito_ritual(conjurador, ritual_id, r, efeito, alvo, res)
+	_log("[color=#bb8fce]%s conjura %s em %s (%d PE).[/color] %s" % [conjurador.nome, r.nome, alvo.nome, custo, " ".join(PackedStringArray(res.textos))])
+	ritual_conjurado.emit(res)
+	_verificar_fim()
+	return res
+
+
+## Teste de resistência do alvo contra o ritual. Criatura do elemento que o ritual oprime:
+## −2 dados; do mesmo elemento: +2 dados (p.128).
+func _resistir_ritual(conjurador: Agente, ritual_id: String, r: Dictionary, alvo: Ser, pericia: String) -> ResultadoTeste:
+	var mod := 0
+	if alvo is Ameaca and (alvo as Ameaca).elemento != "":
+		var el := (alvo as Ameaca).elemento
+		var vantagem: Dictionary = ruleset.dados.rituais.vantagem_elemental
+		if vantagem.get(r.elemento, "") == el:
+			mod = -int(vantagem.dados)
+		elif r.elemento == el:
+			mod = int(vantagem.dados)
+	return Teste.rolar(dados, alvo.dados_da_pericia(pericia), alvo.bonus_pericia(pericia), conjurador.dt_ritual(ritual_id), mod)
+
+
+func _aplicar_efeito_ritual(conjurador: Agente, ritual_id: String, r: Dictionary, e: Dictionary, alvo: Ser, res: Dictionary) -> void:
+	var passou := false
+	if e.has("resistencia") and alvo != conjurador:
+		var tr := _resistir_ritual(conjurador, ritual_id, r, alvo, e.resistencia)
+		res.teste_resistencia = tr
+		passou = tr.sucesso
+		res.textos.append("%s resiste (%s): %s." % [alvo.nome, ruleset.pericia(e.resistencia).nome, "passou" if passou else "falhou"])
+	match e.tipo:
+		"dano":
+			var dano := dados.rolar_expressao(e.dados) + conjurador.bonus_ritual_potente()
+			if passou and e.get("ao_passar", "") == "metade":
+				dano /= 2
+			var real := aplicar_dano(alvo, dano, e.get("tipo_dano", r.elemento), 0, conjurador)
+			res.dano = real
+			res.textos.append("%d de dano." % real)
+			if e.has("drena") and real > 0:
+				var cura := int(real * float(e.drena))
+				conjurador.curar(cura)
+				res.textos.append("%s recupera %d PV." % [conjurador.nome, cura])
+			if not passou and e.has("condicao"):
+				alvo.aplicar_condicao(e.condicao, int(e.get("rodadas", 0)))
+				res.textos.append("%s fica %s." % [alvo.nome, e.condicao])
+			if not passou and e.has("hemorragia"):
+				alvo.hemorragia = {"dados": e.hemorragia, "dt": conjurador.dt_ritual(ritual_id), "sucessos": 0}
+				res.textos.append("%s começa a sangrar." % alvo.nome)
+		"cura":
+			var cura := dados.rolar_expressao(e.dados) + conjurador.bonus_ritual_potente()
+			alvo.curar(cura)
+			res.cura = cura
+			res.textos.append("%s recupera %d PV." % [alvo.nome, cura])
+		"pv_temporario":
+			var pvt := dados.rolar_expressao(String(e.dados))
+			alvo.pv_temporario = maxi(alvo.pv_temporario, pvt)
+			res.textos.append("%s recebe %d PV temporários." % [alvo.nome, pvt])
+		"transfusao":
+			var qtd := mini(int(e.maximo), mini(conjurador.pv - 1, alvo.pv_maximo - alvo.pv))
+			if qtd > 0:
+				conjurador.pv -= qtd
+				conjurador._atualizar_pv()
+				alvo.curar(qtd)
+			res.textos.append("%s transfere %d PV para %s." % [conjurador.nome, maxi(0, qtd), alvo.nome])
+		"condicao":
+			if passou and e.has("ao_passar_condicao"):
+				alvo.aplicar_condicao(e.ao_passar_condicao, int(e.get("rodadas", 0)))
+				res.textos.append("%s fica %s." % [alvo.nome, e.ao_passar_condicao])
+			elif not passou:
+				alvo.aplicar_condicao(e.condicao, int(e.get("rodadas", 0)))
+				res.textos.append("%s fica %s." % [alvo.nome, e.condicao])
+		"buff", "debuff", "arma":
+			var ativo := e.duplicate()
+			if e.get("atributo", "") == "fisico":
+				ativo["atributo_" + ("for" if alvo.atributo("for") >= alvo.atributo("agi") else "agi")] = int(e.valor)
+			elif e.get("atributo", "") == "mental":
+				ativo["atributo_" + ("int" if alvo.atributo("int") >= alvo.atributo("pre") else "pre")] = int(e.valor)
+			ativo.conjurador = conjurador
+			alvo.rituais_ativos[ritual_id] = ativo
+			if e.get("sustentado", false):
+				_sustentados = _sustentados.filter(func(s): return s.conjurador != conjurador)   # só um sustentado por vez
+				_sustentados.append({"conjurador": conjurador, "alvo": alvo, "ritual": ritual_id})
+			res.textos.append("O efeito dura %s." % ("enquanto sustentado" if e.get("sustentado", false) else "até o fim da cena"))
+
+
+## Sustentado (p.130): 1 PE no início de cada turno do conjurador, ou o ritual termina.
+func _manter_sustentados(ser: Ser) -> void:
+	for s in _sustentados.duplicate():
+		if s.conjurador != ser:
+			continue
+		if not (ser as Agente).gastar_pe(1, true):
+			s.alvo.rituais_ativos.erase(s.ritual)
+			_sustentados.erase(s)
+			_log("%s não sustenta mais %s." % [ser.nome, ruleset.ritual(s.ritual).nome])
+
+
+## Hemorragia (Descarnar): no início do turno, Fortitude; falha sofre o dano, dois sucessos seguidos estancam.
+func _processar_hemorragia(ser: Ser) -> void:
+	if ser.hemorragia.is_empty():
+		return
+	var h: Dictionary = ser.hemorragia
+	var t := Teste.rolar(dados, ser.dados_da_pericia("fortitude"), ser.bonus_pericia("fortitude"), int(h.dt))
+	if t.sucesso:
+		h.sucessos += 1
+		if h.sucessos >= 2:
+			ser.hemorragia = {}
+			_log("A hemorragia de %s estanca." % ser.nome)
+	else:
+		h.sucessos = 0
+		var dano := aplicar_dano(ser, dados.rolar_expressao(h.dados), "sangue")
+		_log("%s sangra: %d de dano." % [ser.nome, dano])
+
+
+func _log(texto: String) -> void:
+	registro.emit(texto)
 
 
 # --- Reações (p.88) --------------------------------------------------------
@@ -448,10 +670,17 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 			dano += atacante.atributo("for")
 		if furtivo_dados > 0:
 			dano += dados.rolar_expressao("%dd6" % furtivo_dados)   # dados extras não multiplicam
+		for expr in String(mods.get("dados_dano_ritual", "")).split("+", false):
+			dano += dados.rolar_expressao(expr)   # Amaldiçoar Arma (não multiplica no crítico)
 		res.dano_bruto = maxi(1, dano)
 		res.dano = aplicar_dano(alvo, res.dano_bruto, arma.get("tipo_dano", ""), rd_extra, atacante)
 		if eh_corpo_a_corpo and agente != null and agente.tem_habilidade("gladiador_paranormal"):
 			_gladiador_paranormal(agente)
+	if not res.acertou:
+		for r in alvo.rituais_ativos.values():
+			if int(r.get("embaralhar", 0)) > 0:
+				r.embaralhar = maxi(0, int(r.embaralhar) - 2)   # uma cópia ilusória some
+				break
 	if res.reacao == "contra_ataque" and not res.acertou:
 		res.contra_ataque = atacar(alvo, atacante, reacao.arma)
 	elif res.reacao == "bloqueio" and reacao.get("revidar", false) and (alvo as Agente).gastar_pe(2):

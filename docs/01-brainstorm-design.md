@@ -166,6 +166,10 @@ Pontos em que o livro é ambíguo e escolhemos uma leitura (revisar se surgir er
 | PP por missão | O grupo é avaliado junto (p.61): cada agente que volta recebe o total da tabela 3.2. "Pista adicional" = evento resolvido com sucesso |
 | NEX por missão | +5% só para quem volta de uma missão cumprida (p.33: "missão concluída com sucesso") |
 | Recuperação | Na Base, entre missões, todos recuperam PV, PE e SAN e as condições acabam |
+| Dano de rituais com dois tipos (Descarnar) | Tratado como um tipo só (o elemento do ritual) |
+| Rituais em armas (Amaldiçoar Arma, Arma Atroz) | Ficam no ser que empunha a arma; os dados extras não multiplicam no crítico |
+| Coincidência Forçada | O +2 em testes de perícia também vale para testes de ataque (Luta/Pontaria são perícias) |
+| Concentração | Só é testada por causa de proteção (leve/pesada); ser ferido durante a execução fica para rituais com execução maior que padrão |
 | Reforços da Ordem (modo Normal) | 2 por missão. Um agente caído num combate perdido (ou morto) é resgatado: sai da missão com uma lesão (1d6 no atributo, como a regra de Lesões) |
 
 ## 14. Ferramentas: Godot e o Tabletop Simulator ✅
