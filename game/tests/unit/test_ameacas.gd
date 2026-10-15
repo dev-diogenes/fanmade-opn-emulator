@@ -24,7 +24,7 @@ func _combate(regras: Dictionary = {}) -> Combate:
 # --- Fichas -----------------------------------------------------------------------
 
 func test_fichas_do_livro_carregam():
-	assert_eq(rs.lista_ameacas().size(), 42)
+	assert_eq(rs.lista_ameacas().size(), 45)
 	for a in rs.lista_ameacas():
 		var info := DadosJogo.ameaca(rs, a.id)
 		var amea := Ameaca.criar(rs, info.nome, info.ficha)

@@ -41,6 +41,8 @@ static func alvo_preferido(c: Combate, ser: Ser, padrao: Ser) -> Ser:
 static func agir_antes(c: Combate, ser: Ameaca, alvo: Ser) -> bool:
 	if ser.mods_cena.has("prendendo"):
 		return true   # o succ só segura a vítima
+	if ser.tem_hab("consumir") and int(ser.mods_cena.get("flores", 0)) < 7 and c.usar_habilidade(ser, "consumir").ok:
+		return true   # a Dama consome os corpos que encontra
 	if ser.tem_hab("comportamento_erratico"):
 		c.comportamento_erratico(ser)   # o anomiático não planeja: rola a tabela
 		return true
@@ -100,7 +102,7 @@ static func agir_antes(c: Combate, ser: Ameaca, alvo: Ser) -> bool:
 						if c.usar_habilidade(ser, h.id, vit).ok:
 							return true
 					continue
-				if t_h == "alvo":
+				if t_h in ["alvo", "manobra_ataques"]:
 					if alvo != null and c.usar_habilidade(ser, h.id, alvo).ok:
 						return true
 					continue

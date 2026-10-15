@@ -59,6 +59,7 @@ var _sustentados: Array[Dictionary] = []
 var _zonas: Array[Dictionary] = []
 var _melodia_rodada := -10          ## última rodada em que a melodia do escutado tocou
 var _melodia_quem: Ser               ## quem toca a melodia (o escutado vai atrás)
+var _consumidos: Array[Ser] = []     ## cadáveres que a Dama de Sangue já consumiu
 
 
 func _init(p_ruleset: Ruleset, p_dados: Dados, p_regras: Dictionary = {}) -> void:
@@ -185,6 +186,13 @@ func proximo_turno() -> Ser:
 		if ser.tem(Ser.SURPREENDIDO):
 			turno_perdido.emit(ser, "surpreendido")
 			continue
+		if ser.tem(Ser.CONFUSO) and not ser.tem(Ser.MORTO):
+			if dados.rolar(6) == 6:
+				ser.condicoes.erase(Ser.CONFUSO)   # p.320: com 6, a condição termina
+			else:
+				ser.iniciar_turno()
+				turno_perdido.emit(ser, "confuso")
+				continue
 		if ser.tem(Ser.ATORDOADO) or ser.tem(Ser.PASMO):
 			var motivo := "atordoado" if ser.tem(Ser.ATORDOADO) else "pasmo"
 			ser.condicoes.erase(Ser.ATORDOADO)
@@ -312,6 +320,13 @@ func agredir(atacante: Ser, alvo: Ser, arma: Dictionary, pe_foco: int = 0, opcoe
 		if encerrado or (alvo.esta_fora_de_combate() and not alvo.tem(Ser.POCA)):
 			break
 		res.ataques_extras.append(atacar(atacante, alvo, arma))
+	if atacante is Ameaca and (atacante as Ameaca).tem_hab("ataque_flexivel") and not encerrado and not alvo.esta_fora_de_combate():
+		for outra in (atacante as Ameaca).ataques:   # Kerberos: o quarto ataque com a outra arma
+			if outra.id != arma.get("id", ""):
+				var r_extra := atacar(atacante, alvo, outra)
+				if r_extra.teste != null:
+					res.ataques_extras.append(r_extra)
+				break
 	if atacante.efeito_ritual("ataque_adicional") > 0 and arma.get("ataque", "corpo_a_corpo") == "corpo_a_corpo" and not encerrado and not alvo.esta_fora_de_combate():
 		res.ataque_adicional = atacar(atacante, alvo, arma)   # Ódio Incontrolável (discente)
 	return res
@@ -832,6 +847,18 @@ func _tentaculos(conjurador: Ser, e: Dictionary, alvo: Ser, res: Dictionary) -> 
 func escapar(ser: Ser) -> bool:
 	if not ser.tem(Ser.AGARRADO):
 		return false
+	if ser.mods_cena.has("prisao_pv"):
+		if acoes.has(ser) and not gastar_acao(ser, "padrao"):
+			return false
+		var arma_s: Dictionary = (ser as Agente).arma() if ser is Agente else ruleset.arma("desarmado")
+		var golpe := dados.rolar_expressao(String(arma_s.get("dano", "1d3"))) + (ser.atributo("for") if arma_s.get("soma_forca", false) else 0)
+		ser.mods_cena["prisao_pv"] = int(ser.mods_cena.prisao_pv) - golpe   # os tentáculos são acertados automaticamente
+		_log("%s golpeia os tentáculos (%d)." % [ser.nome, golpe])
+		if int(ser.mods_cena.prisao_pv) <= 0:
+			ser.mods_cena.erase("prisao_pv")
+			_soltar(ser)
+			return true
+		return false
 	if ser.mods_cena.has("agarrado_por"):
 		if acoes.has(ser) and not gastar_acao(ser, "padrao"):
 			return false
@@ -956,6 +983,22 @@ func _ao_acertar(atacante: Ser, alvo: Ser, arma: Dictionary, res: ResultadoAtaqu
 				lista.append(alvo)
 				atacante.mods_cena["agarrando"] = lista
 				_log("%s agarra %s." % [atacante.nome, alvo.nome])
+	if aa.has("cravar") and not alvo.tem(Ser.AGARRADO) and not alvo.imune_a_condicao(Ser.AGARRADO):
+		alvo.aplicar_condicao(Ser.AGARRADO)   # Cravar Chifres (minotauro)
+		alvo.mods_cena["agarrado_por"] = atacante
+		alvo.mods_cena["agarrado_teste"] = aa.cravar.teste
+		alvo.mods_cena["cravado"] = {"por": atacante, "dano": aa.cravar.dano, "tipo_dano": aa.cravar.tipo_dano}
+		var lista_c: Array = atacante.mods_cena.get("agarrando", [])
+		lista_c.append(alvo)
+		atacante.mods_cena["agarrando"] = lista_c
+		_log("[color=#ec7063]%s crava os chifres em %s![/color]" % [atacante.nome, alvo.nome])
+	if aa.has("devorar") and alvo.pv == 0 and not alvo.tem(Ser.MORTO) and not (atacante as Ameaca).usos.has("devorar"):
+		(atacante as Ameaca).usos["devorar"] = 1   # Devorar (kerberos): uma vez por cena
+		if not Teste.rolar(dados, alvo.dados_da_pericia("fortitude"), alvo.bonus_pericia("fortitude"), int(aa.devorar.dt)).sucesso:
+			var pv_total := alvo.pv_maximo
+			alvo._morrer()
+			atacante.curar(pv_total / 2)
+			_log("[color=#ec7063]%s devora %s.[/color]" % [atacante.nome, alvo.nome])
 	if aa.has("veneno") and not alvo.mods_cena.has("veneno_na_cena"):
 		alvo.mods_cena["veneno_na_cena"] = true   # só a primeira vez na cena
 		alvo.mods_cena["veneno"] = aa.veneno
@@ -1021,6 +1064,13 @@ func _fim_de_turno(ser: Ser) -> void:
 					var af: Dictionary = enx.ao_ferir
 					if not Teste.rolar(dados, x.dados_da_pericia(af.resistencia), x.bonus_pericia(af.resistencia), int(af.dt)).sucesso:
 						x.aplicar_condicao(af.condicao, int(af.get("rodadas", 0)))
+	if ser.mods_cena.has("cravado"):
+		var cv: Dictionary = ser.mods_cena.cravado
+		if ser.tem(Ser.AGARRADO) and ser.mods_cena.get("agarrado_por") == cv.por:
+			var d := aplicar_dano(ser, dados.rolar_expressao(String(cv.dano)), String(cv.tipo_dano), 0, cv.por)
+			_log("Os chifres cravados rasgam %s: %d de dano." % [ser.nome, d])
+		else:
+			ser.mods_cena.erase("cravado")
 	if ser.mods_cena.has("hipnotizado_por"):
 		var tentativas := int(ser.mods_cena.get("hipnose_testes", 0))
 		ser.mods_cena["hipnose_testes"] = tentativas + 1
@@ -1066,6 +1116,10 @@ func _soltar_succao(succ: Ser) -> void:
 ## Início do turno: veneno de qualquer ser; constrição, sucção e aceleração.
 func _inicio_de_turno_ameacas(ser: Ser) -> void:
 	ser.mods_cena.erase("resistencia_extra")
+	ser.mods_cena.erase("queimada")
+	if ser.tem(Ser.EM_CHAMAS):
+		var fogo := aplicar_dano(ser, dados.rolar(6), "fogo")
+		_log("%s queima: %d de dano." % [ser.nome, fogo])
 	for outro in participantes:   # a foto do viajante vale até o início do próximo turno de quem fotografou
 		if outro.mods_cena.get("visivel_ate") == ser:
 			outro.mods_cena.erase("visivel_ate")
@@ -1205,11 +1259,26 @@ func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = nu
 		return {"ok": false, "erro": "já usou nesta cena"}
 	if h.has("requer") and not amea.mods_cena.get("efeito_" + String(h.requer), false):
 		return {"ok": false, "erro": "requer %s" % h.requer}
+	if h.has("flor"):
+		if int(h.ordem) > int(amea.mods_cena.get("flores", 0)):
+			return {"ok": false, "erro": "a flor %s ainda não desabrochou" % h.flor}
+		if h.id in amea.mods_cena.get("murchas", []):
+			return {"ok": false, "erro": "a flor %s murchou" % h.flor}
+	if String(h.get("tipo", "")) == "consumir":
+		var cadaver := _cadaver_adjacente(amea)
+		if cadaver == null or int(amea.mods_cena.get("flores", 0)) >= 7:
+			return {"ok": false, "erro": "nenhum corpo ao alcance"}
+		if acoes.has(amea) and not gastar_acao(amea, h.acao):
+			return {"ok": false, "erro": "sem ação"}
+		_consumidos.append(cadaver)
+		amea.mods_cena["flores"] = int(amea.mods_cena.get("flores", 0)) + 1
+		_log("[color=#ec7063]%s consome o corpo de %s: desabrocha mais uma flor (%d/7).[/color]" % [amea.nome, cadaver.nome, int(amea.mods_cena.flores)])
+		return {"ok": true, "atingidos": []}
 	if h.get("requer_forma", false) and not amea.na_forma_de_sangue():
 		return {"ok": false, "erro": "só na forma de Sangue"}
 	if h.get("so_copia", false) and not amea.mods_cena.get("copia", false):
 		return {"ok": false, "erro": "só as cópias"}
-	if String(h.get("tipo", "")) in ["alvo", "marcar"]:
+	if String(h.get("tipo", "")) in ["alvo", "marcar", "manobra_ataques"]:
 		if alvo == null or alvo.esta_fora_de_combate() or (h.has("alcance") and not _alcance_hab(amea, alvo, String(h.alcance))):
 			return {"ok": false, "erro": "alvo inválido"}
 		if h.get("requer_adjacente", false) and grade != null and grade.tem(amea) and grade.tem(alvo) and not grade.estao_adjacentes(amea, alvo):
@@ -1240,6 +1309,23 @@ func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = nu
 		amea.rituais_ativos[hab_id] = h.buff.duplicate()
 		_log("[color=#ec7063]%s usa %s.[/color]" % [amea.nome, nome])
 		return {"ok": true, "atingidos": []}
+	if tipo_h == "manobra_ataques":   # Derrubar e Devorar (kerberos)
+		var t: Dictionary = h.teste
+		var venceu := Teste.rolar(dados, int(t.dados), int(t.bonus), 0).total > _teste_melhor(alvo, ["atletismo", "acrobacia"]).total
+		var resultados: Array = []
+		if venceu:
+			var arma_m: Dictionary = {}
+			for a in amea.ataques:
+				if a.id == h.arma:
+					arma_m = a.duplicate()
+			arma_m["dano"] = h.dano
+			arma_m.erase("vezes")
+			for _k in int(h.ataques):
+				if alvo.esta_fora_de_combate():
+					break
+				resultados.append(atacar(amea, alvo, arma_m, 0, {"ignorar_distancia": true}))
+		_log("[color=#ec7063]%s %s %s.[/color]" % [amea.nome, "derruba e morde" if venceu else "tenta derrubar", alvo.nome])
+		return {"ok": true, "atingidos": [alvo] if venceu else [], "ataques": resultados}
 	if tipo_h == "teleporte":   # Correr pelas Frestas: reaparece perto do alvo
 		if alvo != null and grade != null:
 			_teleportar_para_perto(amea, alvo)
@@ -1264,6 +1350,8 @@ func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = nu
 		for x in grade.seres_em(grade.celulas_da_area(String(h.area.forma), origem, ponto, metros)):
 			if x.lado != amea.lado and not x.esta_fora_de_combate():
 				atingidos.append(x)
+		if h.has("max_alvos"):
+			atingidos = atingidos.slice(0, int(h.max_alvos))
 	else:
 		for x in participantes:
 			if x.lado != amea.lado and not x.esta_fora_de_combate():
@@ -1297,8 +1385,16 @@ func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = nu
 			_hipnotizar(amea, x, int(h.dt))
 			textos.append("%s é hipnotizado" % x.nome)
 			continue
-		if h.has("condicao") and not passou:
-			x.aplicar_condicao(h.condicao, int(h.get("rodadas", 0)))
+		if h.has("prisao"):   # Prisão de Tentáculos: preso até os tentáculos caírem
+			x.aplicar_condicao(Ser.AGARRADO)
+			x.mods_cena["agarrado_por"] = amea
+			x.mods_cena["prisao_pv"] = int(h.prisao.pv)
+			textos.append("%s fica preso" % x.nome)
+		if h.has("condicao") and (not passou or h.get("ao_passar", "") == "reduz"):
+			var rod: int = dados.rolar_expressao(str(h.rodadas)) if str(h.get("rodadas", "")).contains("d") else int(h.get("rodadas", 0))
+			if passou:
+				rod = 1   # Miasma Fétido: passar reduz para 1 rodada
+			x.aplicar_condicao(h.condicao, rod)
 			if h.has("asfixia"):
 				x.mods_cena["asfixia"] = h.asfixia
 				x.mods_cena["asfixiado_por"] = amea
@@ -1473,6 +1569,105 @@ func _alcance_hab(amea: Ser, alvo: Ser, alcance: String) -> bool:
 	if alcance == "adjacente":
 		return grade == null or not grade.tem(amea) or not grade.tem(alvo) or grade.estao_adjacentes(amea, alvo)
 	return _perto(amea, alvo, alcance)
+
+
+# --- Dama de Sangue (p.200) ----------------------------------------------------
+
+## Uma flor murcha: a Dama perde a habilidade e sofre a penalidade da flor.
+func _murchar(dama: Ameaca, h: Dictionary) -> void:
+	var murchas: Array = dama.mods_cena.get("murchas", [])
+	if h.id in murchas:
+		return
+	murchas.append(h.id)
+	dama.mods_cena["murchas"] = murchas
+	var pen: Dictionary = h.get("penalidade", {})
+	for pericia in pen.get("menos_dados", {}):
+		var md: Dictionary = dama.mods_cena.get("menos_dados", {})
+		md[pericia] = int(md.get(pericia, 0)) + int(pen.menos_dados[pericia])
+		dama.mods_cena["menos_dados"] = md
+	for k in ["menos_resistencia", "menos_defesa", "menos_deslocamento"]:
+		if pen.has(k):
+			dama.mods_cena[k] = int(dama.mods_cena.get(k, 0)) + int(pen[k])
+	if pen.has("menos_pv"):
+		dama.pv_maximo = maxi(1, dama.pv_maximo - int(pen.menos_pv))
+		dama.pv = mini(dama.pv, dama.pv_maximo)
+	_log("[color=#f5b041]A flor %s da %s murcha![/color]" % [h.flor, dama.nome])
+
+
+func _cadaver_adjacente(amea: Ser) -> Ser:
+	for x in participantes:
+		if x.tem(Ser.MORTO) and not x in _consumidos and (grade == null or not grade.tem(x) or not grade.tem(amea) or grade.estao_adjacentes(amea, x)):
+			return x
+	return null
+
+
+## Usa um item contra uma ameaça adjacente (fertilizante, agrotóxico… contra a Dama de Sangue).
+func usar_contra(agente: Agente, alvo: Ameaca, item_id: String) -> bool:
+	var info := ruleset.equipamento(item_id)
+	if not agente.tem_item(item_id) or info.get("contra", "") == "":
+		return false
+	if grade != null and grade.tem(agente) and grade.tem(alvo) and not grade.estao_adjacentes(agente, alvo):
+		return false
+	if acoes.has(agente) and not gastar_acao(agente, "padrao"):
+		return false
+	agente.consumir_item(item_id)
+	var murchou := false
+	for h in alvo.habilidades:
+		if h.get("murcha", {}).get("item", "") == item_id and int(h.get("ordem", 0)) <= int(alvo.mods_cena.get("flores", 0)):
+			_murchar(alvo, h)
+			murchou = true
+	if not murchou:
+		_log("%s usa %s em %s, sem efeito." % [agente.nome, info.nome, alvo.nome])
+	return murchou
+
+
+# --- Granadas (p.74) ---------------------------------------------------------------
+
+## Ação padrão: arremessa a granada num ponto em alcance médio; atinge todos a 6 m (aliados também).
+func usar_granada(agente: Agente, item_id: String, celula: Vector2i) -> Dictionary:
+	var info := ruleset.equipamento(item_id)
+	var ex: Dictionary = info.get("explosivo", {})
+	if ex.is_empty() or not agente.tem_item(item_id):
+		return {"ok": false, "erro": "sem esta granada"}
+	if grade != null and grade.tem(agente) and Grade.distancia(grade.posicao(agente), celula) > int(Grade.ALCANCES.get(ex.get("alcance", "medio"), 12)):
+		return {"ok": false, "erro": "fora de alcance"}
+	if acoes.has(agente) and not gastar_acao(agente, "padrao"):
+		return {"ok": false, "erro": "sem ação padrão"}
+	agente.consumir_item(item_id)
+	var atingidos: Array[Ser] = []
+	if grade != null and grade.tem(agente):
+		for x in grade.seres_em(grade.celulas_da_area("esfera", grade.posicao(agente), celula, float(ex.get("raio", 6)))):
+			if not x.esta_fora_de_combate() or x.tem(Ser.POCA):
+				atingidos.append(x)
+	var dt := agente.dt_habilidade(String(ex.get("dt_atributo", "agi")))
+	var rolagem := dados.rolar_expressao(String(ex.dano)) if ex.has("dano") else 0
+	var textos := PackedStringArray()
+	for x in atingidos:
+		var passou := Teste.rolar(dados, x.dados_da_pericia(ex.resistencia), x.bonus_pericia(ex.resistencia), dt).sucesso
+		if ex.has("dano"):
+			var d := rolagem
+			if passou:
+				d = 0 if _tem_evasao(x, String(ex.resistencia)) else d / 2
+			if x is Ameaca and (x as Ameaca).tem_hab("enxame"):
+				d = d * 3 / 2
+			textos.append("%s %d" % [x.nome, aplicar_dano(x, d, String(ex.tipo_dano), 0, agente)])
+		if ex.has("condicao") and not passou:
+			x.aplicar_condicao(String(ex.condicao), int(ex.get("rodadas", 0)))
+			textos.append("%s fica %s" % [x.nome, ex.condicao])
+		elif passou and ex.has("ao_passar_condicao"):
+			x.aplicar_condicao(String(ex.ao_passar_condicao), 1)
+	_log("[color=#f0b27a]%s arremessa %s:[/color] %s" % [agente.nome, info.nome, ", ".join(textos) if not textos.is_empty() else "ninguém é atingido"])
+	_verificar_fim()
+	return {"ok": true, "atingidos": atingidos}
+
+
+## Ação padrão para apagar as chamas (p.320).
+func apagar_chamas(ser: Ser) -> bool:
+	if not ser.tem(Ser.EM_CHAMAS) or (acoes.has(ser) and not gastar_acao(ser, "padrao")):
+		return false
+	ser.condicoes.erase(Ser.EM_CHAMAS)
+	_log("%s apaga as chamas." % ser.nome)
+	return true
 
 
 # --- Hipnose (carniçal) --------------------------------------------------------
@@ -1846,7 +2041,7 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	var dados_teste := atacante.dados_da_pericia(pericia_id)
 	var bonus_teste := atacante.bonus_pericia(pericia_id)
 	if arma.has("teste"):   # ataque de ficha de ameaça: "TESTE 2O+5" já inclui tudo
-		dados_teste = int(arma.teste.dados) - atacante.penalidade_dados_atributo(ruleset.atributo_da_pericia(pericia_id)) + atacante.efeito_ritual("dados_testes")
+		dados_teste = int(arma.teste.dados) - atacante.penalidade_dados_atributo(ruleset.atributo_da_pericia(pericia_id)) + atacante.efeito_ritual("dados_testes") - int(atacante.mods_cena.get("menos_dados", {}).get(pericia_id, 0))
 		bonus_teste = int(arma.teste.bonus) + atacante.efeito_ritual("pericias")
 	res.teste = Teste.rolar(dados, dados_teste, bonus_teste + bonus_ataque, defesa, dados_extras)
 	if agente != null:
@@ -1994,6 +2189,12 @@ func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 
 	if atacante is Ameaca and (atacante as Ameaca).tem_hab("sadismo"):
 		atacante.mods_cena["sadismo"] = true
 	if amea_alvo != null:
+		if tipo_dano == "fogo" and amea_alvo.tem_hab("lodo_protetor"):
+			amea_alvo.mods_cena["queimada"] = true   # perde a imunidade até o próximo turno
+		for h in amea_alvo.habilidades:
+			var mu: Dictionary = h.get("murcha", {})
+			if mu.has("dano") and tipo_dano in mu.dano and final >= int(mu.get("minimo", 1)):
+				_murchar(amea_alvo, h)
 		var cura := amea_alvo.habilidade("cura_acelerada")
 		if not cura.is_empty() and tipo_dano in cura.get("desliga_com", []):
 			amea_alvo.mods_cena["cura_desligada"] = true   # Regeneração de Sangue para até o fim da cena

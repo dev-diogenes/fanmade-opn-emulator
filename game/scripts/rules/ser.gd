@@ -34,6 +34,8 @@ const SEM_CURA := "sem_cura"   ## Poeira da Podridão: não recupera PV
 const SANGRANDO := "sangrando"  ## p.321: Vigor DT 20 no início do turno ou perde 1d6 PV
 const POCA := "poca"
 const ASFIXIADO := "asfixiado"  ## Afogar em Sangue (Mulher Afogada)
+const EM_CHAMAS := "em_chamas"  ## p.320: 1d6 de fogo no início do turno; ação padrão para apagar
+const CONFUSO := "confuso"      ## p.320: age de modo aleatório (no jogo: perde o turno, exceto com 6 no 1d6)
 const LENTO := "lento"
 const PARALISADO_ := "paralisado"           ## Imortalidade (esqueleto de Lodo, enraizado): desfeito, mas volta
 ## Condições mentais e de medo (p.320-321): criaturas paranormais são imunes (p.190)
@@ -333,7 +335,7 @@ func encerrar_cena() -> void:
 	mods_cena.clear()
 	defesa_temporaria = 0
 	penalidade_ataque_temporaria = 0
-	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL, FATIGADO, ATORDOADO, PASMO, ABALADO, APAVORADO, ENJOADO, AGARRADO, OFUSCADO, SEM_CURA, SANGRANDO]:
+	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL, FATIGADO, ATORDOADO, PASMO, ABALADO, APAVORADO, ENJOADO, AGARRADO, OFUSCADO, SEM_CURA, SANGRANDO, EM_CHAMAS, CONFUSO, ASFIXIADO]:
 		condicoes.erase(c)   # condições terminam no fim da cena (p.321)
 	duracoes.clear()
 	rituais_ativos.clear()

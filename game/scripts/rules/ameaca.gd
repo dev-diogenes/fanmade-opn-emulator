@@ -76,7 +76,7 @@ func atributo(atributo_id: String) -> int:
 func dados_da_pericia(pericia_id: String) -> int:
 	var attr := ruleset.atributo_da_pericia(pericia_id)
 	var d := int(pericias[pericia_id].get("dados", 1)) if pericias.has(pericia_id) else atributo(attr)
-	return d - penalidade_dados_atributo(attr) + efeito_ritual("dados_testes")
+	return d - penalidade_dados_atributo(attr) + efeito_ritual("dados_testes") - int(mods_cena.get("menos_dados", {}).get(pericia_id, 0))
 
 
 func bonus_pericia(pericia_id: String) -> int:
@@ -89,13 +89,13 @@ func treinado_em(pericia_id: String) -> bool:
 
 
 func defesa() -> int:
-	return defesa_fixa + ajustes_de_defesa() + efeito_ritual("defesa_ritual")
+	return defesa_fixa + ajustes_de_defesa() + efeito_ritual("defesa_ritual") - int(mods_cena.get("menos_defesa", 0))
 
 
 func deslocamento_m() -> float:
 	if na_forma_de_sangue():
 		return float(forma_de_sangue.get("deslocamento", deslocamento))
-	return deslocamento
+	return maxf(0.0, deslocamento - float(mods_cena.get("menos_deslocamento", 0)))
 
 
 func na_forma_de_sangue() -> bool:
@@ -153,6 +153,9 @@ func resistencia(tipo_dano: String) -> int:
 		return 1 << 20   # Enigma de Medo: nada fere a criatura antes de ser resolvido
 	if tipo_dano in imunidades or "dano" in imunidades:
 		return 1 << 20   # imunidade da ficha
+	var lodo := habilidade("lodo_protetor")
+	if not lodo.is_empty() and not tipo_dano in lodo.get("exceto", []) and not mods_cena.get("queimada", false):
+		return 1 << 20   # Aracnasita: o Lodo a protege de tudo, menos do fogo
 	if na_forma_de_sangue():
 		return int(forma_de_sangue.get("resistencias", {}).get(tipo_dano, 0)) + int(mods_cena.get("resistencia_extra", 0))
-	return super(tipo_dano)
+	return maxi(0, super(tipo_dano) - int(mods_cena.get("menos_resistencia", 0)))

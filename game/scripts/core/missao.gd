@@ -291,15 +291,17 @@ func _aplicar_efeito(a: Agente, ef: Dictionary, h: Vector2i) -> void:
 
 ## Monta a configuração do combate: agentes no hex + aliados até 1 hex de distância (FTK).
 func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool) -> void:
-	var info: Dictionary = DadosJogo.ler("encontros").chefe if chefe else _encontro(encontro_id)
 	var participantes: Array[Agente] = []
 	var alcance := int(_cfg.aliados_entram_no_combate_ate)
 	for a in agentes:
 		if not a.tem(Ser.MORTO) and not a.esta_fora_de_combate() and Hex.distancia(posicao(a), h) <= alcance:
 			participantes.append(a)
+	var info: Dictionary = covil_para(participantes) if chefe else _encontro(encontro_id)
 	var ameacas: Array = []
 	for amea_id in info.ameacas:
 		var am := DadosJogo.ameaca(ruleset, amea_id)
+		if chefe and amea_id == info.ameacas[0]:
+			am.chefe = true   # a primeira ameaça do covil é o chefe
 		if chefe and am.chefe and modificador_chefe != 0.0:
 			am.ficha = am.ficha.duplicate(true)
 			am.ficha.pv = maxi(1, roundi(float(am.ficha.pv) * (1.0 + modificador_chefe)))
@@ -322,6 +324,19 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool) -> void:
 	}
 	_log("[color=#ec7063][b]Encontro: %s![/b][/color] (%d agente(s) entram no combate)" % [info.nome, participantes.size()])
 	encontro_iniciado.emit(encontro_pendente)
+
+
+## O covil muda com o grupo: o de maior "nex_minimo" que a soma do NEX alcança.
+static func covil_para(grupo: Array) -> Dictionary:
+	var d := DadosJogo.ler("encontros")
+	var nex_total := 0
+	for a in grupo:
+		nex_total += a.nex
+	var melhor: Dictionary = d.chefe
+	for c in d.get("chefes", []):
+		if nex_total >= int(c.nex_minimo) and int(c.nex_minimo) >= int(melhor.get("nex_minimo", 0)):
+			melhor = c
+	return melhor
 
 
 ## Escolhe ameaças da lista, da mais forte para a mais fraca, sem passar do orçamento de VD.

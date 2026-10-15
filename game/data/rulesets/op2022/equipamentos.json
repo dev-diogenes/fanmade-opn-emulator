@@ -168,7 +168,14 @@
       "espacos": 1,
       "componentes": "energia",
       "descricao": "Materiais para conjurar rituais de Energia (p.129)."
-    }
+    },
+    {"id": "granada_de_fragmentacao", "nome": "Granada de fragmentação", "categoria": 1, "espacos": 1, "consumivel": true, "ref": "p.74", "explosivo": {"raio": 6, "alcance": "medio", "dano": "8d6", "tipo_dano": "perfuracao", "resistencia": "reflexos", "dt_atributo": "agi", "ao_passar": "metade"}, "descricao": "Ação padrão, alcance médio: 8d6 de perfuração em quem estiver a 6 m do ponto (Reflexos DT Agi: metade)."},
+    {"id": "granada_incendiaria", "nome": "Granada incendiária", "categoria": 1, "espacos": 1, "consumivel": true, "ref": "p.74", "explosivo": {"raio": 6, "alcance": "medio", "dano": "6d6", "tipo_dano": "fogo", "condicao": "em_chamas", "resistencia": "reflexos", "dt_atributo": "agi", "ao_passar": "metade"}, "descricao": "Ação padrão, alcance médio: 6d6 de fogo e em chamas num raio de 6 m (Reflexos DT Agi: metade e sem chamas)."},
+    {"id": "granada_de_atordoamento", "nome": "Granada de atordoamento", "categoria": 0, "espacos": 1, "consumivel": true, "ref": "p.74", "explosivo": {"raio": 6, "alcance": "medio", "condicao": "atordoado", "rodadas": 1, "resistencia": "fortitude", "dt_atributo": "agi", "ao_passar_condicao": "ofuscado"}, "descricao": "Ação padrão, alcance médio: quem estiver a 6 m fica atordoado por 1 rodada (Fortitude DT Agi: só ofuscado)."},
+    {"id": "fertilizante", "nome": "Fertilizante", "categoria": 0, "espacos": 1, "consumivel": true, "contra": "dama_de_sangue", "descricao": "Item do jogo: jogado na Dama de Sangue, murcha a flor rosa."},
+    {"id": "agrotoxico", "nome": "Agrotóxico", "categoria": 0, "espacos": 1, "consumivel": true, "contra": "dama_de_sangue", "descricao": "Item do jogo: jogado na Dama de Sangue, murcha a flor vermelha."},
+    {"id": "bulbo_de_bravo_purpulis", "nome": "Bulbo de bravo purpulis", "categoria": 0, "espacos": 1, "consumivel": true, "contra": "dama_de_sangue", "descricao": "Item do jogo: a planta roxa que cresce nas pedras; em contato com a Dama de Sangue, murcha a flor roxa."},
+    {"id": "galao_de_agua", "nome": "Galão de água", "categoria": 0, "espacos": 1, "consumivel": true, "contra": "dama_de_sangue", "descricao": "Item do jogo: água corrente sobre a Dama de Sangue murcha a flor verde."}
   ],
   "acessorios_base": [
     {

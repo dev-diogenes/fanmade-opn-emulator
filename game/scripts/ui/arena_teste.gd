@@ -45,6 +45,9 @@ var _btn_item: Button
 var _btn_ritual: Button
 var _btn_enigma: Button
 var _btn_soltar: Button
+var _btn_apagar: Button
+var _opt_item: OptionButton
+var _btn_item_combate: Button
 var _opt_ritual: OptionButton
 var _spin_foco: SpinBox
 var _chk_ae: CheckBox
@@ -281,6 +284,15 @@ func _clicar_celula(celula: Vector2i) -> void:
 			for op in combate.oportunidades_pendentes:
 				_registrar("%s pode fazer um ataque de oportunidade." % op.atacante.nome)
 		_modo = ""
+	elif _modo == "granada" and agente != null:
+		var r := combate.usar_granada(agente, _opt_item.get_item_metadata(_opt_item.selected), celula)
+		if not r.ok:
+			_registrar("[color=#e67e22]Não deu: %s.[/color]" % r.get("erro", "?"))
+		_modo = ""
+	elif _modo == "contra" and agente != null and alvo is Ameaca:
+		if not combate.usar_contra(agente, alvo as Ameaca, _opt_item.get_item_metadata(_opt_item.selected)):
+			_registrar("[color=#e67e22]Precisa estar ao lado da criatura (e de uma ação padrão).[/color]")
+		_modo = ""
 	elif _modo == "ritual_area" and agente != null:
 		var escolha: Array = _opt_ritual.get_item_metadata(_opt_ritual.selected)
 		_conjurar(agente, escolha[0], escolha[1], alvo, {"celula": celula})
@@ -409,6 +421,15 @@ func _montar_interface() -> void:
 	_btn_soltar = _botao("Soltar-se", _soltar)
 	botoes2.add_child(_btn_enigma)
 	botoes2.add_child(_btn_soltar)
+	_btn_apagar = _botao("Apagar chamas", _apagar)
+	botoes2.add_child(_btn_apagar)
+	var linha_item := HBoxContainer.new()
+	painel.add_child(linha_item)
+	_opt_item = OptionButton.new()
+	_opt_item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	linha_item.add_child(_opt_item)
+	_btn_item_combate = _botao("Usar item", _modo_item)
+	linha_item.add_child(_btn_item_combate)
 	var linha_ritual := HBoxContainer.new()
 	painel.add_child(linha_ritual)
 	_opt_ritual = OptionButton.new()
@@ -548,6 +569,24 @@ func _decifrar() -> void:
 	_atualizar()
 
 
+## Granadas pedem um ponto; itens contra criaturas (fertilizante…) pedem a criatura.
+func _modo_item() -> void:
+	var agente := _agente_da_vez()
+	if agente == null or _opt_item.selected < 0:
+		return
+	var info := ruleset.equipamento(_opt_item.get_item_metadata(_opt_item.selected))
+	_modo = "granada" if info.has("explosivo") else "contra"
+	_registrar("Escolha %s para %s." % ["o ponto" if _modo == "granada" else "a criatura", info.nome])
+	_atualizar()
+
+
+func _apagar() -> void:
+	var agente := _agente_da_vez()
+	if agente != null:
+		combate.apagar_chamas(agente)
+	_atualizar()
+
+
 func _soltar() -> void:
 	var agente := _agente_da_vez()
 	if agente != null:
@@ -620,6 +659,21 @@ func _atualizar() -> void:
 		_btn_enigma.text = "Tocar a melodia" if com_enigma.enigma.get("tipo", "") == "melodia" else "Enigma: %s" % com_enigma.etapa_atual().get("texto", "decifrar")
 	_btn_enigma.disabled = agente == null
 	_btn_soltar.visible = agente != null and agente.tem(Ser.AGARRADO)
+	_btn_apagar.visible = agente != null and agente.tem(Ser.EM_CHAMAS)
+	var item_antes = _opt_item.get_item_metadata(_opt_item.selected) if _opt_item.selected >= 0 else ""
+	_opt_item.clear()
+	if agente != null:
+		var vistos := {}
+		for item_id in agente.equipamento:
+			var info := ruleset.equipamento(item_id)
+			if vistos.has(item_id) or not (info.has("explosivo") or info.get("contra", "") != ""):
+				continue
+			vistos[item_id] = true
+			_opt_item.add_item("%s (%d)" % [info.nome, agente.equipamento.count(item_id)])
+			_opt_item.set_item_metadata(_opt_item.item_count - 1, item_id)
+			if item_id == item_antes:
+				_opt_item.select(_opt_item.item_count - 1)
+	_opt_item.get_parent().visible = _opt_item.item_count > 0
 	_opt_ritual.get_parent().visible = _opt_ritual.item_count > 0
 	_btn_item.text = "Cicatrizante (%d)" % (agente.equipamento.count("cicatrizante") if agente != null else 0)
 	_spin_foco.max_value = agente.pe_disponivel_no_turno() if agente != null else 0

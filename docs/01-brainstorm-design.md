@@ -204,6 +204,11 @@ Pontos em que o livro é ambíguo e escolhemos uma leitura (revisar se surgir er
 | Hipnose | O hipnotizado muda de lado e é jogado pela IA. Se todos os agentes ficarem hipnotizados, o combate é perdido; no fim do combate, todos voltam ao normal |
 | Ocioso | Escolhe como alvo o primeiro agente do combate (outro, se ele cair). A Retaliação vale uma vez por ataque e o dano não é não letal ainda |
 | Enpap-X | No mapa aparece como "Prisioneiro Marcado" (um existido); a transformação acontece a 0 PV, com todos os PV da nova ficha |
+| Granadas | DT Agi = DT de habilidade com Agilidade (10 + limite de PE + Agilidade). Em chamas: 1d6 de fogo no início do turno; ação padrão para apagar |
+| Confuso | No início do turno, rola 1d6: com 6 a condição termina e o ser age; senão, perde o turno (simplificação do "comporta-se de modo aleatório") |
+| Dama de Sangue | Só desabrocha flores consumindo cadáveres do combate (ação padrão, adjacente). Itens das fraquezas são do jogo e precisam ser usados ao lado dela. "Caído" do Arremessar ainda não existe no motor |
+| Minotauro e Kerberos | Cravar Chifres vale em qualquer acerto dos chifres (o jogo ainda não tem investida). Derrubar e Devorar alcança só quem está adjacente |
+| Covil | Escolhido pela soma do NEX de quem entra: 0 = Covil Carmesim, 90 = Jardim das Sete Flores, 180 = Labirinto, 280 = Portão do Inferno |
 | Sustentado com vários alvos | Custa 1 PE por turno pelo ritual inteiro, não por alvo; conjurar outro ritual sustentado encerra o anterior |
 | Reforços da Ordem (modo Normal) | 2 por missão. Um agente caído num combate perdido (ou morto) é resgatado: sai da missão com uma lesão (1d6 no atributo, como a regra de Lesões) |
 
