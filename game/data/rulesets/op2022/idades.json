@@ -31,7 +31,7 @@
     { "id": "devagar_jovem", "nome": "\"Devagar, Jovem!\"", "descricao": "Deslocamento −3 m e não faz investidas.", "implementado": true,
       "efeitos": [{ "tipo": "deslocamento_mod", "valor": -3 }, { "tipo": "sem_investida" }] },
     { "id": "distraido", "nome": "Distraído", "descricao": "Fica surpreendido na 1ª rodada de combate e perde o 1º turno de investigação.", "implementado": true,
-      "efeitos": [{ "tipo": "surpreendido_inicio" }], "pendente": "investigação (Fase 3)" },
+      "efeitos": [{ "tipo": "surpreendido_inicio" }] },
     { "id": "fragil", "nome": "Frágil", "descricao": "−2 PV por NEX.", "implementado": true, "efeitos": [{ "tipo": "pv_por_nex", "valor": -2 }] },
     { "id": "gota", "nome": "Gota", "descricao": "Sofre 1d6 de dano ao testar Agilidade (ou perícias dela) e ao se esquivar.", "implementado": true,
       "efeitos": [{ "tipo": "dano_ao_testar", "atributos": ["agi"], "dano": "1d6", "inclui_esquiva": true }] },

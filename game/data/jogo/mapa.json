@@ -22,7 +22,8 @@
   },
   "geracao": {
     "encontros": 7,
-    "eventos": 7,
+    "eventos": 6,
+    "investigacoes": 3,
     "vilas": 1,
     "distancia_minima_do_inicio": 3,
     "limiares_ruido": [

@@ -1,0 +1,146 @@
+class_name Investigacao3D
+extends Node3D
+## Cena de investigação em 3D: câmera aproximada e visão reduzida (névoa densa e uma luz de
+## raio curto). Os pontos de interesse ficam em volta do grupo; Facilitar aumenta a luz.
+
+const RAIO_PONTOS := 3.0
+const CORES_CHAO := {"casa_abandonada": Color("3b3430"), "capela": Color("3a3640"), "acampamento": Color("2c3a2a")}
+
+var rig: CameraRig
+var _props: Dictionary = {}       ## ponto_id -> Node3D
+var _marcas: Dictionary = {}      ## ponto_id -> Node3D (marcador flutuante)
+var _luz: OmniLight3D
+var _ambiente: Environment
+var _anel_sel: MeshInstance3D
+var _nivel_luz := 0
+
+
+func construir(cena: Dictionary, agentes: Array) -> void:
+	var sol := DirectionalLight3D.new()
+	sol.rotation_degrees = Vector3(-60, -30, 0)
+	sol.light_energy = 0.15
+	add_child(sol)
+	var amb := WorldEnvironment.new()
+	_ambiente = Environment.new()
+	_ambiente.background_mode = Environment.BG_COLOR
+	_ambiente.background_color = Color("07070b")
+	_ambiente.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	_ambiente.ambient_light_color = Color("3a3550")
+	_ambiente.ambient_light_energy = 0.25
+	_ambiente.fog_enabled = true
+	_ambiente.fog_light_color = Color("0c0b12")
+	_ambiente.fog_density = 0.11
+	_ambiente.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	amb.environment = _ambiente
+	add_child(amb)
+
+	var chao := CylinderMesh.new()
+	chao.top_radius = 6.0
+	chao.bottom_radius = 6.0
+	chao.height = 0.2
+	chao.radial_segments = 10
+	var mi := MeshInstance3D.new()
+	mi.mesh = chao
+	mi.material_override = Pecas.material(CORES_CHAO.get(cena.id, Color("333333")))
+	mi.position.y = -0.1
+	add_child(mi)
+
+	_luz = OmniLight3D.new()
+	_luz.position = Vector3(0, 2.2, 0)
+	_luz.light_color = Color("ffd9a0")
+	_luz.light_energy = 2.2
+	_luz.shadow_enabled = true
+	add_child(_luz)
+	_aplicar_luz()
+
+	var pontos: Array = cena.pontos
+	for i in pontos.size():
+		var p: Dictionary = pontos[i]
+		var ang := TAU * i / pontos.size() + 0.4
+		var pos := Vector3(cos(ang) * RAIO_PONTOS, 0, sin(ang) * RAIO_PONTOS)
+		var prop := _prop_para(cena.id, i)
+		prop.position = pos
+		prop.rotation.y = -ang
+		add_child(prop)
+		_props[p.id] = prop
+		var marca := Pecas.marcador("investigacao")
+		marca.position = pos + Vector3(0, 0.6, 0)
+		add_child(marca)
+		_marcas[p.id] = marca
+		var rot := Pecas.rotulo(p.nome, 52, Color("d0ece7"))
+		rot.position = pos + Vector3(0, 1.75, 0)
+		add_child(rot)
+	var cores := [Color("3d7bd9"), Color("27ae60"), Color("af7ac5"), Color("e67e22")]
+	for i in agentes.size():
+		var f := Pecas.figura(cores[i % cores.size()], 0.9)
+		f.position = Vector3(-0.5 + 0.5 * i, 0, 0.3 * (i % 2))
+		var r := Pecas.rotulo(agentes[i].nome, 40)
+		r.position = Vector3(0, 0.95, 0)
+		f.add_child(r)
+		add_child(f)
+	_anel_sel = Pecas.anel(0.75, Color("48c9b0"))
+	_anel_sel.visible = false
+	add_child(_anel_sel)
+	rig = CameraRig.new()
+	add_child(rig)
+	rig.distancia = 9.0
+	rig.distancia_min = 4.0
+	rig.distancia_max = 13.0
+	rig.limites = AABB(Vector3(-4, 0, -4), Vector3(8, 0, 8))
+	rig.focar(Vector3.ZERO, true)
+
+
+func _prop_para(cena_id: String, i: int) -> Node3D:
+	# Cria só a peça usada (montar uma lista com todas deixaria as outras órfãs na memória).
+	match "%s:%d" % [cena_id, i % 4]:
+		"casa_abandonada:0": return Pecas.caixote(0.9)
+		"casa_abandonada:1": return Pecas.caixote(0.7)
+		"casa_abandonada:2": return Pecas.casa()
+		"casa_abandonada:3": return Pecas.parede(0.8)
+		"capela:0", "capela:3": return Pecas.pilar_quebrado(0.9 if i % 4 == 0 else 0.6)
+		"capela:1": return Pecas.parede(1.2)
+		"capela:2": return Pecas.caixote(0.8)
+		_:
+			match i % 4:
+				0: return Pecas.rocha(0.35)
+				1: return Pecas.casa(Color("6b7d5c"), Color("4a5a3e"))
+				2: return Pecas.capim()
+	return Pecas.caixote(0.6)
+
+
+## Facilitar a investigação ilumina a cena (o raio de visão cresce).
+func iluminar() -> void:
+	_nivel_luz += 1
+	_aplicar_luz()
+
+
+func _aplicar_luz() -> void:
+	_luz.omni_range = 3.6 + 1.6 * _nivel_luz
+	_ambiente.fog_density = maxf(0.03, 0.11 - 0.03 * _nivel_luz)
+
+
+func atualizar(cena: CenaInvestigacao, selecionado: String) -> void:
+	for pid in _marcas:
+		var achado: bool = not pid in cena.pontos_restantes
+		_marcas[pid].visible = not achado
+		for filho in _props[pid].get_children():
+			if filho is MeshInstance3D:
+				filho.transparency = 0.6 if achado else 0.0
+	_anel_sel.visible = selecionado != "" and _props.has(selecionado)
+	if _anel_sel.visible:
+		_anel_sel.position = _props[selecionado].position + Vector3(0, 0.02, 0)
+
+
+## Ponto de interesse sob o ponteiro ("" se nenhum).
+func ponto_em(pos_tela: Vector2) -> String:
+	var chao = rig.ponto_no_chao(pos_tela, 0.0)
+	if chao == null:
+		return ""
+	var melhor := ""
+	var melhor_d := 1.0
+	for pid in _props:
+		var d: float = (_props[pid].position - chao).length()
+		if d < melhor_d:
+			melhor = pid
+			melhor_d = d
+	return melhor

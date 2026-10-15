@@ -85,6 +85,18 @@ static func _tentar(semente: int, cfg: Dictionary, forcar: bool = false) -> Mapa
 		if h != Vector2i(-999, -999):
 			mapa.definir_conteudo(h, {"tipo": "evento", "evento": eventos[ordem[i]].id})
 
+	# Cenas de investigação, escolhidas pelo terreno do hex
+	var cenas: Array = DadosJogo.ler("cenas_investigacao").cenas
+	for i in int(cfg.geracao.get("investigacoes", 0)):
+		var h := _hex_livre(mapa, rng, inicio, 2)
+		if h == Vector2i(-999, -999):
+			continue
+		var opcoes := cenas.filter(func(c): return mapa.terreno(h) in c.terrenos)
+		if opcoes.is_empty():
+			opcoes = cenas
+		var escolhida: Dictionary = opcoes[rng.randi_range(0, opcoes.size() - 1)]
+		mapa.definir_conteudo(h, {"tipo": "investigacao", "cena": escolhida.id})
+
 	# Se o conteúdo bloqueou todo caminho até o objetivo, tenta de novo.
 	if not forcar and mapa.caminho(inicio, objetivo, true).is_empty() and _sem_rota_por_conteudo(mapa, inicio, objetivo):
 		return null

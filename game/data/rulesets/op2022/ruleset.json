@@ -15,6 +15,7 @@
     "idades.json",
     "armas.json",
     "patentes.json",
-    "equipamentos.json"
+    "equipamentos.json",
+    "investigacao.json"
   ]
 }

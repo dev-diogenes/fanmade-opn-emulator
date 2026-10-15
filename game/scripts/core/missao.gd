@@ -8,6 +8,7 @@ extends RefCounted
 signal registro(texto: String)
 signal evento_aberto(hex: Vector2i, evento: Dictionary, agente: Agente)
 signal encontro_iniciado(config: Dictionary)
+signal investigacao_iniciada(config: Dictionary)
 signal turno_mudou(agente: Agente)
 signal missao_encerrada(vitoria: bool)
 
@@ -25,6 +26,10 @@ var movimento_rolado := false
 var ultimo_movimento: Dictionary = {}   ## {"slots": [...], "dt": int, "sucessos": int, "total": int}
 var evento_pendente: Dictionary = {}    ## {"hex", "evento", "agente"}
 var encontro_pendente: Dictionary = {}  ## config para a arena
+var investigacao_pendente: Dictionary = {}  ## {"hex", "cena", "agentes"} para a cena de investigação
+var caso: Caso
+## Modificador de PV do chefe pelas investigações (+0.2 fortalecido, −0.2 enfraquecido)
+var modificador_chefe := 0.0
 var encerrada := false
 var vitoria := false
 ## Opções da run (Carreira): modo_morte, lesoes, inspiracao_resoluta
@@ -56,6 +61,7 @@ static func nova(semente_: int, ruleset_: Ruleset = null, grupo: Array = [], opc
 	for k in opcoes_:
 		m.opcoes[k] = opcoes_[k]
 	m.reforcos = 2 if m.opcoes.get("modo_morte", "normal") == "normal" else 0
+	m.caso = Caso.gerar(m.dados)
 	var inicio := m.mapa.encontrar("inicio")
 	if grupo.is_empty():
 		for ficha in DadosJogo.ler("grupo_inicial").agentes:
@@ -100,7 +106,7 @@ func agentes_em(h: Vector2i) -> Array[Agente]:
 
 
 func ocupado() -> bool:
-	return not evento_pendente.is_empty() or not encontro_pendente.is_empty() or encerrada
+	return not evento_pendente.is_empty() or not encontro_pendente.is_empty() or not investigacao_pendente.is_empty() or encerrada
 
 
 ## Rola o movimento do agente da vez: 1 d20 por ponto de Agilidade (mínimo 1) + 1 por PE de Foco.
@@ -164,6 +170,8 @@ func _entrar(a: Agente, h: Vector2i) -> void:
 			evento_pendente = {"hex": h, "evento": ev, "agente": a}
 			_log("[b]%s[/b]: %s" % [ev.titulo, ev.texto])
 			evento_aberto.emit(h, ev, a)
+		"investigacao":
+			_preparar_investigacao(h, c.cena)
 		"vila", "inicio":
 			_log("%s chega a %s. Dá para descansar aqui." % [a.nome, c.get("nome", "uma cidade")])
 
@@ -289,7 +297,13 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool) -> void:
 			participantes.append(a)
 	var ameacas: Array = []
 	for amea_id in info.ameacas:
-		ameacas.append(DadosJogo.ameaca(ruleset, amea_id))
+		var am := DadosJogo.ameaca(ruleset, amea_id)
+		if chefe and am.chefe and modificador_chefe != 0.0:
+			am.ficha = am.ficha.duplicate(true)
+			am.ficha.pv = maxi(1, roundi(float(am.ficha.pv) * (1.0 + modificador_chefe)))
+			if caso != null and caso.pergunta("quem").get("respondida", false):
+				am.nome = caso.sujeito.get("chefe_titulo", am.nome)
+		ameacas.append(am)
 	# Balanceamento: fora do covil, no máximo N ameaças por agente que entra no combate
 	# (as mais fracas saem primeiro), para quem chega sozinho não enfrentar o grupo inteiro.
 	if not chefe and not participantes.is_empty():
@@ -385,6 +399,68 @@ func _ajustar_indice() -> void:
 	_iniciar_turno_do_agente()
 
 
+# --- Investigação ----------------------------------------------------------
+
+func _preparar_investigacao(h: Vector2i, cena_id: String) -> void:
+	var participantes: Array[Agente] = []
+	for a in agentes:
+		if not a.esta_fora_de_combate() and Hex.distancia(posicao(a), h) <= int(_cfg.aliados_entram_no_combate_ate):
+			participantes.append(a)
+	investigacao_pendente = {"hex": h, "cena": cena_id, "agentes": participantes, "semente": dados.rolar(1000000)}
+	var nome := ""
+	for cn in DadosJogo.ler("cenas_investigacao").cenas:
+		if cn.id == cena_id:
+			nome = cn.nome
+	_log("[color=#76d7c4][b]Investigação: %s![/b][/color] (%d agente(s) participam)" % [nome, participantes.size()])
+	investigacao_iniciada.emit(investigacao_pendente)
+
+
+## Cria a cena de investigação pendente (a cena da UI chama isto).
+func criar_cena_investigacao() -> CenaInvestigacao:
+	if investigacao_pendente.is_empty():
+		return null
+	var d := Dados.new(int(investigacao_pendente.get("semente", 1)))
+	return CenaInvestigacao.nova(ruleset, d, caso, investigacao_pendente.cena, investigacao_pendente.agentes, "", membrana)
+
+
+## Aplica o resultado de uma cena de investigação: pistas (PP), perguntas respondidas e
+## penalidades da urgência. O hex fica limpo (ou vira um encontro, se a penalidade mandar).
+func concluir_investigacao(resultado: Dictionary) -> void:
+	if investigacao_pendente.is_empty():
+		return
+	var h: Vector2i = investigacao_pendente.hex
+	investigacao_pendente = {}
+	mapa.limpar_conteudo(h)
+	pistas += resultado.get("pistas", []).size()
+	for p in resultado.get("perguntas", []):
+		var ef: Dictionary = p.get("efeito", {})
+		_log("[color=#f7dc6f]%s[/color]" % ef.get("texto", ""))
+		match ef.get("tipo", ""):
+			"chefe_enfraquecido":
+				modificador_chefe -= 0.2
+			"membrana":
+				membrana.alterar(int(ef.get("valor", 0)), "investigacao")
+			"revelar_objetivo":
+				var obj := mapa.encontrar("objetivo")
+				mapa.revelar(obj, 1)
+	var pen: Dictionary = resultado.get("penalidade", {})
+	match pen.get("tipo", ""):
+		"chefe_fortalecido":
+			modificador_chefe += 0.2
+		"encontro":
+			mapa.definir_conteudo(h, {"tipo": "encontro", "encontro": pen.get("encontro", "celula_cultista")})
+	# "membrana" já foi aplicada pela própria cena (urgência estourada)
+	_iniciar_turno_do_agente_sem_reset()
+	_verificar_derrota()
+
+
+## Volta ao mesmo agente depois da cena, sem zerar o movimento que ele tinha.
+func _iniciar_turno_do_agente_sem_reset() -> void:
+	var a := agente_atual()
+	if a != null:
+		turno_mudou.emit(a)
+
+
 # --- Mundo -----------------------------------------------------------------
 
 func _turno_do_mundo() -> void:
@@ -458,6 +534,8 @@ func para_dicionario() -> Dictionary:
 		"posicoes": pos, "turno_mundo": turno_mundo, "indice": indice,
 		"movimento_restante": movimento_restante, "movimento_rolado": movimento_rolado,
 		"evento_pendente": ev, "encontro_pendente": enc, "reforcos": reforcos, "pistas": pistas,
+		"caso": caso.para_dicionario() if caso != null else {}, "modificador_chefe": modificador_chefe,
+		"investigacao_pendente": {"hex": [investigacao_pendente.hex.x, investigacao_pendente.hex.y], "cena": investigacao_pendente.cena} if not investigacao_pendente.is_empty() else {},
 		"turnos_sem_surgimento": _turnos_sem_surgimento, "descansos": descansos,
 		"historico": historico.slice(maxi(0, historico.size() - 300)),
 		"encerrada": encerrada, "vitoria": vitoria,
@@ -508,6 +586,11 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 		m.historico.append(linha)
 	m.encerrada = d.get("encerrada", false)
 	m.vitoria = d.get("vitoria", false)
+	m.caso = Caso.de_dicionario(d.caso) if not d.get("caso", {}).is_empty() else Caso.gerar(m.dados)
+	m.modificador_chefe = float(d.get("modificador_chefe", 0.0))
+	var inv: Dictionary = d.get("investigacao_pendente", {})
+	if not inv.is_empty():
+		m._preparar_investigacao(Vector2i(int(inv.hex[0]), int(inv.hex[1])), inv.cena)
 	var ev: Dictionary = d.get("evento_pendente", {})
 	if not ev.is_empty() and por_id.has(ev.agente):
 		m.evento_pendente = {"hex": Vector2i(int(ev.hex[0]), int(ev.hex[1])), "evento": m._evento(ev.evento), "agente": por_id[ev.agente]}

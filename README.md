@@ -63,6 +63,16 @@ Uma missão acontece num mapa hexagonal em 3D low poly, gerado por seed. Câmera
 
 ![Mapa da missão](docs/mapa_mundo.png)
 
+### Investigação
+
+Os hexes com o **anel verde-água** são cenas de investigação. Ao entrar, o grupo (agentes a até 2 hexes) vai para uma cena 3D escura, com a luz curta:
+
+- Na vez de cada agente: **Procurar pistas** num ponto de interesse (clique no objeto; cada ponto aceita perícias com DTs diferentes), **Facilitar** (sucesso dá +2 aos aliados e ilumina a cena), **Ajudar** um aliado ou usar habilidades (Faro para Pistas, Perito, Eclético, Incansável…).
+- A **urgência** limita as rodadas; a cada 3 falhas ao procurar, perde-se uma. Se o tempo acabar, há uma penalidade.
+- As pistas respondem às perguntas da **ficha do caso**: descobrir *onde* revela o covil; *quem*, enfraquece o chefe; *o que*, fortalece a Membrana. Cada pista vale +2 PP no relatório.
+
+![Investigação](docs/investigacao.png)
+
 ### Arena de Teste (combate tático)
 
 Os encontros do mapa abrem o combate tático em 3D, com o grupo e as ameaças do encontro (mesmos controles de câmera). Abrindo `scenes/arena_teste.tscn` direto (F6), roda um combate de demonstração: 3 agentes (Mauro, Bianca e Rita) contra cultistas, um atirador e uma aberração.

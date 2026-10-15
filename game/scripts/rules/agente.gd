@@ -419,6 +419,8 @@ func pe_disponivel_no_turno() -> int:
 ## o primeiro gasto do turno pode passar do limite (p.33: "sempre pode usar pelo menos
 ## uma habilidade em seu custo mínimo por turno").
 func pode_gastar_pe(quantidade: int, habilidade_no_minimo: bool = false) -> bool:
+	if quantidade == 0:
+		return true   # nada a gastar (mesmo que o limite do turno já tenha sido passado)
 	if quantidade < 0 or quantidade > pe + pe_temporario:
 		return false
 	if habilidade_no_minimo and pe_gasto_no_turno == 0:
@@ -466,6 +468,8 @@ func encerrar_cena() -> void:
 ##     "engenhosidade": "veterano"|"expert" — junto com Eclético
 ##     "perito": true        — Perito: soma o dado do nível atual (PE conforme o NEX)
 ##     "dados_extras": int, "bonus_extra": int
+##     "atributo_base": "for"|"agi"|...  — troca o atributo-base (Incansável, Presteza Atlética)
+##     "conhecimento_aplicado": true      — poder do especialista: usa Intelecto (2 PE)
 ## Todo o PE é verificado antes (tudo ou nada). Retorna null se o teste não puder ser feito.
 func testar(dados: Dados, pericia_id: String, dt: int, pe_foco: int = 0, opcoes: Dictionary = {}) -> ResultadoTeste:
 	var plano := _planejar_teste(pericia_id, pe_foco, opcoes)
@@ -474,7 +478,10 @@ func testar(dados: Dados, pericia_id: String, dt: int, pe_foco: int = 0, opcoes:
 	for hab_id in plano.usos:
 		usos_na_cena[hab_id] = int(usos_na_cena.get(hab_id, 0)) + 1
 	var bonus: int = bonus_pericia(pericia_id, plano.grau) + plano.bonus
-	var r := Teste.rolar(dados, dados_da_pericia(pericia_id), bonus, dt, int(opcoes.get("dados_extras", 0)) + pe_foco)
+	var reserva := dados_da_pericia(pericia_id)
+	if plano.atributo_base != "":
+		reserva = atributo(plano.atributo_base)
+	var r := Teste.rolar(dados, reserva, bonus, dt, int(opcoes.get("dados_extras", 0)) + pe_foco)
 	if plano.dado_perito != "":
 		var extra := dados.rolar_expressao(plano.dado_perito)
 		r.dados_bonus.append(extra)
@@ -500,7 +507,13 @@ func custo_do_teste(pericia_id: String, pe_foco: int = 0, opcoes: Dictionary = {
 
 func _planejar_teste(pericia_id: String, pe_foco: int, opcoes: Dictionary) -> Dictionary:
 	var plano := {"custo": pe_foco, "bonus": int(opcoes.get("bonus_extra", 0)), "grau": grau(pericia_id), "dado_perito": "", "usos": [],
-		"fontes": 0, "no_minimo": true}
+		"fontes": 0, "no_minimo": true, "atributo_base": String(opcoes.get("atributo_base", ""))}
+	if opcoes.get("conhecimento_aplicado", false):
+		if not tem_habilidade("conhecimento_aplicado") or pericia_id in ["luta", "pontaria"]:
+			return {}
+		plano.custo += 2
+		plano.fontes += 1
+		plano.atributo_base = "int"
 	var info := ruleset.pericia(pericia_id)
 	# Eclético (+ Engenhosidade)
 	if opcoes.get("ecletico", false):

@@ -1,0 +1,32 @@
+{
+  "nota": "Gerador de casos (conteúdo original). A estrutura Sujeito + Ação + Local segue a ideia do Gerador de Missões do livro (p.165), com tabelas próprias. As pistas usam {sujeito}, {acao} e {local}.",
+  "sujeitos": [
+    { "id": "seita", "nome": "uma seita de mascarados", "chefe_titulo": "o Sacerdote Carmesim" },
+    { "id": "medico", "nome": "um médico aposentado", "chefe_titulo": "o Doutor" },
+    { "id": "herdeira", "nome": "a herdeira de uma família antiga", "chefe_titulo": "a Herdeira" },
+    { "id": "ex_agente", "nome": "um ex-agente desaparecido", "chefe_titulo": "o Desertor" },
+    { "id": "radialista", "nome": "um radialista da madrugada", "chefe_titulo": "a Voz" }
+  ],
+  "acoes": [
+    { "id": "invocar", "texto": "tenta trazer algo de Sangue para este lado" },
+    { "id": "sequestros", "texto": "sequestra moradores para um ritual" },
+    { "id": "item", "texto": "usa um objeto amaldiçoado para enriquecer" },
+    { "id": "vinganca", "texto": "quer vingança contra a cidade" }
+  ],
+  "locais": [
+    { "id": "frigorifico", "nome": "um frigorífico desativado" },
+    { "id": "igreja", "nome": "uma igreja interditada" },
+    { "id": "fazenda", "nome": "uma fazenda de porcos abandonada" },
+    { "id": "hospital", "nome": "a ala fechada do hospital" }
+  ],
+  "resumo": "Desaparecimentos e marcas de sangue seco na região. A Ordem suspeita de atividade paranormal ligada a Sangue.",
+  "objetivo": "Descobrir quem está por trás, o que pretende e onde fica o covil; então, encerrar a ameaça.",
+  "perguntas": [
+    { "id": "quem", "texto": "Quem está por trás dos acontecimentos?", "pistas_necessarias": 2,
+      "efeito": { "tipo": "chefe_enfraquecido", "texto": "Conhecendo o inimigo, os agentes sabem onde ferir: o chefe começa com 20% menos PV." } },
+    { "id": "oque", "texto": "O que essa pessoa pretende?", "pistas_necessarias": 2,
+      "efeito": { "tipo": "membrana", "valor": 10, "texto": "Sabendo o que o ritual precisa, os agentes atrapalham os preparativos: a Membrana se fortalece." } },
+    { "id": "onde", "texto": "Onde fica o covil?", "pistas_necessarias": 2,
+      "efeito": { "tipo": "revelar_objetivo", "texto": "O covil foi localizado e aparece no mapa." } }
+  ]
+}

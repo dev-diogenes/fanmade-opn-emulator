@@ -45,6 +45,7 @@ func _ready() -> void:
 		_registrar("[b]Missão iniciada.[/b] O covil carmesim está em algum lugar a leste. A Membrana já começa a ceder.")
 	missao.registro.connect(_registrar_sem_guardar)
 	missao.encontro_iniciado.connect(_ao_encontro)
+	missao.investigacao_iniciada.connect(_ao_investigar)
 	missao.missao_encerrada.connect(_ao_encerrar)
 	missao.turno_mudou.connect(func(_a):
 		_mapa3d.focar_agente(missao)
@@ -84,6 +85,13 @@ func _ao_encontro(config: Dictionary) -> void:
 	await get_tree().create_timer(1.0).timeout
 	if _jogo != null and is_inside_tree():
 		_jogo.ir_para_combate(config)
+
+
+func _ao_investigar(_config: Dictionary) -> void:
+	_atualizar()
+	await get_tree().create_timer(1.0).timeout
+	if _jogo != null and is_inside_tree():
+		_jogo.ir_para_investigacao()
 
 
 func _ao_encerrar(venceu: bool) -> void:

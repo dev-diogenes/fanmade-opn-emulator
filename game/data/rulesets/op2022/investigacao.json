@@ -1,0 +1,15 @@
+{
+  "ref": "p.86, p.89-91",
+  "urgencia": [
+    { "id": "muito_baixo", "nome": "Muito baixa", "rodadas": 6 },
+    { "id": "baixo", "nome": "Baixa", "rodadas": 5 },
+    { "id": "medio", "nome": "Média", "rodadas": 4 },
+    { "id": "alto", "nome": "Alta", "rodadas": 3 },
+    { "id": "muito_alto", "nome": "Muito alta", "rodadas": 2 }
+  ],
+  "dt": { "simples": 15, "complexa": 20, "muito_complexa": 25 },
+  "facilitar": { "bonus": 2, "dt_ideia_boa": 15, "dt_ideia_abstrata": 25 },
+  "falhas_para_perder_rodada": 3,
+  "ajuda": { "ref": "p.86", "dt": 10, "bonus": 1, "bonus_por_10_acima": 1 },
+  "habilidade_sem_bonus_que_ajuda": 5
+}

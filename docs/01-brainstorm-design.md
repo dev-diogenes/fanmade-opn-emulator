@@ -47,6 +47,14 @@ O livro já traz uma estrutura de investigação completa (p.89–91), que encai
 
 A **V1 também tem investigação**, numa versão simplificada. A V2 aprofunda o sistema (interrogatórios, quadro de conexões, falsas pistas).
 
+**Implementado na Fase 3 ✅:**
+- **Caso por missão:** a estrutura Sujeito + Ação + Local do Gerador de Missões, com tabelas próprias. A ficha tem 3 perguntas (quem, o quê, onde), e cada uma precisa de 2 pistas.
+- **Cada resposta muda o jogo:** *onde* revela o covil; *quem* tira 20% dos PV do chefe e dá a ele o nome do vilão; *o quê* dá +10 à Membrana.
+- **Penalidade ao estourar a urgência** (sorteada): Membrana −10, chefe com +20% de PV, ou um encontro surge no hex.
+- **Tempo:** cada rodada de investigação custa 2 de Membrana.
+- **Ajuda (p.86):** DT 10, +1 e mais +1 a cada 10 acima. Teimoso não ajuda nem é ajudado; Espírito Cívico soma +2 por 1 PE.
+- **Poderes com efeito:** Faro para Pistas, Incansável, Presteza Atlética, Na Trilha Certa, Pensamento Ágil, Guiado pelo Paranormal, Intuição Paranormal, Conhecimento Aplicado e Distraído (perde o 1º turno).
+
 ## 4. Progressão: NEX ≠ nível ✅
 
 | Eixo | O que representa | Fonte | Como sobe | Efeito no jogo |

@@ -171,7 +171,7 @@ static func anel(raio: float, cor: Color) -> MeshInstance3D:
 ## Marcador flutuante (encontro, evento, objetivo).
 static func marcador(tipo: String) -> Node3D:
 	var n := Node3D.new()
-	var cor: Color = {"encontro": Color("e74c3c"), "evento": Color("f4d03f"), "objetivo": Color("8e1b1b"),
+	var cor: Color = {"encontro": Color("e74c3c"), "evento": Color("f4d03f"), "objetivo": Color("8e1b1b"), "investigacao": Color("48c9b0"),
 		"vila": Color("ecf0f1"), "inicio": Color("5dade2")}.get(tipo, Color.WHITE)
 	var m: Mesh
 	match tipo:
@@ -179,6 +179,13 @@ static func marcador(tipo: String) -> Node3D:
 			var p := PrismMesh.new()
 			p.size = Vector3(0.22, 0.3, 0.08)
 			m = p
+		"investigacao":
+			var t := TorusMesh.new()
+			t.inner_radius = 0.07
+			t.outer_radius = 0.13
+			t.rings = 10
+			t.ring_segments = 4
+			m = t
 		"objetivo":
 			var s := SphereMesh.new()
 			s.radius = 0.16

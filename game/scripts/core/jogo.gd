@@ -5,6 +5,7 @@ extends Node
 const CENA_BASE := "res://scenes/base_ordem.tscn"
 const CENA_MAPA := "res://scenes/mapa_mundo.tscn"
 const CENA_ARENA := "res://scenes/arena_teste.tscn"
+const CENA_INVESTIGACAO := "res://scenes/investigacao.tscn"
 
 var carreira: Carreira
 ## Configuração do combate que a arena deve montar (vazia = arena de demonstração)
@@ -58,6 +59,18 @@ func voltar_do_combate(vencedor: String) -> void:
 	if missao != null:
 		missao.concluir_encontro(vencedor)
 	combate_config = {}
+	salvar()
+	get_tree().change_scene_to_file.call_deferred(CENA_MAPA)
+
+
+func ir_para_investigacao() -> void:
+	salvar()
+	get_tree().change_scene_to_file.call_deferred(CENA_INVESTIGACAO)
+
+
+func voltar_da_investigacao(resultado: Dictionary) -> void:
+	if missao != null:
+		missao.concluir_investigacao(resultado)
 	salvar()
 	get_tree().change_scene_to_file.call_deferred(CENA_MAPA)
 
