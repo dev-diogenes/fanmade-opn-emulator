@@ -77,7 +77,7 @@ func test_encontro_monta_combate_com_aliados_proximos():
 	m.mover(h)
 	assert_signal_emitted(m, "encontro_iniciado")
 	var cfg := m.encontro_pendente
-	assert_eq(cfg.agentes.size(), 3, "os outros dois estão a 1 hex e entram no combate")
+	assert_eq(cfg.agentes.size(), 3, "os outros dois estão a até 2 hexes e entram no combate")
 	assert_eq(cfg.ameacas.size(), 2)
 	m.concluir_encontro("agentes")
 	assert_true(m.mapa.conteudo(h).is_empty())
@@ -140,12 +140,12 @@ func test_turno_do_mundo_enfraquece_a_membrana_e_faz_surgir_ameacas():
 	for i in 9:   # 3 agentes x 3 turnos do mundo
 		m.encerrar_turno()
 	assert_eq(m.turno_mundo, 4)
-	assert_eq(m.membrana.valor, 57)
+	assert_eq(m.membrana.valor, 54, "−2 por turno do mundo")
 	var depois := 0
 	for h in m.mapa.celulas:
 		if m.mapa.conteudo(h).get("tipo", "") == "encontro":
 			depois += 1
-	assert_eq(depois, antes + 1, "um surgimento a cada 3 turnos com a Membrana instável")
+	assert_eq(depois, antes + 1, "um surgimento a cada 2 turnos com a Membrana instável (no turno 3; o próximo no 5)")
 
 
 func test_descanso_na_cidade():
@@ -169,3 +169,27 @@ func test_combate_completo_da_missao_na_arena():
 	assert_true(arena.combate.encerrado)
 	m.concluir_encontro(arena._vencedor)
 	assert_true(m.encontro_pendente.is_empty())
+
+
+func test_agente_sozinho_enfrenta_no_maximo_uma_ameaca():
+	var m := _missao()
+	var a := m.agente_atual()
+	var longe := m.posicao(a) + Vector2i(5, 0)
+	for outro in m.agentes:
+		if outro != a:
+			m.posicoes[outro] = longe
+	m._preparar_encontro(m.posicao(a), "ritual_interrompido", false)   # 3 ameaças no total
+	assert_eq(m.encontro_pendente.agentes.size(), 1)
+	assert_eq(m.encontro_pendente.ameacas.size(), 1)
+
+
+func test_aliado_a_dois_hexes_entra_no_combate():
+	var m := _missao()
+	var a := m.agente_atual()
+	var b: Agente = m.agentes[1]
+	var c: Agente = m.agentes[2]
+	m.posicoes[b] = m.posicao(a) + Vector2i(2, 0)
+	m.posicoes[c] = m.posicao(a) + Vector2i(3, 0)
+	m._preparar_encontro(m.posicao(a), "celula_cultista", false)
+	assert_true(b in m.encontro_pendente.agentes)
+	assert_false(c in m.encontro_pendente.agentes)

@@ -8,7 +8,8 @@
     "atributo": "agi"
   },
   "visao": 2,
-  "aliados_entram_no_combate_ate": 1,
+  "aliados_entram_no_combate_ate": 2,
+  "ameacas_por_agente": 1,
   "terrenos": {
     "campo":    { "nome": "Campo",    "custo": 1, "cor": "4f6b3a", "arena": { "cobertura": 2, "dificil": 0, "parede": 0 } },
     "estrada":  { "nome": "Estrada",  "custo": 1, "cor": "8a7d5c", "arena": { "cobertura": 3, "dificil": 0, "parede": 0 } },
@@ -35,7 +36,7 @@
   },
   "mundo": {
     "descricao": "Depois que todos os agentes jogam, o mundo age: a Membrana enfraquece e, conforme o estado dela, novas ameaças surgem perto do grupo.",
-    "surgimento_a_cada_turnos": 3
+    "surgimento_a_cada_turnos": 2
   },
   "descanso": {
     "descricao": "Numa cidade, o agente pode descansar uma vez por visita: recupera parte dos PV, PE e SAN.",

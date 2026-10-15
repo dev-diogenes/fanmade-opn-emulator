@@ -1,5 +1,10 @@
 ; Engine configuration file.
-; Projeto Godot 4.x — abra esta pasta (game/) no editor do Godot.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 
@@ -7,17 +12,21 @@ config_version=5
 
 config/name="Ordem Paranormal: Fanmade (WIP)"
 config/description="RPG fanmade de Ordem Paranormal no estilo For The King. Não oficial."
-config/features=PackedStringArray("4.6", "Forward Plus")
 run/main_scene="res://scenes/base_ordem.tscn"
+config/features=PackedStringArray("4.6", "Forward Plus")
 
 [autoload]
 
 Jogo="*res://scripts/core/jogo.gd"
 
-[internationalization]
+[dotnet]
 
-locale/fallback="pt_BR"
+project/assembly_name="Ordem Paranormal- Fanmade (WIP)"
 
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+
+[internationalization]
+
+locale/fallback="pt_BR"

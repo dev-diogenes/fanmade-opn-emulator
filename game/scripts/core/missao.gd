@@ -290,6 +290,12 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool) -> void:
 	var ameacas: Array = []
 	for amea_id in info.ameacas:
 		ameacas.append(DadosJogo.ameaca(ruleset, amea_id))
+	# Balanceamento: fora do covil, no máximo N ameaças por agente que entra no combate
+	# (as mais fracas saem primeiro), para quem chega sozinho não enfrentar o grupo inteiro.
+	if not chefe and not participantes.is_empty():
+		var limite := maxi(1, participantes.size() * int(_cfg.get("ameacas_por_agente", 1)))
+		ameacas.sort_custom(func(a, b): return int(a.nivel) > int(b.nivel))
+		ameacas = ameacas.slice(0, limite)
 	encontro_pendente = {
 		"hex": h, "nome": info.nome, "chefe": chefe, "terreno": mapa.terreno(h),
 		"agentes": participantes, "armas": armas, "ameacas": ameacas, "encontro": encontro_id,

@@ -5,7 +5,7 @@
   "maximo": 100,
   "eventos": {
     "rodada_combate": -1,
-    "turno_mapa": -1,
+    "turno_mapa": -2,
     "rodada_investigacao": -2,
     "ritual_conjurado": -2,
     "ritual_por_circulo": -1,
