@@ -15,6 +15,9 @@ var _pericias: Dictionary = {}
 var _classes: Dictionary = {}
 var _armas: Dictionary = {}
 var _graus: Dictionary = {}
+var _origens: Dictionary = {}
+var _poderes: Dictionary = {}   ## classe_id -> {poder_id -> poder}
+var _trilhas: Dictionary = {}   ## classe_id -> {trilha_id -> trilha}
 
 
 ## Carrega o manifesto e os arquivos listados. Retorna OK ou um código de erro.
@@ -42,6 +45,18 @@ func _indexar() -> void:
 		_classes[c.id] = c
 	for a in dados.get("armas", {}).get("armas", []):
 		_armas[a.id] = a
+	for o in dados.get("origens", {}).get("origens", []):
+		_origens[o.id] = o
+	var poderes_por_classe: Dictionary = dados.get("poderes_classe", {}).get("poderes", {})
+	for classe_id in poderes_por_classe:
+		_poderes[classe_id] = {}
+		for p in poderes_por_classe[classe_id]:
+			_poderes[classe_id][p.id] = p
+	var trilhas_por_classe: Dictionary = dados.get("trilhas", {}).get("trilhas", {})
+	for classe_id in trilhas_por_classe:
+		_trilhas[classe_id] = {}
+		for t in trilhas_por_classe[classe_id]:
+			_trilhas[classe_id][t.id] = t
 
 
 static func _ler_json(caminho: String) -> Variant:
@@ -67,6 +82,10 @@ func tem_pericia(pericia_id: String) -> bool:
 	return _pericias.has(pericia_id)
 
 
+func tem_classe(classe_id: String) -> bool:
+	return _classes.has(classe_id)
+
+
 func classe(classe_id: String) -> Dictionary:
 	assert(_classes.has(classe_id), "Classe desconhecida: %s" % classe_id)
 	return _classes[classe_id]
@@ -77,8 +96,65 @@ func arma(arma_id: String) -> Dictionary:
 	return _armas[arma_id]
 
 
+func tem_origem(origem_id: String) -> bool:
+	return _origens.has(origem_id)
+
+
+func origem(origem_id: String) -> Dictionary:
+	assert(_origens.has(origem_id), "Origem desconhecida: %s" % origem_id)
+	return _origens[origem_id]
+
+
+func tem_poder(classe_id: String, poder_id: String) -> bool:
+	return _poderes.get(classe_id, {}).has(poder_id)
+
+
+func poder(classe_id: String, poder_id: String) -> Dictionary:
+	assert(tem_poder(classe_id, poder_id), "Poder desconhecido: %s/%s" % [classe_id, poder_id])
+	return _poderes[classe_id][poder_id]
+
+
+func tem_trilha(classe_id: String, trilha_id: String) -> bool:
+	return _trilhas.get(classe_id, {}).has(trilha_id)
+
+
+func trilha(classe_id: String, trilha_id: String) -> Dictionary:
+	assert(tem_trilha(classe_id, trilha_id), "Trilha desconhecida: %s/%s" % [classe_id, trilha_id])
+	return _trilhas[classe_id][trilha_id]
+
+
+func habilidade_classe(habilidade_id: String) -> Dictionary:
+	return dados.classes.habilidades_classe.get(habilidade_id, {})
+
+
+## Lista de NEX em que a classe ganha algo (trilha, poder, aumento de atributo…).
+func niveis_de(chave_progressao: String) -> Array:
+	return dados.classes.progressao.get(chave_progressao, [])
+
+
+## Quantas vezes um marco da progressão já foi alcançado no NEX dado.
+func quantos_ate(chave_progressao: String, nex: int) -> int:
+	return niveis_de(chave_progressao).filter(func(n): return int(n) <= nex).size()
+
+
+## Último nível (dicionário) de uma lista {"nex": N, ...} já alcançado. Vazio se nenhum.
+func nivel_alcancado(niveis: Array, nex: int) -> Dictionary:
+	var melhor: Dictionary = {}
+	for n in niveis:
+		if int(n.nex) <= nex:
+			melhor = n
+	return melhor
+
+
 func bonus_grau(grau: String) -> int:
 	return _graus.get(grau, 0)
+
+
+## Próximo grau de treinamento ("treinado" -> "veterano" -> "expert").
+func proximo_grau(grau: String) -> String:
+	var ordem := ["destreinado", "treinado", "veterano", "expert"]
+	var i := ordem.find(grau)
+	return ordem[mini(i + 1, ordem.size() - 1)]
 
 
 func dt_regra(chave: String) -> int:
@@ -130,6 +206,11 @@ func _progressao(regra: Dictionary, nex: int, atributos: Dictionary) -> int:
 func defesa_base(atributos: Dictionary) -> int:
 	var d: Dictionary = dados.classes.derivadas
 	return int(d.defesa_base) + int(atributos.get(d.defesa_atributo, 0))
+
+
+## Testes de resistência (recebem bônus como o de Reflexos Defensivos).
+func eh_teste_de_resistencia(pericia_id: String) -> bool:
+	return pericia_id in ["fortitude", "reflexos", "vontade"]
 
 
 ## Valida a distribuição inicial de atributos (p.24). Retorna a lista de erros (vazia = válido).

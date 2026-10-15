@@ -40,6 +40,68 @@
       "proficiencias": ["armas_simples"]
     }
   ],
+  "progressao": {
+    "ref": "p.35, p.39, p.43",
+    "trilha": [10, 40, 65, 99],
+    "poder": [15, 30, 45, 60, 75, 90],
+    "aumento_atributo": [20, 50, 80, 95],
+    "grau_treinamento": [35, 70],
+    "versatilidade": [50],
+    "atributo_maximo": 5
+  },
+  "grau_treinamento_qtd": {
+    "combatente": { "base": 2, "soma_atributo": "int" },
+    "especialista": { "base": 5, "soma_atributo": "int" },
+    "ocultista": { "base": 3, "soma_atributo": "int" }
+  },
+  "habilidades_classe": {
+    "ataque_especial": {
+      "classe": "combatente", "ref": "p.34",
+      "descricao": "Ao atacar, gasta PE para somar +5 (por passo) no ataque e/ou no dano.",
+      "niveis": [
+        { "nex": 5, "custo": 2, "bonus_total": 5 },
+        { "nex": 25, "custo": 3, "bonus_total": 10 },
+        { "nex": 55, "custo": 4, "bonus_total": 15 },
+        { "nex": 85, "custo": 5, "bonus_total": 20 }
+      ]
+    },
+    "ecletico": {
+      "classe": "especialista", "ref": "p.38",
+      "descricao": "Gasta 2 PE para testar uma perícia como se fosse treinado.",
+      "custo": 2
+    },
+    "engenhosidade": {
+      "classe": "especialista", "ref": "p.40",
+      "descricao": "Eclético pode valer como veterano (+2 PE, NEX 40%) ou expert (+4 PE, NEX 75%).",
+      "niveis": [
+        { "nex": 40, "custo_extra": 2, "grau": "veterano" },
+        { "nex": 75, "custo_extra": 4, "grau": "expert" }
+      ]
+    },
+    "perito": {
+      "classe": "especialista", "ref": "p.38-39",
+      "descricao": "Em duas perícias escolhidas (exceto ataques), gasta PE para somar um dado ao teste.",
+      "quantidade_pericias": 2,
+      "exceto": ["luta", "pontaria"],
+      "niveis": [
+        { "nex": 5, "custo": 2, "dado": "1d6" },
+        { "nex": 25, "custo": 3, "dado": "1d8" },
+        { "nex": 55, "custo": 4, "dado": "1d10" },
+        { "nex": 85, "custo": 5, "dado": "1d12" }
+      ]
+    },
+    "escolhido_pelo_outro_lado": {
+      "classe": "ocultista", "ref": "p.42",
+      "descricao": "Conjura rituais; o círculo máximo cresce com o NEX. Começa com 3 rituais de 1º círculo.",
+      "circulos": [
+        { "nex": 5, "circulo": 1 },
+        { "nex": 25, "circulo": 2 },
+        { "nex": 55, "circulo": 3 },
+        { "nex": 85, "circulo": 4 }
+      ],
+      "rituais_iniciais": 3
+    }
+  },
   "derivadas": {
     "ref": "p.46",
     "defesa_base": 10,

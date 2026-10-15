@@ -13,6 +13,7 @@ const MACHUCADO := "machucado"
 const ENLOUQUECENDO := "enlouquecendo"
 const PERTURBADO := "perturbado"
 const INSANO := "insano"
+const PARALISADO := "paralisado"
 
 const TURNOS_PARA_MORRER := 3
 const TURNOS_PARA_ENLOUQUECER := 3
@@ -25,6 +26,20 @@ var san := 0
 var san_maximo := 0
 var tem_sanidade := true
 var condicoes: Dictionary = {}
+## Resistência a dano fixa por tipo ("corte", "mental", "paranormal"…).
+var resistencias_base: Dictionary = {}
+
+## Modificadores que duram até o fim da cena (Inspiração Resoluta etc.):
+## {"atributos": {"for": 2}, "resistencias": {"mental": 10}, "ataque_contra": {Ser: 5}}
+var mods_cena: Dictionary = {}
+## Bônus de Defesa até o início do próximo turno (Combate Defensivo).
+var defesa_temporaria := 0
+## Ações padrão extras no próximo turno (concedidas por efeitos; a UI consome).
+var acoes_padrao_extras := 0
+## Reação usada desde o início do último turno do ser.
+var reacao_usada := false
+## Quem causou o último dano (para "Chamas da Vingança"). Referência fraca para evitar ciclos.
+var _ultimo_atacante: WeakRef
 
 var _turnos_morrendo := 0
 var _turnos_enlouquecendo := 0
@@ -45,8 +60,29 @@ func bonus_pericia(_pericia_id: String) -> int:
 	return 0
 
 
+func treinado_em(_pericia_id: String) -> bool:
+	return false
+
+
 func defesa() -> int:
-	return 10
+	return 10 + defesa_temporaria
+
+
+## Modificadores que o ser aplica ao atacar com `arma` contra `alvo`:
+## {bonus_ataque, dados_extras, margem (redução da margem de ameaça), bonus_dano, dados_dano_extra}
+func modificar_ataque(_arma: Dictionary, alvo: Ser) -> Dictionary:
+	var mods := {"bonus_ataque": 0, "dados_extras": 0, "margem": 0, "bonus_dano": 0, "dados_dano_extra": 0}
+	mods.bonus_ataque += int(mods_cena.get("ataque_contra", {}).get(alvo, 0))
+	return mods
+
+
+## Bônus em testes de resistência (Fortitude, Reflexos, Vontade).
+func bonus_testes_resistencia() -> int:
+	return 0
+
+
+func resistencia(tipo_dano: String) -> int:
+	return int(resistencias_base.get(tipo_dano, 0)) + int(mods_cena.get("resistencias", {}).get(tipo_dano, 0))
 
 
 # --- Estado ----------------------------------------------------------------
@@ -59,6 +95,18 @@ func esta_fora_de_combate() -> bool:
 	return tem(MORTO) or tem(INCONSCIENTE) or tem(INSANO)
 
 
+func ultimo_atacante() -> Ser:
+	return _ultimo_atacante.get_ref() as Ser if _ultimo_atacante != null else null
+
+
+func registrar_atacante(atacante: Ser) -> void:
+	_ultimo_atacante = weakref(atacante) if atacante != null else null
+
+
+func turnos_morrendo() -> int:
+	return _turnos_morrendo
+
+
 func sofrer_dano(quantidade: int) -> void:
 	if quantidade <= 0 or tem(MORTO):
 		return
@@ -66,11 +114,13 @@ func sofrer_dano(quantidade: int) -> void:
 	_atualizar_pv()
 
 
+## Dano mental: reduzido pela resistência mental; vai para a SAN (ou para os PV de ameaças da Realidade, p.82).
 func sofrer_dano_mental(quantidade: int) -> void:
+	quantidade -= resistencia("mental")
 	if quantidade <= 0:
 		return
 	if not tem_sanidade:
-		sofrer_dano(quantidade)  # Ameaças da Realidade perdem PV (p.82)
+		sofrer_dano(quantidade)
 		return
 	san = maxi(0, san - quantidade)
 	_atualizar_san()
@@ -100,6 +150,8 @@ func estabilizar() -> void:
 ## Chamado no início de cada turno do ser. Três turnos iniciados morrendo
 ## (ou enlouquecendo) na mesma cena matam (ou enlouquecem) o ser.
 func iniciar_turno() -> void:
+	defesa_temporaria = 0
+	reacao_usada = false
 	if tem(MORRENDO):
 		_turnos_morrendo += 1
 		if _turnos_morrendo >= TURNOS_PARA_MORRER:
@@ -112,10 +164,14 @@ func iniciar_turno() -> void:
 			ficou_insano.emit(self)
 
 
-## Zera os contadores ao fim de uma cena.
+## Zera contadores e modificadores temporários ao fim de uma cena.
 func encerrar_cena() -> void:
 	_turnos_morrendo = 0
 	_turnos_enlouquecendo = 0
+	mods_cena.clear()
+	defesa_temporaria = 0
+	acoes_padrao_extras = 0
+	reacao_usada = false
 
 
 func _atualizar_pv() -> void:

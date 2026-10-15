@@ -1,14 +1,15 @@
 {
   "ref": "p.66-67",
-  "nota": "Subconjunto inicial para a Fase 1. 'margem' = menor resultado do d20 que ameaça crítico.",
+  "nota": "Subconjunto inicial. 'margem' = menor d20 que ameaça crítico. 'ataque': corpo_a_corpo, disparo (arcos, bestas) ou fogo.",
   "armas": [
-    { "id": "desarmado", "nome": "Ataque desarmado", "categoria": 0, "dano": "1d3", "margem": 20, "multiplicador": 2, "tipo_dano": "impacto", "pericia": "luta", "soma_forca": true, "nao_letal": true },
-    { "id": "faca", "nome": "Faca", "categoria": 0, "dano": "1d4", "margem": 19, "multiplicador": 2, "tipo_dano": "corte", "pericia": "luta", "soma_forca": true },
-    { "id": "machete", "nome": "Machete", "categoria": 0, "dano": "1d6", "margem": 19, "multiplicador": 2, "tipo_dano": "corte", "pericia": "luta", "soma_forca": true },
-    { "id": "machado", "nome": "Machado", "categoria": 1, "dano": "1d8", "margem": 20, "multiplicador": 3, "tipo_dano": "corte", "pericia": "luta", "soma_forca": true },
-    { "id": "espada", "nome": "Espada", "categoria": 1, "dano": "1d8", "margem": 19, "multiplicador": 2, "tipo_dano": "corte", "pericia": "luta", "soma_forca": true },
-    { "id": "pistola", "nome": "Pistola", "categoria": 1, "dano": "1d12", "margem": 18, "multiplicador": 2, "tipo_dano": "balistico", "pericia": "pontaria", "soma_forca": false },
-    { "id": "revolver", "nome": "Revólver", "categoria": 1, "dano": "2d6", "margem": 19, "multiplicador": 3, "tipo_dano": "balistico", "pericia": "pontaria", "soma_forca": false },
-    { "id": "espingarda", "nome": "Espingarda", "categoria": 1, "dano": "4d6", "margem": 20, "multiplicador": 3, "tipo_dano": "balistico", "pericia": "pontaria", "soma_forca": false }
+    {"id": "desarmado", "nome": "Ataque desarmado", "categoria": 0, "dano": "1d3", "margem": 20, "multiplicador": 2, "tipo_dano": "impacto", "pericia": "luta", "soma_forca": true, "nao_letal": true, "ataque": "corpo_a_corpo"},
+    {"id": "faca", "nome": "Faca", "categoria": 0, "dano": "1d4", "margem": 19, "multiplicador": 2, "tipo_dano": "corte", "pericia": "luta", "soma_forca": true, "ataque": "corpo_a_corpo"},
+    {"id": "machete", "nome": "Machete", "categoria": 0, "dano": "1d6", "margem": 19, "multiplicador": 2, "tipo_dano": "corte", "pericia": "luta", "soma_forca": true, "ataque": "corpo_a_corpo"},
+    {"id": "machado", "nome": "Machado", "categoria": 1, "dano": "1d8", "margem": 20, "multiplicador": 3, "tipo_dano": "corte", "pericia": "luta", "soma_forca": true, "ataque": "corpo_a_corpo"},
+    {"id": "espada", "nome": "Espada", "categoria": 1, "dano": "1d8", "margem": 19, "multiplicador": 2, "tipo_dano": "corte", "pericia": "luta", "soma_forca": true, "ataque": "corpo_a_corpo"},
+    {"id": "pistola", "nome": "Pistola", "categoria": 1, "dano": "1d12", "margem": 18, "multiplicador": 2, "tipo_dano": "balistico", "pericia": "pontaria", "soma_forca": false, "ataque": "fogo"},
+    {"id": "arco", "nome": "Arco", "categoria": 0, "dano": "1d6", "margem": 20, "multiplicador": 3, "tipo_dano": "perfuracao", "pericia": "pontaria", "soma_forca": false, "ataque": "disparo"},
+    {"id": "revolver", "nome": "Revólver", "categoria": 1, "dano": "2d6", "margem": 19, "multiplicador": 3, "tipo_dano": "balistico", "pericia": "pontaria", "soma_forca": false, "ataque": "fogo"},
+    {"id": "espingarda", "nome": "Espingarda", "categoria": 1, "dano": "4d6", "margem": 20, "multiplicador": 3, "tipo_dano": "balistico", "pericia": "pontaria", "soma_forca": false, "ataque": "fogo"}
   ]
 }

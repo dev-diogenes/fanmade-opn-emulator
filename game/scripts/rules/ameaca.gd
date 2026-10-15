@@ -22,6 +22,7 @@ static func criar(p_ruleset: Ruleset, p_nome: String, ficha: Dictionary) -> Amea
 	a.pericias = ficha.get("pericias", {})
 	for at in ficha.get("ataques", []):
 		a.ataques.append(at)
+	a.resistencias_base = ficha.get("resistencias", {})
 	a.tem_sanidade = false
 	return a
 
@@ -42,5 +43,9 @@ func bonus_pericia(pericia_id: String) -> int:
 	return 0
 
 
+func treinado_em(pericia_id: String) -> bool:
+	return pericias.has(pericia_id) and int(pericias[pericia_id].get("bonus", 0)) > 0
+
+
 func defesa() -> int:
-	return defesa_fixa
+	return defesa_fixa + defesa_temporaria

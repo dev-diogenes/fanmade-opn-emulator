@@ -7,8 +7,11 @@ var arma: Dictionary
 var teste: ResultadoTeste
 var acertou := false
 var critico := false
-var dano := 0
+var dano := 0           ## Dano efetivamente sofrido (após resistência)
+var dano_bruto := 0     ## Dano rolado, antes da resistência
 var pe_gasto := 0
+var reacao := ""        ## Reação usada pelo alvo: "esquiva", "bloqueio", "contra_ataque" ou ""
+var contra_ataque: ResultadoAtaque
 
 
 func descrever() -> String:

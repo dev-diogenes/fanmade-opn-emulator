@@ -10,6 +10,14 @@ var total := 0
 var dt := 0
 var natural_20 := false
 var sucesso := false
+var dados_bonus: Array[int] = []  ## Dados somados ao total (ex.: Perito +1d6)
+
+
+## Soma um bônus depois da rolagem (ex.: dado do Perito) e reavalia o sucesso.
+func somar_bonus(valor: int) -> void:
+	bonus += valor
+	total += valor
+	sucesso = natural_20 or total >= dt
 
 
 ## Texto curto para debug/log, ex.: "[14, 3, 9] maior 14 +5 = 19 vs DT 20 ✗"

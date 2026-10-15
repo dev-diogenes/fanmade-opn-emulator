@@ -9,6 +9,9 @@
     "pericias.json",
     "classes.json",
     "dificuldades.json",
+    "origens.json",
+    "poderes_classe.json",
+    "trilhas.json",
     "armas.json"
   ]
 }

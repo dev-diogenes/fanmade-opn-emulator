@@ -6,7 +6,8 @@
 |---|---|---|
 | **0. Organização** ✅ | Repositório, docs, visão, brainstorm, ADRs | Este documento existe 🙂 |
 | **1. Motor de regras** ✅ | `game/scripts/rules/` sem interface: agente, teste em slots, PE, PV/SAN, combate básico, carregados de `data/rulesets/op2022` | 34 testes GUT passando, cobrindo os testes de perícia e um combate 1×1 |
-| **1.5 Regras de criação** | Origens, poderes de classe e trilhas em dados; Ataque Especial, Eclético e Perito; reações (bloqueio, esquiva, contra-ataque); dano massivo; Lesões; Inspiração Resoluta | Agente criado do zero com todas as escolhas do livro |
+| **1.5 Regras de criação** ✅ | 26 origens, 50 poderes de classe e 15 trilhas em dados; criação validada (`CriacaoAgente`); Ataque Especial, Eclético, Engenhosidade e Perito; custo mínimo acima do limite de PE; reações (bloqueio, esquiva, contra-ataque); dano massivo; Lesões; Inspiração Resoluta | 76 testes GUT passando. Efeitos já aplicados pelo motor: 14/26 poderes de origem, 13/50 poderes de classe, 6/60 habilidades de trilha. O resto está marcado `"implementado": false` com o motivo em `pendente` |
+| **1.6 Pendências de regras** | Idade Variada e NEX 0%/Mundano; Versatilidade com trilha alheia; poderes que dependem só do motor atual (Combate com Duas Armas, Ataque Extra, Duro de Matar, Ataque Furtivo, Inspirar Confiança…); uma Iniciativa só para todas as ameaças; confirmar a regra de dados negativos (p.322) | Todos os poderes "só de combate" implementados |
 | **2. Fatia vertical** | 1 mapa hexagonal, 4 agentes, elemento Sangue, 5 ameaças, 1 chefe, Base da Ordem, Membrana, salvar | 5 playtesters de fora terminam uma missão |
 | **3. Investigação** | Cena com zoom, hotspots, urgência, ficha do grupo, relatório e PP | Uma missão com investigação e combate final |
 | **4. Procedural** | Gerador de missões com seed, os 4 elementos, rituais, itens amaldiçoados | 10 seeds seguidas jogáveis sem travar |
