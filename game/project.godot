@@ -7,8 +7,12 @@ config_version=5
 
 config/name="Ordem Paranormal: Fanmade (WIP)"
 config/description="RPG fanmade de Ordem Paranormal no estilo For The King. Não oficial."
-config/features=PackedStringArray("4.5", "Forward Plus")
+config/features=PackedStringArray("4.6", "Forward Plus")
 
 [internationalization]
 
 locale/fallback="pt_BR"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gut/plugin.cfg")

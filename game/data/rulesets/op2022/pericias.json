@@ -1,0 +1,40 @@
+{
+  "ref": "p.50",
+  "graus": [
+    { "id": "destreinado", "bonus": 0 },
+    { "id": "treinado", "bonus": 5 },
+    { "id": "veterano", "bonus": 10 },
+    { "id": "expert", "bonus": 15 }
+  ],
+  "penalidade_sem_kit": -5,
+  "pericias": [
+    { "id": "acrobacia", "nome": "Acrobacia", "atributo": "agi", "somente_treinada": false, "carga": true, "kit": false },
+    { "id": "adestramento", "nome": "Adestramento", "atributo": "pre", "somente_treinada": true, "carga": false, "kit": false },
+    { "id": "artes", "nome": "Artes", "atributo": "pre", "somente_treinada": true, "carga": false, "kit": false },
+    { "id": "atletismo", "nome": "Atletismo", "atributo": "for", "somente_treinada": false, "carga": false, "kit": false },
+    { "id": "atualidades", "nome": "Atualidades", "atributo": "int", "somente_treinada": false, "carga": false, "kit": false },
+    { "id": "ciencias", "nome": "Ciências", "atributo": "int", "somente_treinada": true, "carga": false, "kit": false },
+    { "id": "crime", "nome": "Crime", "atributo": "agi", "somente_treinada": true, "carga": true, "kit": true },
+    { "id": "diplomacia", "nome": "Diplomacia", "atributo": "pre", "somente_treinada": false, "carga": false, "kit": false },
+    { "id": "enganacao", "nome": "Enganação", "atributo": "pre", "somente_treinada": false, "carga": false, "kit": true },
+    { "id": "fortitude", "nome": "Fortitude", "atributo": "vig", "somente_treinada": false, "carga": false, "kit": false },
+    { "id": "furtividade", "nome": "Furtividade", "atributo": "agi", "somente_treinada": false, "carga": true, "kit": false },
+    { "id": "iniciativa", "nome": "Iniciativa", "atributo": "agi", "somente_treinada": false, "carga": false, "kit": false },
+    { "id": "intimidacao", "nome": "Intimidação", "atributo": "pre", "somente_treinada": false, "carga": false, "kit": false },
+    { "id": "intuicao", "nome": "Intuição", "atributo": "pre", "somente_treinada": false, "carga": false, "kit": false },
+    { "id": "investigacao", "nome": "Investigação", "atributo": "int", "somente_treinada": false, "carga": false, "kit": false },
+    { "id": "luta", "nome": "Luta", "atributo": "for", "somente_treinada": false, "carga": false, "kit": false },
+    { "id": "medicina", "nome": "Medicina", "atributo": "int", "somente_treinada": false, "carga": false, "kit": true },
+    { "id": "ocultismo", "nome": "Ocultismo", "atributo": "int", "somente_treinada": true, "carga": false, "kit": false },
+    { "id": "percepcao", "nome": "Percepção", "atributo": "pre", "somente_treinada": false, "carga": false, "kit": false },
+    { "id": "pilotagem", "nome": "Pilotagem", "atributo": "agi", "somente_treinada": true, "carga": false, "kit": false },
+    { "id": "pontaria", "nome": "Pontaria", "atributo": "agi", "somente_treinada": false, "carga": false, "kit": false },
+    { "id": "profissao", "nome": "Profissão", "atributo": "int", "somente_treinada": true, "carga": false, "kit": false },
+    { "id": "reflexos", "nome": "Reflexos", "atributo": "agi", "somente_treinada": false, "carga": false, "kit": false },
+    { "id": "religiao", "nome": "Religião", "atributo": "pre", "somente_treinada": true, "carga": false, "kit": false },
+    { "id": "sobrevivencia", "nome": "Sobrevivência", "atributo": "int", "somente_treinada": false, "carga": false, "kit": false },
+    { "id": "tatica", "nome": "Tática", "atributo": "int", "somente_treinada": true, "carga": false, "kit": false },
+    { "id": "tecnologia", "nome": "Tecnologia", "atributo": "int", "somente_treinada": true, "carga": false, "kit": true },
+    { "id": "vontade", "nome": "Vontade", "atributo": "pre", "somente_treinada": false, "carga": false, "kit": false }
+  ]
+}

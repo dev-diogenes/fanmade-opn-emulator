@@ -23,7 +23,7 @@ maior: 14  +5 (Furtividade treinada)  = 19   vs  DT 20  ✗
 - Antes de rolar, o jogador pode gastar PE: **cada PE adiciona 1 slot de d20** ao teste.
 - O gasto respeita o **limite de PE por turno** do NEX (p.33), somado ao PE gasto em habilidades no mesmo turno.
 - A tensão de cada turno fica entre "forçar este teste" e "guardar para a habilidade".
-- Com atributo 0, o slot extra entra na rolagem de "pior resultado": o PE ajuda a sair da penalidade, mas não a anula. ❓ Validar no playtest.
+- **Atributo 0 ✅ (implementado):** a reserva é `atributo + dados extras`. Com reserva 0 ou menos, rolam-se `2 − reserva` d20 e vale o pior. Então, com atributo 0, **1 PE de Foco leva a 1d20 normal**: o Foco tira o agente da penalidade. Penalidades que deixam a reserva negativa somam dados ao "pior". Essa extensão é interpretação nossa; ❓ confirmar nas Clarificações (p.322).
 - 🔧 **Balanceamento a observar:** quem tem atributo alto e muito PE pode quebrar as DTs. Se acontecer, o plano B é limitar o bônus a 2 slots extras por teste.
 
 ## 3. Investigação: zoom aproximado com a visão reduzida ✅

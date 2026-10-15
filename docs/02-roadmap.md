@@ -5,7 +5,8 @@
 | Fase | Entrega | Critério de pronto |
 |---|---|---|
 | **0. Organização** ✅ | Repositório, docs, visão, brainstorm, ADRs | Este documento existe 🙂 |
-| **1. Motor de regras** | `game/scripts/rules/` sem interface: agente, teste em slots, PE, PV/SAN, combate básico, carregados de `data/rulesets/op2022` | Testes automatizados (GUT) cobrindo os testes de perícia e um combate 1×1 |
+| **1. Motor de regras** ✅ | `game/scripts/rules/` sem interface: agente, teste em slots, PE, PV/SAN, combate básico, carregados de `data/rulesets/op2022` | 34 testes GUT passando, cobrindo os testes de perícia e um combate 1×1 |
+| **1.5 Regras de criação** | Origens, poderes de classe e trilhas em dados; Ataque Especial, Eclético e Perito; reações (bloqueio, esquiva, contra-ataque); dano massivo; Lesões; Inspiração Resoluta | Agente criado do zero com todas as escolhas do livro |
 | **2. Fatia vertical** | 1 mapa hexagonal, 4 agentes, elemento Sangue, 5 ameaças, 1 chefe, Base da Ordem, Membrana, salvar | 5 playtesters de fora terminam uma missão |
 | **3. Investigação** | Cena com zoom, hotspots, urgência, ficha do grupo, relatório e PP | Uma missão com investigação e combate final |
 | **4. Procedural** | Gerador de missões com seed, os 4 elementos, rituais, itens amaldiçoados | 10 seeds seguidas jogáveis sem travar |

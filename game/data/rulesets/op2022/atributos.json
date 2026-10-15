@@ -1,0 +1,16 @@
+{
+  "ref": "p.23-25",
+  "criacao": {
+    "valor_inicial": 1,
+    "pontos_para_distribuir": 4,
+    "maximo_inicial": 3,
+    "pode_reduzir_um_para_zero": true
+  },
+  "atributos": [
+    { "id": "agi", "nome": "Agilidade", "descricao": "Reflexos, velocidade e coordenação." },
+    { "id": "for", "nome": "Força", "descricao": "Potência física. Soma no dano corpo a corpo e de arremesso." },
+    { "id": "int", "nome": "Intelecto", "descricao": "Raciocínio e estudo. Dá perícias extras e limita rituais conhecidos." },
+    { "id": "pre", "nome": "Presença", "descricao": "Vontade, percepção e carisma. Soma nos PE por NEX." },
+    { "id": "vig", "nome": "Vigor", "descricao": "Saúde e resistência. Soma nos PV por NEX." }
+  ]
+}

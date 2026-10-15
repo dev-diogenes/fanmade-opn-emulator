@@ -1,0 +1,20 @@
+{
+  "ref": "p.85",
+  "dificuldades": [
+    { "id": "facil", "nome": "Fácil", "dt": 5 },
+    { "id": "media", "nome": "Média", "dt": 10 },
+    { "id": "dificil", "nome": "Difícil", "dt": 15 },
+    { "id": "muito_dificil", "nome": "Muito difícil", "dt": 20 },
+    { "id": "formidavel", "nome": "Formidável", "dt": 25 },
+    { "id": "heroica", "nome": "Heroica", "dt": 30 },
+    { "id": "quase_impossivel", "nome": "Quase impossível", "dt": 35 }
+  ],
+  "regras": {
+    "ref": "p.86-88",
+    "natural_20_sucesso_automatico": true,
+    "morrendo_turnos_para_morrer": 3,
+    "enlouquecendo_turnos_para_insano": 3,
+    "dt_estabilizar_morrendo": 20,
+    "dt_acalmar_enlouquecendo": 20
+  }
+}

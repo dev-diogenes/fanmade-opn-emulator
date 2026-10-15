@@ -1,0 +1,49 @@
+{
+  "ref": "p.32-45",
+  "nota": "PV e PE por NEX somam o atributo indicado a cada novo nível de exposição (5% em 5%).",
+  "classes": [
+    {
+      "id": "combatente",
+      "nome": "Combatente",
+      "ref": "p.34-35",
+      "descricao": "Linha de frente: armas, resistência e táticas de combate.",
+      "pv": { "inicial": 20, "atributo": "vig", "por_nex": 4 },
+      "pe": { "inicial": 2, "atributo": "pre", "por_nex": 2 },
+      "san": { "inicial": 12, "por_nex": 3 },
+      "pericias_fixas_escolha": [["luta", "pontaria"], ["fortitude", "reflexos"]],
+      "pericias_livres": { "base": 1, "soma_atributo": "int" },
+      "proficiencias": ["armas_simples", "armas_taticas", "protecoes_leves"]
+    },
+    {
+      "id": "especialista",
+      "nome": "Especialista",
+      "ref": "p.38-39",
+      "descricao": "Versátil: perícias, conhecimento técnico e improviso.",
+      "pv": { "inicial": 16, "atributo": "vig", "por_nex": 3 },
+      "pe": { "inicial": 3, "atributo": "pre", "por_nex": 3 },
+      "san": { "inicial": 16, "por_nex": 4 },
+      "pericias_fixas_escolha": [],
+      "pericias_livres": { "base": 7, "soma_atributo": "int" },
+      "proficiencias": ["armas_simples", "protecoes_leves"]
+    },
+    {
+      "id": "ocultista",
+      "nome": "Ocultista",
+      "ref": "p.42-43",
+      "descricao": "Estudioso do Outro Lado: conjura rituais, a um preço.",
+      "pv": { "inicial": 12, "atributo": "vig", "por_nex": 2 },
+      "pe": { "inicial": 4, "atributo": "pre", "por_nex": 4 },
+      "san": { "inicial": 20, "por_nex": 5 },
+      "pericias_fixas": ["ocultismo", "vontade"],
+      "pericias_fixas_escolha": [],
+      "pericias_livres": { "base": 3, "soma_atributo": "int" },
+      "proficiencias": ["armas_simples"]
+    }
+  ],
+  "derivadas": {
+    "ref": "p.46",
+    "defesa_base": 10,
+    "defesa_atributo": "agi",
+    "deslocamento_m": 9
+  }
+}

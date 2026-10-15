@@ -41,6 +41,17 @@ reference/            Material pago LOCAL, ignorado pelo Git
 2. Instale o [Git LFS](https://git-lfs.com) e rode `git lfs install`.
 3. Clone o repositório e abra `game/project.godot` no Godot.
 
+### Testes
+
+Os testes usam o [GUT](https://github.com/bitwes/Gut) 9.6.1, que já vem em `game/addons/gut`. Para rodar:
+
+- **No editor:** abra a aba **GUT** no painel inferior e clique em *Run All*.
+- **No terminal:**
+
+```bash
+GODOT=/caminho/para/Godot_v4.6.1-stable_win64_console.exe tools/rodar_testes.sh
+```
+
 ## Documentação
 
 - [Visão e Spec](docs/00-visao-e-spec.md)
