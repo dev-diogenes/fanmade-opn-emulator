@@ -46,7 +46,7 @@ func _ready() -> void:
 	Entrada.configurar()
 	_controles = _jogo.controles() if _jogo != null else ControleLocal.padrao()
 	sessao = _jogo.sessao if _jogo != null else Sessao.new()
-	sessao.entrar("mapa", _aplicar_comando)
+	sessao.entrar("mapa", _aplicar_comando, func(): return missao.agente_atual(), func(): return Comandos.hash_missao(missao))
 	_montar_interface()
 	for linha in missao.historico:
 		_log.append_text(linha + "\n")
@@ -61,6 +61,7 @@ func _ready() -> void:
 	if missao.encerrada:
 		_ao_encerrar(missao.vitoria)
 	_atualizar()
+	sessao.liberar()
 
 
 func _ao_mudar_turno(_a: Agente) -> void:
@@ -311,7 +312,8 @@ func _montar_interface() -> void:
 	_lbl_fim = Label.new()
 	_lbl_fim.add_theme_font_size_override("font_size", 28)
 	caixa.add_child(_lbl_fim)
-	caixa.add_child(_botao("Voltar à Base", _nova_missao))
+	var cliente: bool = _jogo != null and _jogo.rede.eh_cliente()
+	caixa.add_child(_botao("Voltar ao saguão" if cliente else "Voltar à Base", _nova_missao))
 	add_child(_painel_fim)
 
 

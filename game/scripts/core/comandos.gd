@@ -75,6 +75,8 @@ static func aplicar_investigacao(cena: CenaInvestigacao, cmd: Dictionary) -> Dic
 			var a := _agente_da_cena(cena, cmd.get("agente", -1))
 			return {"ok": a != null and cena.pagar_na_trilha_certa(a)}
 		"sair":
+			if not cena.encerrada:
+				return {"ok": false, "erro": "a cena ainda não acabou"}
 			return {"ok": true, "resultado": cena.resultado()}
 	return {"ok": false, "erro": "ação de investigação desconhecida: %s" % cmd.get("acao", "")}
 
@@ -187,6 +189,13 @@ static func hash_combate(c: Combate) -> int:
 			linha.append(vetor(c.grade.posicao(s)))
 		seres.append(linha)
 	var d := {"rodada": c.rodada, "vez": ref(c, c.ser_atual()), "encerrado": c.encerrado, "rng": str(c.dados.estado()), "seres": seres}
+	return JSON.stringify(_normalizar(d), "", true).hash()
+
+
+static func hash_investigacao(cena: CenaInvestigacao) -> int:
+	var d := {"rodada": cena.rodada, "indice": cena.indice, "falhas": cena.falhas, "encerrada": cena.encerrada,
+		"pontos": cena.pontos_restantes.duplicate(), "pistas": cena.pistas_encontradas.size(),
+		"agentes": cena.agentes.map(func(a): return [a.pv, a.pe, a.san]), "rng": str(cena.dados.estado())}
 	return JSON.stringify(_normalizar(d), "", true).hash()
 
 

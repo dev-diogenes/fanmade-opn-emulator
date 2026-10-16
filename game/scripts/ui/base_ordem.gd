@@ -19,6 +19,10 @@ var _caixa_grupo: VBoxContainer
 var _checks_grupo: Dictionary = {}     ## Agente -> CheckBox
 var _donos_grupo: Dictionary = {}      ## Agente -> OptionButton (dono no co-op local)
 var _caixa_jogadores: VBoxContainer
+var _caixa_online: VBoxContainer
+var _txt_porta: LineEdit
+var _txt_endereco: LineEdit
+var _txt_nome: LineEdit
 var _opt_missao: OptionButton
 var _txt_missao: RichTextLabel
 ## Uma entrada por item da lista de missões: {tipo: "procedural"|"campanha"|"comunidade", definicao, erros}
@@ -39,6 +43,11 @@ func _ready() -> void:
 	if not carreira.roster.is_empty():
 		_selecionado = carreira.roster[0]
 	_atualizar_tudo()
+	if _jogo != null:
+		_jogo.jogadores_mudaram.connect(_ao_mudar_jogadores)
+		if _jogo.aviso_rede != "":
+			_lbl_erros.text = _jogo.aviso_rede
+			_jogo.aviso_rede = ""
 
 
 # --- Montagem ------------------------------------------------------------------
@@ -123,9 +132,12 @@ func _montar_interface() -> void:
 	c3.add_child(_titulo("Grupo da missão (até 4)"))
 	_caixa_grupo = VBoxContainer.new()
 	c3.add_child(_caixa_grupo)
-	c3.add_child(_titulo("Jogadores (co-op local)"))
+	c3.add_child(_titulo("Jogadores (co-op local e online)"))
 	_caixa_jogadores = VBoxContainer.new()
 	c3.add_child(_caixa_jogadores)
+	c3.add_child(_titulo("Online"))
+	_caixa_online = VBoxContainer.new()
+	c3.add_child(_caixa_online)
 	c3.add_child(_titulo("Opções da run"))
 	_opt_modo = OptionButton.new()
 	_opt_modo.add_item("Normal (2 Reforços da Ordem)")
@@ -239,6 +251,7 @@ func _atualizar_tudo() -> void:
 		linha.add_child(dono)
 		_caixa_grupo.add_child(linha)
 	_montar_jogadores()
+	_montar_online()
 	_listar_missoes()
 	_opt_modo.select(0 if carreira.opcoes.get("modo_morte", "normal") == "normal" else 1)
 	_chk_lesoes.set_pressed_no_signal(carreira.opcoes.get("lesoes", true))
@@ -457,6 +470,14 @@ func _montar_jogadores() -> void:
 		var lbl := Label.new()
 		lbl.text = "Jogador %d" % (j + 1)
 		linha.add_child(lbl)
+		var jog_j: Dictionary = ctl.jogadores[j]
+		if jog_j.dispositivo == ControleLocal.REDE:
+			var online := Label.new()
+			online.text = "online: %s" % jog_j.get("nome", "?")
+			online.add_theme_color_override("font_color", Color("76d7c4"))
+			linha.add_child(online)
+			_caixa_jogadores.add_child(linha)
+			continue
 		var disp := OptionButton.new()
 		disp.add_item("Teclado e mouse")
 		for k in ControleLocal.MAX_JOGADORES:
@@ -502,6 +523,80 @@ func _definir_dispositivo(i: int, j: int) -> void:
 
 func _definir_dono(j: int, a: Agente) -> void:
 	carreira.controles.definir_dono(a, j)
+	if _jogo != null:
+		_jogo.controles_mudaram()
+
+
+# --- Online (Fase 8.2) ------------------------------------------------------------
+
+func _montar_online() -> void:
+	for filho in _caixa_online.get_children():
+		filho.queue_free()
+	var rede: Rede = _jogo.rede if _jogo != null else null
+	if rede == null:
+		return
+	if rede.eh_host():
+		var lbl := Label.new()
+		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lbl.text = "Hospedando na porta %d. Endereços desta máquina: %s. Quem entrar aparece em Jogadores; escolha os donos dos agentes no grupo." % [rede.porta, ", ".join(PackedStringArray(_enderecos_locais()))]
+		lbl.add_theme_color_override("font_color", Color("76d7c4"))
+		_caixa_online.add_child(lbl)
+		_caixa_online.add_child(_botao("Parar de hospedar", _parar_de_hospedar))
+		return
+	var linha_host := HBoxContainer.new()
+	_txt_porta = LineEdit.new()
+	_txt_porta.text = str(Rede.PORTA_PADRAO)
+	_txt_porta.placeholder_text = "porta"
+	_txt_porta.custom_minimum_size = Vector2(70, 0)
+	linha_host.add_child(_txt_porta)
+	linha_host.add_child(_botao("Hospedar", _hospedar))
+	_caixa_online.add_child(linha_host)
+	var linha_entrar := HBoxContainer.new()
+	_txt_endereco = LineEdit.new()
+	_txt_endereco.text = "127.0.0.1"
+	_txt_endereco.placeholder_text = "IP do host"
+	_txt_endereco.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	linha_entrar.add_child(_txt_endereco)
+	_txt_nome = LineEdit.new()
+	_txt_nome.placeholder_text = "seu nome"
+	_txt_nome.custom_minimum_size = Vector2(90, 0)
+	linha_entrar.add_child(_txt_nome)
+	linha_entrar.add_child(_botao("Entrar", _entrar_na_sessao))
+	_caixa_online.add_child(linha_entrar)
+
+
+func _enderecos_locais() -> Array:
+	var lista: Array = []
+	for ip in IP.get_local_addresses():
+		if not ":" in ip and not ip.begins_with("127.") and not ip.begins_with("169.254."):
+			lista.append(ip)
+	return lista if not lista.is_empty() else ["127.0.0.1"]
+
+
+func _porta() -> int:
+	var p := _txt_porta.text.to_int() if _txt_porta != null else Rede.PORTA_PADRAO
+	return p if p > 0 and p < 65536 else Rede.PORTA_PADRAO
+
+
+func _hospedar() -> void:
+	var erro: Error = _jogo.hospedar(_porta())
+	_lbl_erros.text = "" if erro == OK else "Não deu para hospedar (erro %d): a porta pode estar em uso." % erro
+	_atualizar_tudo()
+
+
+func _parar_de_hospedar() -> void:
+	_jogo.sair_da_sessao()
+
+
+func _entrar_na_sessao() -> void:
+	var erro: Error = _jogo.entrar_em_sessao(_txt_endereco.text.strip_edges(), _porta(), _txt_nome.text.strip_edges())
+	if erro != OK:
+		_lbl_erros.text = "Não deu para conectar (erro %d)." % erro
+
+
+func _ao_mudar_jogadores() -> void:
+	if is_inside_tree():
+		_atualizar_tudo()
 
 
 func _grupo() -> Array:

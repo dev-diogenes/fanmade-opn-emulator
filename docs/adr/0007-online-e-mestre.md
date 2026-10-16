@@ -50,3 +50,5 @@ Havia duas formas de sincronizar:
 - A IA das ameaças e a animação rodam em cada máquina, então a latência só pesa nas decisões dos jogadores.
 - Um novo tipo de ação no jogo precisa virar comando. Uma tela que chamar a lógica direto funciona offline, mas sai de sincronia online.
 - O registro de comandos também serve para reproduzir bugs: checkpoint mais comandos refazem a partida.
+- A tela avisa a sessão quando está ocupada, por exemplo enquanto anima os turnos da IA. Comandos da rede esperam por isso, e quem está atrasado pula as pausas. O checksum só vale nos pontos de decisão, que são iguais em todas as máquinas.
+- O teste de ponta a ponta é `tools/teste_online.sh`: dois processos do Godot sem janela, cada um com um robô que joga pelas telas a vez dos próprios agentes.

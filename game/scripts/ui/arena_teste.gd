@@ -70,7 +70,7 @@ func _ready() -> void:
 	if config.is_empty() and jogo != null and not jogo.combate_config.is_empty():
 		config = jogo.combate_config
 	sessao = jogo.sessao if jogo != null and not config.is_empty() else Sessao.new()
-	sessao.entrar("combate", _aplicar_comando)
+	sessao.entrar("combate", _aplicar_comando, func(): return fluxo.decisor() if fluxo != null else null, func(): return fluxo.hash_estado())
 	if not config.is_empty() and semente < 0:
 		semente = int(config.get("semente", -1))
 	iniciar_combate(semente if semente >= 0 else randi())
@@ -179,18 +179,23 @@ func _adicionar(ser: Ser, arma: Dictionary, pos: Vector2i) -> void:
 ## Passa para o próximo turno. Turnos da IA são jogados aqui (com uma pausa curta para
 ## o jogador acompanhar, exceto no autoplay). Para quando chega a vez de um agente.
 ## O passo a passo é o do FluxoCombate (o mesmo do piloto e da rede); aqui só entram as pausas.
+## Enquanto a IA joga, a sessão fica ocupada (comandos de outros jogadores esperam); quem
+## está atrasado na rede pula as pausas.
 func _avancar() -> void:
+	sessao.ocupado = true
 	while true:
 		_modo = ""
 		var ser := fluxo.proximo()
 		_selecionado = ser
 		_atualizar()
 		if ser == null:
+			sessao.liberar()
 			return
 		if fluxo.decide_jogador(ser):
 			_focar_para_controle()
+			sessao.liberar()
 			return   # vez do jogador
-		if not autoplay:
+		if not autoplay and not sessao.atrasado():
 			await get_tree().create_timer(0.6).timeout
 			if not is_inside_tree():
 				return
@@ -303,8 +308,8 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 			return res
 		"sair":
 			var jogo := get_node_or_null("/root/Jogo")
-			if jogo != null and not config.is_empty():
-				jogo.voltar_do_combate(_vencedor)
+			if res.ok and jogo != null and not config.is_empty():
+				jogo.voltar_do_combate(res.vencedor)
 			return res
 	_atualizar()
 	return res

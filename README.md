@@ -18,6 +18,7 @@ As duas usam o mesmo motor, com rulesets diferentes ([ADR 0002](docs/adr/0002-re
 - **Sandbox:** escolha seus agentes e jogue missões geradas proceduralmente.
 - **Campanha:** *O Fundo da Represa*, história original em 4 missões.
 - **Comunidade:** missões criadas por jogadores, com ou sem mestre.
+- **Online:** até 4 jogadores, cada um no seu computador ([como jogar](docs/06-online.md)).
 
 ## Estrutura
 
@@ -98,6 +99,10 @@ Na Base, em **Missão**, escolha **Campanha: O Fundo da Represa**. É uma histó
 - Perder não avança a campanha: a mesma missão espera outra tentativa.
 - O formato está em [docs/05-campanha.md](docs/05-campanha.md).
 
+### Online
+
+Na Base, em **Online**, uma pessoa clica em **Hospedar** (porta 7777) e as outras escrevem o IP dela e clicam em **Entrar**. Quem entra espera no saguão. O host escolhe o dono de cada agente no grupo e começa a missão; cada um joga a vez dos seus agentes. A carreira é do host; quem entrou volta para a própria carreira ao sair. Detalhes, rede e o teste com dois processos estão em [docs/06-online.md](docs/06-online.md).
+
 ### Co-op local (até 4 jogadores)
 
 Na Base, em **Jogadores (co-op local)**, adicione jogadores e escolha o dispositivo de cada um (teclado e mouse ou um controle). No grupo da missão, cada agente ganha um dono. Na vez de um agente, só o dispositivo do dono funciona, e uma faixa amarela avisa de quem é a vez. Com controle: o direcional e A/B navegam os botões, LB/RB trocam o foco, e depois de rolar o movimento (ou num modo de ataque, movimento ou ritual na arena) o direcional ou o analógico movem um cursor pelo tabuleiro, A confirma e B volta para os botões. Na investigação, "Próximo ponto" troca o ponto de interesse.
@@ -142,6 +147,7 @@ GODOT=/caminho/para/Godot_v4.6.1-stable_win64_console.exe tools/rodar_testes.sh
 - [Legal e Conteúdo](docs/03-legal-e-conteudo.md)
 - [Missões da comunidade](docs/04-missoes-da-comunidade.md)
 - [Campanha](docs/05-campanha.md)
+- [Jogar online](docs/06-online.md)
 - [Decisões de arquitetura (ADRs)](docs/adr/)
 
 ## Contribuindo

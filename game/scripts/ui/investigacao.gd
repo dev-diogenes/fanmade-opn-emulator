@@ -44,7 +44,7 @@ func _ready() -> void:
 		missao._preparar_investigacao(missao.mapa.encontrar("inicio"), "casa_abandonada")
 	cena = missao.criar_cena_investigacao()
 	sessao = _jogo.sessao if _jogo != null and _jogo.missao == missao else Sessao.new()
-	sessao.entrar("investigacao", _aplicar_comando)
+	sessao.entrar("investigacao", _aplicar_comando, func(): return cena.agente_atual(), func(): return Comandos.hash_investigacao(cena))
 	Entrada.configurar()
 	_controles = _jogo.controles() if _jogo != null and _jogo.missao == missao else ControleLocal.padrao()
 	_montar_interface()
@@ -53,6 +53,7 @@ func _ready() -> void:
 	# Registro do início da cena (emitido antes da conexão)
 	_log.append_text("[b]%s[/b] — urgência %s (%d rodadas).\n[i]Pista básica:[/i] %s\n" % [cena.cena.nome, String(cena.urgencia.get("nome", "")).to_lower(), cena.rodadas_max, cena.cena.pista_basica])
 	_atualizar()
+	sessao.liberar()
 
 
 # --- Interface -------------------------------------------------------------------
@@ -368,7 +369,8 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 			if not res.ok:
 				_log.append_text("[color=#e67e22]Não dá para ajudar agora.[/color]\n")
 		"sair":
-			_jogo.voltar_da_investigacao(res.resultado)
+			if res.ok and _jogo != null:
+				_jogo.voltar_da_investigacao(res.resultado)
 			return res
 	_atualizar()
 	return res
