@@ -85,6 +85,10 @@ Algumas criaturas só caem quando o grupo resolve o **Enigma de Medo** delas (bo
 
 Granadas (de fragmentação, incendiária e de atordoamento) são requisitadas na Base e usadas pelo seletor de itens da arena: atingem todos num raio de 6 m, aliados inclusive. O fogo é a única coisa que fere a Aracnasita e ajuda a murchar uma das flores da Dama de Sangue; as outras flores murcham com fertilizante, agrotóxico, um bulbo raro ou água corrente. O covil do fim da missão muda com a experiência do grupo: Portão do Inferno, o Julgamento do Anjo, o Apocalipse da Aniquilação, o Deus da Morte e, para um grupo no auge (NEX somado 390), O Pacto com o Diabo — que só cede a uma força de Morte equivalente.
 
+### Co-op local (até 4 jogadores)
+
+Na Base, em **Jogadores (co-op local)**, adicione jogadores e escolha o dispositivo de cada um (teclado e mouse ou um controle). No grupo da missão, cada agente ganha um dono. Na vez de um agente, só o dispositivo do dono funciona, e uma faixa amarela avisa de quem é a vez. Com controle: o direcional e A/B navegam os botões, LB/RB trocam o foco, e depois de rolar o movimento (ou num modo de ataque, movimento ou ritual na arena) o direcional ou o analógico movem um cursor pelo tabuleiro, A confirma e B volta para os botões. Na investigação, "Próximo ponto" troca o ponto de interesse.
+
 ### Investigação
 
 Os hexes com o **anel verde-água** são cenas de investigação. Ao entrar, o grupo (agentes a até 2 hexes) vai para uma cena 3D escura, com a luz curta:

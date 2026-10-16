@@ -16,6 +16,8 @@ var opcoes: Dictionary = {"modo_morte": "normal", "lesoes": true, "inspiracao_re
 var missao: Missao
 var missoes_concluidas := 0
 var ultimo_relatorio: Dictionary = {}
+## Co-op local (ADR 0004): jogadores e dono de cada agente
+var controles: ControleLocal = ControleLocal.padrao()
 var _proximo_id := 1
 
 
@@ -163,7 +165,7 @@ func para_dicionario() -> Dictionary:
 	return {
 		"versao": VERSAO, "ruleset": ruleset.id, "proximo_id": _proximo_id,
 		"roster": roster.map(func(a): return a.para_dicionario()),
-		"memorial": memorial.duplicate(true), "opcoes": opcoes.duplicate(),
+		"memorial": memorial.duplicate(true), "opcoes": opcoes.duplicate(), "controles": controles.para_dicionario(),
 		"missoes_concluidas": missoes_concluidas, "ultimo_relatorio": ultimo_relatorio.duplicate(true),
 		"missao": missao.para_dicionario() if missao != null else {},
 		# Agentes que estão na missão mas saíram do roster (mortos aguardando o relatório)
@@ -192,6 +194,7 @@ static func de_dicionario(d: Dictionary, ruleset_: Ruleset = null) -> Carreira:
 	for m in d.get("memorial", []):
 		c.memorial.append(m)
 	c.opcoes = d.get("opcoes", c.opcoes)
+	c.controles = ControleLocal.de_dicionario(d.get("controles", {}))
 	c.missoes_concluidas = int(d.get("missoes_concluidas", 0))
 	c.ultimo_relatorio = d.get("ultimo_relatorio", {})
 	var md: Dictionary = d.get("missao", {})

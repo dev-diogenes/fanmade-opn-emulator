@@ -21,6 +21,7 @@ var _posicoes: Dictionary = {}    ## Ser -> Vector3
 var _destaques: Node3D
 var _anel_vez: MeshInstance3D
 var _anel_sel: MeshInstance3D
+var _cursor: MeshInstance3D   ## cursor do controle (co-op local)
 
 
 func construir(p_grade: Grade) -> void:
@@ -71,6 +72,26 @@ func celula_em(pos_tela: Vector2) -> Vector2i:
 		return Vector2i(-1, -1)
 	var c := Vector2i(floori(ponto.x), floori(ponto.z))
 	return c if grade.dentro(c) else Vector2i(-1, -1)
+
+
+func mostrar_cursor(c: Vector2i, visivel: bool) -> void:
+	if _cursor == null:
+		_cursor = Pecas.anel(0.48, Color("f7dc6f"))
+		add_child(_cursor)
+	_cursor.visible = visivel and grade != null and grade.dentro(c)
+	if _cursor.visible:
+		_cursor.position = posicao(c) + Vector3(0, 0.03, 0)
+
+
+## Célula vizinha na direção pedida na tela (o giro da câmera é arredondado a 90°).
+func celula_na_direcao(c: Vector2i, dir: Vector2i) -> Vector2i:
+	var g := rig.giro if rig != null else 0.0
+	var quartos := posmod(roundi(g / (PI / 2.0)), 4)
+	var d := dir
+	for _i in quartos:
+		d = Vector2i(d.y, -d.x)
+	var nova := c + d
+	return nova if grade.dentro(nova) else c
 
 
 func atualizar(destinos: Array, alvos: Array, atual: Ser, selecionado: Ser, zonas: Array = []) -> void:

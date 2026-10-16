@@ -20,6 +20,7 @@ var _fichas: Dictionary = {}       ## Agente -> Node3D
 var _destaques: Node3D
 var _anel_vez: MeshInstance3D
 var _ultima_posicao: Dictionary = {}
+var _cursor: MeshInstance3D   ## cursor do controle (co-op local)
 
 
 func construir(p_mapa: MapaHex, terrenos: Dictionary) -> void:
@@ -117,6 +118,35 @@ func _decorar(raiz: Node3D, h: Vector2i, terreno: String, altura: float) -> void
 
 
 ## Sincroniza a apresentação com o estado da missão.
+## Cursor dos controles: um anel amarelo sobre o hex.
+func mostrar_cursor(h: Vector2i, visivel: bool) -> void:
+	if _cursor == null:
+		_cursor = Pecas.anel(RAIO * 0.85, Color("f7dc6f"))
+		add_child(_cursor)
+	_cursor.visible = visivel and mapa.tem(h)
+	if _cursor.visible:
+		_cursor.position = posicao_hex(h) + Vector3(0, 0.06, 0)
+
+
+## Vizinho de `h` na direção pedida na tela (considera o giro da câmera).
+func vizinho_na_direcao(h: Vector2i, dir: Vector2i) -> Vector2i:
+	var g := rig.giro if rig != null else 0.0
+	var direita := Vector3(cos(g), 0, -sin(g))
+	var frente := Vector3(-sin(g), 0, -cos(g))
+	var desejo := (direita * dir.x - frente * dir.y).normalized()
+	var melhor := h
+	var melhor_dot := 0.3
+	for v in Hex.vizinhos(h):
+		if not mapa.tem(v):
+			continue
+		var delta := posicao_hex(v, 0.0) - posicao_hex(h, 0.0)
+		var d := delta.normalized().dot(desejo)
+		if d > melhor_dot:
+			melhor_dot = d
+			melhor = v
+	return melhor
+
+
 func atualizar(missao: Missao, destinos: Dictionary) -> void:
 	for h in _tiles:
 		var revelado := mapa.revelado(h)

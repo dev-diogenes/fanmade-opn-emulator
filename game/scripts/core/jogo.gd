@@ -18,6 +18,15 @@ var missao: Missao:
 		return carreira.missao if carreira != null else null
 
 
+func _ready() -> void:
+	Entrada.configurar()
+
+
+## Jogadores locais da carreira (um só, no teclado, se ainda não houver carreira).
+func controles() -> ControleLocal:
+	return carreira.controles if carreira != null else ControleLocal.padrao()
+
+
 func carregar_ou_criar() -> Carreira:
 	if carreira == null:
 		carreira = Carreira.carregar()

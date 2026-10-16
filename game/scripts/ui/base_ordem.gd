@@ -17,6 +17,8 @@ var _opt_arma: OptionButton
 var _lbl_requisicao: Label
 var _caixa_grupo: VBoxContainer
 var _checks_grupo: Dictionary = {}     ## Agente -> CheckBox
+var _donos_grupo: Dictionary = {}      ## Agente -> OptionButton (dono no co-op local)
+var _caixa_jogadores: VBoxContainer
 var _opt_modo: OptionButton
 var _chk_lesoes: CheckBox
 var _chk_inspiracao: CheckBox
@@ -112,6 +114,9 @@ func _montar_interface() -> void:
 	c3.add_child(_titulo("Grupo da missão (até 4)"))
 	_caixa_grupo = VBoxContainer.new()
 	c3.add_child(_caixa_grupo)
+	c3.add_child(_titulo("Jogadores (co-op local)"))
+	_caixa_jogadores = VBoxContainer.new()
+	c3.add_child(_caixa_jogadores)
 	c3.add_child(_titulo("Opções da run"))
 	_opt_modo = OptionButton.new()
 	_opt_modo.add_item("Normal (2 Reforços da Ordem)")
@@ -194,12 +199,26 @@ func _atualizar_tudo() -> void:
 	for filho in _caixa_grupo.get_children():
 		filho.queue_free()
 	_checks_grupo.clear()
+	_donos_grupo.clear()
+	var ctl := carreira.controles
 	for a in carreira.roster:
+		var linha := HBoxContainer.new()
 		var chk := CheckBox.new()
 		chk.text = a.nome
+		chk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		chk.button_pressed = _checks_grupo.size() < 3
 		_checks_grupo[a] = chk
-		_caixa_grupo.add_child(chk)
+		linha.add_child(chk)
+		var dono := OptionButton.new()
+		for j in ctl.jogadores.size():
+			dono.add_item("Jogador %d" % (j + 1))
+		dono.select(ctl.jogador_de(a))
+		dono.item_selected.connect(_definir_dono.bind(a))
+		dono.visible = ctl.co_op()
+		_donos_grupo[a] = dono
+		linha.add_child(dono)
+		_caixa_grupo.add_child(linha)
+	_montar_jogadores()
 	_opt_modo.select(0 if carreira.opcoes.get("modo_morte", "normal") == "normal" else 1)
 	_chk_lesoes.set_pressed_no_signal(carreira.opcoes.get("lesoes", true))
 	_chk_inspiracao.set_pressed_no_signal(carreira.opcoes.get("inspiracao_resoluta", true))
@@ -387,6 +406,65 @@ func _requisitar() -> void:
 	_lbl_requisicao.text = "\n".join(erros) if not erros.is_empty() else "Equipamento requisitado."
 	_salvar()
 	_atualizar_agente()
+
+
+# --- Co-op local (ADR 0004) ---------------------------------------------------
+
+func _montar_jogadores() -> void:
+	for filho in _caixa_jogadores.get_children():
+		filho.queue_free()
+	var ctl := carreira.controles
+	var conectados := Input.get_connected_joypads()
+	for j in ctl.jogadores.size():
+		var linha := HBoxContainer.new()
+		var lbl := Label.new()
+		lbl.text = "Jogador %d" % (j + 1)
+		linha.add_child(lbl)
+		var disp := OptionButton.new()
+		disp.add_item("Teclado e mouse")
+		for k in ControleLocal.MAX_JOGADORES:
+			disp.add_item("Controle %d%s" % [k + 1, "" if k in conectados else " (desconectado)"])
+		var jog: Dictionary = ctl.jogadores[j]
+		disp.select(0 if jog.dispositivo == ControleLocal.TECLADO else int(jog.indice) + 1)
+		disp.item_selected.connect(_definir_dispositivo.bind(j))
+		linha.add_child(disp)
+		if j > 0:
+			linha.add_child(_botao("Remover", _remover_jogador.bind(j)))
+		_caixa_jogadores.add_child(linha)
+	if ctl.jogadores.size() < ControleLocal.MAX_JOGADORES:
+		_caixa_jogadores.add_child(_botao("+ Jogador", _adicionar_jogador))
+	if ctl.co_op():
+		var dica := Label.new()
+		dica.text = "Cada agente do grupo tem um dono: na vez dele, só o dispositivo desse jogador controla o jogo."
+		dica.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		dica.add_theme_color_override("font_color", Color("aab7b8"))
+		_caixa_jogadores.add_child(dica)
+
+
+func _adicionar_jogador() -> void:
+	var ctl := carreira.controles
+	var usados := ctl.jogadores.filter(func(j): return j.dispositivo == ControleLocal.CONTROLE).map(func(j): return int(j.indice))
+	var livre := 0
+	while livre in usados:
+		livre += 1
+	ctl.adicionar_jogador(ControleLocal.CONTROLE, livre)
+	_atualizar_tudo()
+
+
+func _remover_jogador(j: int) -> void:
+	carreira.controles.remover_jogador(j)
+	_atualizar_tudo()
+
+
+func _definir_dispositivo(i: int, j: int) -> void:
+	if i == 0:
+		carreira.controles.definir_dispositivo(j, ControleLocal.TECLADO)
+	else:
+		carreira.controles.definir_dispositivo(j, ControleLocal.CONTROLE, i - 1)
+
+
+func _definir_dono(j: int, a: Agente) -> void:
+	carreira.controles.definir_dono(a, j)
 
 
 func _grupo() -> Array:

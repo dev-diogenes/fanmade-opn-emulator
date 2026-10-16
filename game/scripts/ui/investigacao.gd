@@ -27,6 +27,10 @@ var _caso: RichTextLabel
 var _log: RichTextLabel
 var _botoes_acao: Array[Button] = []
 var _painel_fim: PanelContainer
+var _lbl_vez: Label
+var _controles: ControleLocal
+var _btn_procurar: Button
+var _ultimo_agente: Agente
 
 
 func _ready() -> void:
@@ -38,6 +42,8 @@ func _ready() -> void:
 		missao = Missao.nova(42)
 		missao._preparar_investigacao(missao.mapa.encontrar("inicio"), "casa_abandonada")
 	cena = missao.criar_cena_investigacao()
+	Entrada.configurar()
+	_controles = _jogo.controles() if _jogo != null and _jogo.missao == missao else ControleLocal.padrao()
 	_montar_interface()
 	cena.registro.connect(func(t): _log.append_text(t + "\n"))
 	cena.terminou.connect(func(_r): _painel_fim.visible = true)
@@ -81,10 +87,16 @@ func _montar_interface() -> void:
 	p.add_theme_constant_override("separation", 4)
 	rolagem.add_child(p)
 
+	_lbl_vez = _label(p, 18)
+	_lbl_vez.add_theme_color_override("font_color", Color("f7dc6f"))
 	_lbl_topo = _label(p, 16)
 	_lbl_agente = _label(p)
-	_lbl_ponto = _label(p)
+	var lp := HBoxContainer.new()
+	p.add_child(lp)
+	_lbl_ponto = _label(lp)
 	_lbl_ponto.add_theme_color_override("font_color", Color("76d7c4"))
+	_lbl_ponto.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_botao(lp, "Próximo ponto", _proximo_ponto)
 
 	var l1 := HBoxContainer.new()
 	p.add_child(l1)
@@ -100,7 +112,8 @@ func _montar_interface() -> void:
 	_chk_faro = _check(l2, "Faro p/ Pistas")
 	_chk_perito = _check(l2, "Perito")
 	_chk_ecletico = _check(l2, "Eclético")
-	_botoes_acao.append(_botao(p, "Procurar pistas", _procurar))
+	_btn_procurar = _botao(p, "Procurar pistas", _procurar)
+	_botoes_acao.append(_btn_procurar)
 
 	_label(p).text = "Facilitar a investigação"
 	var l3 := HBoxContainer.new()
@@ -181,6 +194,12 @@ func _botao(pai: Control, texto: String, acao: Callable) -> Button:
 
 func _atualizar() -> void:
 	var a := cena.agente_atual()
+	_lbl_vez.text = _controles.faixa_da_vez(a)
+	_lbl_vez.visible = _lbl_vez.text != ""
+	if a != _ultimo_agente:
+		_ultimo_agente = a
+		if a != null and _controles.usa_controle(a) and is_inside_tree():
+			_btn_procurar.grab_focus.call_deferred()
 	_lbl_topo.text = "%s — rodada %d de %d%s" % [cena.cena.nome, mini(cena.rodada, cena.rodadas_max), cena.rodadas_max, "" if a == null else " — vez de %s" % a.nome]
 	if a != null:
 		_lbl_agente.text = "%s: PE %d/%d (+%d temp.)  SAN %d/%d" % [a.nome, a.pe, a.pe_maximo, a.pe_temporario, a.san, a.san_maximo]
@@ -234,6 +253,23 @@ func _atualizar() -> void:
 			"  → [color=#f7dc6f]%s[/color]" % resp if resp != "" else ""])
 	_caso.text = "\n".join(linhas)
 	_visao.atualizar(cena, _ponto)
+
+
+# --- Co-op local e controles (ADR 0004) ---------------------------------------------
+
+## Só o dispositivo do dono do agente da vez age na cena.
+func _input(evento: InputEvent) -> void:
+	if _controles != null and cena != null and not _controles.evento_permitido(evento, cena.agente_atual()):
+		get_viewport().set_input_as_handled()
+
+
+## Troca o ponto de interesse sem o mouse (controles).
+func _proximo_ponto() -> void:
+	if cena.pontos_restantes.is_empty():
+		return
+	var i := cena.pontos_restantes.find(_ponto)
+	_ponto = cena.pontos_restantes[(i + 1) % cena.pontos_restantes.size()]
+	_atualizar()
 
 
 # --- Ações -----------------------------------------------------------------------

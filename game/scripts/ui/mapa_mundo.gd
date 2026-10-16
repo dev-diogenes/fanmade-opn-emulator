@@ -29,6 +29,10 @@ var _btn_testar: Button
 var _log: RichTextLabel
 var _painel_fim: PanelContainer
 var _lbl_fim: Label
+var _lbl_vez: Label
+var _controles: ControleLocal
+var _cursor := Vector2i.ZERO
+var _cursor_ativo := false
 
 
 func _ready() -> void:
@@ -38,6 +42,8 @@ func _ready() -> void:
 	else:
 		missao = Missao.nova(randi() % 1000000)
 	_terrenos = DadosJogo.ler("mapa").terrenos
+	Entrada.configurar()
+	_controles = _jogo.controles() if _jogo != null else ControleLocal.padrao()
 	_montar_interface()
 	for linha in missao.historico:
 		_log.append_text(linha + "\n")
@@ -47,13 +53,58 @@ func _ready() -> void:
 	missao.encontro_iniciado.connect(_ao_encontro)
 	missao.investigacao_iniciada.connect(_ao_investigar)
 	missao.missao_encerrada.connect(_ao_encerrar)
-	missao.turno_mudou.connect(func(_a):
-		_mapa3d.focar_agente(missao)
-		_atualizar())
+	missao.turno_mudou.connect(_ao_mudar_turno)
 	_mapa3d.focar_agente(missao, true)
 	if missao.encerrada:
 		_ao_encerrar(missao.vitoria)
 	_atualizar()
+
+
+func _ao_mudar_turno(_a: Agente) -> void:
+	_cursor_ativo = false
+	_mapa3d.focar_agente(missao)
+	_atualizar()
+	_focar_para_controle()
+
+
+## Com um controle na vez, o foco vai para o botão principal (a navegação é pelo direcional).
+func _focar_para_controle() -> void:
+	var a := missao.agente_atual()
+	if a != null and _controles.usa_controle(a) and is_inside_tree():
+		(_btn_testar if _painel_evento.visible else _btn_rolar).grab_focus()
+
+
+# --- Co-op local e controles (ADR 0004) ------------------------------------
+
+## Só o dispositivo do dono do agente da vez controla o mapa. Com um controle: o direcional
+## move o cursor pelos hexes depois de rolar o movimento, A anda até ele, B volta aos botões.
+func _input(evento: InputEvent) -> void:
+	if not _controles.evento_permitido(evento, missao.agente_atual()):
+		get_viewport().set_input_as_handled()
+		return
+	if not (evento is InputEventJoypadButton or evento is InputEventJoypadMotion):
+		return
+	var destinos := missao.destinos()
+	var dir := Entrada.direcao(evento)
+	if dir != Vector2i.ZERO and not destinos.is_empty():
+		if not _cursor_ativo:
+			_cursor_ativo = true
+			_cursor = missao.posicao(missao.agente_atual())
+		_cursor = _mapa3d.vizinho_na_direcao(_cursor, dir)
+		_mapa3d.mostrar_cursor(_cursor, true)
+		get_viewport().set_input_as_handled()
+	elif _cursor_ativo and evento.is_action_pressed("confirmar"):
+		if missao.mover(_cursor):
+			_cursor_ativo = false
+			_mapa3d.focar_agente(missao)
+			_atualizar()
+			_focar_para_controle()
+		get_viewport().set_input_as_handled()
+	elif _cursor_ativo and evento.is_action_pressed("cancelar"):
+		_cursor_ativo = false
+		_mapa3d.mostrar_cursor(_cursor, false)
+		_focar_para_controle()
+		get_viewport().set_input_as_handled()
 
 
 # --- Ações -----------------------------------------------------------------
@@ -62,6 +113,11 @@ func _rolar() -> void:
 	missao.rolar_movimento(int(_spin_foco.value))
 	_spin_foco.value = 0
 	_atualizar()
+	var a := missao.agente_atual()
+	if a != null and _controles.usa_controle(a) and not missao.destinos().is_empty():
+		_cursor_ativo = true   # depois de rolar, o direcional já move o cursor
+		_cursor = missao.posicao(a)
+		_mapa3d.mostrar_cursor(_cursor, true)
 
 
 func _descansar() -> void:
@@ -164,6 +220,10 @@ func _montar_interface() -> void:
 	painel.add_theme_constant_override("separation", 6)
 	raiz.add_child(painel)
 
+	_lbl_vez = Label.new()
+	_lbl_vez.add_theme_font_size_override("font_size", 18)
+	_lbl_vez.add_theme_color_override("font_color", Color("f7dc6f"))
+	painel.add_child(_lbl_vez)
 	_lbl_turno = Label.new()
 	_lbl_turno.add_theme_font_size_override("font_size", 17)
 	painel.add_child(_lbl_turno)
@@ -244,6 +304,13 @@ func _botao(texto: String, acao: Callable) -> Button:
 
 
 func _atualizar() -> void:
+	if _lbl_vez != null:
+		_lbl_vez.text = _controles.faixa_da_vez(missao.agente_atual())
+		_lbl_vez.visible = _lbl_vez.text != ""
+	if _mapa3d != null and missao.destinos().is_empty():
+		_cursor_ativo = false
+	if _mapa3d != null:
+		_mapa3d.mostrar_cursor(_cursor, _cursor_ativo)
 	if _lbl_turno == null:
 		return
 	var a := missao.agente_atual()

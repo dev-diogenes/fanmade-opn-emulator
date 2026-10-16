@@ -48,6 +48,10 @@ var _btn_soltar: Button
 var _btn_apagar: Button
 var _opt_item: OptionButton
 var _btn_item_combate: Button
+var _lbl_vez: Label
+var _controles: ControleLocal
+var _cursor := Vector2i.ZERO
+var _cursor_ativo := false
 var _opt_ritual: OptionButton
 var _spin_foco: SpinBox
 var _chk_ae: CheckBox
@@ -72,6 +76,9 @@ func _ready() -> void:
 # --- Preparação ------------------------------------------------------------
 
 func iniciar_combate(semente: int) -> void:
+	Entrada.configurar()
+	var jogo_c := get_node_or_null("/root/Jogo")
+	_controles = jogo_c.controles() if jogo_c != null and not config.is_empty() else ControleLocal.padrao()
 	ruleset = RulesetOp2022.carregar_padrao()
 	dados = Dados.new(semente)
 	var jogo := get_node_or_null("/root/Jogo")
@@ -178,13 +185,57 @@ func _avancar() -> void:
 		_atualizar()
 		if ser == null:
 			return
-		if ser is Agente and not autoplay:
+		if _agente_da_vez() != null:
+			_focar_para_controle()
 			return   # vez do jogador
 		if not autoplay:
 			await get_tree().create_timer(0.6).timeout
 			if not is_inside_tree():
 				return
 		_jogar_ia(ser)
+
+
+# --- Co-op local e controles (ADR 0004) ------------------------------------
+
+func _focar_para_controle() -> void:
+	var a := _agente_da_vez()
+	if a != null and _controles.usa_controle(a) and is_inside_tree() and _btn_atacar != null:
+		_btn_atacar.grab_focus()
+
+
+## Só o dispositivo do dono do agente da vez age. Com um controle, nos modos que pedem um
+## quadrado (mover, atacar, ritual, granada…), o direcional move o cursor, A escolhe e B cancela.
+func _input(evento: InputEvent) -> void:
+	if _controles == null:
+		return
+	if not _controles.evento_permitido(evento, _agente_da_vez()):
+		get_viewport().set_input_as_handled()
+		return
+	if not (evento is InputEventJoypadButton or evento is InputEventJoypadMotion) or grade == null:
+		return
+	var agente := _agente_da_vez()
+	if agente == null or _modo == "":
+		_cursor_ativo = false
+		return
+	var dir := Entrada.direcao(evento)
+	if dir != Vector2i.ZERO:
+		if not _cursor_ativo:
+			_cursor_ativo = true
+			_cursor = grade.posicao(agente)
+		_cursor = _tab3d.celula_na_direcao(_cursor, dir)
+		_tab3d.mostrar_cursor(_cursor, true)
+		get_viewport().set_input_as_handled()
+	elif evento.is_action_pressed("confirmar") and _cursor_ativo:
+		_cursor_ativo = false
+		_clicar_celula(_cursor)
+		_focar_para_controle()
+		get_viewport().set_input_as_handled()
+	elif evento.is_action_pressed("cancelar"):
+		_cursor_ativo = false
+		_modo = ""
+		_atualizar()
+		_focar_para_controle()
+		get_viewport().set_input_as_handled()
 
 
 ## IA (ameaças e autoplay): veja IaCombate.
@@ -321,6 +372,10 @@ func _montar_interface() -> void:
 	painel.add_theme_constant_override("separation", 6)
 	raiz.add_child(painel)
 
+	_lbl_vez = Label.new()
+	_lbl_vez.add_theme_font_size_override("font_size", 18)
+	_lbl_vez.add_theme_color_override("font_color", Color("f7dc6f"))
+	painel.add_child(_lbl_vez)
 	_lbl_turno = Label.new()
 	_lbl_turno.add_theme_font_size_override("font_size", 18)
 	painel.add_child(_lbl_turno)
@@ -687,3 +742,9 @@ func _atualizar_3d() -> void:
 	for z in combate.zonas():
 		zonas.append({"celulas": z.celulas, "elemento": ruleset.ritual(z.ritual).elemento})
 	_tab3d.atualizar(destinos, alvos, combate.ser_atual(), _selecionado, zonas)
+	if _modo == "":
+		_cursor_ativo = false
+	_tab3d.mostrar_cursor(_cursor, _cursor_ativo)
+	if _lbl_vez != null and _controles != null:
+		_lbl_vez.text = _controles.faixa_da_vez(_agente_da_vez())
+		_lbl_vez.visible = _lbl_vez.text != ""
