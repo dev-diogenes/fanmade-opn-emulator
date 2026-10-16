@@ -80,19 +80,20 @@ func iniciar_combate(semente: int) -> void:
 	else:
 		membrana = Membrana.carregar_padrao()
 	membrana.estado_mudou.connect(func(e, _ant): _registrar("[color=#c39bd3]A Membrana está %s: %s[/color]" % [e.nome, e.descricao]))
-	var regras: Dictionary = config.get("regras", {"lesoes": true, "inspiracao_resoluta": true, "presenca_perturbadora": true})
-	combate = Combate.new(ruleset, dados, regras)
-	grade = Grade.new(COLUNAS, LINHAS)
-	combate.grade = grade
-	combate.membrana = membrana
-	combate.registro.connect(_registrar)
-	combate.ser_adicionado.connect(_ao_adicionar)
 	if config.is_empty():
+		combate = Combate.new(ruleset, dados, {"lesoes": true, "inspiracao_resoluta": true, "presenca_perturbadora": true})
+		grade = Grade.new(COLUNAS, LINHAS)
+		combate.grade = grade
+		combate.membrana = membrana
 		_montar_mapa()
 		_criar_lados()
 	else:
-		_montar_mapa_do_terreno(config.get("terreno", "campo"))
-		_criar_lados_da_missao()
+		var montado := MontagemCombate.montar(ruleset, config, dados, membrana)
+		combate = montado.combate
+		grade = montado.grade
+		armas = montado.armas
+	combate.registro.connect(_registrar)
+	combate.ser_adicionado.connect(_ao_adicionar)
 	if _tab3d != null:
 		_tab3d.construir(grade)
 	combate.ataque_resolvido.connect(_ao_atacar)
@@ -145,36 +146,9 @@ func _criar_lados() -> void:
 	_adicionar(Ameaca.criar(ruleset, "Aberração", aberracao), garras, Vector2i(11, 4))
 
 
-## Campo de batalha a partir do terreno do hex (parâmetros "arena" em mapa.json).
-func _montar_mapa_do_terreno(terreno_id: String) -> void:
-	var t: Dictionary = DadosJogo.ler("mapa").terrenos.get(terreno_id, {})
-	var param: Dictionary = t.get("arena", {})
-	var tipos := {Grade.PAREDE: int(param.get("parede", 0)), Grade.COBERTURA: int(param.get("cobertura", 2)), Grade.DIFICIL: int(param.get("dificil", 0))}
-	for tipo in tipos:
-		for i in tipos[tipo]:
-			# Colunas 0-1 e 12-13 ficam livres para os dois lados se posicionarem.
-			var c := Vector2i(2 + dados.rolar(COLUNAS - 4) - 1, dados.rolar(LINHAS) - 1)
-			if not grade.terreno.has(c):
-				grade.terreno[c] = tipo
-
-
-func _criar_lados_da_missao() -> void:
-	var linhas_livres := [4, 2, 6, 3, 5, 1, 7]
-	var i := 0
-	for a in config.agentes:
-		_adicionar(a, config.armas[a], Vector2i(1, linhas_livres[i % linhas_livres.size()]))
-		i += 1
-	i = 0
-	for info in config.ameacas:
-		var amea := Ameaca.criar(ruleset, info.nome, info.ficha)
-		_adicionar(amea, info.arma, Vector2i(COLUNAS - 2 - (i / 7), linhas_livres[i % linhas_livres.size()]))
-		i += 1
-
-
 ## Seres que surgem no meio do combate (cópias do escutado).
 func _ao_adicionar(ser: Ser) -> void:
-	var lista: Array = (ser as Ameaca).ataques if ser is Ameaca else []
-	armas[ser] = lista[0] if not lista.is_empty() else ruleset.arma("desarmado")
+	armas[ser] = MontagemCombate.arma_de(ruleset, ser)
 	_registrar("%s entra no combate." % ser.nome)
 
 
@@ -213,59 +187,13 @@ func _avancar() -> void:
 		_jogar_ia(ser)
 
 
-## IA simples: vai até o agente (ou inimigo) mais próximo e ataca se puder.
+## IA (ameaças e autoplay): veja IaCombate.
 func _jogar_ia(ser: Ser) -> void:
-	var alvo := IaAmeaca.alvo_preferido(combate, ser, _inimigo_mais_proximo(ser))
-	if alvo == null:
-		return
-	var arma: Dictionary = armas.get(ser, ruleset.arma("desarmado"))
-	if ser is Ameaca:
-		if IaAmeaca.agir_antes(combate, ser as Ameaca, alvo) or combate.encerrado:
-			return
-		if IaAmeaca.so_se_move(ser):
-			var perto := grade.aproximar(ser, alvo, ser.deslocamento_quadrados())
-			if perto != grade.posicao(ser):
-				combate.mover(ser, perto)
-			return
-		arma = IaAmeaca.escolher_arma(combate, ser, alvo, arma)
-	if ser is Agente:
-		for rid in (ser as Agente).rituais:
-			var rr := ruleset.ritual(rid)
-			if rr.get("implementado", false) and rr.efeitos[0].tipo == "dano" and not rr.efeitos[0].has("area") and combate.pode_conjurar(ser, rid, alvo) == "":
-				combate.conjurar(ser, rid, alvo)
-				return
-	if not _pode_atacar(ser, alvo, arma):
-		var limite := ser.deslocamento_quadrados()
-		var destino := grade.aproximar(ser, alvo, limite)
-		if arma.get("ataque", "") != "corpo_a_corpo" and grade.em_alcance(ser, alvo, arma.get("alcance", "curto")):
-			destino = grade.posicao(ser)   # atirador já em alcance: não precisa andar
-		if destino != grade.posicao(ser):
-			combate.mover(ser, destino)
-	if _pode_atacar(ser, alvo, arma) and not combate.encerrado:
-		if alvo is Agente and alvo.treinado_em("reflexos"):
-			combate.declarar_reacao(alvo, "esquiva")
-		combate.agredir(ser, alvo, arma)
-
-
-func _inimigo_mais_proximo(ser: Ser) -> Ser:
-	var melhor: Ser = null
-	var melhor_d := 1 << 30
-	for outro in combate.participantes:
-		if outro.lado == ser.lado or outro.esta_fora_de_combate() or not grade.tem(outro):
-			continue
-		var d := grade.distancia_entre(ser, outro)
-		if d < melhor_d:
-			melhor = outro
-			melhor_d = d
-	return melhor
+	IaCombate.jogar(combate, ser, armas)
 
 
 func _pode_atacar(ser: Ser, alvo: Ser, arma: Dictionary) -> bool:
-	if combate.acoes_restantes(ser).padrao <= 0 or (alvo.esta_fora_de_combate() and not alvo.tem(Ser.POCA)):
-		return false
-	if arma.get("ataque", "corpo_a_corpo") == "corpo_a_corpo":
-		return grade.estao_adjacentes(ser, alvo)
-	return grade.faixa_de_alcance(ser, alvo, arma.get("alcance", "curto")) != "fora" and grade.cobertura(ser, alvo) != "total"
+	return IaCombate.pode_atacar(combate, ser, alvo, arma)
 
 
 # --- Ações do jogador -------------------------------------------------------

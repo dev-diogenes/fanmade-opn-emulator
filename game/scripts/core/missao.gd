@@ -310,11 +310,17 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool) -> void:
 		ameacas.append(am)
 	# Balanceamento (p.187): fora do covil, a soma do VD das ameaças não passa da soma do NEX
 	# de quem entra no combate (× dificuldade); sempre sobra ao menos a mais fraca.
-	if not chefe and not participantes.is_empty():
+	if not participantes.is_empty():
 		var orcamento := 0
 		for a in participantes:
 			orcamento += a.nex
-		ameacas = escolher_por_vd(ameacas, int(orcamento * float(_cfg.get("dificuldade_encontro", 1.0))))
+		if not chefe:
+			ameacas = escolher_por_vd(ameacas, int(orcamento * float(_cfg.get("dificuldade_encontro", 1.0))))
+		elif not ameacas.is_empty():
+			# Covil: o chefe sempre está lá; a escolta cabe no que sobra do orçamento difícil (× 1,5)
+			var chefe_am: Dictionary = ameacas[0]
+			var sobra := int(orcamento * float(_cfg.get("dificuldade_covil", 1.5))) - int(chefe_am.get("vd", 0))
+			ameacas = [chefe_am] + escolher_por_vd(ameacas.slice(1), sobra, false)
 	encontro_pendente = {
 		"hex": h, "nome": info.nome, "chefe": chefe, "terreno": mapa.terreno(h),
 		"agentes": participantes, "armas": armas, "ameacas": ameacas, "encontro": encontro_id,
@@ -340,7 +346,7 @@ static func covil_para(grupo: Array) -> Dictionary:
 
 
 ## Escolhe ameaças da lista, da mais forte para a mais fraca, sem passar do orçamento de VD.
-static func escolher_por_vd(lista: Array, orcamento: int) -> Array:
+static func escolher_por_vd(lista: Array, orcamento: int, ao_menos_uma: bool = true) -> Array:
 	var ordenadas := lista.duplicate()
 	ordenadas.sort_custom(func(a, b): return int(a.get("vd", 0)) > int(b.get("vd", 0)))
 	var escolhidas: Array = []
@@ -349,7 +355,7 @@ static func escolher_por_vd(lista: Array, orcamento: int) -> Array:
 		if total + int(am.get("vd", 0)) <= orcamento:
 			escolhidas.append(am)
 			total += int(am.get("vd", 0))
-	if escolhidas.is_empty() and not ordenadas.is_empty():
+	if escolhidas.is_empty() and not ordenadas.is_empty() and ao_menos_uma:
 		escolhidas.append(ordenadas[-1])
 	return escolhidas
 

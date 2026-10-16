@@ -193,26 +193,26 @@
     },
     "horror_carmesim": {
       "nome": "Horror Carmesim",
-      "nivel": 4,
+      "nivel": 2,
       "arma": "mordida_sangue",
       "chefe": true,
       "ficha": {
-        "pv": 70,
-        "defesa": 16,
+        "pv": 45,
+        "defesa": 14,
         "deslocamento": 12,
         "atributos": {
           "agi": 2,
-          "for": 4,
-          "vig": 4
+          "for": 3,
+          "vig": 3
         },
         "pericias": {
           "luta": {
-            "dados": 3,
-            "bonus": 10
+            "dados": 2,
+            "bonus": 5
           },
           "fortitude": {
-            "dados": 4,
-            "bonus": 10
+            "dados": 3,
+            "bonus": 5
           },
           "vontade": {
             "dados": 2,
@@ -220,18 +220,18 @@
           }
         },
         "resistencias": {
-          "balistico": 5,
-          "corte": 2
+          "balistico": 2
         },
         "elemento": "sangue",
         "criatura": true,
-        "vd": 160,
+        "vd": 25,
         "presenca_perturbadora": {
-          "dt": 20,
-          "dano": "2d6",
-          "nex": 50
+          "dt": 15,
+          "dano": "1d6",
+          "nex": 30
         }
-      }
+      },
+      "nota": "Chefe do covil inicial, calibrado para 3 a 4 agentes de NEX 5-10% (orçamento difícil, p.187)."
     },
     "sombra_sussurrante": {
       "nome": "Sombra Sussurrante",

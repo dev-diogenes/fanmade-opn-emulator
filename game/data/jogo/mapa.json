@@ -10,6 +10,7 @@
   "visao": 2,
   "aliados_entram_no_combate_ate": 2,
   "dificuldade_encontro": 1.0,
+  "dificuldade_covil": 1.5,
   "dificuldade_nota": "Orçamento de VD dos encontros = soma do NEX de quem entra × dificuldade (p.187: 0,5 fácil, 1 equilibrado, 1,5 difícil).",
   "terrenos": {
     "campo":    { "nome": "Campo",    "custo": 1, "cor": "4f6b3a", "arena": { "cobertura": 2, "dificil": 0, "parede": 0 } },

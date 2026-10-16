@@ -214,6 +214,7 @@ Pontos em que o livro é ambíguo e escolhemos uma leitura (revisar se surgir er
 | Silhueta | Qualquer ataque corpo a corpo contra ela é um toque: o atacante sofre a aura uma vez por turno, acerte ou não |
 | Marionete | Reflexos Guiados ao terminar um movimento ao lado dela. Ironia do Destino divide pela metade o dano que ela sofre enquanto agarra |
 | Desejos de Sangue e Comandar | Viram uma "fúria" de um turno: o agente muda de lado e é jogado pela IA até o fim do próprio turno |
+| Covil e orçamento | O chefe sempre está no covil; a escolta entra só no que sobra de 1,5 × o NEX somado (o "difícil" do livro). O Horror Carmesim, chefe do grupo inicial, é uma criatura nossa calibrada para VD 25 |
 | Sustentado com vários alvos | Custa 1 PE por turno pelo ritual inteiro, não por alvo; conjurar outro ritual sustentado encerra o anterior |
 | Reforços da Ordem (modo Normal) | 2 por missão. Um agente caído num combate perdido (ou morto) é resgatado: sai da missão com uma lesão (1d6 no atributo, como a regra de Lesões) |
 

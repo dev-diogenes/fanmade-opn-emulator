@@ -172,7 +172,7 @@ func test_resultado_da_investigacao_na_missao():
 	assert_eq(m.pistas, 2)
 	assert_true(m.mapa.revelado(m.mapa.encontrar("objetivo")))
 	m._preparar_encontro(m.mapa.encontrar("objetivo"), "covil", true)
-	assert_eq(int(m.encontro_pendente.ameacas[0].ficha.pv), 84, "chefe 20% mais forte (70 -> 84)")
+	assert_eq(int(m.encontro_pendente.ameacas[0].ficha.pv), 54, "chefe 20% mais forte (45 -> 54)")
 
 
 func test_descobrir_quem_enfraquece_e_nomeia_o_chefe():
@@ -182,7 +182,7 @@ func test_descobrir_quem_enfraquece_e_nomeia_o_chefe():
 	m.concluir_investigacao({"pistas": [], "perguntas": [quem], "penalidade": {}})
 	m._preparar_encontro(m.mapa.encontrar("objetivo"), "covil", true)
 	var chefe: Dictionary = m.encontro_pendente.ameacas[0]
-	assert_eq(int(chefe.ficha.pv), 56)
+	assert_eq(int(chefe.ficha.pv), 36, "20% mais fraco (45 -> 36)")
 	assert_eq(chefe.nome, m.caso.sujeito.chefe_titulo)
 
 
