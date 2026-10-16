@@ -21,6 +21,27 @@ A carreira é do host e só ele salva. Recrutar, requisitar e as escolhas de NEX
 4. Na vez de um agente seu, você joga. Na dos outros, você assiste: a faixa amarela diz de quem é a vez.
 5. **Sair da sessão** volta para a Base com a **sua** carreira, que ficou guardada e não muda.
 
+## Modo Mestre
+
+Na Base, em **Jogadores**, escolha quem é o **Mestre**. Pode ser você (host), alguém online ou alguém no mesmo PC.
+
+- **Na vez das ameaças, o jogo espera o mestre** em todas as máquinas. Na arena, ele tem uma barra própria:
+  - **Mover**;
+  - **Atacar**, com o ataque da ficha escolhido;
+  - **Usar** uma habilidade;
+  - **IA joga o turno**;
+  - **Encerrar turno**.
+- **No mapa,** o botão **Painel do mestre** mostra as respostas do caso (quem, o quê, onde) e deixa:
+  - narrar para o grupo (o texto aparece no registro de todos);
+  - fortalecer ou enfraquecer a Membrana;
+  - com "Clique no mapa escolhe o hex", pôr um encontro ou evento, revelar em volta ou limpar o hex;
+  - curar, ferir ou mexer na Sanidade de um agente.
+- **O mestre vê o mapa inteiro.** Os jogadores continuam com a névoa.
+- **Se o mestre sair,** o host assume as ameaças, e a partida segue.
+- **Sem mestre,** a IA joga as ameaças, como sempre.
+
+O mestre pode usar as missões da comunidade como roteiro: o arquivo tem o briefing, o caso e os textos dos eventos ([formato](04-missoes-da-comunidade.md)).
+
 ## Rede
 
 - **Mesma rede (LAN):** use o IP local do host (por exemplo, 192.168.0.10).
@@ -36,8 +57,11 @@ A carreira é do host e só ele salva. Recrutar, requisitar e as escolhas de NEX
 
 ## Teste automático com dois processos
 
-`tools/teste_online.sh [semente]` abre um host e um cliente sem janela. Os dois jogam uma missão pelas telas, cada um na vez dos próprios agentes, e o teste confere que terminam com o mesmo estado:
+`tools/teste_online.sh [semente] [tarde|mestre]` abre um host e um cliente sem janela. Os dois jogam uma missão pelas telas, cada um na vez dos próprios agentes, e o teste confere que terminam com o mesmo estado:
 
 ```bash
 GODOT=/caminho/para/Godot_console.exe tools/teste_online.sh 7
 ```
+
+- Com `tarde`, o cliente entra no meio da missão.
+- Com `mestre`, o host é o mestre (joga as ameaças, narra e mexe na Membrana) e o cliente joga todos os agentes.

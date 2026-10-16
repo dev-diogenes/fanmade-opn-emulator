@@ -2,20 +2,23 @@
 # Teste de fumaça online (Fase 8.2): um host e um cliente, em dois processos do Godot sem
 # janela, jogam a mesma missão pelas telas de verdade, cada um na vez dos próprios agentes.
 # No fim, o hash da missão precisa ser igual nos dois.
-# Uso: GODOT=/caminho/para/godot_console.exe tools/teste_online.sh [semente] [tarde]
+# Uso: GODOT=/caminho/para/godot_console.exe tools/teste_online.sh [semente] [tarde|mestre]
 # Com "tarde", o cliente entra no meio da missão (recebe o checkpoint e refaz os comandos).
+# Com "mestre", o host é o mestre (joga as ameaças e narra) e o cliente joga todos os agentes.
 set -uo pipefail
 GODOT="${GODOT:-godot}"
 SEMENTE="${1:-7}"
 TARDE=0
+MESTRE=0
 [ "${2:-}" = "tarde" ] && TARDE=1
+[ "${2:-}" = "mestre" ] && MESTRE=1
 PORTA=$((20000 + RANDOM % 20000))
 cd "$(dirname "$0")/../game"
 SAIDA="$(mktemp -d)"
 "$GODOT" --headless --path . --import >/dev/null 2>&1 || true
-"$GODOT" --headless --path . res://tests/rede/robo_online.tscn -- --papel=host --porta=$PORTA --semente=$SEMENTE --tarde=$TARDE >"$SAIDA/host.txt" 2>&1 &
+"$GODOT" --headless --path . res://tests/rede/robo_online.tscn -- --papel=host --porta=$PORTA --semente=$SEMENTE --tarde=$TARDE --mestre=$MESTRE >"$SAIDA/host.txt" 2>&1 &
 HOST=$!
-"$GODOT" --headless --path . res://tests/rede/robo_online.tscn -- --papel=cliente --porta=$PORTA --semente=$SEMENTE --tarde=$TARDE >"$SAIDA/cliente.txt" 2>&1 &
+"$GODOT" --headless --path . res://tests/rede/robo_online.tscn -- --papel=cliente --porta=$PORTA --semente=$SEMENTE --tarde=$TARDE --mestre=$MESTRE >"$SAIDA/cliente.txt" 2>&1 &
 CLIENTE=$!
 ( sleep 300; kill $HOST $CLIENTE 2>/dev/null ) >/dev/null 2>&1 &
 VIGIA=$!

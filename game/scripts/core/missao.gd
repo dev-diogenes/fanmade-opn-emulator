@@ -334,6 +334,7 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool, semente_s
 		"regras": {"lesoes": opcoes.get("lesoes", true), "inspiracao_resoluta": opcoes.get("inspiracao_resoluta", true),
 			"presenca_perturbadora": true, "bonus_enigma": mini(10, pistas * 2), "perguntas_respondidas": _perguntas_respondidas()},
 		"nivel_membrana": membrana.nivel_ameaca(), "semente": semente_salva if semente_salva >= 0 else dados.rolar(1000000),
+		"mestre": bool(opcoes.get("mestre", false)),
 	}
 	if semente_salva < 0:
 		_log("[color=#ec7063][b]Encontro: %s![/b][/color] (%d agente(s) entram no combate)" % [info.nome, participantes.size()])

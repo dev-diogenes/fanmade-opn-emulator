@@ -101,7 +101,11 @@ Na Base, em **Missão**, escolha **Campanha: O Fundo da Represa**. É uma histó
 
 ### Online
 
-Na Base, em **Online**, uma pessoa clica em **Hospedar** (porta 7777) e as outras escrevem o IP dela e clicam em **Entrar**. Quem entra espera no saguão. O host escolhe o dono de cada agente no grupo e começa a missão; cada um joga a vez dos seus agentes. A carreira é do host; quem entrou volta para a própria carreira ao sair. Detalhes, rede e o teste com dois processos estão em [docs/06-online.md](docs/06-online.md).
+Na Base, em **Online**, uma pessoa clica em **Hospedar** (porta 7777) e as outras escrevem o IP dela e clicam em **Entrar**. Quem entra espera no saguão. O host escolhe o dono de cada agente no grupo e começa a missão; cada um joga a vez dos seus agentes. A carreira é do host; quem entrou volta para a própria carreira ao sair.
+
+**Modo Mestre:** em Jogadores, escolha um **Mestre**. Ele joga as ameaças na arena (ou deixa a IA jogar um turno), vê o mapa inteiro e tem um painel no mapa. Com ele, narra para o grupo, mexe na Membrana, põe encontros e eventos, revela hexes e cura ou fere agentes.
+
+Detalhes, rede e o teste com dois processos estão em [docs/06-online.md](docs/06-online.md).
 
 ### Co-op local (até 4 jogadores)
 

@@ -21,7 +21,8 @@ const LOCAL := "local"
 const HOST := "host"
 const CLIENTE := "cliente"
 const PEER_DO_HOST := 1
-const CONTEXTOS := {"mapa": Comandos.ACOES_MAPA, "investigacao": Comandos.ACOES_INVESTIGACAO, "combate": Comandos.ACOES_COMBATE}
+const CONTEXTOS := {"mapa": Comandos.ACOES_MAPA, "investigacao": Comandos.ACOES_INVESTIGACAO, "combate": Comandos.ACOES_COMBATE, "mestre": Comandos.ACOES_MESTRE}
+const MESTRE := "mestre"
 
 var modo := LOCAL
 ## Tela ativa: "mapa", "combate" ou "investigacao"
@@ -34,11 +35,15 @@ var registro: Array[Dictionary] = []
 var seq := 0
 ## A tela está ocupada (animando os turnos da IA ou ainda montando): os comandos esperam.
 var ocupado := false
-## Host: func(peer, agente) -> bool. O Jogo monta a partir dos donos (ControleLocal).
+## Host: func(peer, ser) -> bool. O Jogo monta a partir dos donos (ControleLocal); com mestre,
+## o ser da vez pode ser uma ameaça, e o dono é o mestre.
 var validar_dono := Callable()
+## Host: func(peer) -> bool, para os comandos do mestre (ctx "mestre")
+var validar_mestre := Callable()
 var dessincronias := 0
 
 var _aplicador := Callable()
+var _aplicador_mestre := Callable()
 var _quem_decide := Callable()
 var _hash := Callable()
 var _pedidos: Array[Dictionary] = []     ## host: [{peer, cmd}]
@@ -74,6 +79,11 @@ func sair(ctx: String) -> void:
 		_hash = Callable()
 
 
+## Quem aplica os comandos do mestre (o Jogo, na missão em andamento). Eles valem em qualquer tela.
+func registrar_mestre(aplicador: Callable) -> void:
+	_aplicador_mestre = aplicador
+
+
 func liberar() -> void:
 	ocupado = false
 	processar_fila()
@@ -104,6 +114,10 @@ func enviar(cmd: Dictionary) -> Dictionary:
 			var antes := seq
 			receber_pedido(PEER_DO_HOST, cmd)
 			return _ultimo_resultado if seq > antes else {"ok": false, "pendente": not _pedidos.is_empty()}
+	if String(cmd.get("ctx", "")) == MESTRE:
+		if not _aplicador_mestre.is_valid():
+			return {"ok": false, "erro": "sem missão para o mestre"}
+		return _aplicar(cmd.duplicate(true))
 	if String(cmd.get("ctx", "")) != contexto or not _aplicador.is_valid():
 		return {"ok": false, "erro": "comando fora da tela ativa"}
 	return _aplicar(cmd.duplicate(true))
@@ -150,7 +164,9 @@ func processar_fila() -> void:
 func _passo_do_host() -> bool:
 	var p: Dictionary = _pedidos[0]
 	var cmd: Dictionary = p.cmd
-	if String(cmd.ctx) != contexto:
+	if String(cmd.ctx) == MESTRE:
+		cmd["tela"] = contexto   # o cliente aplica na mesma tela em que o host aceitou
+	elif String(cmd.ctx) != contexto:
 		if contexto == "":
 			return false   # trocando de cena: o pedido espera
 		_pedidos.pop_front()
@@ -175,7 +191,8 @@ func _passo_do_cliente() -> bool:
 	if int(e.seq) <= seq:
 		_recebidos.pop_front()   # repetido
 		return true
-	if int(e.seq) != seq + 1 or String(e.get("ctx", "")) != contexto:
+	var tela := String(e.get("tela", "")) if String(e.get("ctx", "")) == MESTRE else String(e.get("ctx", ""))
+	if int(e.seq) != seq + 1 or tela != contexto:
 		return false   # falta um anterior, ou a tela ainda não chegou lá
 	if _hash.is_valid() and int(e.get("hash_antes", 0)) != 0 and _hash.call() != int(e.hash_antes):
 		dessincronias += 1
@@ -190,13 +207,19 @@ func _passo_do_cliente() -> bool:
 
 
 func _motivo_de_recusa(peer: int, cmd: Dictionary) -> String:
+	if String(cmd.get("ctx", "")) == MESTRE:
+		if not _aplicador_mestre.is_valid():
+			return "não há missão para o mestre"
+		if validar_mestre.is_valid() and not validar_mestre.call(peer):
+			return "só o mestre faz isso"
+		return ""
 	if String(cmd.get("acao", "")) == "sair":
 		return ""   # a tela confere se a cena acabou
-	var agente = _quem_decide.call() if _quem_decide.is_valid() else null
-	if not agente is Agente:
-		return "não é a vez de um agente"
-	if validar_dono.is_valid() and not validar_dono.call(peer, agente):
-		return "a vez é de um agente de outro jogador"
+	var ser = _quem_decide.call() if _quem_decide.is_valid() else null
+	if not ser is Ser:
+		return "não é a vez de ninguém"
+	if validar_dono.is_valid() and not validar_dono.call(peer, ser):
+		return "a vez é de um agente de outro jogador" if ser is Agente else "a vez é do mestre"
 	return ""
 
 
@@ -208,7 +231,7 @@ func _bem_formado(cmd) -> bool:
 
 
 func _aplicar(cmd: Dictionary) -> Dictionary:
-	var res: Dictionary = _aplicador.call(cmd)
+	var res: Dictionary = _aplicador_mestre.call(cmd) if String(cmd.get("ctx", "")) == MESTRE else _aplicador.call(cmd)
 	registro.append(cmd)
 	_ultimo_resultado = res
 	comando_aplicado.emit(cmd, res)

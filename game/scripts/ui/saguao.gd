@@ -60,6 +60,8 @@ func _atualizar() -> void:
 		linhas.append("[b]Jogadores[/b]")
 		for j in info.jogadores:
 			linhas.append("  " + String(j))
+	if String(info.get("mestre", "")) != "":
+		linhas.append("[b]Mestre:[/b] %s" % info.mestre)
 	if not info.get("agentes", []).is_empty():
 		linhas.append("")
 		linhas.append("[b]Agentes da carreira do host[/b]")

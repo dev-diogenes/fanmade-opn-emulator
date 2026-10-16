@@ -16,13 +16,17 @@ var armas: Dictionary = {}
 var membrana: Membrana
 ## Autoplay: a IA joga também os agentes
 var ia_para_agentes := false
+## Modo Mestre: as ameaças esperam a decisão do mestre (vem da configuração do encontro)
+var ameacas_pelo_mestre := false
 var turnos := 0
 
 
 ## Combate de um encontro da missão (a seed vem da configuração).
 static func montar(ruleset_: Ruleset, config: Dictionary, membrana_: Membrana) -> FluxoCombate:
 	var montado := MontagemCombate.montar(ruleset_, config, Dados.new(int(config.get("semente", 1))), membrana_)
-	return de_combate(ruleset_, montado.combate, montado.grade, montado.armas, membrana_)
+	var f := de_combate(ruleset_, montado.combate, montado.grade, montado.armas, membrana_)
+	f.ameacas_pelo_mestre = bool(config.get("mestre", false))
+	return f
 
 
 ## Combate já montado (a arena de demonstração monta o seu).
@@ -57,8 +61,10 @@ func proximo() -> Ser:
 
 
 ## O ser espera a decisão de um jogador? Agentes do lado dos agentes, fora do autoplay
-## (hipnotizados e em fúria jogam pela IA).
+## (hipnotizados e em fúria jogam pela IA); com mestre, também as ameaças.
 func decide_jogador(ser: Ser) -> bool:
+	if ser is Ameaca:
+		return ameacas_pelo_mestre and ser.lado == "ameacas"
 	return ser is Agente and ser.lado == "agentes" and not ia_para_agentes
 
 

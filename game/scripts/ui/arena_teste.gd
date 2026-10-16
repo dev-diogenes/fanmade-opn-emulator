@@ -62,6 +62,10 @@ var _log: RichTextLabel
 var _painel_fim: PanelContainer
 var _lbl_fim: Label
 var _btn_fim: Button
+var _caixa_mestre: VBoxContainer
+var _lbl_mestre: Label
+var _opt_ataque_m: OptionButton
+var _opt_hab_m: OptionButton
 
 
 func _ready() -> void:
@@ -71,6 +75,7 @@ func _ready() -> void:
 		config = jogo.combate_config
 	sessao = jogo.sessao if jogo != null and not config.is_empty() else Sessao.new()
 	sessao.entrar("combate", _aplicar_comando, func(): return fluxo.decisor() if fluxo != null else null, func(): return fluxo.hash_estado())
+	sessao.comando_aplicado.connect(_ao_comando_aplicado)
 	if not config.is_empty() and semente < 0:
 		semente = int(config.get("semente", -1))
 	iniciar_combate(semente if semente >= 0 else randi())
@@ -104,6 +109,7 @@ func iniciar_combate(semente: int) -> void:
 		armas = montado.armas
 	fluxo = FluxoCombate.de_combate(ruleset, combate, grade, armas, membrana)
 	fluxo.ia_para_agentes = autoplay
+	fluxo.ameacas_pelo_mestre = bool(config.get("mestre", false)) and not autoplay
 	fluxo.nova_rodada.connect(func(r): _registrar("[color=#7f8c8d]— Rodada %d —[/color]" % r))
 	combate.registro.connect(_registrar)
 	combate.ser_adicionado.connect(_ao_adicionar)
@@ -166,6 +172,17 @@ func _ao_adicionar(ser: Ser) -> void:
 func _exit_tree() -> void:
 	if sessao != null:
 		sessao.sair("combate")
+		if sessao.comando_aplicado.is_connected(_ao_comando_aplicado):
+			sessao.comando_aplicado.disconnect(_ao_comando_aplicado)
+
+
+## Comandos do mestre (narração, Membrana, cura…) chegam em qualquer tela.
+func _ao_comando_aplicado(cmd: Dictionary, res: Dictionary) -> void:
+	if String(cmd.get("ctx", "")) != "mestre":
+		return
+	if cmd.get("acao", "") == "narrar" and res.get("ok", false):
+		_registrar("[color=#f5cba7][b]Mestre:[/b] %s[/color]" % res.texto)
+	_atualizar()
 
 
 func _adicionar(ser: Ser, arma: Dictionary, pos: Vector2i) -> void:
@@ -302,7 +319,7 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 				_ultimo_teste = res.teste
 			else:
 				_registrar("[color=#e67e22]Sem ação padrão para decifrar o enigma.[/color]")
-		"encerrar_turno":
+		"encerrar_turno", "ia":
 			if res.ok:
 				_avancar()
 			return res
@@ -316,6 +333,22 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 
 
 func _clicar_celula(celula: Vector2i) -> void:
+	var amea := _ameaca_da_vez()
+	if amea != null and _modo.begins_with("m_"):
+		var alvo_m := grade.ocupante(celula)
+		var modo := _modo
+		_modo = ""
+		match modo:
+			"m_mover":
+				_enviar("mover", {"celula": Comandos.vetor(celula)})
+			"m_atacar":
+				if alvo_m != null and alvo_m.lado != amea.lado:
+					_enviar("agredir", {"alvo": Comandos.ref(combate, alvo_m), "arma": _opt_ataque_m.get_item_metadata(_opt_ataque_m.selected) if _opt_ataque_m.selected >= 0 else -1})
+			"m_habilidade":
+				if _opt_hab_m.selected >= 0:
+					_enviar("habilidade", {"habilidade": _opt_hab_m.get_item_metadata(_opt_hab_m.selected), "alvo": Comandos.ref(combate, alvo_m), "celula": Comandos.vetor(celula)})
+		_atualizar()
+		return
 	var agente := _agente_da_vez()
 	var alvo := grade.ocupante(celula)
 	if _modo == "mover" and agente != null:
@@ -461,6 +494,33 @@ func _montar_interface() -> void:
 	linha_ritual.add_child(_opt_ritual)
 	_btn_ritual = _botao("Conjurar", _modo_ritual)
 	linha_ritual.add_child(_btn_ritual)
+
+	# Modo Mestre (Fase 8.3): só aparece na máquina do mestre, na vez de uma ameaça
+	_caixa_mestre = VBoxContainer.new()
+	_caixa_mestre.visible = false
+	painel.add_child(_caixa_mestre)
+	_lbl_mestre = Label.new()
+	_lbl_mestre.add_theme_color_override("font_color", Color("f5cba7"))
+	_caixa_mestre.add_child(_lbl_mestre)
+	var linha_m := HBoxContainer.new()
+	_caixa_mestre.add_child(linha_m)
+	linha_m.add_child(_botao("Mover", _modo_mestre.bind("m_mover")))
+	linha_m.add_child(_botao("IA joga o turno", _ia_mestre))
+	linha_m.add_child(_botao("Encerrar turno", _encerrar_mestre))
+	var linha_m2 := HBoxContainer.new()
+	_caixa_mestre.add_child(linha_m2)
+	_opt_ataque_m = OptionButton.new()
+	_opt_ataque_m.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_opt_ataque_m.clip_text = true
+	linha_m2.add_child(_opt_ataque_m)
+	linha_m2.add_child(_botao("Atacar", _modo_mestre.bind("m_atacar")))
+	var linha_m3 := HBoxContainer.new()
+	_caixa_mestre.add_child(linha_m3)
+	_opt_hab_m = OptionButton.new()
+	_opt_hab_m.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_opt_hab_m.clip_text = true
+	linha_m3.add_child(_opt_hab_m)
+	linha_m3.add_child(_botao("Usar", _modo_mestre.bind("m_habilidade")))
 
 	var opcoes := HBoxContainer.new()
 	painel.add_child(opcoes)
@@ -691,8 +751,61 @@ func _atualizar() -> void:
 	_chk_ae.visible = agente != null and agente.classe_id == "combatente"
 	_barra_membrana.value = membrana.valor
 	_lbl_membrana.text = "%d — %s" % [membrana.valor, membrana.estado().get("nome", "")]
+	_atualizar_mestre()
 	_desenhar_slots()
 	_atualizar_3d()
+
+
+# --- Modo Mestre (Fase 8.3) ------------------------------------------------------
+
+## A ameaça da vez, quando é esta máquina que decide por ela (o mestre).
+func _ameaca_da_vez() -> Ameaca:
+	var s := fluxo.decisor() if fluxo != null else null
+	return s as Ameaca if s is Ameaca and _controles != null and _controles.e_mestre_local() else null
+
+
+func _atualizar_mestre() -> void:
+	var amea := _ameaca_da_vez()
+	_caixa_mestre.visible = amea != null
+	if amea == null:
+		return
+	var modos := {"m_mover": "escolha o destino", "m_atacar": "escolha o alvo", "m_habilidade": "escolha o alvo ou o ponto"}
+	_lbl_mestre.text = "Mestre — vez de %s%s" % [amea.nome, ("  (%s)" % modos[_modo]) if modos.has(_modo) else ""]
+	var ataque_antes = _opt_ataque_m.get_item_metadata(_opt_ataque_m.selected) if _opt_ataque_m.selected >= 0 else 0
+	_opt_ataque_m.clear()
+	if amea.ataques.is_empty():
+		_opt_ataque_m.add_item("%s (%s)" % [armas.get(amea, {}).get("nome", "Ataque"), armas.get(amea, {}).get("dano", "?")])
+		_opt_ataque_m.set_item_metadata(0, -1)
+	for i in amea.ataques.size():
+		_opt_ataque_m.add_item("%s (%s)" % [amea.ataques[i].get("nome", "Ataque"), amea.ataques[i].get("dano", "?")])
+		_opt_ataque_m.set_item_metadata(_opt_ataque_m.item_count - 1, i)
+		if i == ataque_antes:
+			_opt_ataque_m.select(_opt_ataque_m.item_count - 1)
+	var hab_antes = _opt_hab_m.get_item_metadata(_opt_hab_m.selected) if _opt_hab_m.selected >= 0 else ""
+	_opt_hab_m.clear()
+	for h in amea.habilidades:
+		if h.has("acao"):
+			_opt_hab_m.add_item("%s (%s)" % [String(h.id).capitalize(), h.acao])
+			_opt_hab_m.set_item_metadata(_opt_hab_m.item_count - 1, h.id)
+			if h.id == hab_antes:
+				_opt_hab_m.select(_opt_hab_m.item_count - 1)
+	_opt_hab_m.get_parent().visible = _opt_hab_m.item_count > 0
+
+
+func _modo_mestre(modo: String) -> void:
+	if _ameaca_da_vez() != null:
+		_modo = modo
+		_atualizar()
+
+
+func _ia_mestre() -> void:
+	if _ameaca_da_vez() != null:
+		_enviar("ia")
+
+
+func _encerrar_mestre() -> void:
+	if _ameaca_da_vez() != null:
+		_enviar("encerrar_turno")
 
 
 func _ficha(ser: Ser) -> String:
@@ -774,5 +887,6 @@ func _atualizar_3d() -> void:
 		_cursor_ativo = false
 	_tab3d.mostrar_cursor(_cursor, _cursor_ativo)
 	if _lbl_vez != null and _controles != null:
-		_lbl_vez.text = _controles.faixa_da_vez(_agente_da_vez())
+		var amea_vez = fluxo.decisor() if fluxo != null else null
+		_lbl_vez.text = ("Vez de %s — %s" % [amea_vez.nome, "mestre (você)" if _controles.e_mestre_local() else "mestre"]) if amea_vez is Ameaca else _controles.faixa_da_vez(_agente_da_vez())
 		_lbl_vez.visible = _lbl_vez.text != ""

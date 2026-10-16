@@ -34,6 +34,18 @@ var _lbl_vez: Label
 var _controles: ControleLocal
 var _cursor := Vector2i.ZERO
 var _cursor_ativo := false
+## Modo Mestre (Fase 8.3)
+var _btn_painel_mestre: Button
+var _painel_mestre: PanelContainer
+var _lbl_caso_mestre: Label
+var _txt_narrar: LineEdit
+var _chk_hex_mestre: CheckBox
+var _lbl_hex_mestre: Label
+var _opt_encontro_m: OptionButton
+var _opt_evento_m: OptionButton
+var _opt_agente_m: OptionButton
+var _spin_valor_m: SpinBox
+var _hex_mestre := Vector2i(-999, -999)
 
 
 func _ready() -> void:
@@ -47,6 +59,7 @@ func _ready() -> void:
 	_controles = _jogo.controles() if _jogo != null else ControleLocal.padrao()
 	sessao = _jogo.sessao if _jogo != null else Sessao.new()
 	sessao.entrar("mapa", _aplicar_comando, func(): return missao.agente_atual(), func(): return Comandos.hash_missao(missao))
+	sessao.comando_aplicado.connect(_ao_comando_aplicado)
 	_montar_interface()
 	for linha in missao.historico:
 		_log.append_text(linha + "\n")
@@ -157,6 +170,152 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 func _exit_tree() -> void:
 	if sessao != null:
 		sessao.sair("mapa")
+		if sessao.comando_aplicado.is_connected(_ao_comando_aplicado):
+			sessao.comando_aplicado.disconnect(_ao_comando_aplicado)
+
+
+## Comandos do mestre chegam em qualquer tela (a narração já entra no registro da missão).
+func _ao_comando_aplicado(cmd: Dictionary, _res: Dictionary) -> void:
+	if String(cmd.get("ctx", "")) == "mestre":
+		_atualizar()
+
+
+# --- Modo Mestre (Fase 8.3) ------------------------------------------------------
+
+func _sou_mestre() -> bool:
+	return bool(missao.opcoes.get("mestre", false)) and _controles.e_mestre_local()
+
+
+func _montar_painel_mestre(painel: VBoxContainer) -> void:
+	_btn_painel_mestre = _botao("Painel do mestre", func(): _painel_mestre.visible = not _painel_mestre.visible)
+	painel.add_child(_btn_painel_mestre)
+	_painel_mestre = PanelContainer.new()
+	_painel_mestre.visible = false
+	_painel_mestre.position = Vector2(12, 12)
+	_painel_mestre.custom_minimum_size = Vector2(360, 0)
+	add_child(_painel_mestre)
+	var caixa := VBoxContainer.new()
+	caixa.add_theme_constant_override("separation", 5)
+	_painel_mestre.add_child(caixa)
+	var titulo := Label.new()
+	titulo.text = "Mestre (só você vê este painel e o mapa inteiro)"
+	titulo.add_theme_color_override("font_color", Color("f5cba7"))
+	caixa.add_child(titulo)
+	_lbl_caso_mestre = Label.new()
+	_lbl_caso_mestre.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_lbl_caso_mestre.custom_minimum_size = Vector2(340, 0)
+	caixa.add_child(_lbl_caso_mestre)
+	var linha_n := HBoxContainer.new()
+	caixa.add_child(linha_n)
+	_txt_narrar = LineEdit.new()
+	_txt_narrar.placeholder_text = "Narrar para o grupo…"
+	_txt_narrar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_txt_narrar.text_submitted.connect(func(_t): _narrar())
+	linha_n.add_child(_txt_narrar)
+	linha_n.add_child(_botao("Narrar", _narrar))
+	var linha_m := HBoxContainer.new()
+	caixa.add_child(linha_m)
+	linha_m.add_child(_rotulo("Membrana:"))
+	linha_m.add_child(_botao("−5", _enviar_mestre.bind("membrana", {"valor": -5})))
+	linha_m.add_child(_botao("+5", _enviar_mestre.bind("membrana", {"valor": 5})))
+	_chk_hex_mestre = CheckBox.new()
+	_chk_hex_mestre.text = "Clique no mapa escolhe o hex"
+	caixa.add_child(_chk_hex_mestre)
+	_lbl_hex_mestre = _rotulo("Hex: nenhum")
+	caixa.add_child(_lbl_hex_mestre)
+	var linha_e := HBoxContainer.new()
+	caixa.add_child(linha_e)
+	_opt_encontro_m = OptionButton.new()
+	_opt_encontro_m.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_opt_encontro_m.clip_text = true
+	for e in missao.extras.get("encontros", []) + DadosJogo.ler("encontros").encontros:
+		_opt_encontro_m.add_item(String(e.nome))
+		_opt_encontro_m.set_item_metadata(_opt_encontro_m.item_count - 1, e.id)
+	linha_e.add_child(_opt_encontro_m)
+	linha_e.add_child(_botao("Pôr encontro", _por_no_hex.bind("encontro")))
+	var linha_v := HBoxContainer.new()
+	caixa.add_child(linha_v)
+	_opt_evento_m = OptionButton.new()
+	_opt_evento_m.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_opt_evento_m.clip_text = true
+	var ev_jogo := DadosJogo.ler("eventos")
+	for e in missao.extras.get("eventos", []) + ev_jogo.eventos + ev_jogo.get("eventos_medo", []):
+		_opt_evento_m.add_item(String(e.titulo))
+		_opt_evento_m.set_item_metadata(_opt_evento_m.item_count - 1, e.id)
+	linha_v.add_child(_opt_evento_m)
+	linha_v.add_child(_botao("Pôr evento", _por_no_hex.bind("evento")))
+	var linha_h := HBoxContainer.new()
+	caixa.add_child(linha_h)
+	linha_h.add_child(_botao("Revelar em volta", _no_hex.bind("revelar", {"raio": 2})))
+	linha_h.add_child(_botao("Limpar hex", _no_hex.bind("limpar", {})))
+	var linha_a := HBoxContainer.new()
+	caixa.add_child(linha_a)
+	_opt_agente_m = OptionButton.new()
+	for a in missao.agentes:
+		_opt_agente_m.add_item(a.nome)
+		_opt_agente_m.set_item_metadata(_opt_agente_m.item_count - 1, a.id)
+	linha_a.add_child(_opt_agente_m)
+	_spin_valor_m = SpinBox.new()
+	_spin_valor_m.min_value = 1
+	_spin_valor_m.max_value = 50
+	_spin_valor_m.value = 5
+	linha_a.add_child(_spin_valor_m)
+	var linha_a2 := HBoxContainer.new()
+	caixa.add_child(linha_a2)
+	linha_a2.add_child(_botao("Curar", _no_agente.bind("curar", 1)))
+	linha_a2.add_child(_botao("Ferir", _no_agente.bind("ferir", 1)))
+	linha_a2.add_child(_botao("+SAN", _no_agente.bind("sanidade", 1)))
+	linha_a2.add_child(_botao("−SAN", _no_agente.bind("sanidade", -1)))
+
+
+func _rotulo(texto: String) -> Label:
+	var l := Label.new()
+	l.text = texto
+	return l
+
+
+func _enviar_mestre(acao: String, args: Dictionary = {}) -> Dictionary:
+	return sessao.enviar(Comandos.novo("mestre", acao, args))
+
+
+func _narrar() -> void:
+	if _txt_narrar.text.strip_edges() != "":
+		_enviar_mestre("narrar", {"texto": _txt_narrar.text})
+		_txt_narrar.text = ""
+
+
+func _no_hex(acao: String, args: Dictionary) -> void:
+	if missao.mapa.tem(_hex_mestre):
+		var a := args.duplicate()
+		a["hex"] = Comandos.vetor(_hex_mestre)
+		_enviar_mestre(acao, a)
+
+
+func _por_no_hex(tipo: String) -> void:
+	var opt := _opt_encontro_m if tipo == "encontro" else _opt_evento_m
+	if opt.selected >= 0:
+		_no_hex(tipo, {"id": opt.get_item_metadata(opt.selected)})
+
+
+func _no_agente(acao: String, sinal: int) -> void:
+	if _opt_agente_m.selected >= 0:
+		_enviar_mestre(acao, {"agente": _opt_agente_m.get_item_metadata(_opt_agente_m.selected), "valor": int(_spin_valor_m.value) * sinal})
+
+
+func _atualizar_mestre() -> void:
+	if _btn_painel_mestre == null:
+		return
+	var mestre := _sou_mestre()
+	_btn_painel_mestre.visible = mestre
+	_mapa3d.ver_tudo = mestre
+	if not mestre:
+		_painel_mestre.visible = false
+		return
+	var c := missao.caso
+	_lbl_caso_mestre.text = "Quem: %s.\nO quê: %s.\nOnde: %s." % [c.sujeito.get("nome", "?"), c.acao.get("texto", "?"), c.local.get("nome", "?")] if c != null else ""
+	if missao.mapa.tem(_hex_mestre):
+		var cont: Dictionary = missao.mapa.conteudo(_hex_mestre)
+		_lbl_hex_mestre.text = "Hex [%d, %d]: %s, %s" % [_hex_mestre.x, _hex_mestre.y, missao.mapa.terreno(_hex_mestre), cont.get("tipo", "vazio")]
 
 
 func _ao_encontro(config: Dictionary) -> void:
@@ -187,7 +346,13 @@ func _nova_missao() -> void:
 
 func _clicar(evento: InputEvent) -> void:
 	if evento is InputEventMouseButton and evento.pressed and evento.button_index == MOUSE_BUTTON_LEFT:
-		_enviar("mover", {"hex": Comandos.vetor(_mapa3d.hex_em(evento.position))})
+		var h := _mapa3d.hex_em(evento.position)
+		if _chk_hex_mestre != null and _chk_hex_mestre.button_pressed and _sou_mestre():
+			_hex_mestre = h
+			_mapa3d.mostrar_cursor(h, true)
+			_atualizar()
+			return
+		_enviar("mover", {"hex": Comandos.vetor(h)})
 		return
 	if _mapa3d.rig.tratar_entrada(evento):
 		_vista.accept_event()
@@ -298,6 +463,8 @@ func _montar_interface() -> void:
 	_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	painel.add_child(_log)
 
+	_montar_painel_mestre(painel)
+
 	var legenda := Label.new()
 	legenda.text = "Vermelho: encontro · amarelo: evento · azul: início · branco: vila · esfera escura: covil\nCâmera: roda = zoom, botão direito = girar, WASD = deslizar"
 	legenda.add_theme_color_override("font_color", Color("7f8c8d"))
@@ -353,6 +520,7 @@ func _atualizar() -> void:
 	_barra_membrana.value = missao.membrana.valor
 	_lbl_membrana.text = "%d — %s
 Reforços da Ordem: %d   ·   Pistas: %d" % [missao.membrana.valor, missao.membrana.estado().get("nome", ""), missao.reforcos, missao.pistas]
+	_atualizar_mestre()
 	_mapa3d.atualizar(missao, missao.destinos())
 
 

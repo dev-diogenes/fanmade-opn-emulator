@@ -21,6 +21,8 @@ var _destaques: Node3D
 var _anel_vez: MeshInstance3D
 var _ultima_posicao: Dictionary = {}
 var _cursor: MeshInstance3D   ## cursor do controle (co-op local)
+## Modo Mestre: a tela do mestre mostra o mapa inteiro (só o desenho; o estado não muda)
+var ver_tudo := false
 
 
 func construir(p_mapa: MapaHex, terrenos: Dictionary) -> void:
@@ -60,7 +62,7 @@ func posicao_hex(h: Vector2i, altura: float = -1.0) -> Vector3:
 	var p := Hex.para_pixel(h, RAIO)
 	var y := altura
 	if y < 0.0:
-		y = ALTURAS.get(mapa.terreno(h), 0.2) if mapa.revelado(h) else 0.16
+		y = ALTURAS.get(mapa.terreno(h), 0.2) if ver_tudo or mapa.revelado(h) else 0.16
 	return Vector3(p.x, y, p.y)
 
 
@@ -149,7 +151,7 @@ func vizinho_na_direcao(h: Vector2i, dir: Vector2i) -> Vector2i:
 
 func atualizar(missao: Missao, destinos: Dictionary) -> void:
 	for h in _tiles:
-		var revelado := mapa.revelado(h)
+		var revelado := ver_tudo or mapa.revelado(h)
 		_tiles[h].terreno.visible = revelado
 		_tiles[h].nevoa.visible = not revelado
 		_atualizar_marcador(h, mapa.conteudo(h).get("tipo", "") if revelado else "")

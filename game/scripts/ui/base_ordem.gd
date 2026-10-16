@@ -491,6 +491,21 @@ func _montar_jogadores() -> void:
 		_caixa_jogadores.add_child(linha)
 	if ctl.jogadores.size() < ControleLocal.MAX_JOGADORES:
 		_caixa_jogadores.add_child(_botao("+ Jogador", _adicionar_jogador))
+	# Modo Mestre (Fase 8.3): com mestre, ele joga as ameaças e tem um painel no mapa
+	var linha_m := HBoxContainer.new()
+	var lbl_m := Label.new()
+	lbl_m.text = "Mestre"
+	linha_m.add_child(lbl_m)
+	var opt_m := OptionButton.new()
+	opt_m.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	opt_m.clip_text = true
+	opt_m.add_item("Sem mestre (a IA joga as ameaças)")
+	for j in ctl.jogadores.size():
+		opt_m.add_item(ctl.descricao(j))
+	opt_m.select(ctl.mestre + 1 if ctl.mestre >= 0 else 0)
+	opt_m.item_selected.connect(_definir_mestre)
+	linha_m.add_child(opt_m)
+	_caixa_jogadores.add_child(linha_m)
 	if ctl.co_op():
 		var dica := Label.new()
 		dica.text = "Cada agente do grupo tem um dono: na vez dele, só o dispositivo desse jogador controla o jogo."
@@ -523,6 +538,12 @@ func _definir_dispositivo(i: int, j: int) -> void:
 
 func _definir_dono(j: int, a: Agente) -> void:
 	carreira.controles.definir_dono(a, j)
+	if _jogo != null:
+		_jogo.controles_mudaram()
+
+
+func _definir_mestre(i: int) -> void:
+	carreira.controles.definir_mestre(i - 1)
 	if _jogo != null:
 		_jogo.controles_mudaram()
 

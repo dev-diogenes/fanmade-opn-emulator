@@ -104,7 +104,7 @@ func iniciar_missao(grupo: Array, semente: int) -> Missao:
 		return null
 	for a in grupo:
 		_restaurar(a)
-	missao = Missao.nova(semente, ruleset, grupo.duplicate(), opcoes.duplicate())
+	missao = Missao.nova(semente, ruleset, grupo.duplicate(), _opcoes_da_missao())
 	ultimo_relatorio = {}
 	return missao
 
@@ -115,9 +115,17 @@ func iniciar_missao_comunidade(grupo: Array, definicao: Dictionary, semente: int
 		return null
 	for a in grupo:
 		_restaurar(a)
-	missao = MissaoComunidade.criar_missao(definicao, ruleset, grupo.duplicate(), opcoes.duplicate(), semente)
+	missao = MissaoComunidade.criar_missao(definicao, ruleset, grupo.duplicate(), _opcoes_da_missao(), semente)
 	ultimo_relatorio = {}
 	return missao
+
+
+## Opções que a missão leva: as da run e se há mestre (ADR 0007: com mestre, as ameaças
+## esperam a decisão dele em todas as máquinas).
+func _opcoes_da_missao() -> Dictionary:
+	var op := opcoes.duplicate()
+	op["mestre"] = controles.mestre >= 0
+	return op
 
 
 ## Progresso de uma campanha (criado na primeira consulta).
@@ -140,7 +148,7 @@ func iniciar_missao_campanha(grupo: Array, campanha: Dictionary, semente: int) -
 	var i := int(p.etapa)
 	for a in grupo:
 		_restaurar(a)
-	missao = MissaoComunidade.criar_missao(campanha.missoes[i].definicao, ruleset, grupo.duplicate(), opcoes.duplicate(), semente)
+	missao = MissaoComunidade.criar_missao(campanha.missoes[i].definicao, ruleset, grupo.duplicate(), _opcoes_da_missao(), semente)
 	missao.extras["campanha"] = Campanha.extras_da_etapa(campanha, i)
 	Campanha.aplicar_marcas(missao, campanha.missoes[i], p.marcas)
 	ultimo_relatorio = {}

@@ -45,6 +45,7 @@ func _ready() -> void:
 	cena = missao.criar_cena_investigacao()
 	sessao = _jogo.sessao if _jogo != null and _jogo.missao == missao else Sessao.new()
 	sessao.entrar("investigacao", _aplicar_comando, func(): return cena.agente_atual(), func(): return Comandos.hash_investigacao(cena))
+	sessao.comando_aplicado.connect(_ao_comando_aplicado)
 	Entrada.configurar()
 	_controles = _jogo.controles() if _jogo != null and _jogo.missao == missao else ControleLocal.padrao()
 	_montar_interface()
@@ -379,3 +380,14 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 func _exit_tree() -> void:
 	if sessao != null:
 		sessao.sair("investigacao")
+		if sessao.comando_aplicado.is_connected(_ao_comando_aplicado):
+			sessao.comando_aplicado.disconnect(_ao_comando_aplicado)
+
+
+## Comandos do mestre chegam em qualquer tela; aqui, a narração vai para o registro.
+func _ao_comando_aplicado(cmd: Dictionary, res: Dictionary) -> void:
+	if String(cmd.get("ctx", "")) != "mestre":
+		return
+	if cmd.get("acao", "") == "narrar" and res.get("ok", false):
+		_log.append_text("[color=#f5cba7][b]Mestre:[/b] %s[/color]\n" % res.texto)
+	_atualizar()

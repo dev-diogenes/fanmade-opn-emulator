@@ -16,6 +16,8 @@ const PEER_DO_HOST := 1
 var jogadores: Array[Dictionary] = []
 ## O peer desta máquina (não vai no save): 1 no host e offline
 var meu_peer := PEER_DO_HOST
+## Jogador que faz o papel de mestre (ADR 0007, Fase 8.3); -1 = sem mestre (a IA joga as ameaças)
+var mestre := -1
 ## agente_id -> índice do jogador
 var donos: Dictionary = {}
 
@@ -60,6 +62,24 @@ func remover_remotos() -> void:
 			remover_jogador(j)
 
 
+func definir_mestre(j: int) -> void:
+	mestre = j if j >= 0 and j < jogadores.size() else -1
+
+
+## Máquina do mestre. Sem mestre na sessão, o host assume (a partida não trava esperando).
+func mestre_peer() -> int:
+	return peer_do_jogador(mestre) if mestre >= 0 and mestre < jogadores.size() else PEER_DO_HOST
+
+
+## Esta máquina faz o papel de mestre?
+func e_mestre_local() -> bool:
+	return mestre_peer() == meu_peer
+
+
+func descricao_mestre() -> String:
+	return descricao(mestre) if mestre >= 0 and mestre < jogadores.size() else "sem mestre"
+
+
 func peer_do_jogador(j: int) -> int:
 	return int(jogadores[j].get("peer", PEER_DO_HOST)) if j >= 0 and j < jogadores.size() else PEER_DO_HOST
 
@@ -78,6 +98,10 @@ func remover_jogador(j: int) -> void:
 	if j <= 0 or j >= jogadores.size():
 		return
 	jogadores.remove_at(j)
+	if mestre == j:
+		mestre = -1
+	elif mestre > j:
+		mestre -= 1
 	for id in donos.keys():
 		if int(donos[id]) == j:
 			donos.erase(id)
@@ -143,7 +167,7 @@ func evento_permitido(evento: InputEvent, agente: Agente) -> bool:
 
 
 func para_dicionario() -> Dictionary:
-	return {"jogadores": jogadores.duplicate(true), "donos": donos.duplicate()}
+	return {"jogadores": jogadores.duplicate(true), "donos": donos.duplicate(), "mestre": mestre}
 
 
 static func de_dicionario(d: Dictionary) -> ControleLocal:
@@ -157,4 +181,5 @@ static func de_dicionario(d: Dictionary) -> ControleLocal:
 		c.jogadores.append({"dispositivo": TECLADO, "indice": 0})
 	for id in d.get("donos", {}):
 		c.donos[id] = int(d.donos[id])
+	c.definir_mestre(int(d.get("mestre", -1)))
 	return c

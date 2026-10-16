@@ -43,6 +43,22 @@ Havia duas formas de sincronizar:
   - **8.2:** rede e saguão.
   - **8.3:** Modo Mestre.
 
+## Modo Mestre (Fase 8.3)
+
+- **Quem é o mestre:** um jogador do `ControleLocal` (`mestre`, ou -1 para jogar sem mestre), escolhido na Base. Pode ser o host, um cliente ou alguém no mesmo PC.
+- **Ameaças:** se a missão começa com mestre, isso fica no estado da missão (`opcoes.mestre`) e na configuração de cada encontro. Assim, todas as máquinas esperam a decisão do mestre na vez das ameaças, em vez de rodar a IA. O mestre joga essa vez por comandos, com o próprio ser como `ator`:
+  - andar;
+  - atacar, com o ataque escolhido da ficha;
+  - usar uma habilidade;
+  - conjurar;
+  - "IA joga este turno".
+- **Comandos do mestre** (`ctx: "mestre"`): narrar, Membrana, revelar hexes, pôr encontro ou evento num hex, limpar um hex, curar, ferir e mexer na Sanidade.
+  - Eles valem em qualquer tela.
+  - O host marca em que tela aceitou o comando, e o cliente só aplica quando estiver na mesma, para todos aplicarem no mesmo ponto da partida.
+  - Só o peer do mestre pode mandar esses comandos.
+- **Se o mestre sai,** o host assume o papel, e a partida não trava esperando ninguém.
+- **Só na tela do mestre:** ele vê o mapa inteiro e as respostas do caso. Isso é desenho na tela dele, não muda o estado do jogo.
+
 ## Consequências
 
 - Qualquer código de lógica que usar outro gerador de números, ou que depender da ordem de algo não determinístico, quebra a sincronia. O checksum detecta o problema, e a ressincronização corrige no ponto seguinte.

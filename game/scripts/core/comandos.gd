@@ -8,7 +8,9 @@ extends RefCounted
 
 const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento"]
 const ACOES_INVESTIGACAO := ["procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair"]
-const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "decifrar", "apagar", "soltar", "encerrar_turno", "sair"]
+const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair"]
+## Modo Mestre (Fase 8.3): valem em qualquer tela, só do peer do mestre
+const ACOES_MESTRE := ["narrar", "membrana", "revelar", "encontro", "evento", "limpar", "curar", "ferir", "sanidade"]
 
 
 static func novo(ctx: String, acao: String, args: Dictionary = {}) -> Dictionary:
@@ -108,8 +110,9 @@ static func ser(c: Combate, i) -> Ser:
 	return c.participantes[k] if k >= 0 and k < c.participantes.size() else null
 
 
-## Aplica uma decisão do ser da vez (`ator`). "encerrar_turno" e "sair" não mexem no combate:
-## quem chama (arena, testes, rede) avança os turnos com o FluxoCombate ou troca de cena.
+## Aplica uma decisão do ser da vez (`ator`): de um agente ou, com mestre, de uma ameaça.
+## "encerrar_turno", "ia" e "sair" pedem a quem chama (arena, testes, rede) que avance os
+## turnos com o FluxoCombate ou troque de cena; "ia" antes joga o turno inteiro pela IA.
 static func aplicar_combate(c: Combate, armas: Dictionary, cmd: Dictionary) -> Dictionary:
 	var acao := String(cmd.get("acao", ""))
 	if acao == "sair":
@@ -126,11 +129,29 @@ static func aplicar_combate(c: Combate, armas: Dictionary, cmd: Dictionary) -> D
 			var alvo := ser(c, cmd.get("alvo", -1))
 			if alvo == null:
 				return {"ok": false, "erro": "alvo inválido"}
-			var r := c.agredir(ator, alvo, armas.get(ator, c.ruleset.arma("desarmado")), int(cmd.get("foco", 0)), _opcoes(cmd))
+			var arma: Dictionary = armas.get(ator, c.ruleset.arma("desarmado"))
+			if ator is Ameaca and cmd.has("arma"):
+				var k := int(cmd.arma)
+				if k >= 0 and k < (ator as Ameaca).ataques.size():
+					arma = (ator as Ameaca).ataques[k]
+			var r := c.agredir(ator, alvo, arma, int(cmd.get("foco", 0)), _opcoes(cmd))
 			return {"ok": r.teste != null, "ataque": r}
+		"ia":
+			IaCombate.jogar(c, ator, armas)
+			return {"ok": true}
+		"habilidade":
+			if not ator is Ameaca:
+				return {"ok": false, "erro": "só ameaças usam habilidades da ficha"}
+			var celula = de_vetor(cmd.celula) if cmd.get("celula") is Array else null
+			return c.usar_habilidade(ator as Ameaca, String(cmd.get("habilidade", "")), ser(c, cmd.get("alvo", -1)), celula)
 		"conjurar":
+			if ator is Ameaca:
+				var alvo_r := ser(c, cmd.get("alvo", -1))
+				if alvo_r == null:
+					return {"ok": false, "erro": "alvo inválido"}
+				return c.conjurar_ameaca(ator as Ameaca, String(cmd.ritual), alvo_r, _opcoes(cmd))
 			if not ator is Agente:
-				return {"ok": false, "erro": "só agentes conjuram por comando"}
+				return {"ok": false, "erro": "esse ser não conjura"}
 			var op := _opcoes(cmd)
 			if op.has("celula"):
 				op.celula = de_vetor(op.celula)
@@ -167,6 +188,86 @@ static func aplicar_combate(c: Combate, armas: Dictionary, cmd: Dictionary) -> D
 		"soltar":
 			return {"ok": c.escapar(ator)}
 	return {"ok": false, "erro": "ação de combate desconhecida: %s" % acao}
+
+
+# --- Mestre (Fase 8.3) ------------------------------------------------------------------
+
+## Comando do mestre na missão. O texto narrado perde os colchetes (nada de BBCode alheio).
+static func aplicar_mestre(m: Missao, cmd: Dictionary) -> Dictionary:
+	match String(cmd.get("acao", "")):
+		"narrar":
+			var t := String(cmd.get("texto", "")).replace("[", "(").replace("]", ")").strip_edges().substr(0, 400)
+			if t == "":
+				return {"ok": false, "erro": "nada para narrar"}
+			m._log("[color=#f5cba7][b]Mestre:[/b] %s[/color]" % t)
+			return {"ok": true, "texto": t}
+		"membrana":
+			var v := clampi(int(cmd.get("valor", 0)), -50, 50)
+			if v == 0:
+				return {"ok": false, "erro": "valor zero"}
+			m.membrana.alterar(v, "mestre")
+			m._log("[color=#c39bd3]O mestre %s a Membrana (%+d).[/color]" % ["fortalece" if v > 0 else "enfraquece", v])
+			return {"ok": true}
+		"revelar":
+			var h := de_vetor(cmd.hex)
+			if not m.mapa.tem(h):
+				return {"ok": false, "erro": "hex fora do mapa"}
+			m.mapa.revelar(h, clampi(int(cmd.get("raio", 1)), 0, 10))
+			return {"ok": true}
+		"encontro", "evento":
+			var h := de_vetor(cmd.hex)
+			if not _hex_livre(m, h):
+				return {"ok": false, "erro": "o hex precisa estar livre"}
+			var id := String(cmd.get("id", ""))
+			if cmd.acao == "encontro":
+				if m._encontro(id).is_empty():
+					return {"ok": false, "erro": "encontro desconhecido"}
+				m.mapa.definir_conteudo(h, {"tipo": "encontro", "encontro": id})
+			else:
+				if m._evento(id).is_empty():
+					return {"ok": false, "erro": "evento desconhecido"}
+				m.mapa.definir_conteudo(h, {"tipo": "evento", "evento": id})
+			return {"ok": true}
+		"limpar":
+			var h := de_vetor(cmd.hex)
+			if not m.mapa.tem(h) or String(m.mapa.conteudo(h).get("tipo", "")) in ["inicio", "objetivo"]:
+				return {"ok": false, "erro": "esse hex não pode ser limpo"}
+			m.mapa.limpar_conteudo(h)
+			return {"ok": true}
+		"curar", "ferir", "sanidade":
+			var a: Agente = null
+			for ag in m.agentes:
+				if ag.id == String(cmd.get("agente", "")):
+					a = ag
+			var v := int(cmd.get("valor", 0))
+			if a == null or v == 0 or a.tem(Ser.MORTO):
+				return {"ok": false, "erro": "agente ou valor inválido"}
+			v = clampi(v, -100, 100)
+			match String(cmd.acao):
+				"curar":
+					a.curar(absi(v))
+					m._log("[color=#f5cba7]O mestre: %s recupera %d PV.[/color]" % [a.nome, absi(v)])
+				"ferir":
+					a.sofrer_dano(absi(v))
+					m._log("[color=#f5cba7]O mestre: %s sofre %d de dano.[/color]" % [a.nome, absi(v)])
+				"sanidade":
+					if v > 0:
+						a.recuperar_sanidade(v)
+					else:
+						a.perder_sanidade(-v)
+					m._log("[color=#f5cba7]O mestre: %s %s %d de Sanidade.[/color]" % [a.nome, "recupera" if v > 0 else "perde", absi(v)])
+			m._verificar_derrota()
+			return {"ok": true}
+	return {"ok": false, "erro": "ação de mestre desconhecida: %s" % cmd.get("acao", "")}
+
+
+static func _hex_livre(m: Missao, h: Vector2i) -> bool:
+	if not m.mapa.tem(h) or not m.mapa.passavel(h) or not m.mapa.conteudo(h).is_empty():
+		return false
+	for a in m.agentes:
+		if m.posicao(a) == h:
+			return false
+	return true
 
 
 # --- Checksum -------------------------------------------------------------------------

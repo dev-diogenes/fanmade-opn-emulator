@@ -39,7 +39,9 @@ func _ready() -> void:
 	rede.name = "Rede"
 	add_child(rede)
 	rede.ligar(sessao)
-	sessao.validar_dono = func(peer, agente): return controles().peer_de(agente) == peer
+	sessao.validar_dono = func(peer, ser): return controles().mestre_peer() == peer if ser is Ameaca else controles().peer_de(ser) == peer
+	sessao.validar_mestre = func(peer): return controles().mestre_peer() == peer
+	sessao.registrar_mestre(_aplicar_mestre)
 	rede.jogador_entrou.connect(_ao_entrar_jogador)
 	rede.jogador_saiu.connect(_ao_sair_jogador)
 	rede.estado_pedido.connect(_ao_pedirem_estado)
@@ -164,6 +166,18 @@ func salvar() -> void:
 		carreira.salvar()
 
 
+## Comandos do mestre (Fase 8.3): mexem na missão em andamento, em qualquer tela.
+func _aplicar_mestre(cmd: Dictionary) -> Dictionary:
+	if missao == null:
+		return {"ok": false, "erro": "sem missão"}
+	return Comandos.aplicar_mestre(missao, cmd)
+
+
+## A missão em andamento tem mestre, e esta máquina faz esse papel?
+func sou_mestre() -> bool:
+	return missao != null and bool(missao.opcoes.get("mestre", false)) and controles().e_mestre_local()
+
+
 # --- Online (Fase 8.2) ----------------------------------------------------------------
 
 func hospedar(porta: int = Rede.PORTA_PADRAO) -> Error:
@@ -228,6 +242,7 @@ func _info_saguao() -> Dictionary:
 	for a in carreira.roster:
 		agentes.append({"nome": a.nome, "nex": a.nex, "jogador": ctl.descricao(ctl.jogador_de(a)), "peer": ctl.peer_de(a)})
 	return {"status": "Conectado. Aguardando o host começar uma missão.", "jogadores": jogadores, "agentes": agentes,
+		"mestre": ctl.descricao_mestre(),
 		"relatorio": carreira.ultimo_relatorio.duplicate(true)}
 
 

@@ -11,6 +11,7 @@ const LIMITE_PASSOS := 20000
 static func resolver_combate(ruleset: Ruleset, config: Dictionary, membrana: Membrana) -> Dictionary:
 	var fluxo := FluxoCombate.montar(ruleset, config, membrana)
 	fluxo.ia_para_agentes = true
+	fluxo.ameacas_pelo_mestre = false
 	fluxo.iniciar()
 	fluxo.avancar_ate_decisao()
 	var c := fluxo.combate

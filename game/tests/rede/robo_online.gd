@@ -4,11 +4,15 @@ extends Node
 ## entra, dá a ele um agente e começa a missão. No fim, cada lado imprime o hash da missão,
 ## e o script compara. Argumentos: -- --papel=host|cliente --porta=N --semente=N [--tarde=1]
 ## Com --tarde=1, o host começa sozinho e o cliente entra no meio da missão (checkpoint + replay).
+## Com --mestre=1, o host é o mestre: o cliente joga todos os agentes; o host joga as ameaças,
+## narra e mexe na Membrana a cada turno do mundo.
 
 var papel := "host"
 var porta := 24555
 var semente := 7
 var tarde := false
+var mestre := false
+var _turno_narrado := -1
 var _investigou := false
 var jogo: Node
 var _espera := 0.0
@@ -30,12 +34,15 @@ func _ready() -> void:
 				"porta": porta = partes[1].to_int()
 				"semente": semente = partes[1].to_int()
 				"tarde": tarde = partes[1] == "1"
+				"mestre": mestre = partes[1] == "1"
 	Engine.time_scale = 20.0
 	jogo = get_node("/root/Jogo")
 	jogo.salvar_automaticamente = false
 	jogo.sessao.comando_aplicado.connect(func(cmd, _res): _por_tela[cmd.ctx] = int(_por_tela.get(cmd.ctx, 0)) + 1)
 	jogo.carreira = Carreira.nova()
 	if papel == "host":
+		if mestre:
+			jogo.carreira.controles.definir_mestre(0)
 		jogo.rede.jogador_entrou.connect(_ao_entrar)
 		var erro: Error = jogo.hospedar(porta)
 		print("ROBO host hospedando na porta %d: %s" % [porta, error_string(erro)])
@@ -50,7 +57,8 @@ func _ready() -> void:
 func _ao_entrar(peer: int, nome: String) -> void:
 	print("ROBO host: entrou %s (peer %d)" % [nome, peer])
 	var c: Carreira = jogo.carreira
-	jogo.controles().definir_dono(c.roster[1], c.controles.jogadores.size() - 1)
+	for k in (c.roster.size() if mestre else 1):
+		jogo.controles().definir_dono(c.roster[k if mestre else 1], c.controles.jogadores.size() - 1)
 	jogo.controles_mudaram()
 	if jogo.missao != null:
 		print("ROBO host: cliente entrou no meio da missão (comando %d)" % jogo.sessao.seq)
@@ -98,6 +106,12 @@ func _enviar(cena: Node, acao: String, args: Dictionary = {}) -> void:
 
 
 func _jogar_mapa(cena: Node, m: Missao) -> void:
+	if mestre and papel == "host" and m.turno_mundo != _turno_narrado and m.encontro_pendente.is_empty():
+		_turno_narrado = m.turno_mundo
+		cena._enviar_mestre("narrar", {"texto": "Começa o turno %d do mundo." % m.turno_mundo})
+		cena._enviar_mestre("membrana", {"valor": 5 if m.turno_mundo % 2 == 0 else -2})
+		cena._enviar_mestre("curar", {"agente": m.agentes[0].id, "valor": 2})
+		return
 	var a := m.agente_atual()
 	if a == null or not jogo.controles().e_local(a) or not m.encontro_pendente.is_empty() or not m.investigacao_pendente.is_empty():
 		return
@@ -138,6 +152,20 @@ func _jogar_arena(cena: Node) -> void:
 			_enviar(cena, "sair")
 		return
 	var ser := f.decisor()
+	if ser is Ameaca:
+		if cena._ameaca_da_vez() == null:
+			return
+		var alvo_m := IaCombate.inimigo_mais_proximo(f.combate, ser)
+		var arma: Dictionary = f.armas[ser] if (ser as Ameaca).ataques.is_empty() else (ser as Ameaca).ataques[0]
+		var passo_m: int = _passo_turno.get(f.turnos, 0)
+		_passo_turno[f.turnos] = passo_m + 1
+		if passo_m == 0 and alvo_m != null and IaCombate.pode_atacar(f.combate, ser, alvo_m, arma):
+			_enviar(cena, "agredir", {"alvo": Comandos.ref(f.combate, alvo_m), "arma": 0})
+		elif passo_m == 0:
+			_enviar(cena, "ia")
+		else:
+			_enviar(cena, "encerrar_turno")
+		return
 	if ser == null or not jogo.controles().e_local(ser as Agente):
 		return
 	var c := f.combate
