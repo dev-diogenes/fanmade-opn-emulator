@@ -43,6 +43,9 @@ var resgatados: Array[Agente] = []
 
 ## Todas as linhas do registro (a cena do mapa é recriada após cada combate)
 var historico: Array[String] = []
+## Missão da comunidade (Fase 6): conteúdo próprio que vem antes dos dados do jogo.
+## {"id", "titulo", "encontros": [], "eventos": [], "ameacas": {}, "covil": {}, "surgimentos": "padrao"}
+var extras: Dictionary = {}
 
 var _cfg: Dictionary
 var _descansou: Dictionary = {}          ## Agente -> hex onde já descansou nesta visita
@@ -227,6 +230,9 @@ func _iniciar_turno_do_agente() -> void:
 # --- Eventos ---------------------------------------------------------------
 
 func _evento(evento_id: String) -> Dictionary:
+	for e in extras.get("eventos", []):
+		if e.id == evento_id:
+			return e
 	var d := DadosJogo.ler("eventos")
 	for e in d.eventos + d.get("eventos_medo", []):
 		if e.id == evento_id:
@@ -296,10 +302,10 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool) -> void:
 	for a in agentes:
 		if not a.tem(Ser.MORTO) and not a.esta_fora_de_combate() and Hex.distancia(posicao(a), h) <= alcance:
 			participantes.append(a)
-	var info: Dictionary = covil_para(participantes) if chefe else _encontro(encontro_id)
+	var info: Dictionary = (extras.covil if not extras.get("covil", {}).is_empty() else covil_para(participantes)) if chefe else _encontro(encontro_id)
 	var ameacas: Array = []
 	for amea_id in info.ameacas:
-		var am := DadosJogo.ameaca(ruleset, amea_id)
+		var am := ameaca_info(amea_id)
 		if chefe and amea_id == info.ameacas[0]:
 			am.chefe = true   # a primeira ameaça do covil é o chefe
 		if chefe and am.chefe and modificador_chefe != 0.0:
@@ -366,17 +372,28 @@ func encontros_para_surgir(nivel: int, vivos: Array) -> Array:
 	var nex_total := 0
 	for a in vivos:
 		nex_total += a.nex
-	var opcoes: Array = DadosJogo.ler("encontros").encontros.filter(func(e): return int(e.nivel) <= nivel and _vd_minimo(e) <= nex_total * 2)
-	if opcoes.is_empty():
-		opcoes = DadosJogo.ler("encontros").encontros.filter(func(e): return int(e.nivel) == 0)
+	var modo := String(extras.get("surgimentos", "padrao"))
+	if modo == "nenhum":
+		return []
+	var base: Array = extras.get("encontros", []) if modo == "proprios" else DadosJogo.ler("encontros").encontros
+	var opcoes: Array = base.filter(func(e): return int(e.get("nivel", 0)) <= nivel and _vd_minimo(e) <= nex_total * 2)
+	if opcoes.is_empty() and modo != "proprios":
+		opcoes = base.filter(func(e): return int(e.get("nivel", 0)) == 0)
 	return opcoes
+
+
+## Ficha de uma ameaça: primeiro as próprias da missão, depois as do jogo e as do livro.
+func ameaca_info(amea_id: String) -> Dictionary:
+	if extras.get("ameacas", {}).has(amea_id):
+		return DadosJogo.info_ameaca(ruleset, amea_id, extras.ameacas[amea_id])
+	return DadosJogo.ameaca(ruleset, amea_id)
 
 
 ## VD da ameaça mais fraca de um encontro (o mínimo que o combate terá).
 func _vd_minimo(e: Dictionary) -> int:
 	var minimo := 1 << 20
 	for id in e.ameacas:
-		minimo = mini(minimo, int(DadosJogo.ameaca(ruleset, id).vd))
+		minimo = mini(minimo, int(ameaca_info(id).vd))
 	return minimo
 
 
@@ -389,7 +406,7 @@ func _perguntas_respondidas() -> Array:
 
 
 func _encontro(encontro_id: String) -> Dictionary:
-	for e in DadosJogo.ler("encontros").encontros:
+	for e in extras.get("encontros", []) + DadosJogo.ler("encontros").encontros:
 		if e.id == encontro_id:
 			return e
 	return {}
@@ -631,7 +648,7 @@ func para_dicionario() -> Dictionary:
 		"investigacao_pendente": {"hex": [investigacao_pendente.hex.x, investigacao_pendente.hex.y], "cena": investigacao_pendente.cena} if not investigacao_pendente.is_empty() else {},
 		"turnos_sem_surgimento": _turnos_sem_surgimento, "descansos": descansos,
 		"historico": historico.slice(maxi(0, historico.size() - 300)),
-		"encerrada": encerrada, "vitoria": vitoria,
+		"encerrada": encerrada, "vitoria": vitoria, "extras": extras.duplicate(true),
 	}
 
 
@@ -641,6 +658,7 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.ruleset = ruleset_
 	m._cfg = DadosJogo.ler("mapa")
 	m.semente = int(d.get("semente", 0))
+	m.extras = d.get("extras", {})
 	m.dados = Dados.new(m.semente)
 	m.dados.restaurar_estado(String(d.get("rng", "0")).to_int())
 	m.mapa = MapaHex.new(m._cfg.terrenos)

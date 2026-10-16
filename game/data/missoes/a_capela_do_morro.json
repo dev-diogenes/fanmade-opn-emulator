@@ -1,0 +1,67 @@
+{
+  "formato": "opn-missao",
+  "versao": 1,
+  "id": "a_capela_do_morro",
+  "titulo": "A Capela do Morro",
+  "autor": "Equipe do projeto (exemplo)",
+  "descricao": "Missão de exemplo do formato da comunidade: mapa desenhado à mão, eventos, encontro e chefe próprios.",
+  "nex_recomendado": 5,
+  "briefing": "Em Santa Luzia do Morro, os sinos da capela abandonada tocam sozinhos toda madrugada. Três moradores sumiram desde a primeira badalada. A Ordem quer saber quem está tocando — e por quê.",
+  "membrana_inicial": 90,
+  "mapa": {
+    "terreno": [
+      "fffccccmmfff",
+      "fccccecmmcff",
+      "ccuccecccrcf",
+      "cccceeeeccrc",
+      "ccppcccecccc",
+      "cpaapcceccmm",
+      "ccppcccfffmm",
+      "fccccfffffmm"
+    ],
+    "inicio": [0, 3],
+    "nome_inicio": "Estrada de chegada",
+    "objetivo": [11, 3],
+    "conteudo": [
+      {"em": [2, 2], "tipo": "vila", "nome": "Santa Luzia do Morro"},
+      {"em": [3, 1], "tipo": "evento", "evento": "badalada"},
+      {"em": [6, 5], "tipo": "evento", "evento": "poco_seco"},
+      {"em": [5, 3], "tipo": "encontro", "encontro": "procissao"},
+      {"em": [9, 2], "tipo": "investigacao", "cena": "capela"},
+      {"em": [8, 6], "tipo": "encontro", "encontro": "cria_solitaria"}
+    ]
+  },
+  "caso": {
+    "sujeito": {"id": "sineiro", "nome": "o antigo sineiro da capela", "chefe_titulo": "o Sineiro"},
+    "acao": {"id": "chamar", "texto": "toca os sinos para chamar algo do Outro Lado"},
+    "local": {"id": "torre", "nome": "a torre da capela"},
+    "objetivo": "Descobrir quem toca os sinos e silenciá-los."
+  },
+  "eventos": [
+    {"id": "badalada", "titulo": "Badalada fora de hora",
+     "texto": "Os sinos tocam ao meio-dia. Ninguém na vila olha para cima.",
+     "pericia": "vontade", "dt": 15,
+     "sucesso": {"texto": "Você conta as badaladas: sete, sempre sete.", "efeitos": [{"tipo": "revelar_objetivo"}]},
+     "falha": {"texto": "O som entra nos ossos e não sai mais.", "efeitos": [{"tipo": "dano_mental", "valor": "1d6"}]}},
+    {"id": "poco_seco", "titulo": "Poço seco",
+     "texto": "No fundo do poço, alguém deixou sete velas acesas.",
+     "pericia": "ocultismo", "dt": 15,
+     "sucesso": {"texto": "Você apaga as velas na ordem certa. O ar fica mais leve.", "efeitos": [{"tipo": "membrana", "valor": 5}]},
+     "falha": {"texto": "Uma vela se apaga sozinha. Depois outra.", "efeitos": [{"tipo": "membrana", "valor": -4}]}}
+  ],
+  "encontros": [
+    {"id": "procissao", "nome": "Procissão da madrugada", "nivel": 0, "ameacas": ["iniciado", "fiel_do_sino"]}
+  ],
+  "ameacas": {
+    "fiel_do_sino": {"nome": "Fiel do Sino", "nivel": 1, "arma": "faca",
+      "ficha": {"pv": 14, "defesa": 12, "vd": 10, "atributos": {"agi": 1, "for": 2, "vig": 1},
+                "pericias": {"luta": {"dados": 1, "bonus": 5}, "vontade": {"dados": 1, "bonus": 2}}}},
+    "o_sineiro": {"nome": "O Sineiro", "nivel": 2, "arma": "mordida_sangue", "chefe": true,
+      "ficha": {"pv": 40, "defesa": 14, "deslocamento": 9, "vd": 25, "elemento": "sangue", "criatura": true,
+                "atributos": {"agi": 2, "for": 3, "vig": 3},
+                "pericias": {"luta": {"dados": 2, "bonus": 5}, "fortitude": {"dados": 3, "bonus": 5}, "vontade": {"dados": 2, "bonus": 5}},
+                "presenca_perturbadora": {"dt": 15, "dano": "1d6", "nex": 30}}}
+  },
+  "covil": {"nome": "A Torre da Capela", "ameacas": ["o_sineiro", "fiel_do_sino"]},
+  "opcoes": {"surgimentos": "padrao"}
+}

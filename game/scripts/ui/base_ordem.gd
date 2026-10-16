@@ -19,6 +19,9 @@ var _caixa_grupo: VBoxContainer
 var _checks_grupo: Dictionary = {}     ## Agente -> CheckBox
 var _donos_grupo: Dictionary = {}      ## Agente -> OptionButton (dono no co-op local)
 var _caixa_jogadores: VBoxContainer
+var _opt_missao: OptionButton
+var _lbl_missao: Label
+var _missoes: Array[Dictionary] = []   ## missões da comunidade: [{caminho, definicao, erros}]
 var _opt_modo: OptionButton
 var _chk_lesoes: CheckBox
 var _chk_inspiracao: CheckBox
@@ -131,6 +134,16 @@ func _montar_interface() -> void:
 	_chk_inspiracao.text = "Inspiração Resoluta (p.184)"
 	_chk_inspiracao.toggled.connect(func(v): carreira.opcoes.inspiracao_resoluta = v)
 	c3.add_child(_chk_inspiracao)
+	c3.add_child(_titulo("Missão"))
+	_opt_missao = OptionButton.new()
+	_opt_missao.clip_text = true
+	_opt_missao.item_selected.connect(func(_i): _mostrar_missao())
+	c3.add_child(_opt_missao)
+	_lbl_missao = Label.new()
+	_lbl_missao.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_lbl_missao.add_theme_color_override("font_color", Color("aab7b8"))
+	c3.add_child(_lbl_missao)
+	c3.add_child(_botao("Editor de missões", _abrir_editor))
 	_btn_iniciar = _botao("Iniciar missão", _iniciar)
 	c3.add_child(_btn_iniciar)
 	_btn_continuar = _botao("Continuar missão em andamento", _continuar)
@@ -219,6 +232,7 @@ func _atualizar_tudo() -> void:
 		linha.add_child(dono)
 		_caixa_grupo.add_child(linha)
 	_montar_jogadores()
+	_listar_missoes()
 	_opt_modo.select(0 if carreira.opcoes.get("modo_morte", "normal") == "normal" else 1)
 	_chk_lesoes.set_pressed_no_signal(carreira.opcoes.get("lesoes", true))
 	_chk_inspiracao.set_pressed_no_signal(carreira.opcoes.get("inspiracao_resoluta", true))
@@ -481,8 +495,51 @@ func _iniciar() -> void:
 	if not erros.is_empty():
 		_lbl_erros.text = "\n".join(erros)
 		return
+	var escolha := _opt_missao.selected - 1   # 0 = procedural
+	if escolha >= 0:
+		var m: Dictionary = _missoes[escolha]
+		if not m.erros.is_empty():
+			_lbl_erros.text = "Esta missão tem erros:\n" + "\n".join(m.erros)
+			return
+		if _jogo != null:
+			_jogo.iniciar_missao_comunidade(grupo, m.definicao)
+		return
 	if _jogo != null:
 		_jogo.iniciar_missao(grupo)
+
+
+# --- Missões da comunidade (Fase 6) ---------------------------------------------
+
+func _listar_missoes() -> void:
+	var antes := _opt_missao.selected
+	_missoes = MissaoComunidade.listar(carreira.ruleset)
+	_opt_missao.clear()
+	_opt_missao.add_item("Missão procedural (mapa e caso sorteados)")
+	for m in _missoes:
+		var d: Dictionary = m.definicao
+		_opt_missao.add_item("%s%s%s" % [d.get("titulo", m.caminho.get_file()), "" if String(d.get("autor", "")) == "" else " — " + String(d.autor), "" if m.erros.is_empty() else " (com erros)"])
+	_opt_missao.select(clampi(antes, 0, _opt_missao.item_count - 1))
+	_mostrar_missao()
+
+
+func _mostrar_missao() -> void:
+	var escolha := _opt_missao.selected - 1
+	if escolha < 0:
+		_lbl_missao.text = "Um mapa novo a cada missão, com encontros, eventos e investigações sorteados."
+		return
+	var m: Dictionary = _missoes[escolha]
+	var d: Dictionary = m.definicao
+	var texto := String(d.get("descricao", ""))
+	if d.has("nex_recomendado"):
+		texto += "  (NEX recomendado: %d%%)" % int(d.nex_recomendado)
+	if not m.erros.is_empty():
+		texto += "\nErros: " + "; ".join(PackedStringArray(m.erros))
+	_lbl_missao.text = texto
+
+
+func _abrir_editor() -> void:
+	if _jogo != null:
+		_jogo.ir_para_editor()
 
 
 func _continuar() -> void:

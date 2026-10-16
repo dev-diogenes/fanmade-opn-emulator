@@ -27,12 +27,26 @@ static func ameaca(ruleset: Ruleset, ameaca_id: String) -> Dictionary:
 		var ataques: Array = b.ficha.get("ataques", [])
 		return {"id": ameaca_id, "nome": b.nome, "ficha": b.ficha, "arma": ataques[0] if not ataques.is_empty() else ruleset.arma("desarmado"),
 			"nivel": nivel_por_vd(int(b.vd)), "chefe": false, "vd": int(b.vd)}
-	var info: Dictionary = d.ameacas[ameaca_id]
-	var arma: Dictionary = d.armas_extras.get(info.arma, {})
-	if arma.is_empty():
-		arma = ruleset.arma(info.arma)
-	return {"id": ameaca_id, "nome": info.nome, "ficha": info.ficha, "arma": arma, "nivel": int(info.nivel), "chefe": info.get("chefe", false),
-		"vd": int(info.ficha.get("vd", 10))}
+	return info_ameaca(ruleset, ameaca_id, d.ameacas[ameaca_id])
+
+
+## Monta a ficha pronta a partir de uma ameaça no formato do jogo ({nome, nivel, arma, ficha}).
+## `arma` pode ser o id de uma arma (do ruleset ou de armas_extras) ou a própria arma; se a ficha
+## tiver "ataques" (formato do livro), vale o primeiro. Usada também pelas missões da comunidade.
+static func info_ameaca(ruleset: Ruleset, ameaca_id: String, info: Dictionary) -> Dictionary:
+	var ficha: Dictionary = info.get("ficha", {})
+	var arma: Dictionary = {}
+	if not ficha.get("ataques", []).is_empty():
+		arma = ficha.ataques[0]
+	elif info.get("arma") is Dictionary:
+		arma = info.arma
+	else:
+		arma = ler("ameacas").armas_extras.get(String(info.get("arma", "")), {})
+		if arma.is_empty():
+			arma = ruleset.arma(String(info.get("arma", "desarmado")))
+	var vd := int(ficha.get("vd", info.get("vd", 10)))
+	return {"id": ameaca_id, "nome": info.get("nome", ameaca_id), "ficha": ficha, "arma": arma,
+		"nivel": int(info.get("nivel", nivel_por_vd(vd))), "chefe": info.get("chefe", false), "vd": vd}
 
 
 ## Nível de ameaça (1 a 4) a partir do VD, para ordenar e equilibrar encontros.

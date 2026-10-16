@@ -104,6 +104,17 @@ func iniciar_missao(grupo: Array, semente: int) -> Missao:
 	return missao
 
 
+## Missão da comunidade (Fase 6): mesma regra de grupo; o mapa e o conteúdo vêm da definição.
+func iniciar_missao_comunidade(grupo: Array, definicao: Dictionary, semente: int) -> Missao:
+	if missao != null or not validar_grupo(grupo).is_empty() or not MissaoComunidade.validar(definicao, ruleset).is_empty():
+		return null
+	for a in grupo:
+		_restaurar(a)
+	missao = MissaoComunidade.criar_missao(definicao, ruleset, grupo.duplicate(), opcoes.duplicate(), semente)
+	ultimo_relatorio = {}
+	return missao
+
+
 ## Volta para a Base: aplica PP, NEX e patente (p.61-63), enterra os mortos e recupera todos.
 func encerrar_missao() -> Dictionary:
 	if missao == null or not missao.encerrada:

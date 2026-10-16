@@ -88,6 +88,10 @@ func tem_pericia(pericia_id: String) -> bool:
 	return _pericias.has(pericia_id)
 
 
+func tem_arma(arma_id: String) -> bool:
+	return _armas.has(arma_id)
+
+
 func tem_classe(classe_id: String) -> bool:
 	return _classes.has(classe_id)
 

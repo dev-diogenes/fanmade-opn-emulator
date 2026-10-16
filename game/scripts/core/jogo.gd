@@ -6,6 +6,7 @@ const CENA_BASE := "res://scenes/base_ordem.tscn"
 const CENA_MAPA := "res://scenes/mapa_mundo.tscn"
 const CENA_ARENA := "res://scenes/arena_teste.tscn"
 const CENA_INVESTIGACAO := "res://scenes/investigacao.tscn"
+const CENA_EDITOR := "res://scenes/editor_missao.tscn"
 
 var carreira: Carreira
 ## Configuração do combate que a arena deve montar (vazia = arena de demonstração)
@@ -56,6 +57,18 @@ func iniciar_missao(grupo: Array, semente: int = -1) -> Missao:
 		salvar()
 		get_tree().change_scene_to_file.call_deferred(CENA_MAPA)
 	return m
+
+
+func iniciar_missao_comunidade(grupo: Array, definicao: Dictionary, semente: int = -1) -> Missao:
+	var m := carreira.iniciar_missao_comunidade(grupo, definicao, semente if semente >= 0 else randi() % 1000000)
+	if m != null:
+		salvar()
+		get_tree().change_scene_to_file.call_deferred(CENA_MAPA)
+	return m
+
+
+func ir_para_editor() -> void:
+	get_tree().change_scene_to_file.call_deferred(CENA_EDITOR)
 
 
 func ir_para_combate(config: Dictionary) -> void:
