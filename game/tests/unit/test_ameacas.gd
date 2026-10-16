@@ -268,7 +268,7 @@ func test_enigma_ligado_a_pergunta_do_caso():
 	assert_false(c.decifrar_enigma(a, sombra).sucesso)
 	c.dados.forcar([12, 12])
 	assert_true(c.decifrar_enigma(a, sombra).sucesso, "DT 22 − 5 pela pergunta respondida")
-	assert_eq(_ameaca("o_que_ficou").enigma.pergunta, "o_que")
+	assert_eq(_ameaca("o_que_ficou").enigma.pergunta, "oque", "o id da pergunta do caso é \"oque\"")
 
 
 func test_ia_escolhe_a_arma():

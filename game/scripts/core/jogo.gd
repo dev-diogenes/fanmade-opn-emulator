@@ -67,6 +67,14 @@ func iniciar_missao_comunidade(grupo: Array, definicao: Dictionary, semente: int
 	return m
 
 
+func iniciar_missao_campanha(grupo: Array, campanha: Dictionary, semente: int = -1) -> Missao:
+	var m := carreira.iniciar_missao_campanha(grupo, campanha, semente if semente >= 0 else randi() % 1000000)
+	if m != null:
+		salvar()
+		get_tree().change_scene_to_file.call_deferred(CENA_MAPA)
+	return m
+
+
 func ir_para_editor() -> void:
 	get_tree().change_scene_to_file.call_deferred(CENA_EDITOR)
 

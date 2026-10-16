@@ -20,8 +20,9 @@ var _checks_grupo: Dictionary = {}     ## Agente -> CheckBox
 var _donos_grupo: Dictionary = {}      ## Agente -> OptionButton (dono no co-op local)
 var _caixa_jogadores: VBoxContainer
 var _opt_missao: OptionButton
-var _lbl_missao: Label
-var _missoes: Array[Dictionary] = []   ## missões da comunidade: [{caminho, definicao, erros}]
+var _txt_missao: RichTextLabel
+## Uma entrada por item da lista de missões: {tipo: "procedural"|"campanha"|"comunidade", definicao, erros}
+var _opcoes_missao: Array[Dictionary] = []
 var _opt_modo: OptionButton
 var _chk_lesoes: CheckBox
 var _chk_inspiracao: CheckBox
@@ -111,9 +112,14 @@ func _montar_interface() -> void:
 		_checks_itens[item.id] = chk
 		_caixa_requisicao.add_child(chk)
 
-	# Coluna 3: missão
-	var c3 := _coluna(colunas, 0)
+	# Coluna 3: missão (rola quando não cabe na janela)
+	var rolagem_c3 := ScrollContainer.new()
+	rolagem_c3.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rolagem_c3.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	colunas.add_child(rolagem_c3)
+	var c3 := _coluna(rolagem_c3, 0)
 	c3.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	c3.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	c3.add_child(_titulo("Grupo da missão (até 4)"))
 	_caixa_grupo = VBoxContainer.new()
 	c3.add_child(_caixa_grupo)
@@ -139,10 +145,11 @@ func _montar_interface() -> void:
 	_opt_missao.clip_text = true
 	_opt_missao.item_selected.connect(func(_i): _mostrar_missao())
 	c3.add_child(_opt_missao)
-	_lbl_missao = Label.new()
-	_lbl_missao.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_lbl_missao.add_theme_color_override("font_color", Color("aab7b8"))
-	c3.add_child(_lbl_missao)
+	_txt_missao = RichTextLabel.new()
+	_txt_missao.bbcode_enabled = true
+	_txt_missao.custom_minimum_size = Vector2(0, 120)
+	_txt_missao.add_theme_color_override("default_color", Color("aab7b8"))
+	c3.add_child(_txt_missao)
 	c3.add_child(_botao("Editor de missões", _abrir_editor))
 	_btn_iniciar = _botao("Iniciar missão", _iniciar)
 	c3.add_child(_btn_iniciar)
@@ -386,6 +393,22 @@ func _mostrar_relatorio() -> void:
 		if ag.has("pp"):
 			s += ", %+d PP, NEX %d%%→%d%%, %s%s" % [int(ag.pp), int(ag.nex_antes), int(ag.nex), ag.patente, " [color=#58d68d](promovido!)[/color]" if ag.promovido else ""]
 		linhas.append(s)
+	var camp: Dictionary = r.get("campanha", {})
+	if not camp.is_empty():
+		linhas.append("")
+		linhas.append("[b]%s — missão %d de %d[/b]" % [camp.titulo, int(camp.etapa), int(camp.total)])
+		var texto := String(camp.get("texto", ""))
+		if texto == "" and not camp.vitoria:
+			texto = "A missão continua esperando: dá para tentar de novo, com o mesmo grupo ou com outro."
+		if texto != "":
+			linhas.append("[i]%s[/i]" % texto)
+		for t in camp.get("marcas", []):
+			linhas.append("[color=#f7dc6f]Marca: %s[/color]" % t)
+		for nome in camp.get("recrutas", []):
+			linhas.append("[color=#58d68d]%s pode ser recrutado na Base.[/color]" % nome)
+		if camp.get("concluida", false):
+			linhas.append("[b]Epílogo[/b]")
+			linhas.append("[i]%s[/i]" % camp.get("epilogo", ""))
 	if not carreira.memorial.is_empty():
 		linhas.append("[color=#7f8c8d]Memorial: %s[/color]" % ", ".join(PackedStringArray(carreira.memorial.map(func(m): return m.nome))))
 	_relatorio.text = "\n".join(linhas)
@@ -495,46 +518,84 @@ func _iniciar() -> void:
 	if not erros.is_empty():
 		_lbl_erros.text = "\n".join(erros)
 		return
-	var escolha := _opt_missao.selected - 1   # 0 = procedural
-	if escolha >= 0:
-		var m: Dictionary = _missoes[escolha]
-		if not m.erros.is_empty():
-			_lbl_erros.text = "Esta missão tem erros:\n" + "\n".join(m.erros)
-			return
-		if _jogo != null:
-			_jogo.iniciar_missao_comunidade(grupo, m.definicao)
+	var op: Dictionary = _opcoes_missao[clampi(_opt_missao.selected, 0, _opcoes_missao.size() - 1)]
+	if not op.erros.is_empty():
+		_lbl_erros.text = "Esta missão tem erros:\n" + "\n".join(op.erros)
 		return
-	if _jogo != null:
-		_jogo.iniciar_missao(grupo)
+	if _jogo == null:
+		return
+	match String(op.tipo):
+		"campanha":
+			_jogo.iniciar_missao_campanha(grupo, op.definicao)
+		"comunidade":
+			_jogo.iniciar_missao_comunidade(grupo, op.definicao)
+		_:
+			_jogo.iniciar_missao(grupo)
 
 
-# --- Missões da comunidade (Fase 6) ---------------------------------------------
+# --- Lista de missões: procedural, campanha (Fase 7) e comunidade (Fase 6) ---------
 
 func _listar_missoes() -> void:
 	var antes := _opt_missao.selected
-	_missoes = MissaoComunidade.listar(carreira.ruleset)
+	_opcoes_missao = [{"tipo": "procedural", "definicao": {}, "erros": [] as Array[String]}]
+	for c in Campanha.listar(carreira.ruleset):
+		_opcoes_missao.append({"tipo": "campanha", "definicao": c.definicao, "erros": c.erros})
+	for m in MissaoComunidade.listar(carreira.ruleset):
+		_opcoes_missao.append({"tipo": "comunidade", "definicao": m.definicao, "erros": m.erros, "caminho": m.caminho})
 	_opt_missao.clear()
-	_opt_missao.add_item("Missão procedural (mapa e caso sorteados)")
-	for m in _missoes:
-		var d: Dictionary = m.definicao
-		_opt_missao.add_item("%s%s%s" % [d.get("titulo", m.caminho.get_file()), "" if String(d.get("autor", "")) == "" else " — " + String(d.autor), "" if m.erros.is_empty() else " (com erros)"])
+	for op in _opcoes_missao:
+		_opt_missao.add_item(_nome_da_opcao(op))
 	_opt_missao.select(clampi(antes, 0, _opt_missao.item_count - 1))
 	_mostrar_missao()
 
 
+func _nome_da_opcao(op: Dictionary) -> String:
+	var d: Dictionary = op.definicao
+	var erro := "" if op.erros.is_empty() else " (com erros)"
+	match String(op.tipo):
+		"campanha":
+			var p := carreira.progresso_campanha(String(d.get("id", "")))
+			return "Campanha: %s — %s%s" % [d.get("titulo", "?"), Campanha.descrever_etapa(d, p).to_lower() if p.concluida else Campanha.descrever_etapa(d, p).get_slice(":", 0), erro]
+		"comunidade":
+			return "%s%s%s" % [d.get("titulo", String(op.caminho).get_file()), "" if String(d.get("autor", "")) == "" else " — " + String(d.autor), erro]
+	return "Missão procedural (mapa e caso sorteados)"
+
+
 func _mostrar_missao() -> void:
-	var escolha := _opt_missao.selected - 1
-	if escolha < 0:
-		_lbl_missao.text = "Um mapa novo a cada missão, com encontros, eventos e investigações sorteados."
-		return
-	var m: Dictionary = _missoes[escolha]
-	var d: Dictionary = m.definicao
-	var texto := String(d.get("descricao", ""))
-	if d.has("nex_recomendado"):
-		texto += "  (NEX recomendado: %d%%)" % int(d.nex_recomendado)
-	if not m.erros.is_empty():
-		texto += "\nErros: " + "; ".join(PackedStringArray(m.erros))
-	_lbl_missao.text = texto
+	var op: Dictionary = _opcoes_missao[clampi(_opt_missao.selected, 0, _opcoes_missao.size() - 1)]
+	var d: Dictionary = op.definicao
+	var texto := ""
+	match String(op.tipo):
+		"procedural":
+			texto = "Um mapa novo a cada missão, com encontros, eventos e investigações sorteados."
+		"campanha":
+			texto = _texto_da_campanha(d)
+		"comunidade":
+			texto = String(d.get("descricao", ""))
+			if d.has("nex_recomendado"):
+				texto += "  (NEX recomendado: %d%%)" % int(d.nex_recomendado)
+	if not op.erros.is_empty():
+		texto += "\n[color=#f1948a]Erros: %s[/color]" % "; ".join(PackedStringArray(op.erros))
+	_txt_missao.text = texto
+
+
+## Ponto em que a campanha está: prólogo (na primeira missão), título, NEX e o texto de abertura.
+func _texto_da_campanha(d: Dictionary) -> String:
+	if d.get("missoes", []).is_empty():
+		return String(d.get("descricao", ""))
+	var p := carreira.progresso_campanha(String(d.get("id", "")))
+	var linhas: Array[String] = []
+	if p.concluida:
+		linhas.append("[b]Campanha concluída[/b] (%d vez(es)). Iniciar de novo recomeça da primeira missão." % int(p.vezes))
+		linhas.append("[i]%s[/i]" % d.get("epilogo", ""))
+		return "\n".join(linhas)
+	var i := clampi(int(p.etapa), 0, d.missoes.size() - 1)
+	var md: Dictionary = d.missoes[i].get("definicao", {})
+	if i == 0:
+		linhas.append("[i]%s[/i]" % d.get("prologo", d.get("descricao", "")))
+	linhas.append("[b]%s[/b]%s" % [Campanha.descrever_etapa(d, p), "  (NEX recomendado: %d%%)" % int(md.nex_recomendado) if md.has("nex_recomendado") else ""])
+	linhas.append(String(d.missoes[i].get("antes", md.get("descricao", ""))))
+	return "\n".join(linhas)
 
 
 func _abrir_editor() -> void:

@@ -61,6 +61,26 @@ static func resolver_investigacao(m: Missao) -> Dictionary:
 	return cena.resultado()
 
 
+## Faz as escolhas de NEX pendentes pela primeira opção que der certo (piloto e testes).
+static func resolver_pendencias(a: Agente) -> void:
+	for _i in 40:
+		var pend := Progressao.pendencias(a)
+		if pend.is_empty():
+			return
+		var p: Dictionary = pend[0]
+		var feito := false
+		if p.tipo == "grau":
+			var opcoes: Array = p.opcoes
+			feito = opcoes.size() >= int(p.quantidade) and Progressao.aplicar(a, "grau", opcoes.slice(0, int(p.quantidade))).is_empty()
+		else:
+			for op in p.opcoes:
+				if Progressao.aplicar(a, p.tipo, op).is_empty():
+					feito = true
+					break
+		if not feito:
+			return
+
+
 ## Joga a missão inteira. Retorna um relatório: {encerrada, vitoria, turnos_mundo, combates,
 ## combates_sem_fim, eventos, investigacoes, passos, travou}.
 static func jogar(m: Missao, limite_turnos_mundo: int = 150) -> Dictionary:

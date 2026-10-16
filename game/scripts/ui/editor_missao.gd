@@ -359,7 +359,7 @@ func _atualizar_alvos() -> void:
 				_opt_alvo.add_item(e.titulo)
 				_opt_alvo.set_item_metadata(_opt_alvo.item_count - 1, e.id)
 		"investigacao":
-			for cn in DadosJogo.ler("cenas_investigacao").cenas:
+			for cn in editor.definicao.get("cenas", []) + DadosJogo.ler("cenas_investigacao").cenas:
 				_opt_alvo.add_item(cn.nome)
 				_opt_alvo.set_item_metadata(_opt_alvo.item_count - 1, cn.id)
 	_opt_alvo.visible = _opt_alvo.item_count > 0

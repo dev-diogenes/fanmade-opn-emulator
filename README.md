@@ -16,7 +16,7 @@ As duas usam o mesmo motor, com rulesets diferentes ([ADR 0002](docs/adr/0002-re
 ## Modos
 
 - **Sandbox:** escolha seus agentes e jogue missões geradas proceduralmente.
-- **Campanha:** história original.
+- **Campanha:** *O Fundo da Represa*, história original em 4 missões.
 - **Comunidade:** missões criadas por jogadores, com ou sem mestre.
 
 ## Estrutura
@@ -28,7 +28,8 @@ game/                 Projeto Godot 4 (abra esta pasta no editor)
   scripts/core/       Mapa, turnos, save, rede
   scripts/ui/         Interface
   data/rulesets/      Regras em dados (op2022, op-v2…)
-  data/missions/      Missões: procedural, campanha, comunidade
+  data/missoes/       Missões da comunidade que vêm com o jogo
+  data/campanhas/     Campanhas (uma pasta por campanha)
   assets/             Modelos, texturas, áudio (Git LFS)
   tests/              Testes automatizados (GUT)
 tools/                Scripts auxiliares
@@ -89,6 +90,14 @@ Granadas (de fragmentação, incendiária e de atordoamento) são requisitadas n
 
 Na Base, em **Missão**, escolha entre a missão procedural e as missões da comunidade (a de exemplo é "A Capela do Morro"). O botão **Editor de missões** abre um editor simples: pinte o terreno hex a hex, ponha início, covil, vilas, encontros, eventos e investigações, crie eventos próprios, escolha as ameaças do covil e salve. As missões ficam em `user://missoes/` e também podem ser escritas à mão: o formato está em [docs/04-missoes-da-comunidade.md](docs/04-missoes-da-comunidade.md).
 
+### Campanha: O Fundo da Represa
+
+Na Base, em **Missão**, escolha **Campanha: O Fundo da Represa**. É uma história original em 4 missões, numa cidade do interior de Goiás que uma represa afogou em 1979 e que a seca está trazendo de volta. O quadro da missão mostra o prólogo e o texto de abertura da próxima missão. Depois de cada vitória, o relatório traz o que aconteceu, as **marcas** que o grupo ganhou e os recrutas que a história libera.
+
+- Responder às perguntas do caso numa missão deixa marcas que ajudam nas seguintes: a Membrana mais forte, o covil já revelado, o chefe final mais fraco.
+- Perder não avança a campanha: a mesma missão espera outra tentativa.
+- O formato está em [docs/05-campanha.md](docs/05-campanha.md).
+
 ### Co-op local (até 4 jogadores)
 
 Na Base, em **Jogadores (co-op local)**, adicione jogadores e escolha o dispositivo de cada um (teclado e mouse ou um controle). No grupo da missão, cada agente ganha um dono. Na vez de um agente, só o dispositivo do dono funciona, e uma faixa amarela avisa de quem é a vez. Com controle: o direcional e A/B navegam os botões, LB/RB trocam o foco, e depois de rolar o movimento (ou num modo de ataque, movimento ou ritual na arena) o direcional ou o analógico movem um cursor pelo tabuleiro, A confirma e B volta para os botões. Na investigação, "Próximo ponto" troca o ponto de interesse.
@@ -131,6 +140,8 @@ GODOT=/caminho/para/Godot_v4.6.1-stable_win64_console.exe tools/rodar_testes.sh
 - [Brainstorm de Design](docs/01-brainstorm-design.md)
 - [Roadmap](docs/02-roadmap.md)
 - [Legal e Conteúdo](docs/03-legal-e-conteudo.md)
+- [Missões da comunidade](docs/04-missoes-da-comunidade.md)
+- [Campanha](docs/05-campanha.md)
 - [Decisões de arquitetura (ADRs)](docs/adr/)
 
 ## Contribuindo

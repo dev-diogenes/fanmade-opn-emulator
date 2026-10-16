@@ -217,6 +217,9 @@ Pontos em que o livro é ambíguo e escolhemos uma leitura (revisar se surgir er
 | Covil e orçamento | O chefe sempre está no covil; a escolta entra só no que sobra de 1,5 × o NEX somado (o "difícil" do livro). O Horror Carmesim, chefe do grupo inicial, é uma criatura nossa calibrada para VD 25 |
 | Sustentado com vários alvos | Custa 1 PE por turno pelo ritual inteiro, não por alvo; conjurar outro ritual sustentado encerra o anterior |
 | Reforços da Ordem (modo Normal) | 2 por missão. Um agente caído num combate perdido (ou morto) é resgatado: sai da missão com uma lesão (1d6 no atributo, como a regra de Lesões) |
+| Campanha e derrota | Perder uma missão da campanha não encerra a campanha: a mesma missão espera outra tentativa. As mortes e os PP seguem as regras de sempre |
+| Marcas da campanha | Uma pergunta do caso respondida numa missão vencida vira marca. As missões seguintes leem as marcas e aplicam um efeito que a investigação já tinha: Membrana, chefe enfraquecido ou covil revelado |
+| Recrutas da campanha | Personagens da história entram no roster como recrutas de NEX 5%, iguais aos outros; quem morre vai para o memorial e não volta |
 
 ## 14. Ferramentas: Godot e o Tabletop Simulator ✅
 

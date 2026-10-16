@@ -247,6 +247,8 @@ func _atualizar() -> void:
 		if a.tem_habilidade("na_trilha_certa"):
 			_botao(_caixa_habilidades, "Na Trilha Certa", _trilha_certa.bind(a))
 	var linhas: Array[String] = ["[b]Ficha do caso[/b]  ·  %s" % missao.caso.objetivo]
+	if missao.caso.resumo != "":
+		linhas.append("[i][color=#aab7b8]%s[/color][/i]" % missao.caso.resumo)
 	for q in missao.caso.perguntas:
 		var resp := missao.caso.resposta(q.id)
 		linhas.append("%s %s  [color=#aab7b8](%d/%d)[/color]%s" % ["✔" if q.respondida else "•", q.texto, mini(int(q.encontradas), int(q.pistas_necessarias)), int(q.pistas_necessarias),

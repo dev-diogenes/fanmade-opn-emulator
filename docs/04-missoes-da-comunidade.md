@@ -24,6 +24,7 @@ A Base lista as duas pastas. Uma missão com erros aparece marcada "(com erros)"
   "membrana_inicial": 90,
   "mapa": { ... },
   "caso": { ... },
+  "cenas": [ ... ],
   "eventos": [ ... ],
   "encontros": [ ... ],
   "ameacas": { ... },
@@ -72,7 +73,7 @@ Só `formato`, `versao`, `titulo` e `mapa` são obrigatórios. Sem `caso`, o cas
   - `vila`: lugar de descanso;
   - `evento`: um teste de perícia;
   - `encontro`: um combate;
-  - `investigacao`: uma cena de investigação (`casa_abandonada`, `capela` ou `acampamento`).
+  - `investigacao`: uma cena de investigação, da própria missão (veja `cenas`) ou do jogo (`casa_abandonada`, `capela` ou `acampamento`).
 - Eventos e encontros podem ser da missão ou do jogo, pelo `id`. Veja `data/jogo/eventos.json` e `data/jogo/encontros.json`.
 
 **Gerado por seed:** em vez de `terreno`, use `"semente": 1234`. O terreno sai como no modo procedural. Com `"conteudo_procedural": true`, o mapa também ganha os encontros, eventos, vilas e investigações sorteados; sem isso, só o que você puser em `conteudo`. `inicio` e `objetivo` são opcionais nesse caso.
@@ -86,11 +87,33 @@ Troca partes da ficha do caso. Os textos das pistas usam essas partes.
   "sujeito": {"id": "sineiro", "nome": "o antigo sineiro da capela", "chefe_titulo": "o Sineiro"},
   "acao": {"id": "chamar", "texto": "toca os sinos para chamar algo do Outro Lado"},
   "local": {"id": "torre", "nome": "a torre da capela"},
-  "objetivo": "Descobrir quem toca os sinos e silenciá-los."
+  "objetivo": "Descobrir quem toca os sinos e silenciá-los.",
+  "resumo": "Os sinos tocam sozinhos de madrugada, e moradores somem."
 }
 ```
 
-Quando o grupo descobre *quem* é o culpado, o chefe passa a se chamar `chefe_titulo`.
+Quando o grupo descobre *quem* é o culpado, o chefe passa a se chamar `chefe_titulo`. O `resumo` aparece na ficha do caso, durante a investigação.
+
+### `cenas` (opcional)
+
+Cenas de investigação próprias, no mesmo formato de `data/jogo/cenas_investigacao.json`:
+
+```json
+{"id": "torre_do_sino", "nome": "Torre do sino", "visual": "capela",
+ "pista_basica": "A escada da torre foi lavada há pouco. Ainda pinga.",
+ "pontos": [
+   {"id": "corda", "nome": "Corda do sino", "pericias": {"ocultismo": 15, "percepcao": 20},
+    "responde": "oque", "pista": "A corda tem sangue seco. Quem a puxa {acao}."}
+ ],
+ "facilitar": [
+   {"id": "lanterna", "texto": "Iluminar a escada", "pericias": {"sobrevivencia": 15}}
+ ]}
+```
+
+- Cada ponto aceita uma ou mais perícias, cada uma com a sua DT. `responde` diz qual pergunta do caso a pista ajuda a responder: `quem`, `oque` ou `onde`. São 2 pistas por pergunta.
+- Os textos das pistas podem usar `{sujeito}`, `{acao}` e `{local}`.
+- `visual` escolhe as peças 3D de uma cena do jogo (`casa_abandonada`, `capela` ou `acampamento`).
+- No mapa, a cena entra como `{"tipo": "investigacao", "cena": "torre_do_sino"}`.
 
 ### `eventos`
 

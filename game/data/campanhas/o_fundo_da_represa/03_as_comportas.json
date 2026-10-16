@@ -1,0 +1,465 @@
+{
+  "formato": "opn-missao",
+  "versao": 1,
+  "id": "fundo_03_as_comportas",
+  "titulo": "As Comportas",
+  "autor": "Equipe do projeto",
+  "descricao": "Campanha O Fundo da Represa, missão 3. Alguém dentro da usina quer abrir todas as comportas na lua nova.",
+  "nex_recomendado": 15,
+  "membrana_inicial": 80,
+  "briefing": "A Usina do Jequiri fica no pé da barragem, entre a represa e a Vila do Porto. Faltam três dias para a lua nova. Se as comportas abrirem todas de uma vez, a água desce o vale levando tudo.",
+  "mapa": {
+    "terreno": [
+      "aaaaaaaammmccfffffff",
+      "aaaaaaaameucccffffff",
+      "aaaaaaaaeuucccccffff",
+      "aaaaaaaaeuuucccccfff",
+      "aaaaaaaaecuccaaccccf",
+      "aaaaaaaaecccaaacccff",
+      "aaaaaaaaeccaaacccccf",
+      "aaaaaaaaecaaaccccccc",
+      "aaaaaaaamcaaccuuccec",
+      "aaaaaaammcaacceeeeec",
+      "aaaaaammmccaaccccuuc",
+      "aaaaammmmcaacccccccc"
+    ],
+    "inicio": [
+      18,
+      9
+    ],
+    "nome_inicio": "Estrada da Vila do Porto",
+    "objetivo": [
+      9,
+      1
+    ],
+    "conteudo": [
+      {
+        "em": [
+          15,
+          8
+        ],
+        "tipo": "vila",
+        "nome": "Vila do Porto"
+      },
+      {
+        "em": [
+          12,
+          2
+        ],
+        "tipo": "evento",
+        "evento": "sirene"
+      },
+      {
+        "em": [
+          16,
+          5
+        ],
+        "tipo": "evento",
+        "evento": "operario_na_estrada"
+      },
+      {
+        "em": [
+          8,
+          6
+        ],
+        "tipo": "evento",
+        "evento": "vertedouro"
+      },
+      {
+        "em": [
+          10,
+          4
+        ],
+        "tipo": "evento",
+        "evento": "ronco_das_turbinas"
+      },
+      {
+        "em": [
+          11,
+          3
+        ],
+        "tipo": "investigacao",
+        "cena": "casa_de_maquinas"
+      },
+      {
+        "em": [
+          15,
+          3
+        ],
+        "tipo": "encontro",
+        "encontro": "seguranca_da_usina"
+      },
+      {
+        "em": [
+          12,
+          1
+        ],
+        "tipo": "encontro",
+        "encontro": "turno_da_noite"
+      },
+      {
+        "em": [
+          9,
+          5
+        ],
+        "tipo": "encontro",
+        "encontro": "lodo_nas_turbinas"
+      },
+      {
+        "em": [
+          18,
+          6
+        ],
+        "tipo": "encontro",
+        "encontro": "caes_da_usina"
+      }
+    ]
+  },
+  "caso": {
+    "sujeito": {
+      "id": "sarmento",
+      "nome": "Otávio Sarmento, o engenheiro-chefe da usina",
+      "chefe_titulo": "Sarmento, o Engenheiro"
+    },
+    "acao": {
+      "id": "esvaziar",
+      "texto": "quer abrir as comportas e esvaziar a represa de uma vez"
+    },
+    "local": {
+      "id": "sala_de_controle",
+      "nome": "a sala de controle no alto da barragem"
+    },
+    "objetivo": "Impedir a abertura das comportas e deter quem está por trás dela.",
+    "resumo": "Alguém dentro da Usina do Jequiri prepara a abertura total das comportas para a lua nova. Se a represa esvaziar de uma vez, a água leva as cidades rio abaixo."
+  },
+  "eventos": [
+    {
+      "id": "sirene",
+      "titulo": "Sirene da barragem",
+      "texto": "Uma sirene dispara sozinha e ecoa no vale. Na Vila do Porto, as luzes começam a acender.",
+      "pericia": "tecnologia",
+      "dt": 16,
+      "sucesso": {
+        "texto": "Você acha o quadro da sirene e a desliga antes que a vila entre em pânico.",
+        "efeitos": [
+          {
+            "tipo": "membrana",
+            "valor": 4
+          }
+        ]
+      },
+      "falha": {
+        "texto": "A sirene não para. Gente sai de casa sem saber para onde correr.",
+        "efeitos": [
+          {
+            "tipo": "membrana",
+            "valor": -5
+          }
+        ]
+      }
+    },
+    {
+      "id": "operario_na_estrada",
+      "titulo": "Operário na estrada",
+      "texto": "Um operário de capacete corre na direção contrária, sem olhar para trás.",
+      "pericia": "diplomacia",
+      "dt": 15,
+      "sucesso": {
+        "texto": "Ele para, respira e explica como chegar à casa de máquinas sem passar pelos vigias.",
+        "efeitos": [
+          {
+            "tipo": "revelar_raio",
+            "valor": 4
+          }
+        ]
+      },
+      "falha": {
+        "texto": "Ele empurra você e some no mato, gritando que o engenheiro vai matar todo mundo.",
+        "efeitos": [
+          {
+            "tipo": "dano_mental",
+            "valor": "1d4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "vertedouro",
+      "titulo": "Vertedouro",
+      "texto": "O vertedouro solta um jato de água sobre a crista da barragem. Do outro lado, a lama da represa borbulha.",
+      "pericia": "atletismo",
+      "dt": 16,
+      "sucesso": {
+        "texto": "Você passa colado na mureta. Lá de cima, dá para ver a usina inteira e a sala de controle.",
+        "efeitos": [
+          {
+            "tipo": "revelar_objetivo"
+          }
+        ]
+      },
+      "falha": {
+        "texto": "O jato acerta em cheio e joga você contra a mureta.",
+        "efeitos": [
+          {
+            "tipo": "dano",
+            "valor": "2d6"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ronco_das_turbinas",
+      "titulo": "O ronco das turbinas",
+      "texto": "Por baixo do ronco das turbinas, alguém conta números em voz baixa, de trás para frente.",
+      "pericia": "vontade",
+      "dt": 16,
+      "sucesso": {
+        "texto": "Você não deixa a contagem entrar na sua cabeça e chega ao fim do corredor inteiro.",
+        "efeitos": [
+          {
+            "tipo": "recupera_san",
+            "valor": "1d4"
+          }
+        ]
+      },
+      "falha": {
+        "texto": "Você se pega contando junto.",
+        "efeitos": [
+          {
+            "tipo": "dano_mental",
+            "valor": "1d6"
+          }
+        ]
+      }
+    }
+  ],
+  "encontros": [
+    {
+      "id": "seguranca_da_usina",
+      "nome": "Segurança da usina",
+      "nivel": 0,
+      "ameacas": [
+        "soldado_de_aluguel",
+        "capanga"
+      ]
+    },
+    {
+      "id": "turno_da_noite",
+      "nome": "Turno da noite",
+      "nivel": 0,
+      "ameacas": [
+        "investido",
+        "iniciado"
+      ]
+    },
+    {
+      "id": "lodo_nas_turbinas",
+      "nome": "Lodo nas turbinas",
+      "nivel": 1,
+      "ameacas": [
+        "succ"
+      ]
+    },
+    {
+      "id": "caes_da_usina",
+      "nome": "Cães da usina",
+      "nivel": 0,
+      "ameacas": [
+        "cao_de_guarda",
+        "cao_de_guarda",
+        "capanga"
+      ]
+    }
+  ],
+  "cenas": [
+    {
+      "id": "casa_de_maquinas",
+      "nome": "Casa de máquinas",
+      "terrenos": [
+        "cidade"
+      ],
+      "visual": "casa_abandonada",
+      "pista_basica": "As turbinas giram em falso, e o barulho não deixa ninguém pensar. Nos painéis, alguém trocou os lacres de segurança por cordas de sete nós.",
+      "pontos": [
+        {
+          "id": "painel",
+          "nome": "Painel das comportas",
+          "pericias": {
+            "tecnologia": 15,
+            "ciencias": 20
+          },
+          "responde": "oque",
+          "pista": "O sistema foi programado para abrir todas as comportas ao mesmo tempo. Quem fez isso {acao}."
+        },
+        {
+          "id": "relatorio",
+          "nome": "Relatório de 1979",
+          "pericias": {
+            "ciencias": 15,
+            "ocultismo": 20
+          },
+          "responde": "oque",
+          "pista": "Um relatório da construção fala de um \"poço sob a matriz que não pôde ser aterrado\". O padre da cidade pediu que a igreja fosse a última coisa a ficar debaixo d'água."
+        },
+        {
+          "id": "escala",
+          "nome": "Escala de plantão",
+          "pericias": {
+            "investigacao": 15,
+            "atualidades": 20
+          },
+          "responde": "quem",
+          "pista": "Todos os plantões da lua nova foram assinados pela mesma pessoa: {sujeito}."
+        },
+        {
+          "id": "armario",
+          "nome": "Armário do engenheiro-chefe",
+          "pericias": {
+            "investigacao": 20,
+            "crime": 15
+          },
+          "responde": "quem",
+          "pista": "No armário há uma foto antiga da Igreja Matriz de São Bento, com uma família inteira posando na escada. Atrás, a lápis: \"Sarmento, 1978\"."
+        },
+        {
+          "id": "operario",
+          "nome": "Operário escondido",
+          "pericias": {
+            "diplomacia": 15,
+            "intuicao": 15
+          },
+          "responde": "onde",
+          "pista": "O operário escondido atrás do gerador conta que o chefe passa as noites trancado em {local}."
+        },
+        {
+          "id": "cameras",
+          "nome": "Gravações das câmeras",
+          "pericias": {
+            "tecnologia": 20,
+            "percepcao": 15
+          },
+          "responde": "onde",
+          "pista": "Nas gravações, homens de capuz entram pela galeria e sobem direto para a sala de controle."
+        }
+      ],
+      "facilitar": [
+        {
+          "id": "turbina",
+          "texto": "Desligar uma das turbinas para calar o barulho",
+          "pericias": {
+            "tecnologia": 15,
+            "profissao": 20
+          }
+        },
+        {
+          "id": "luzes",
+          "texto": "Religar a luz de emergência",
+          "pericias": {
+            "tecnologia": 15,
+            "atletismo": 15
+          }
+        }
+      ]
+    }
+  ],
+  "ameacas": {
+    "sarmento": {
+      "nome": "Homem de Capacete Branco",
+      "nivel": 2,
+      "chefe": true,
+      "descricao": "Otávio Sarmento, engenheiro-chefe da Usina do Jequiri e neto de uma família de São Bento. Conjura rituais de Morte e anda com um revólver de serviço.",
+      "ficha": {
+        "pv": 70,
+        "defesa": 18,
+        "deslocamento": 9,
+        "vd": 45,
+        "elemento": "morte",
+        "atributos": {
+          "agi": 2,
+          "for": 1,
+          "int": 3,
+          "pre": 2,
+          "vig": 2
+        },
+        "pericias": {
+          "percepcao": {
+            "dados": 2,
+            "bonus": 5
+          },
+          "iniciativa": {
+            "dados": 2,
+            "bonus": 5
+          },
+          "fortitude": {
+            "dados": 2,
+            "bonus": 5
+          },
+          "reflexos": {
+            "dados": 2,
+            "bonus": 5
+          },
+          "vontade": {
+            "dados": 2,
+            "bonus": 10
+          },
+          "ocultismo": {
+            "dados": 3,
+            "bonus": 10
+          }
+        },
+        "conjurador": {
+          "rituais": [
+            "decadencia",
+            "definhar",
+            "miasma_entropico"
+          ],
+          "dt": 17,
+          "limite_pe": 5
+        },
+        "ataques": [
+          {
+            "id": "revolver",
+            "nome": "Revólver de serviço",
+            "teste": {
+              "dados": 2,
+              "bonus": 5
+            },
+            "dano": "2d6",
+            "tipo_dano": "balistico",
+            "ataque": "fogo",
+            "margem": 19,
+            "multiplicador": 3,
+            "soma_forca": false,
+            "alcance": "curto"
+          },
+          {
+            "id": "chave",
+            "nome": "Chave de grifo",
+            "teste": {
+              "dados": 2,
+              "bonus": 5
+            },
+            "dano": "1d8+2",
+            "tipo_dano": "impacto",
+            "ataque": "corpo_a_corpo",
+            "margem": 20,
+            "multiplicador": 2,
+            "soma_forca": false
+          }
+        ]
+      }
+    }
+  },
+  "covil": {
+    "nome": "A Sala de Controle",
+    "ameacas": [
+      "sarmento",
+      "capanga",
+      "iniciado",
+      "cultista"
+    ]
+  },
+  "opcoes": {
+    "surgimentos": "proprios"
+  }
+}

@@ -1,0 +1,412 @@
+{
+  "formato": "opn-missao",
+  "versao": 1,
+  "id": "fundo_01_nivel_baixo",
+  "titulo": "Nível Baixo",
+  "autor": "Equipe do projeto",
+  "descricao": "Campanha O Fundo da Represa, missão 1. Pescadores somem na margem da represa que a seca esvaziou.",
+  "nex_recomendado": 5,
+  "membrana_inicial": 90,
+  "briefing": "Nova São Bento, interior de Goiás. A seca baixou a Represa do Jequiri em vinte metros, e a torre da velha Igreja Matriz apareceu no meio da água. Desde então, quatro pescadores sumiram. Comecem pela colônia, na margem.",
+  "mapa": {
+    "terreno": [
+      "mmcccaaaaaaaaaaa",
+      "mccccpaaaaaaaaaa",
+      "ucccccppaaaaaaaa",
+      "uueeeeecppaaaaaa",
+      "uucccceeecpppaaa",
+      "ccccfcccceeeecpa",
+      "cfffffccccccreep",
+      "ffmmffcfffcccccc",
+      "fmmmfffffmmcccfm",
+      "ffmmffffmmmmcfff"
+    ],
+    "inicio": [
+      0,
+      5
+    ],
+    "nome_inicio": "Trevo de Nova São Bento",
+    "objetivo": [
+      14,
+      6
+    ],
+    "conteudo": [
+      {
+        "em": [
+          1,
+          3
+        ],
+        "tipo": "vila",
+        "nome": "Nova São Bento"
+      },
+      {
+        "em": [
+          6,
+          2
+        ],
+        "tipo": "evento",
+        "evento": "rede_pesada"
+      },
+      {
+        "em": [
+          4,
+          5
+        ],
+        "tipo": "evento",
+        "evento": "cochilo_na_margem"
+      },
+      {
+        "em": [
+          11,
+          5
+        ],
+        "tipo": "evento",
+        "evento": "torre_no_lago"
+      },
+      {
+        "em": [
+          3,
+          3
+        ],
+        "tipo": "evento",
+        "evento": "morador"
+      },
+      {
+        "em": [
+          9,
+          4
+        ],
+        "tipo": "investigacao",
+        "cena": "colonia_de_pescadores"
+      },
+      {
+        "em": [
+          5,
+          1
+        ],
+        "tipo": "encontro",
+        "encontro": "lodo_na_margem"
+      },
+      {
+        "em": [
+          12,
+          4
+        ],
+        "tipo": "encontro",
+        "encontro": "pescadores_de_capuz"
+      },
+      {
+        "em": [
+          7,
+          6
+        ],
+        "tipo": "encontro",
+        "encontro": "lodo_na_margem"
+      }
+    ]
+  },
+  "caso": {
+    "sujeito": {
+      "id": "afogado",
+      "nome": "um pescador que o lago devolveu",
+      "chefe_titulo": "o Afogado do Cais"
+    },
+    "acao": {
+      "id": "arrastar",
+      "texto": "arrasta para a água quem dorme perto da margem"
+    },
+    "local": {
+      "id": "cais_velho",
+      "nome": "o cais velho da colônia"
+    },
+    "objetivo": "Descobrir o que está levando os pescadores e acabar com isso.",
+    "resumo": "Pescadores somem à noite na margem da Represa do Jequiri. Quem dorme perto da água sonha que está se afogando."
+  },
+  "eventos": [
+    {
+      "id": "rede_pesada",
+      "titulo": "Rede pesada",
+      "texto": "Uma rede de pesca está presa num toco, esticada como se alguém puxasse do outro lado.",
+      "pericia": "atletismo",
+      "dt": 15,
+      "sucesso": {
+        "texto": "Você puxa a rede para a margem. Dentro, só lodo e um terço de contas pretas, amarrado com sete nós. A corda aponta para o cais velho.",
+        "efeitos": [
+          {
+            "tipo": "revelar_objetivo"
+          }
+        ]
+      },
+      "falha": {
+        "texto": "A rede dá um tranco e arrasta você até a cintura na água fria antes de soltar.",
+        "efeitos": [
+          {
+            "tipo": "dano",
+            "valor": "1d6"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cochilo_na_margem",
+      "titulo": "Cochilo na margem",
+      "texto": "O calor pesa. Por um instante você fecha os olhos e escuta água entrando por uma janela que não existe.",
+      "pericia": "vontade",
+      "dt": 15,
+      "sucesso": {
+        "texto": "Você acorda antes de afundar. O sonho deixou um mapa na cabeça: ruas, uma praça, uma torre.",
+        "efeitos": [
+          {
+            "tipo": "revelar_raio",
+            "valor": 3
+          }
+        ]
+      },
+      "falha": {
+        "texto": "Você acorda engasgado, com gosto de barro na boca.",
+        "efeitos": [
+          {
+            "tipo": "dano_mental",
+            "valor": "1d6"
+          }
+        ]
+      }
+    },
+    {
+      "id": "torre_no_lago",
+      "titulo": "A torre no lago",
+      "texto": "No meio da represa, a torre da velha Igreja Matriz sai da água como um dedo apontado para o céu.",
+      "pericia": "percepcao",
+      "dt": 15,
+      "sucesso": {
+        "texto": "Com o binóculo, você vê lanternas no alto da torre e barcos indo e voltando. Você anota os horários e avisa a Coordenação.",
+        "efeitos": [
+          {
+            "tipo": "membrana",
+            "valor": 3
+          }
+        ]
+      },
+      "falha": {
+        "texto": "Você olha tempo demais. A torre parece mais perto do que deveria.",
+        "efeitos": [
+          {
+            "tipo": "dano_mental",
+            "valor": "1d4"
+          }
+        ]
+      }
+    }
+  ],
+  "encontros": [
+    {
+      "id": "lodo_na_margem",
+      "nome": "Lodo na margem",
+      "nivel": 0,
+      "ameacas": [
+        "esqueleto_de_lodo"
+      ]
+    },
+    {
+      "id": "pescadores_de_capuz",
+      "nome": "Pescadores de capuz",
+      "nivel": 0,
+      "ameacas": [
+        "cultista",
+        "cultista"
+      ]
+    },
+    {
+      "id": "os_que_voltaram",
+      "nome": "Os que voltaram",
+      "nivel": 2,
+      "ameacas": [
+        "esqueleto_de_lodo",
+        "esqueleto_de_lodo"
+      ]
+    }
+  ],
+  "cenas": [
+    {
+      "id": "colonia_de_pescadores",
+      "nome": "Colônia de pescadores",
+      "terrenos": [
+        "campo"
+      ],
+      "visual": "acampamento",
+      "pista_basica": "Os barracos da colônia estão vazios. As redes secam ao sol, mas ninguém sai para pescar desde o segundo desaparecimento.",
+      "pontos": [
+        {
+          "id": "barraco",
+          "nome": "Barraco do Seu Joaquim",
+          "pericias": {
+            "investigacao": 15,
+            "percepcao": 15
+          },
+          "responde": "quem",
+          "pista": "As pegadas descalças saem do lago, entram no barraco e voltam para a água. Quem leva os pescadores é {sujeito}."
+        },
+        {
+          "id": "pescadora",
+          "nome": "Dona Zélia, a pescadora mais velha",
+          "pericias": {
+            "diplomacia": 15,
+            "intuicao": 15
+          },
+          "responde": "quem",
+          "pista": "Dona Zélia jura que viu Seu Joaquim na beira d'água três noites depois de sumir, chamando os companheiros pelo nome."
+        },
+        {
+          "id": "cordas",
+          "nome": "Cordas no varal",
+          "pericias": {
+            "ocultismo": 15,
+            "sobrevivencia": 15
+          },
+          "responde": "oque",
+          "pista": "As cordas da colônia foram trocadas por cordas de sete nós. Não é coisa de pescador: é um laço de Morte, feito para segurar alguém no fundo."
+        },
+        {
+          "id": "barcos",
+          "nome": "Barcos virados",
+          "pericias": {
+            "investigacao": 20,
+            "percepcao": 15
+          },
+          "responde": "oque",
+          "pista": "Os barcos estão furados de dentro para fora. Alguma coisa {acao}."
+        },
+        {
+          "id": "trilha",
+          "nome": "Trilha de lama",
+          "pericias": {
+            "sobrevivencia": 15,
+            "percepcao": 20
+          },
+          "responde": "onde",
+          "pista": "A lama da trilha seca em placas e leva até {local}, onde os barcos antigos apodrecem."
+        },
+        {
+          "id": "caderno",
+          "nome": "Caderno de pesca",
+          "pericias": {
+            "investigacao": 15,
+            "atualidades": 20
+          },
+          "responde": "onde",
+          "pista": "A última anotação no caderno de Seu Joaquim: \"Tem luz no cais velho de novo. Vou ver quem é.\""
+        }
+      ],
+      "facilitar": [
+        {
+          "id": "lampioes",
+          "texto": "Acender os lampiões da colônia",
+          "pericias": {
+            "sobrevivencia": 15,
+            "percepcao": 15
+          }
+        },
+        {
+          "id": "cachorros",
+          "texto": "Acalmar os cachorros que latem para o lago",
+          "pericias": {
+            "adestramento": 15,
+            "diplomacia": 15
+          }
+        }
+      ]
+    }
+  ],
+  "ameacas": {
+    "afogado_do_cais": {
+      "nome": "Vulto Encharcado",
+      "nivel": 2,
+      "chefe": true,
+      "descricao": "Um pescador que o lago devolveu. Anda encharcado, com lodo no lugar dos olhos, e abraça quem encontra para levar de volta para a água.",
+      "ficha": {
+        "pv": 45,
+        "defesa": 14,
+        "deslocamento": 9,
+        "vd": 25,
+        "elemento": "morte",
+        "criatura": true,
+        "atributos": {
+          "agi": 1,
+          "for": 3,
+          "int": 0,
+          "pre": 1,
+          "vig": 3
+        },
+        "pericias": {
+          "percepcao": {
+            "dados": 1,
+            "bonus": 0
+          },
+          "iniciativa": {
+            "dados": 1,
+            "bonus": 0
+          },
+          "fortitude": {
+            "dados": 3,
+            "bonus": 5
+          },
+          "reflexos": {
+            "dados": 1,
+            "bonus": 0
+          },
+          "vontade": {
+            "dados": 2,
+            "bonus": 5
+          }
+        },
+        "resistencias": {
+          "morte": 10
+        },
+        "vulnerabilidades": [
+          "energia"
+        ],
+        "presenca_perturbadora": {
+          "dt": 14,
+          "dano": "1d6",
+          "nex": 25
+        },
+        "ataques": [
+          {
+            "id": "abraco",
+            "nome": "Abraço Afogado",
+            "teste": {
+              "dados": 2,
+              "bonus": 5
+            },
+            "dano": "1d8+3",
+            "tipo_dano": "impacto",
+            "ataque": "corpo_a_corpo",
+            "margem": 20,
+            "multiplicador": 2,
+            "soma_forca": false,
+            "ao_acertar": {
+              "agarrar": {
+                "teste": {
+                  "dados": 2,
+                  "bonus": 5
+                },
+                "maximo": 1
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "covil": {
+    "nome": "O Cais Velho",
+    "ameacas": [
+      "afogado_do_cais",
+      "esqueleto_de_lodo",
+      "cultista"
+    ]
+  },
+  "opcoes": {
+    "surgimentos": "proprios"
+  }
+}

@@ -1,0 +1,475 @@
+{
+  "formato": "opn-missao",
+  "versao": 1,
+  "id": "fundo_04_a_matriz",
+  "titulo": "A Matriz",
+  "autor": "Equipe do projeto",
+  "descricao": "Campanha O Fundo da Represa, missão 4. A cidade afogada está inteira fora d'água, e a igreja respira.",
+  "nex_recomendado": 20,
+  "membrana_inicial": 75,
+  "briefing": "São Bento do Vale saiu inteira da água. As ruas viraram lama, as casas são cascas, e a Igreja Matriz pulsa no alto da praça. A chuva chega em poucos dias.",
+  "mapa": {
+    "terreno": [
+      "ppppcccccecccccppppp",
+      "paapcrrrceccrrrcpaap",
+      "paapprrreeerrrrppaap",
+      "pppprurreuerrurrpppp",
+      "pprrruueeueeeuurrrpp",
+      "pprrueuuuuuuueuurrpp",
+      "ppprreuurmmruuerrppp",
+      "paaprreurmrmrueerpaa",
+      "paaprrrermmmmerrrpaa",
+      "pppprrrrrmrmrrrrppaa",
+      "ppaapprrrrrrrrpppaaa",
+      "pppaapppprrrppppppaa"
+    ],
+    "inicio": [
+      9,
+      0
+    ],
+    "nome_inicio": "Margem norte",
+    "objetivo": [
+      10,
+      7
+    ],
+    "conteudo": [
+      {
+        "em": [
+          6,
+          0
+        ],
+        "tipo": "vila",
+        "nome": "Acampamento da Ordem"
+      },
+      {
+        "em": [
+          9,
+          3
+        ],
+        "tipo": "evento",
+        "evento": "relogio_parado"
+      },
+      {
+        "em": [
+          6,
+          6
+        ],
+        "tipo": "evento",
+        "evento": "casa_de_infancia"
+      },
+      {
+        "em": [
+          12,
+          2
+        ],
+        "tipo": "evento",
+        "evento": "agua_que_volta"
+      },
+      {
+        "em": [
+          16,
+          5
+        ],
+        "tipo": "evento",
+        "evento": "reflexo_errado"
+      },
+      {
+        "em": [
+          14,
+          4
+        ],
+        "tipo": "investigacao",
+        "cena": "casa_paroquial"
+      },
+      {
+        "em": [
+          4,
+          5
+        ],
+        "tipo": "investigacao",
+        "cena": "casa_abandonada"
+      },
+      {
+        "em": [
+          8,
+          4
+        ],
+        "tipo": "encontro",
+        "encontro": "fieis_de_lodo"
+      },
+      {
+        "em": [
+          12,
+          6
+        ],
+        "tipo": "encontro",
+        "encontro": "ultimos_remanescentes"
+      },
+      {
+        "em": [
+          7,
+          7
+        ],
+        "tipo": "encontro",
+        "encontro": "o_que_mora_na_torre"
+      }
+    ]
+  },
+  "caso": {
+    "sujeito": {
+      "id": "matriz",
+      "nome": "a própria Igreja Matriz, tomada pelo Lodo",
+      "chefe_titulo": "A Matriz Afogada"
+    },
+    "acao": {
+      "id": "prender",
+      "texto": "quer prender a cidade, e quem estiver nela, no instante em que a água chegou"
+    },
+    "local": {
+      "id": "nave",
+      "nome": "a nave da Igreja Matriz"
+    },
+    "objetivo": "Descobrir como o padre Anselmo prendeu a Matriz e destruí-la antes que a chuva volte.",
+    "resumo": "São Bento do Vale está inteira fora d'água pela primeira vez desde 1979. A Igreja Matriz pulsa no alto da praça, e o Lodo das ruas anda sozinho."
+  },
+  "eventos": [
+    {
+      "id": "relogio_parado",
+      "titulo": "Relógio da prefeitura",
+      "texto": "O relógio da prefeitura velha marca 14h10, a hora em que a água chegou. Os ponteiros tremem, querendo voltar.",
+      "pericia": "ocultismo",
+      "dt": 18,
+      "sucesso": {
+        "texto": "Você trava os ponteiros com um prego de ferro. Por um momento, a cidade inteira fica mais leve.",
+        "efeitos": [
+          {
+            "tipo": "membrana",
+            "valor": 5
+          }
+        ]
+      },
+      "falha": {
+        "texto": "Os ponteiros andam para trás, e você sente um minuto inteiro ser arrancado de você.",
+        "efeitos": [
+          {
+            "tipo": "dano_mental",
+            "valor": "1d8"
+          }
+        ]
+      }
+    },
+    {
+      "id": "casa_de_infancia",
+      "titulo": "Uma casa conhecida",
+      "texto": "A porta de uma casa está aberta. Lá dentro, a mesa está posta para cinco pessoas, com pratos limpos.",
+      "pericia": "vontade",
+      "dt": 18,
+      "sucesso": {
+        "texto": "Você fecha a porta sem entrar. Algumas coisas devem ficar no fundo.",
+        "efeitos": [
+          {
+            "tipo": "recupera_san",
+            "valor": "1d6"
+          }
+        ]
+      },
+      "falha": {
+        "texto": "Você se senta à mesa antes de perceber. Demora a lembrar o próprio nome.",
+        "efeitos": [
+          {
+            "tipo": "dano_mental",
+            "valor": "2d4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "agua_que_volta",
+      "titulo": "Água que volta",
+      "texto": "A lama da rua começa a escorrer morro acima, contra a gravidade, na direção da igreja.",
+      "pericia": "reflexos",
+      "dt": 17,
+      "sucesso": {
+        "texto": "Você salta para a calçada a tempo e vê para onde a lama vai: direto para a Matriz.",
+        "efeitos": [
+          {
+            "tipo": "revelar_objetivo"
+          }
+        ]
+      },
+      "falha": {
+        "texto": "A lama agarra suas pernas e aperta antes de soltar.",
+        "efeitos": [
+          {
+            "tipo": "dano",
+            "valor": "2d6"
+          }
+        ]
+      }
+    }
+  ],
+  "encontros": [
+    {
+      "id": "fieis_de_lodo",
+      "nome": "Fiéis de lodo",
+      "nivel": 0,
+      "ameacas": [
+        "esqueleto_de_lodo",
+        "esqueleto_de_lodo"
+      ]
+    },
+    {
+      "id": "ultimos_remanescentes",
+      "nome": "Os últimos Remanescentes",
+      "nivel": 0,
+      "ameacas": [
+        "investido",
+        "iniciado",
+        "cultista"
+      ]
+    },
+    {
+      "id": "o_que_mora_na_torre",
+      "nome": "O que mora na torre",
+      "nivel": 1,
+      "ameacas": [
+        "succ",
+        "esqueleto_de_lodo"
+      ]
+    },
+    {
+      "id": "poca_funda",
+      "nome": "Poça funda",
+      "nivel": 1,
+      "ameacas": [
+        "jacare"
+      ]
+    }
+  ],
+  "cenas": [
+    {
+      "id": "casa_paroquial",
+      "nome": "Casa paroquial",
+      "terrenos": [
+        "cidade"
+      ],
+      "visual": "capela",
+      "pista_basica": "A casa do padre ficou de pé. Os móveis apodreceram, mas o cofre de ferro da sala continua fechado, e ninguém mexeu na estante.",
+      "pontos": [
+        {
+          "id": "diario",
+          "nome": "Diário do padre Anselmo",
+          "pericias": {
+            "religiao": 15,
+            "investigacao": 20
+          },
+          "responde": "oque",
+          "pista": "O diário conta que a Matriz \"ficou com fome do último instante de cada coisa\". O padre escreveu que ela {acao}."
+        },
+        {
+          "id": "cofre",
+          "nome": "Cofre de ferro",
+          "pericias": {
+            "crime": 20,
+            "tecnologia": 20,
+            "atletismo": 25
+          },
+          "responde": "oque",
+          "pista": "No cofre, sete cordas de sete nós e uma oração escrita de trás para frente. O padre amarrou a Matriz ao instante em que a água chegou, e a própria água era o nó."
+        },
+        {
+          "id": "fotos",
+          "nome": "Fotos da inundação",
+          "pericias": {
+            "atualidades": 15,
+            "percepcao": 15
+          },
+          "responde": "quem",
+          "pista": "Nas fotos, a igreja está de portas abertas enquanto a água sobe. Não é a cidade que chama: é {sujeito}."
+        },
+        {
+          "id": "oratorio",
+          "nome": "Oratório",
+          "pericias": {
+            "ocultismo": 15,
+            "vontade": 20
+          },
+          "responde": "quem",
+          "pista": "No oratório, os santos estão virados para a parede. Todos olham para o lado da Matriz, como quem vigia um bicho."
+        },
+        {
+          "id": "planta",
+          "nome": "Planta da paróquia",
+          "pericias": {
+            "investigacao": 15,
+            "ciencias": 20
+          },
+          "responde": "onde",
+          "pista": "A planta da paróquia mostra um poço embaixo do altar, no meio de {local}."
+        },
+        {
+          "id": "bilhete",
+          "nome": "Bilhete do sacristão",
+          "pericias": {
+            "intuicao": 15,
+            "investigacao": 20
+          },
+          "responde": "onde",
+          "pista": "\"Se um dia a água baixar, não entrem pela porta da frente. A nave inteira é a boca.\""
+        }
+      ],
+      "facilitar": [
+        {
+          "id": "velas",
+          "texto": "Acender as velas do oratório",
+          "pericias": {
+            "religiao": 15,
+            "sobrevivencia": 15
+          }
+        },
+        {
+          "id": "porta",
+          "texto": "Escorar a porta que insiste em fechar",
+          "pericias": {
+            "atletismo": 15,
+            "fortitude": 15
+          }
+        }
+      ]
+    }
+  ],
+  "ameacas": {
+    "a_matriz": {
+      "nome": "A Igreja Viva",
+      "nivel": 3,
+      "chefe": true,
+      "descricao": "A velha Igreja Matriz de São Bento, tomada pelo Lodo. Os bancos viraram costelas, o altar virou boca, e a nave inteira se mexe para engolir quem entra.",
+      "ficha": {
+        "pv": 95,
+        "defesa": 18,
+        "deslocamento": 3,
+        "vd": 60,
+        "elemento": "morte",
+        "criatura": true,
+        "atributos": {
+          "agi": 0,
+          "for": 4,
+          "int": 1,
+          "pre": 3,
+          "vig": 4
+        },
+        "pericias": {
+          "percepcao": {
+            "dados": 2,
+            "bonus": 5
+          },
+          "iniciativa": {
+            "dados": 1,
+            "bonus": 0
+          },
+          "fortitude": {
+            "dados": 4,
+            "bonus": 10
+          },
+          "reflexos": {
+            "dados": 1,
+            "bonus": 0
+          },
+          "vontade": {
+            "dados": 3,
+            "bonus": 10
+          }
+        },
+        "resistencias": {
+          "morte": 10,
+          "dano": 3
+        },
+        "vulnerabilidades": [
+          "energia"
+        ],
+        "presenca_perturbadora": {
+          "dt": 18,
+          "dano": "2d6",
+          "nex": 45
+        },
+        "ataques": [
+          {
+            "id": "bracos",
+            "nome": "Braços de Lodo",
+            "teste": {
+              "dados": 2,
+              "bonus": 10
+            },
+            "dano": "2d6+2",
+            "tipo_dano": "impacto",
+            "ataque": "corpo_a_corpo",
+            "margem": 20,
+            "multiplicador": 2,
+            "soma_forca": false
+          },
+          {
+            "id": "jato",
+            "nome": "Jato de Lodo",
+            "teste": {
+              "dados": 3,
+              "bonus": 5
+            },
+            "dano": "2d8",
+            "tipo_dano": "morte",
+            "ataque": "distancia",
+            "margem": 20,
+            "multiplicador": 2,
+            "soma_forca": false,
+            "alcance": "medio"
+          }
+        ],
+        "habilidades": [
+          {
+            "id": "mare_de_lodo",
+            "acao": "livre",
+            "por_rodada": 1,
+            "area": {
+              "forma": "explosao",
+              "raio": 3
+            },
+            "dano": "1d8",
+            "tipo_dano": "morte",
+            "resistencia": "reflexos",
+            "dt": 18,
+            "ao_passar": "metade",
+            "descricao": "Uma vez por rodada, o chão em volta da Matriz vira lama viva: 1d8 de dano de Morte (Reflexos DT 18 reduz à metade)."
+          }
+        ],
+        "enigma": {
+          "texto": "Como o padre Anselmo prendeu a Matriz em 1979?",
+          "pericias": [
+            "religiao",
+            "ocultismo",
+            "investigacao"
+          ],
+          "dt": 24,
+          "pergunta": "oque",
+          "efeito": {
+            "remove_imunidade": false,
+            "remove_resistencia_dano": true,
+            "penalidades": {
+              "menos_defesa": 4
+            }
+          }
+        }
+      }
+    }
+  },
+  "covil": {
+    "nome": "A Nave da Matriz",
+    "ameacas": [
+      "a_matriz",
+      "investido",
+      "iniciado",
+      "cultista"
+    ]
+  },
+  "opcoes": {
+    "surgimentos": "proprios"
+  }
+}

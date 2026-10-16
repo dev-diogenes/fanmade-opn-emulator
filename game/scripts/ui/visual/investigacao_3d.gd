@@ -41,7 +41,7 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 	chao.radial_segments = 10
 	var mi := MeshInstance3D.new()
 	mi.mesh = chao
-	mi.material_override = Pecas.material(CORES_CHAO.get(cena.id, Color("333333")))
+	mi.material_override = Pecas.material(CORES_CHAO.get(cena.get("visual", cena.id), Color("333333")))
 	mi.position.y = -0.1
 	add_child(mi)
 
@@ -58,7 +58,7 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 		var p: Dictionary = pontos[i]
 		var ang := TAU * i / pontos.size() + 0.4
 		var pos := Vector3(cos(ang) * RAIO_PONTOS, 0, sin(ang) * RAIO_PONTOS)
-		var prop := _prop_para(cena.id, i)
+		var prop := _prop_para(String(cena.get("visual", cena.id)), i)
 		prop.position = pos
 		prop.rotation.y = -ang
 		add_child(prop)

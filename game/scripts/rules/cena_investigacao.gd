@@ -38,16 +38,18 @@ var _usos_cena: Dictionary = {}       ## "agente_id:habilidade" -> true
 var _usos_rodada: Dictionary = {}
 
 
-static func nova(ruleset_: Ruleset, dados_: Dados, caso_: Caso, cena_id: String, grupo: Array, urgencia_id: String = "", membrana_: Membrana = null) -> CenaInvestigacao:
+## `cenas_extras`: cenas próprias da missão (Fase 7), procuradas antes das do jogo.
+static func nova(ruleset_: Ruleset, dados_: Dados, caso_: Caso, cena_id: String, grupo: Array, urgencia_id: String = "", membrana_: Membrana = null, cenas_extras: Array = []) -> CenaInvestigacao:
 	var c := CenaInvestigacao.new()
 	c.ruleset = ruleset_
 	c.dados = dados_
 	c.caso = caso_
 	c.membrana = membrana_
 	c._cfg = ruleset_.dados.get("investigacao", {})
-	for cn in DadosJogo.ler("cenas_investigacao").cenas:
+	for cn in cenas_extras + DadosJogo.ler("cenas_investigacao").cenas:
 		if cn.id == cena_id:
 			c.cena = cn
+			break
 	assert(not c.cena.is_empty(), "Cena de investigação desconhecida: %s" % cena_id)
 	for a in grupo:
 		if not a.esta_fora_de_combate():

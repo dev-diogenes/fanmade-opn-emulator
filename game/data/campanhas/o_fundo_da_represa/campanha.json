@@ -1,0 +1,154 @@
+{
+  "formato": "opn-campanha",
+  "versao": 1,
+  "id": "o_fundo_da_represa",
+  "titulo": "O Fundo da Represa",
+  "autor": "Equipe do projeto",
+  "descricao": "Campanha original em quatro missões. Uma seca expõe a cidade que uma represa afogou em 1979, e alguma coisa lá embaixo acorda.",
+  "prologo": "Em março de 1979, a cidade de São Bento do Vale, no interior de Goiás, foi coberta pela água da Represa do Jequiri. Os moradores foram levados para Nova São Bento, no alto do morro, e a cidade velha virou fundo de lago. Mais de quarenta anos depois, a pior seca já registrada baixou a represa em vinte metros, e a torre da antiga Igreja Matriz apareceu no meio da água. Desde então, pescadores somem à noite, e quem dorme perto da margem sonha que está se afogando. A Coordenadora Celina Prado, do escritório da Ordem em Goiânia, reuniu uma equipe para descobrir por quê.",
+  "epilogo": "A Matriz desmorona sobre o próprio poço, e o Lodo das ruas para de se mexer. Três dias depois, a chuva chega forte e não para por uma semana. A Represa do Jequiri volta a subir e cobre São Bento do Vale outra vez, agora sem nada esperando lá embaixo. Em Nova São Bento, os pescadores voltam para a água, e ninguém mais sonha com janelas que não existem. No relatório final, a Coordenadora Celina Prado escreve uma linha só sobre a equipe: fizeram o que o padre Anselmo não conseguiu.",
+  "recrutas": [
+    {
+      "nome": "Davi",
+      "classe": "combatente",
+      "origem": "trabalhador_rural",
+      "nex": 5,
+      "atributos": {
+        "agi": 2,
+        "for": 3,
+        "int": 1,
+        "pre": 1,
+        "vig": 2
+      },
+      "pericias_classe": [
+        "luta",
+        "reflexos"
+      ],
+      "pericias_livres": [
+        "atletismo",
+        "percepcao"
+      ],
+      "equipamento": [
+        "machete",
+        "protecao_leve"
+      ],
+      "arma": "machete"
+    },
+    {
+      "nome": "Lúcia",
+      "classe": "especialista",
+      "origem": "engenheiro",
+      "nex": 5,
+      "atributos": {
+        "agi": 2,
+        "for": 1,
+        "int": 3,
+        "pre": 1,
+        "vig": 2
+      },
+      "pericias_livres": [
+        "ciencias",
+        "investigacao",
+        "percepcao",
+        "atualidades",
+        "pilotagem",
+        "reflexos",
+        "pontaria",
+        "vontade",
+        "crime",
+        "fortitude"
+      ],
+      "perito": [
+        "tecnologia",
+        "ciencias"
+      ],
+      "equipamento": [
+        "pistola",
+        "kit_medicina"
+      ],
+      "arma": "pistola"
+    }
+  ],
+  "missoes": [
+    {
+      "arquivo": "01_nivel_baixo.json",
+      "antes": "A Coordenadora Celina Prado espera vocês no trevo de Nova São Bento. Quatro pescadores sumiram em três semanas, todos da mesma colônia, todos à noite. Comecem pela colônia e descubram o que está levando essa gente para a água.",
+      "depois": "Quando o Afogado desaba na lama, sobra o corpo de Seu Joaquim Moura, o primeiro pescador a sumir. No pulso dele há uma corda com sete nós e uma medalha da antiga Igreja Matriz. Alguém o amarrou e o jogou no lago de propósito. O filho dele, Davi, pede para ajudar a Ordem a descobrir quem foi.",
+      "falha": "A equipe recua para Nova São Bento. Naquela noite, mais um barco volta vazio. A colônia ainda espera alguém da Ordem.",
+      "recompensas": {
+        "recrutas": [
+          "Davi"
+        ]
+      },
+      "marcas": {
+        "oque": {
+          "id": "nos_de_sete",
+          "texto": "Os agentes aprenderam a reconhecer o laço de sete nós."
+        }
+      }
+    },
+    {
+      "arquivo": "02_a_estrada_que_desce.json",
+      "antes": "A corda de sete nós é a assinatura dos Remanescentes, um grupo de antigos moradores de São Bento e de seus filhos, que nunca aceitaram a represa. Eles foram vistos na estrada velha, que agora desce até o leito seco do lago. Sigam a estrada até a cidade afogada e descubram o que estão tirando de lá.",
+      "depois": "Iracema Leme se rende no coreto, ao lado dos caixões que mandou desenterrar. Diz que São Bento só quer respirar de novo e que o engenheiro prometeu deixar a cidade inteira à mostra na lua nova. No bolso dela há um crachá da Usina do Jequiri: Otávio Sarmento, engenheiro-chefe. Se as comportas abrirem de uma vez, a represa esvazia, e a água leva as cidades rio abaixo.",
+      "falha": "Os Remanescentes fecham a estrada velha. Do mirante, à noite, dá para ver lanternas descendo para a cidade afogada.",
+      "efeitos_de_marcas": [
+        {
+          "marca": "nos_de_sete",
+          "tipo": "membrana",
+          "valor": 10,
+          "texto": "Vocês reconhecem os laços de sete nós amarrados ao longo da estrada e cortam cada um: a Membrana se fortalece."
+        }
+      ],
+      "marcas": {
+        "onde": {
+          "id": "planta_da_usina",
+          "texto": "Nas coisas dos Remanescentes, os agentes acharam a planta da Usina do Jequiri."
+        }
+      }
+    },
+    {
+      "arquivo": "03_as_comportas.json",
+      "antes": "Faltam três dias para a lua nova. Lúcia Arantes, engenheira da Usina do Jequiri, procurou a Ordem: ela sabe fechar o sistema das comportas, mas não chega sozinha à sala de controle. Atravessem a usina, impeçam a abertura e tragam Otávio Sarmento.",
+      "depois": "Lúcia fecha as comportas com as mãos ainda tremendo, mas a represa já desceu demais. Ao amanhecer, a Igreja Matriz de São Bento está inteira fora d'água, coberta de um lodo que sobe e desce como quem respira. Preso, Sarmento só repete uma data: 14 de março de 1979, o dia em que a água cobriu a cidade. A previsão é de chuva em uma semana, e essa é a única chance de descer e acabar com isso. Lúcia pede para ir junto.",
+      "falha": "A sirene da barragem toca a noite inteira. A Coordenação retira a equipe, e a lua nova fica mais perto.",
+      "efeitos_de_marcas": [
+        {
+          "marca": "planta_da_usina",
+          "tipo": "revelar_objetivo",
+          "texto": "A planta que estava com os Remanescentes mostra o caminho: a sala de controle já aparece no mapa."
+        }
+      ],
+      "recompensas": {
+        "recrutas": [
+          "Lúcia"
+        ]
+      },
+      "marcas": {
+        "oque": {
+          "id": "relatorio_de_1979",
+          "texto": "O relatório de 1979 mostra onde o padre Anselmo pôs o selo da Matriz."
+        }
+      }
+    },
+    {
+      "arquivo": "04_a_matriz.json",
+      "antes": "Pela primeira vez desde 1979, São Bento do Vale está toda fora d'água. As ruas viraram lama, as casas são cascas, e a Igreja Matriz pulsa no alto da praça. O diário do padre Anselmo Viana, o último pároco, deve estar na casa paroquial: ele sabia o que dormia ali embaixo. Desçam antes da chuva.",
+      "falha": "A equipe sobe de volta para a margem carregando os feridos. Lá embaixo, a Matriz continua respirando, e a chuva ainda não chegou.",
+      "efeitos_de_marcas": [
+        {
+          "marca": "relatorio_de_1979",
+          "tipo": "chefe_enfraquecido",
+          "valor": 0.2,
+          "texto": "O relatório de 1979 mostra onde o padre pôs o selo: os agentes sabem onde ferir, e a Matriz começa com 20% menos PV."
+        },
+        {
+          "marca": "nos_de_sete",
+          "tipo": "membrana",
+          "valor": 5,
+          "texto": "Na entrada da cidade, os agentes desatam os últimos laços de sete nós."
+        }
+      ]
+    }
+  ]
+}

@@ -169,6 +169,27 @@ static func validar(d: Dictionary, ruleset: Ruleset) -> Array[String]:
 			var arma_id := String(info.get("arma", ""))
 			if not ruleset.tem_arma(arma_id) and not DadosJogo.ler("ameacas").armas_extras.has(arma_id):
 				erros.append("Ameaça \"%s\": arma desconhecida \"%s\"" % [amea_id, arma_id])
+	var ids_cenas := {}
+	var perguntas_caso: Array = DadosJogo.ler("casos").perguntas.map(func(p): return p.id)
+	for cn in d.get("cenas", []):
+		var nome := String(cn.get("id", "?"))
+		for campo in ["id", "nome", "pista_basica", "pontos"]:
+			if not cn.has(campo):
+				erros.append("Cena \"%s\": falta \"%s\"" % [nome, campo])
+		for pt in cn.get("pontos", []):
+			if not pt.has("id") or not pt.has("nome") or not pt.has("pista") or not pt.get("pericias") is Dictionary:
+				erros.append("Cena \"%s\": cada ponto precisa de \"id\", \"nome\", \"pericias\" e \"pista\"" % nome)
+				continue
+			if not String(pt.get("responde", "")) in perguntas_caso:
+				erros.append("Cena \"%s\", ponto \"%s\": \"responde\" deve ser %s" % [nome, pt.id, " ou ".join(PackedStringArray(perguntas_caso))])
+			for per in pt.pericias:
+				if not ruleset.tem_pericia(String(per)):
+					erros.append("Cena \"%s\", ponto \"%s\": perícia desconhecida \"%s\"" % [nome, pt.id, per])
+		for f in cn.get("facilitar", []):
+			for per in f.get("pericias", {}):
+				if not ruleset.tem_pericia(String(per)):
+					erros.append("Cena \"%s\": perícia desconhecida \"%s\" em \"facilitar\"" % [nome, per])
+		ids_cenas[nome] = true
 	# Conteúdo posicionado no mapa
 	var eventos_jogo := {}
 	var ev_jogo := DadosJogo.ler("eventos")
@@ -199,8 +220,8 @@ static func validar(d: Dictionary, ruleset: Ruleset) -> Array[String]:
 				if not ids_eventos.has(c.get("evento", "")) and not eventos_jogo.has(c.get("evento", "")):
 					erros.append("Evento desconhecido \"%s\" em [%d, %d]" % [c.get("evento", ""), int(c.em[0]), int(c.em[1])])
 			"investigacao":
-				if not cenas.has(c.get("cena", "")):
-					erros.append("Cena de investigação desconhecida \"%s\" (use %s)" % [c.get("cena", ""), ", ".join(PackedStringArray(cenas.keys()))])
+				if not cenas.has(c.get("cena", "")) and not ids_cenas.has(c.get("cena", "")):
+					erros.append("Cena de investigação desconhecida \"%s\" (use %s)" % [c.get("cena", ""), ", ".join(PackedStringArray(ids_cenas.keys() + cenas.keys()))])
 	var surg := String(d.get("opcoes", {}).get("surgimentos", "padrao"))
 	if not surg in SURGIMENTOS:
 		erros.append("\"opcoes.surgimentos\" deve ser %s" % " ou ".join(PackedStringArray(SURGIMENTOS)))
@@ -240,13 +261,16 @@ static func montar_mapa(d: Dictionary) -> MapaHex:
 			var limpar: bool = not md.get("conteudo_procedural", false) and not tipo in ["inicio", "objetivo"]
 			if limpar or (tipo == "inicio" and md.has("inicio")) or (tipo == "objetivo" and md.has("objetivo")):
 				mapa.limpar_conteudo(h)
-	if md.has("inicio"):
+	# Posições fora do mapa ficam de fora aqui; a validação aponta o erro.
+	if md.has("inicio") and _coord_valida(md.inicio) and mapa.tem(Hex.de_offset(int(md.inicio[0]), int(md.inicio[1]))):
 		mapa.definir_conteudo(Hex.de_offset(int(md.inicio[0]), int(md.inicio[1])), {"tipo": "inicio", "nome": String(md.get("nome_inicio", "Ponto de encontro"))})
-	if md.has("objetivo"):
+	if md.has("objetivo") and _coord_valida(md.objetivo) and mapa.tem(Hex.de_offset(int(md.objetivo[0]), int(md.objetivo[1]))):
 		mapa.definir_conteudo(Hex.de_offset(int(md.objetivo[0]), int(md.objetivo[1])), {"tipo": "objetivo", "encontro": "covil"})
 	for c in md.get("conteudo", []):
+		if not _coord_valida(c.get("em")) or not mapa.tem(Hex.de_offset(int(c.em[0]), int(c.em[1]))):
+			continue
 		var h := Hex.de_offset(int(c.em[0]), int(c.em[1]))
-		match String(c.tipo):
+		match String(c.get("tipo", "")):
 			"encontro": mapa.definir_conteudo(h, {"tipo": "encontro", "encontro": c.encontro})
 			"evento": mapa.definir_conteudo(h, {"tipo": "evento", "evento": c.evento})
 			"investigacao": mapa.definir_conteudo(h, {"tipo": "investigacao", "cena": c.cena})
@@ -263,7 +287,7 @@ static func criar_missao(d: Dictionary, ruleset: Ruleset, grupo: Array, opcoes: 
 	m.mapa = montar_mapa(d)
 	m.extras = {"id": String(d.get("id", id_de(String(d.get("titulo", ""))))), "titulo": String(d.get("titulo", "")), "autor": String(d.get("autor", "")),
 		"encontros": d.get("encontros", []).duplicate(true), "eventos": d.get("eventos", []).duplicate(true),
-		"ameacas": d.get("ameacas", {}).duplicate(true), "covil": d.get("covil", {}).duplicate(true),
+		"ameacas": d.get("ameacas", {}).duplicate(true), "covil": d.get("covil", {}).duplicate(true), "cenas": d.get("cenas", []).duplicate(true),
 		"surgimentos": String(d.get("opcoes", {}).get("surgimentos", "padrao"))}
 	var inicio := m.mapa.encontrar("inicio")
 	for a in m.agentes:
@@ -274,6 +298,8 @@ static func criar_missao(d: Dictionary, ruleset: Ruleset, grupo: Array, opcoes: 
 			m.caso.set(parte, caso[parte].duplicate(true))
 	if caso.has("objetivo"):
 		m.caso.objetivo = String(caso.objetivo)
+	if caso.has("resumo"):
+		m.caso.resumo = String(caso.resumo)
 	if d.has("membrana_inicial"):
 		m.membrana.valor = clampi(int(d.membrana_inicial), 1, 100)
 	m._log("[b]%s[/b]%s" % [d.get("titulo", "Missão da comunidade"), "" if String(d.get("autor", "")) == "" else " — por %s" % d.autor])

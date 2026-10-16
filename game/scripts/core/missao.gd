@@ -492,12 +492,16 @@ func _preparar_investigacao(h: Vector2i, cena_id: String) -> void:
 		if not a.esta_fora_de_combate() and Hex.distancia(posicao(a), h) <= int(_cfg.aliados_entram_no_combate_ate):
 			participantes.append(a)
 	investigacao_pendente = {"hex": h, "cena": cena_id, "agentes": participantes, "semente": dados.rolar(1000000)}
-	var nome := ""
-	for cn in DadosJogo.ler("cenas_investigacao").cenas:
-		if cn.id == cena_id:
-			nome = cn.nome
-	_log("[color=#76d7c4][b]Investigação: %s![/b][/color] (%d agente(s) participam)" % [nome, participantes.size()])
+	_log("[color=#76d7c4][b]Investigação: %s![/b][/color] (%d agente(s) participam)" % [cena_info(cena_id).get("nome", ""), participantes.size()])
 	investigacao_iniciada.emit(investigacao_pendente)
+
+
+## Cena de investigação pelo id: primeiro as da própria missão, depois as do jogo.
+func cena_info(cena_id: String) -> Dictionary:
+	for cn in extras.get("cenas", []) + DadosJogo.ler("cenas_investigacao").cenas:
+		if cn.id == cena_id:
+			return cn
+	return {}
 
 
 ## Cria a cena de investigação pendente (a cena da UI chama isto).
@@ -505,7 +509,7 @@ func criar_cena_investigacao() -> CenaInvestigacao:
 	if investigacao_pendente.is_empty():
 		return null
 	var d := Dados.new(int(investigacao_pendente.get("semente", 1)))
-	return CenaInvestigacao.nova(ruleset, d, caso, investigacao_pendente.cena, investigacao_pendente.agentes, "", membrana)
+	return CenaInvestigacao.nova(ruleset, d, caso, investigacao_pendente.cena, investigacao_pendente.agentes, "", membrana, extras.get("cenas", []))
 
 
 ## Aplica o resultado de uma cena de investigação: pistas (PP), perguntas respondidas e

@@ -1,0 +1,423 @@
+{
+  "formato": "opn-missao",
+  "versao": 1,
+  "id": "fundo_02_a_estrada_que_desce",
+  "titulo": "A Estrada que Desce",
+  "autor": "Equipe do projeto",
+  "descricao": "Campanha O Fundo da Represa, missão 2. A estrada velha desce até a cidade afogada, e alguém está desenterrando os mortos.",
+  "nex_recomendado": 10,
+  "membrana_inicial": 85,
+  "briefing": "A estrada estadual antiga sai do mirante, desce pelo leito seco da represa e termina na praça de São Bento do Vale. Os Remanescentes passam por ela toda noite, carregando alguma coisa pesada.",
+  "mapa": {
+    "terreno": [
+      "ffcccmmeemmcccffff",
+      "fccccmceecmcccccff",
+      "ccppcccecccppccccf",
+      "cpaapccecccpaapccc",
+      "paaaapcepcpaaaapcc",
+      "paaaapceppaaaaapcc",
+      "ppaapccecppaaapccc",
+      "cpppcrrerrcppprccc",
+      "ccrcrrueurrrcrrccc",
+      "ccrrrueeeurrrcccff",
+      "fccrrrruurrrcccfff"
+    ],
+    "inicio": [
+      7,
+      0
+    ],
+    "nome_inicio": "Mirante da represa",
+    "objetivo": [
+      7,
+      9
+    ],
+    "conteudo": [
+      {
+        "em": [
+          3,
+          1
+        ],
+        "tipo": "vila",
+        "nome": "Sítio dos Moura"
+      },
+      {
+        "em": [
+          7,
+          3
+        ],
+        "tipo": "evento",
+        "evento": "ponte_de_pedra"
+      },
+      {
+        "em": [
+          8,
+          4
+        ],
+        "tipo": "evento",
+        "evento": "carro_no_lodo"
+      },
+      {
+        "em": [
+          9,
+          7
+        ],
+        "tipo": "evento",
+        "evento": "retratos_na_lama"
+      },
+      {
+        "em": [
+          5,
+          8
+        ],
+        "tipo": "evento",
+        "evento": "simbolo"
+      },
+      {
+        "em": [
+          13,
+          8
+        ],
+        "tipo": "investigacao",
+        "cena": "cemiterio_de_sao_bento"
+      },
+      {
+        "em": [
+          3,
+          8
+        ],
+        "tipo": "investigacao",
+        "cena": "casa_abandonada"
+      },
+      {
+        "em": [
+          7,
+          5
+        ],
+        "tipo": "encontro",
+        "encontro": "vigia_dos_remanescentes"
+      },
+      {
+        "em": [
+          10,
+          7
+        ],
+        "tipo": "encontro",
+        "encontro": "lama_que_anda"
+      },
+      {
+        "em": [
+          5,
+          4
+        ],
+        "tipo": "encontro",
+        "encontro": "poco_do_jacare"
+      }
+    ]
+  },
+  "caso": {
+    "sujeito": {
+      "id": "iracema",
+      "nome": "Iracema Leme, filha do antigo organista da Matriz",
+      "chefe_titulo": "Iracema, a Organista"
+    },
+    "acao": {
+      "id": "desenterrar",
+      "texto": "desenterra os mortos de São Bento para devolvê-los à cidade"
+    },
+    "local": {
+      "id": "coreto",
+      "nome": "o coreto da praça submersa"
+    },
+    "objetivo": "Descobrir quem lidera os Remanescentes e o que eles querem com os mortos da cidade afogada.",
+    "resumo": "Os Remanescentes descem toda noite pela estrada velha até São Bento do Vale. Covas do cemitério antigo amanhecem abertas."
+  },
+  "eventos": [
+    {
+      "id": "ponte_de_pedra",
+      "titulo": "Ponte de pedra",
+      "texto": "A estrada passa por uma ponte que ficou décadas debaixo d'água. As pedras estão soltas e escorregadias.",
+      "pericia": "atletismo",
+      "dt": 14,
+      "sucesso": {
+        "texto": "Você atravessa pulando de pedra em pedra e ajuda os outros a passar. Lá embaixo, o leito seco se abre até a cidade.",
+        "efeitos": [
+          {
+            "tipo": "revelar_raio",
+            "valor": 3
+          }
+        ]
+      },
+      "falha": {
+        "texto": "Uma pedra cede, e você cai no córrego raso, batendo o joelho.",
+        "efeitos": [
+          {
+            "tipo": "dano",
+            "valor": "1d4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "carro_no_lodo",
+      "titulo": "Carro no lodo",
+      "texto": "Um carro dos anos 70 está enterrado até as janelas, com a placa ainda legível.",
+      "pericia": "investigacao",
+      "dt": 15,
+      "sucesso": {
+        "texto": "No porta-luvas, um mapa da cidade antiga com a praça marcada a caneta, e a caneta é nova.",
+        "efeitos": [
+          {
+            "tipo": "revelar_objetivo"
+          }
+        ]
+      },
+      "falha": {
+        "texto": "A porta cede, e uma enxurrada de lama gelada cobre suas pernas. Alguma coisa se mexe lá dentro.",
+        "efeitos": [
+          {
+            "tipo": "dano",
+            "valor": "1d6"
+          }
+        ]
+      }
+    },
+    {
+      "id": "retratos_na_lama",
+      "titulo": "Retratos na lama",
+      "texto": "Dezenas de fotos de família estão espalhadas pela rua, todas viradas para cima, secas demais para quem passou quarenta anos no fundo.",
+      "pericia": "vontade",
+      "dt": 15,
+      "sucesso": {
+        "texto": "Você recolhe as fotos sem olhar os rostos. Elas não vão chamar mais ninguém.",
+        "efeitos": [
+          {
+            "tipo": "membrana",
+            "valor": 4
+          }
+        ]
+      },
+      "falha": {
+        "texto": "Um dos rostos é o seu.",
+        "efeitos": [
+          {
+            "tipo": "dano_mental",
+            "valor": "1d6"
+          }
+        ]
+      }
+    }
+  ],
+  "encontros": [
+    {
+      "id": "vigia_dos_remanescentes",
+      "nome": "Vigia dos Remanescentes",
+      "nivel": 0,
+      "ameacas": [
+        "iniciado",
+        "cultista_machete",
+        "cultista"
+      ]
+    },
+    {
+      "id": "lama_que_anda",
+      "nome": "Lama que anda",
+      "nivel": 1,
+      "ameacas": [
+        "esqueleto_de_lodo",
+        "esqueleto_de_lodo"
+      ]
+    },
+    {
+      "id": "poco_do_jacare",
+      "nome": "Poço do jacaré",
+      "nivel": 0,
+      "ameacas": [
+        "jacare"
+      ]
+    },
+    {
+      "id": "coveiros",
+      "nome": "Coveiros da madrugada",
+      "nivel": 1,
+      "ameacas": [
+        "investido",
+        "cultista"
+      ]
+    }
+  ],
+  "cenas": [
+    {
+      "id": "cemiterio_de_sao_bento",
+      "nome": "Cemitério de São Bento",
+      "terrenos": [
+        "ruina"
+      ],
+      "visual": "capela",
+      "pista_basica": "O cemitério da cidade afogada saiu da água coberto de conchas e lodo seco. Várias covas estão abertas, e a terra foi tirada de fora para dentro.",
+      "pontos": [
+        {
+          "id": "covas",
+          "nome": "Covas abertas",
+          "pericias": {
+            "investigacao": 15,
+            "medicina": 20
+          },
+          "responde": "oque",
+          "pista": "Os caixões foram levados inteiros, com cuidado e sem pressa. Quem fez isso {acao}."
+        },
+        {
+          "id": "livro_de_obitos",
+          "nome": "Livro de óbitos",
+          "pericias": {
+            "ocultismo": 20,
+            "religiao": 15
+          },
+          "responde": "oque",
+          "pista": "Alguém riscou a data de morte ao lado de cada nome e escreveu por cima: \"volta para casa\"."
+        },
+        {
+          "id": "jazigo",
+          "nome": "Jazigo da família Leme",
+          "pericias": {
+            "investigacao": 15,
+            "atualidades": 20
+          },
+          "responde": "quem",
+          "pista": "O único jazigo limpo é o da família Leme. Há flores frescas e uma partitura de órgão presa na grade."
+        },
+        {
+          "id": "ferido",
+          "nome": "Um Remanescente ferido",
+          "pericias": {
+            "intimidacao": 15,
+            "diplomacia": 20
+          },
+          "responde": "quem",
+          "pista": "O rapaz ferido não aguenta e fala: quem manda é {sujeito}. Ela diz que a cidade vai respirar de novo."
+        },
+        {
+          "id": "pegadas",
+          "nome": "Rastro dos caixões",
+          "pericias": {
+            "sobrevivencia": 15,
+            "percepcao": 15
+          },
+          "responde": "onde",
+          "pista": "As marcas dos caixões arrastados seguem pela rua principal até {local}."
+        },
+        {
+          "id": "bilhete",
+          "nome": "Bilhete no bolso de um morto",
+          "pericias": {
+            "investigacao": 20,
+            "percepcao": 20
+          },
+          "responde": "onde",
+          "pista": "Num bilhete dobrado com cuidado: \"Coreto, meia-noite. Tragam todos.\""
+        }
+      ],
+      "facilitar": [
+        {
+          "id": "conchas",
+          "texto": "Varrer as conchas e o lodo das lápides",
+          "pericias": {
+            "atletismo": 15,
+            "fortitude": 15
+          }
+        },
+        {
+          "id": "lanternas",
+          "texto": "Montar lanternas entre os túmulos",
+          "pericias": {
+            "tecnologia": 15,
+            "sobrevivencia": 15
+          }
+        }
+      ]
+    }
+  ],
+  "ameacas": {
+    "iracema": {
+      "nome": "Mulher de Luto",
+      "nivel": 2,
+      "chefe": true,
+      "descricao": "Iracema Leme, filha do organista da antiga Matriz. Lidera os Remanescentes e conjura rituais de Morte que aprendeu com algo que fala com ela de dentro do lago.",
+      "ficha": {
+        "pv": 50,
+        "defesa": 17,
+        "deslocamento": 9,
+        "vd": 30,
+        "elemento": "morte",
+        "atributos": {
+          "agi": 1,
+          "for": 1,
+          "int": 3,
+          "pre": 3,
+          "vig": 2
+        },
+        "pericias": {
+          "percepcao": {
+            "dados": 2,
+            "bonus": 5
+          },
+          "iniciativa": {
+            "dados": 1,
+            "bonus": 5
+          },
+          "fortitude": {
+            "dados": 2,
+            "bonus": 5
+          },
+          "reflexos": {
+            "dados": 1,
+            "bonus": 0
+          },
+          "vontade": {
+            "dados": 3,
+            "bonus": 10
+          },
+          "ocultismo": {
+            "dados": 3,
+            "bonus": 10
+          }
+        },
+        "conjurador": {
+          "rituais": [
+            "decadencia",
+            "definhar"
+          ],
+          "dt": 16,
+          "limite_pe": 4
+        },
+        "ataques": [
+          {
+            "id": "bengala",
+            "nome": "Bengala de jacarandá",
+            "teste": {
+              "dados": 2,
+              "bonus": 5
+            },
+            "dano": "1d6+2",
+            "tipo_dano": "impacto",
+            "ataque": "corpo_a_corpo",
+            "margem": 20,
+            "multiplicador": 2,
+            "soma_forca": false
+          }
+        ]
+      }
+    }
+  },
+  "covil": {
+    "nome": "A Praça do Coreto",
+    "ameacas": [
+      "iracema",
+      "cultista_machete",
+      "cultista",
+      "esqueleto_de_lodo"
+    ]
+  },
+  "opcoes": {
+    "surgimentos": "proprios"
+  }
+}

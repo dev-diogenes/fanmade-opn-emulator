@@ -18,6 +18,11 @@ var missoes_concluidas := 0
 var ultimo_relatorio: Dictionary = {}
 ## Co-op local (ADR 0004): jogadores e dono de cada agente
 var controles: ControleLocal = ControleLocal.padrao()
+## Campanhas (Fase 7, ADR 0006): progresso por id,
+## {etapa, concluida, vezes, marcas: [id], historico: [{etapa, vitoria}]}
+var campanhas: Dictionary = {}
+## Recrutas liberados pelas campanhas (fichas no formato de recrutas.json)
+var recrutas_extras: Array = []
 var _proximo_id := 1
 
 
@@ -35,7 +40,7 @@ static func nova(ruleset_: Ruleset = null) -> Carreira:
 func recrutas_disponiveis() -> Array:
 	var nomes := roster.map(func(a): return a.nome)
 	var caidos := memorial.map(func(m): return m.nome)
-	return DadosJogo.ler("recrutas").recrutas.filter(func(r): return not r.nome in nomes and not r.nome in caidos)
+	return (DadosJogo.ler("recrutas").recrutas + recrutas_extras).filter(func(r): return not r.nome in nomes and not r.nome in caidos)
 
 
 func recrutar(nome: String) -> Agente:
@@ -115,6 +120,33 @@ func iniciar_missao_comunidade(grupo: Array, definicao: Dictionary, semente: int
 	return missao
 
 
+## Progresso de uma campanha (criado na primeira consulta).
+func progresso_campanha(id: String) -> Dictionary:
+	if not campanhas.has(id):
+		campanhas[id] = {"etapa": 0, "concluida": false, "vezes": 0, "marcas": [], "historico": []}
+	return campanhas[id]
+
+
+## Próxima missão da campanha. Uma campanha concluída recomeça do início: as marcas
+## zeram, e os recrutas liberados continuam no roster.
+func iniciar_missao_campanha(grupo: Array, campanha: Dictionary, semente: int) -> Missao:
+	if missao != null or not validar_grupo(grupo).is_empty() or not Campanha.validar(campanha, ruleset).is_empty():
+		return null
+	var p := progresso_campanha(String(campanha.id))
+	if p.concluida:
+		p.etapa = 0
+		p.concluida = false
+		p.marcas = []
+	var i := int(p.etapa)
+	for a in grupo:
+		_restaurar(a)
+	missao = MissaoComunidade.criar_missao(campanha.missoes[i].definicao, ruleset, grupo.duplicate(), opcoes.duplicate(), semente)
+	missao.extras["campanha"] = Campanha.extras_da_etapa(campanha, i)
+	Campanha.aplicar_marcas(missao, campanha.missoes[i], p.marcas)
+	ultimo_relatorio = {}
+	return missao
+
+
 ## Volta para a Base: aplica PP, NEX e patente (p.61-63), enterra os mortos e recupera todos.
 func encerrar_missao() -> Dictionary:
 	if missao == null or not missao.encerrada:
@@ -159,8 +191,37 @@ func encerrar_missao() -> Dictionary:
 	missoes_concluidas += 1
 	ultimo_relatorio = {"vitoria": m.vitoria, "pp": pp_base, "detalhes_pp": linhas_pp, "agentes": agentes_rel,
 		"turnos": m.turno_mundo, "membrana": m.membrana.valor, "missao": missoes_concluidas}
+	if m.extras.has("campanha"):
+		ultimo_relatorio["campanha"] = _avancar_campanha(m)
 	missao = null
 	return ultimo_relatorio
+
+
+## Fim de uma missão da campanha. Na vitória, a etapa avança, as marcas ficam e os
+## recrutas entram na lista; na derrota, a mesma missão espera outra tentativa.
+func _avancar_campanha(m: Missao) -> Dictionary:
+	var c: Dictionary = m.extras.campanha
+	var p := progresso_campanha(String(c.id))
+	var rel := {"titulo": c.titulo, "etapa": int(c.etapa) + 1, "total": int(c.total), "vitoria": m.vitoria,
+		"texto": c.depois if m.vitoria else c.falha, "marcas": [], "recrutas": [], "concluida": false, "epilogo": ""}
+	p.historico.append({"etapa": int(c.etapa), "vitoria": m.vitoria})
+	if not m.vitoria or int(p.etapa) != int(c.etapa):
+		return rel
+	for marca in Campanha.marcas_ganhas(m):
+		if not marca.id in p.marcas:
+			p.marcas.append(marca.id)
+			rel.marcas.append(String(marca.get("texto", "")))
+	for r in c.recrutas:
+		if not recrutas_extras.any(func(x): return x.nome == r.nome):
+			recrutas_extras.append(r.duplicate(true))
+			rel.recrutas.append(r.nome)
+	p.etapa = int(p.etapa) + 1
+	if int(p.etapa) >= int(c.total):
+		p.concluida = true
+		p.vezes = int(p.vezes) + 1
+		rel.concluida = true
+		rel.epilogo = c.epilogo
+	return rel
 
 
 ## Entre missões, na Base: recuperação total e fim de condições.
@@ -178,6 +239,7 @@ func para_dicionario() -> Dictionary:
 		"roster": roster.map(func(a): return a.para_dicionario()),
 		"memorial": memorial.duplicate(true), "opcoes": opcoes.duplicate(), "controles": controles.para_dicionario(),
 		"missoes_concluidas": missoes_concluidas, "ultimo_relatorio": ultimo_relatorio.duplicate(true),
+		"campanhas": campanhas.duplicate(true), "recrutas_extras": recrutas_extras.duplicate(true),
 		"missao": missao.para_dicionario() if missao != null else {},
 		# Agentes que estão na missão mas saíram do roster (mortos aguardando o relatório)
 		"extras": _agentes_fora_do_roster().map(func(a): return a.para_dicionario()),
@@ -208,6 +270,8 @@ static func de_dicionario(d: Dictionary, ruleset_: Ruleset = null) -> Carreira:
 	c.controles = ControleLocal.de_dicionario(d.get("controles", {}))
 	c.missoes_concluidas = int(d.get("missoes_concluidas", 0))
 	c.ultimo_relatorio = d.get("ultimo_relatorio", {})
+	c.campanhas = d.get("campanhas", {})
+	c.recrutas_extras = d.get("recrutas_extras", [])
 	var md: Dictionary = d.get("missao", {})
 	if not md.is_empty():
 		c.missao = Missao.de_dicionario(c.ruleset, md, por_id)
