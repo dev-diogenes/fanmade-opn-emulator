@@ -8,6 +8,7 @@ const COR_FUNDO := Color("0e1014")
 const CORES_AGENTES := [Color("3d7bd9"), Color("27ae60"), Color("af7ac5"), Color("e67e22")]
 
 var missao: Missao
+var sessao: Sessao
 var _jogo: Node
 var _terrenos: Dictionary
 
@@ -44,6 +45,8 @@ func _ready() -> void:
 	_terrenos = DadosJogo.ler("mapa").terrenos
 	Entrada.configurar()
 	_controles = _jogo.controles() if _jogo != null else ControleLocal.padrao()
+	sessao = _jogo.sessao if _jogo != null else Sessao.new()
+	sessao.entrar("mapa", _aplicar_comando)
 	_montar_interface()
 	for linha in missao.historico:
 		_log.append_text(linha + "\n")
@@ -94,11 +97,7 @@ func _input(evento: InputEvent) -> void:
 		_mapa3d.mostrar_cursor(_cursor, true)
 		get_viewport().set_input_as_handled()
 	elif _cursor_ativo and evento.is_action_pressed("confirmar"):
-		if missao.mover(_cursor):
-			_cursor_ativo = false
-			_mapa3d.focar_agente(missao)
-			_atualizar()
-			_focar_para_controle()
+		_enviar("mover", {"hex": Comandos.vetor(_cursor)})
 		get_viewport().set_input_as_handled()
 	elif _cursor_ativo and evento.is_action_pressed("cancelar"):
 		_cursor_ativo = false
@@ -110,30 +109,53 @@ func _input(evento: InputEvent) -> void:
 # --- Ações -----------------------------------------------------------------
 
 func _rolar() -> void:
-	missao.rolar_movimento(int(_spin_foco.value))
+	var foco := int(_spin_foco.value)
 	_spin_foco.value = 0
-	_atualizar()
-	var a := missao.agente_atual()
-	if a != null and _controles.usa_controle(a) and not missao.destinos().is_empty():
-		_cursor_ativo = true   # depois de rolar, o direcional já move o cursor
-		_cursor = missao.posicao(a)
-		_mapa3d.mostrar_cursor(_cursor, true)
+	_enviar("rolar_movimento", {"foco": foco})
 
 
 func _descansar() -> void:
-	missao.descansar()
-	_atualizar()
+	_enviar("descansar")
 
 
 func _encerrar_turno() -> void:
-	missao.encerrar_turno()
-	_atualizar()
+	_enviar("encerrar_turno")
 
 
 func _testar_evento() -> void:
-	missao.resolver_evento(int(_spin_foco.value))
+	var foco := int(_spin_foco.value)
 	_spin_foco.value = 0
+	_enviar("resolver_evento", {"foco": foco})
+
+
+# --- Comandos (ADR 0007) ------------------------------------------------------
+
+func _enviar(acao: String, args: Dictionary = {}) -> Dictionary:
+	return sessao.enviar(Comandos.novo("mapa", acao, args))
+
+
+## Aplica um comando do mapa (deste jogador ou, online, de outro) e atualiza a tela.
+func _aplicar_comando(cmd: Dictionary) -> Dictionary:
+	var res := Comandos.aplicar_mapa(missao, cmd)
+	var a := missao.agente_atual()
+	match String(cmd.get("acao", "")):
+		"rolar_movimento":
+			if a != null and _controles.usa_controle(a) and not missao.destinos().is_empty():
+				_cursor_ativo = true   # depois de rolar, o direcional já move o cursor
+				_cursor = missao.posicao(a)
+				_mapa3d.mostrar_cursor(_cursor, true)
+		"mover":
+			if res.ok:
+				_cursor_ativo = false
+				_mapa3d.focar_agente(missao)
+				_focar_para_controle()
 	_atualizar()
+	return res
+
+
+func _exit_tree() -> void:
+	if sessao != null:
+		sessao.sair("mapa")
 
 
 func _ao_encontro(config: Dictionary) -> void:
@@ -164,10 +186,7 @@ func _nova_missao() -> void:
 
 func _clicar(evento: InputEvent) -> void:
 	if evento is InputEventMouseButton and evento.pressed and evento.button_index == MOUSE_BUTTON_LEFT:
-		var h := _mapa3d.hex_em(evento.position)
-		if missao.mover(h):
-			_mapa3d.focar_agente(missao)
-			_atualizar()
+		_enviar("mover", {"hex": Comandos.vetor(_mapa3d.hex_em(evento.position))})
 		return
 	if _mapa3d.rig.tratar_entrada(evento):
 		_vista.accept_event()

@@ -13,6 +13,8 @@ var carreira: Carreira
 var combate_config: Dictionary = {}
 ## false nos testes automáticos, para não mexer no save do jogador
 var salvar_automaticamente := true
+## Comandos das telas e checkpoints (ADR 0007)
+var sessao := Sessao.new()
 
 var missao: Missao:
 	get:
@@ -114,9 +116,14 @@ func voltar_para_base() -> void:
 
 func continuar_missao() -> void:
 	if missao != null:
+		salvar()
 		get_tree().change_scene_to_file.call_deferred(CENA_MAPA)
 
 
+## Toda troca de cena salva a carreira e marca o checkpoint da sessão.
 func salvar() -> void:
-	if carreira != null and salvar_automaticamente:
+	if carreira == null:
+		return
+	sessao.marcar_checkpoint(carreira.para_dicionario())
+	if salvar_automaticamente:
 		carreira.salvar()

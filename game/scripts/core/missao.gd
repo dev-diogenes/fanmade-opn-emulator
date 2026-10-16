@@ -296,7 +296,8 @@ func _aplicar_efeito(a: Agente, ef: Dictionary, h: Vector2i) -> void:
 # --- Encontros -------------------------------------------------------------
 
 ## Monta a configuração do combate: agentes no hex + aliados até 1 hex de distância (FTK).
-func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool) -> void:
+## `semente_salva`: ao carregar um save, o encontro volta com a mesma seed e sem novo registro.
+func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool, semente_salva: int = -1) -> void:
 	var participantes: Array[Agente] = []
 	var alcance := int(_cfg.aliados_entram_no_combate_ate)
 	for a in agentes:
@@ -332,9 +333,10 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool) -> void:
 		"agentes": participantes, "armas": armas, "ameacas": ameacas, "encontro": encontro_id,
 		"regras": {"lesoes": opcoes.get("lesoes", true), "inspiracao_resoluta": opcoes.get("inspiracao_resoluta", true),
 			"presenca_perturbadora": true, "bonus_enigma": mini(10, pistas * 2), "perguntas_respondidas": _perguntas_respondidas()},
-		"nivel_membrana": membrana.nivel_ameaca(), "semente": dados.rolar(1000000),
+		"nivel_membrana": membrana.nivel_ameaca(), "semente": semente_salva if semente_salva >= 0 else dados.rolar(1000000),
 	}
-	_log("[color=#ec7063][b]Encontro: %s![/b][/color] (%d agente(s) entram no combate)" % [info.nome, participantes.size()])
+	if semente_salva < 0:
+		_log("[color=#ec7063][b]Encontro: %s![/b][/color] (%d agente(s) entram no combate)" % [info.nome, participantes.size()])
 	encontro_iniciado.emit(encontro_pendente)
 
 
@@ -486,13 +488,14 @@ func _ajustar_indice() -> void:
 
 # --- Investigação ----------------------------------------------------------
 
-func _preparar_investigacao(h: Vector2i, cena_id: String) -> void:
+func _preparar_investigacao(h: Vector2i, cena_id: String, semente_salva: int = -1) -> void:
 	var participantes: Array[Agente] = []
 	for a in agentes:
 		if not a.esta_fora_de_combate() and Hex.distancia(posicao(a), h) <= int(_cfg.aliados_entram_no_combate_ate):
 			participantes.append(a)
-	investigacao_pendente = {"hex": h, "cena": cena_id, "agentes": participantes, "semente": dados.rolar(1000000)}
-	_log("[color=#76d7c4][b]Investigação: %s![/b][/color] (%d agente(s) participam)" % [cena_info(cena_id).get("nome", ""), participantes.size()])
+	investigacao_pendente = {"hex": h, "cena": cena_id, "agentes": participantes, "semente": semente_salva if semente_salva >= 0 else dados.rolar(1000000)}
+	if semente_salva < 0:
+		_log("[color=#76d7c4][b]Investigação: %s![/b][/color] (%d agente(s) participam)" % [cena_info(cena_id).get("nome", ""), participantes.size()])
 	investigacao_iniciada.emit(investigacao_pendente)
 
 
@@ -636,7 +639,8 @@ func para_dicionario() -> Dictionary:
 		ev = {"hex": [evento_pendente.hex.x, evento_pendente.hex.y], "evento": evento_pendente.evento.id, "agente": evento_pendente.agente.id}
 	var enc: Dictionary = {}
 	if not encontro_pendente.is_empty():
-		enc = {"hex": [encontro_pendente.hex.x, encontro_pendente.hex.y], "encontro": encontro_pendente.encontro, "chefe": encontro_pendente.chefe}
+		enc = {"hex": [encontro_pendente.hex.x, encontro_pendente.hex.y], "encontro": encontro_pendente.encontro, "chefe": encontro_pendente.chefe,
+			"semente": int(encontro_pendente.semente)}
 	var descansos: Dictionary = {}
 	for a in _descansou:
 		descansos[a.id] = [_descansou[a].x, _descansou[a].y]
@@ -649,7 +653,8 @@ func para_dicionario() -> Dictionary:
 		"movimento_restante": movimento_restante, "movimento_rolado": movimento_rolado,
 		"evento_pendente": ev, "encontro_pendente": enc, "reforcos": reforcos, "pistas": pistas,
 		"caso": caso.para_dicionario() if caso != null else {}, "modificador_chefe": modificador_chefe,
-		"investigacao_pendente": {"hex": [investigacao_pendente.hex.x, investigacao_pendente.hex.y], "cena": investigacao_pendente.cena} if not investigacao_pendente.is_empty() else {},
+		"investigacao_pendente": {"hex": [investigacao_pendente.hex.x, investigacao_pendente.hex.y], "cena": investigacao_pendente.cena,
+			"semente": int(investigacao_pendente.semente)} if not investigacao_pendente.is_empty() else {},
 		"turnos_sem_surgimento": _turnos_sem_surgimento, "descansos": descansos,
 		"historico": historico.slice(maxi(0, historico.size() - 300)),
 		"encerrada": encerrada, "vitoria": vitoria, "extras": extras.duplicate(true),
@@ -705,11 +710,11 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.modificador_chefe = float(d.get("modificador_chefe", 0.0))
 	var inv: Dictionary = d.get("investigacao_pendente", {})
 	if not inv.is_empty():
-		m._preparar_investigacao(Vector2i(int(inv.hex[0]), int(inv.hex[1])), inv.cena)
+		m._preparar_investigacao(Vector2i(int(inv.hex[0]), int(inv.hex[1])), inv.cena, int(inv.get("semente", -1)))
 	var ev: Dictionary = d.get("evento_pendente", {})
 	if not ev.is_empty() and por_id.has(ev.agente):
 		m.evento_pendente = {"hex": Vector2i(int(ev.hex[0]), int(ev.hex[1])), "evento": m._evento(ev.evento), "agente": por_id[ev.agente]}
 	var enc: Dictionary = d.get("encontro_pendente", {})
 	if not enc.is_empty():
-		m._preparar_encontro(Vector2i(int(enc.hex[0]), int(enc.hex[1])), enc.encontro, enc.chefe)
+		m._preparar_encontro(Vector2i(int(enc.hex[0]), int(enc.hex[1])), enc.encontro, enc.chefe, int(enc.get("semente", -1)))
 	return m

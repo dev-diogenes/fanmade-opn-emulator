@@ -31,6 +31,7 @@ var _lbl_vez: Label
 var _controles: ControleLocal
 var _btn_procurar: Button
 var _ultimo_agente: Agente
+var sessao: Sessao
 
 
 func _ready() -> void:
@@ -42,6 +43,8 @@ func _ready() -> void:
 		missao = Missao.nova(42)
 		missao._preparar_investigacao(missao.mapa.encontrar("inicio"), "casa_abandonada")
 	cena = missao.criar_cena_investigacao()
+	sessao = _jogo.sessao if _jogo != null and _jogo.missao == missao else Sessao.new()
+	sessao.entrar("investigacao", _aplicar_comando)
 	Entrada.configurar()
 	_controles = _jogo.controles() if _jogo != null and _jogo.missao == missao else ControleLocal.padrao()
 	_montar_interface()
@@ -299,57 +302,78 @@ func _procurar() -> void:
 		op["perito"] = true
 	if _chk_ecletico.visible and _chk_ecletico.button_pressed:
 		op["ecletico"] = true
-	var r := cena.procurar(_ponto, per, int(_spin_foco.value), op)
-	if r.is_empty():
-		_log.append_text("[color=#e67e22]Não dá para fazer esse teste (treino, PE ou habilidade).[/color]\n")
+	var foco := int(_spin_foco.value)
 	_spin_foco.value = 0
-	_atualizar()
+	_enviar("procurar", {"ponto": _ponto, "pericia": per, "foco": foco, "opcoes": op})
 
 
 func _facilitar() -> void:
 	if _opt_facilitar.selected < 0:
 		return
 	var meta: Array = _opt_facilitar.get_item_metadata(_opt_facilitar.selected)
-	var r := cena.facilitar(meta[0], meta[1], int(_spin_foco.value), {"presteza_atletica": _chk_presteza.visible and _chk_presteza.button_pressed})
-	if r.is_empty():
-		_log.append_text("[color=#e67e22]Não dá para fazer esse teste.[/color]\n")
-	elif r.sucesso:
-		_visao.iluminar()
+	var foco := int(_spin_foco.value)
 	_spin_foco.value = 0
-	_atualizar()
+	_enviar("facilitar", {"opcao": meta[0], "pericia": meta[1], "foco": foco, "opcoes": {"presteza_atletica": _chk_presteza.visible and _chk_presteza.button_pressed}})
 
 
 func _ajudar() -> void:
 	if _opt_aliado.selected < 0 or _opt_pericia_ajuda.selected < 0:
 		return
-	var r := cena.ajudar(_opt_aliado.get_item_metadata(_opt_aliado.selected), _opt_pericia_ajuda.get_item_metadata(_opt_pericia_ajuda.selected), true)
-	if r.is_empty():
-		_log.append_text("[color=#e67e22]Não dá para ajudar agora.[/color]\n")
-	_atualizar()
+	_enviar("ajudar", {"aliado": Comandos.indice_na_cena(cena, _opt_aliado.get_item_metadata(_opt_aliado.selected)),
+		"pericia": _opt_pericia_ajuda.get_item_metadata(_opt_pericia_ajuda.selected), "espirito_civico": true})
 
 
 func _passar() -> void:
-	cena.passar()
-	_atualizar()
+	_enviar("passar")
 
 
 func _sair() -> void:
-	cena.encerrar()
-	_atualizar()
+	_enviar("encerrar")
 
 
 func _usar_extra(hab: String) -> void:
-	cena.acao_extra(hab)
-	_atualizar()
+	_enviar("acao_extra", {"habilidade": hab})
 
 
 func _trilha_certa(a: Agente) -> void:
-	cena.pagar_na_trilha_certa(a)
-	_atualizar()
+	_enviar("trilha_certa", {"agente": Comandos.indice_na_cena(cena, a)})
 
 
 func _voltar() -> void:
 	if _jogo != null and _jogo.missao == missao:
-		_jogo.voltar_da_investigacao(cena.resultado())
+		_enviar("sair")
 	else:
 		get_tree().reload_current_scene()
+
+
+# --- Comandos (ADR 0007) ------------------------------------------------------
+
+func _enviar(acao: String, args: Dictionary = {}) -> Dictionary:
+	return sessao.enviar(Comandos.novo("investigacao", acao, args))
+
+
+## Aplica um comando da cena (deste jogador ou, online, de outro) e atualiza a tela.
+func _aplicar_comando(cmd: Dictionary) -> Dictionary:
+	var res := Comandos.aplicar_investigacao(cena, cmd)
+	match String(cmd.get("acao", "")):
+		"procurar":
+			if not res.ok:
+				_log.append_text("[color=#e67e22]Não dá para fazer esse teste (treino, PE ou habilidade).[/color]\n")
+		"facilitar":
+			if not res.ok:
+				_log.append_text("[color=#e67e22]Não dá para fazer esse teste.[/color]\n")
+			elif res.teste.get("sucesso", false):
+				_visao.iluminar()
+		"ajudar":
+			if not res.ok:
+				_log.append_text("[color=#e67e22]Não dá para ajudar agora.[/color]\n")
+		"sair":
+			_jogo.voltar_da_investigacao(res.resultado)
+			return res
+	_atualizar()
+	return res
+
+
+func _exit_tree() -> void:
+	if sessao != null:
+		sessao.sair("investigacao")

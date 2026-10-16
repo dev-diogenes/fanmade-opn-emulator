@@ -16,6 +16,8 @@ var armas: Dictionary = {}
 var ruleset: RulesetOp2022
 var dados: Dados
 var combate: Combate
+var fluxo: FluxoCombate
+var sessao: Sessao
 var grade: Grade
 var membrana: Membrana
 ## true = a IA joga pelos agentes também, sem espera (usado pelo teste automático)
@@ -29,7 +31,6 @@ var _vencedor := ""
 var _modo := ""            ## "", "mover" ou "atacar"
 var _selecionado: Ser
 var _ultimo_teste: ResultadoTeste
-var _turnos_jogados := 0
 
 # Nós da interface
 var _vista: SubViewportContainer
@@ -68,6 +69,8 @@ func _ready() -> void:
 	var jogo := get_node_or_null("/root/Jogo")
 	if config.is_empty() and jogo != null and not jogo.combate_config.is_empty():
 		config = jogo.combate_config
+	sessao = jogo.sessao if jogo != null and not config.is_empty() else Sessao.new()
+	sessao.entrar("combate", _aplicar_comando)
 	if not config.is_empty() and semente < 0:
 		semente = int(config.get("semente", -1))
 	iniciar_combate(semente if semente >= 0 else randi())
@@ -99,6 +102,9 @@ func iniciar_combate(semente: int) -> void:
 		combate = montado.combate
 		grade = montado.grade
 		armas = montado.armas
+	fluxo = FluxoCombate.de_combate(ruleset, combate, grade, armas, membrana)
+	fluxo.ia_para_agentes = autoplay
+	fluxo.nova_rodada.connect(func(r): _registrar("[color=#7f8c8d]— Rodada %d —[/color]" % r))
 	combate.registro.connect(_registrar)
 	combate.ser_adicionado.connect(_ao_adicionar)
 	if _tab3d != null:
@@ -107,8 +113,7 @@ func iniciar_combate(semente: int) -> void:
 	combate.combate_encerrado.connect(_ao_encerrar)
 	combate.turno_perdido.connect(func(s, motivo): _registrar("%s perde o turno (%s)." % [s.nome, motivo]))
 	combate.lesao_sofrida.connect(func(a, attr): _registrar("[color=#e67e22]%s sofre uma lesão: −1 %s permanente.[/color]" % [a.nome, attr.to_upper()]))
-	combate.inspiracao_disponivel.connect(_ao_inspirar)
-	combate.iniciar()
+	fluxo.iniciar()
 	for s in combate.participantes:
 		if s is Ameaca and (s as Ameaca).enigma_pendente():
 			_registrar("[color=#f5b041]Enigma de Medo — %s: %s Nada a fere até alguém decifrar (botão Decifrar).[/color]" % [s.nome, (s as Ameaca).enigma.get("texto", "")])
@@ -153,10 +158,14 @@ func _criar_lados() -> void:
 	_adicionar(Ameaca.criar(ruleset, "Aberração", aberracao), garras, Vector2i(11, 4))
 
 
-## Seres que surgem no meio do combate (cópias do escutado).
+## Seres que surgem no meio do combate (cópias do escutado); a arma vem do FluxoCombate.
 func _ao_adicionar(ser: Ser) -> void:
-	armas[ser] = MontagemCombate.arma_de(ruleset, ser)
 	_registrar("%s entra no combate." % ser.nome)
+
+
+func _exit_tree() -> void:
+	if sessao != null:
+		sessao.sair("combate")
 
 
 func _adicionar(ser: Ser, arma: Dictionary, pos: Vector2i) -> void:
@@ -169,30 +178,23 @@ func _adicionar(ser: Ser, arma: Dictionary, pos: Vector2i) -> void:
 
 ## Passa para o próximo turno. Turnos da IA são jogados aqui (com uma pausa curta para
 ## o jogador acompanhar, exceto no autoplay). Para quando chega a vez de um agente.
+## O passo a passo é o do FluxoCombate (o mesmo do piloto e da rede); aqui só entram as pausas.
 func _avancar() -> void:
 	while true:
 		_modo = ""
-		if combate.encerrado or _turnos_jogados >= 500:
-			_atualizar()
-			return
-		var rodada_antes := combate.rodada
-		var ser := combate.proximo_turno()
-		if combate.rodada != rodada_antes:
-			membrana.registrar("rodada_combate")
-			_registrar("[color=#7f8c8d]— Rodada %d —[/color]" % combate.rodada)
-		_turnos_jogados += 1
+		var ser := fluxo.proximo()
 		_selecionado = ser
 		_atualizar()
 		if ser == null:
 			return
-		if _agente_da_vez() != null:
+		if fluxo.decide_jogador(ser):
 			_focar_para_controle()
 			return   # vez do jogador
 		if not autoplay:
 			await get_tree().create_timer(0.6).timeout
 			if not is_inside_tree():
 				return
-		_jogar_ia(ser)
+		fluxo.jogar_ia(ser)
 
 
 # --- Co-op local e controles (ADR 0004) ------------------------------------
@@ -238,11 +240,6 @@ func _input(evento: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-## IA (ameaças e autoplay): veja IaCombate.
-func _jogar_ia(ser: Ser) -> void:
-	IaCombate.jogar(combate, ser, armas)
-
-
 func _pode_atacar(ser: Ser, alvo: Ser, arma: Dictionary) -> bool:
 	return IaCombate.pode_atacar(combate, ser, alvo, arma)
 
@@ -250,28 +247,81 @@ func _pode_atacar(ser: Ser, alvo: Ser, arma: Dictionary) -> bool:
 # --- Ações do jogador -------------------------------------------------------
 
 func _agente_da_vez() -> Agente:
-	var s := combate.ser_atual()
-	return s as Agente if s is Agente and not autoplay and s.lado == "agentes" else null   # hipnotizados jogam pela IA
+	var s := fluxo.decisor() if fluxo != null else null
+	return s as Agente if s is Agente else null   # hipnotizados jogam pela IA
+
+
+# --- Comandos (ADR 0007) ------------------------------------------------------
+
+## As ações do jogador viram comandos do ser da vez e passam pela sessão.
+func _enviar(acao: String, args: Dictionary = {}) -> Dictionary:
+	var cmd := Comandos.novo("combate", acao, args)
+	cmd["ator"] = Comandos.ref(combate, combate.ser_atual())
+	return sessao.enviar(cmd)
+
+
+## Aplica um comando (deste jogador ou, online, de outro) e atualiza a tela.
+func _aplicar_comando(cmd: Dictionary) -> Dictionary:
+	var res := fluxo.aplicar(cmd)
+	var ator := Comandos.ser(combate, cmd.get("ator", -1))
+	match String(cmd.get("acao", "")):
+		"mover":
+			if res.ok:
+				_registrar("%s se move." % ator.nome)
+				for op in combate.oportunidades_pendentes:
+					_registrar("%s pode fazer um ataque de oportunidade." % op.atacante.nome)
+		"agredir":
+			var r = res.get("ataque")
+			if r != null:
+				for extra in r.ataques_extras:
+					_ultimo_teste = extra.teste
+			if not res.ok:
+				_registrar("[color=#e67e22]Ataque inválido (fora de alcance, sem ação ou PE).[/color]")
+		"conjurar":
+			if not res.get("ok", false):
+				_registrar("[color=#e67e22]Não deu para conjurar: %s.[/color]" % res.get("erro", "?"))
+		"granada":
+			if not res.get("ok", false):
+				_registrar("[color=#e67e22]Não deu: %s.[/color]" % res.get("erro", "?"))
+		"contra":
+			if not res.ok:
+				_registrar("[color=#e67e22]Precisa estar ao lado da criatura (e de uma ação padrão).[/color]")
+		"item":
+			var nome_item: String = ruleset.equipamento(String(cmd.get("item", ""))).get("nome", "item")
+			if res.ok:
+				_registrar("%s usa %s em %s: +%d PV." % [ator.nome, nome_item, res.alvo.nome, int(res.cura)])
+			else:
+				_registrar("[color=#e67e22]Não dá para usar %s agora.[/color]" % nome_item)
+		"decifrar":
+			if res.ok:
+				_ultimo_teste = res.teste
+			else:
+				_registrar("[color=#e67e22]Sem ação padrão para decifrar o enigma.[/color]")
+		"encerrar_turno":
+			if res.ok:
+				_avancar()
+			return res
+		"sair":
+			var jogo := get_node_or_null("/root/Jogo")
+			if jogo != null and not config.is_empty():
+				jogo.voltar_do_combate(_vencedor)
+			return res
+	_atualizar()
+	return res
 
 
 func _clicar_celula(celula: Vector2i) -> void:
 	var agente := _agente_da_vez()
 	var alvo := grade.ocupante(celula)
 	if _modo == "mover" and agente != null:
-		if combate.mover(agente, celula):
-			_registrar("%s se move." % agente.nome)
-			for op in combate.oportunidades_pendentes:
-				_registrar("%s pode fazer um ataque de oportunidade." % op.atacante.nome)
 		_modo = ""
+		_enviar("mover", {"celula": Comandos.vetor(celula)})
 	elif _modo == "granada" and agente != null:
-		var r := combate.usar_granada(agente, _opt_item.get_item_metadata(_opt_item.selected), celula)
-		if not r.ok:
-			_registrar("[color=#e67e22]Não deu: %s.[/color]" % r.get("erro", "?"))
 		_modo = ""
+		_enviar("granada", {"item": _opt_item.get_item_metadata(_opt_item.selected), "celula": Comandos.vetor(celula)})
 	elif _modo == "contra" and agente != null and alvo is Ameaca:
-		if not combate.usar_contra(agente, alvo as Ameaca, _opt_item.get_item_metadata(_opt_item.selected)):
-			_registrar("[color=#e67e22]Precisa estar ao lado da criatura (e de uma ação padrão).[/color]")
 		_modo = ""
+		_enviar("contra", {"alvo": Comandos.ref(combate, alvo), "item": _opt_item.get_item_metadata(_opt_item.selected)})
 	elif _modo == "ritual_area" and agente != null:
 		var escolha: Array = _opt_ritual.get_item_metadata(_opt_ritual.selected)
 		_conjurar(agente, escolha[0], escolha[1], alvo, {"celula": celula})
@@ -288,12 +338,8 @@ func _clicar_celula(celula: Vector2i) -> void:
 		var opcoes := {}
 		if _chk_ae.button_pressed and agente.classe_id == "combatente":
 			opcoes["ataque_especial"] = {"ataque": 5}
-		var r := combate.agredir(agente, alvo, armas[agente], int(_spin_foco.value), opcoes)
-		for extra in r.ataques_extras:
-			_ultimo_teste = extra.teste
-		if r.teste == null:
-			_registrar("[color=#e67e22]Ataque inválido (fora de alcance, sem ação ou PE).[/color]")
 		_modo = ""
+		_enviar("agredir", {"alvo": Comandos.ref(combate, alvo), "foco": int(_spin_foco.value), "opcoes": opcoes})
 	elif alvo != null:
 		_selecionado = alvo
 	_atualizar()
@@ -312,17 +358,6 @@ func _ao_atacar(r: ResultadoAtaque) -> void:
 	_registrar(txt)
 	if r.alvo.tem(Ser.MORRENDO):
 		_registrar("[color=#c0392b]%s está morrendo![/color]" % r.alvo.nome)
-
-
-func _ao_inspirar(morto: Agente, efeito: String) -> void:
-	# Na arena, a inspiração vai para o agente vivo com menos PV.
-	var melhor: Agente = null
-	for s in combate.participantes:
-		if s is Agente and not s.esta_fora_de_combate() and (melhor == null or s.pv < melhor.pv):
-			melhor = s
-	if melhor != null:
-		combate.aplicar_inspiracao(combate.inspiracoes_pendentes.size() - 1, melhor)
-		_registrar("[color=#bb8fce]Inspiração Resoluta de %s: %s para %s.[/color]" % [morto.nome, efeito.replace("_", " "), melhor.nome])
 
 
 func _ao_encerrar(vencedor: String) -> void:
@@ -482,12 +517,7 @@ func _usar_cicatrizante() -> void:
 	for s in grade.seres():
 		if s.lado == agente.lado and not s.tem(Ser.MORTO) and grade.estao_adjacentes(agente, s) and s.pv * agente.pv_maximo < agente.pv * s.pv_maximo:
 			alvo = s
-	var cura := combate.usar_item(agente, "cicatrizante", alvo)
-	if cura >= 0:
-		_registrar("%s usa um Cicatrizante em %s: +%d PV." % [agente.nome, alvo.nome, cura])
-	else:
-		_registrar("[color=#e67e22]Não dá para usar o Cicatrizante agora.[/color]")
-	_atualizar()
+	_enviar("item", {"item": "cicatrizante", "alvo": Comandos.ref(combate, alvo)})
 
 
 ## Conjurar: rituais pessoais e explosões saem na hora; áreas esperam o clique no ponto;
@@ -524,12 +554,14 @@ func _alvos_do_lado(agente: Agente, clicado: Ser, e: Dictionary) -> Array:
 	return lista.filter(func(s): return combate._erro_de_alcance(agente, s, String(e.get("alcance", ""))) == "" or cat == "").slice(0, limite)
 
 
-func _conjurar(agente: Agente, rid: String, forma: String, alvo: Ser, opcoes: Dictionary) -> void:
-	var r := combate.conjurar(agente, rid, alvo, forma, opcoes)
-	if not r.ok:
-		_registrar("[color=#e67e22]Não deu para conjurar: %s.[/color]" % r.get("erro", "?"))
+func _conjurar(_agente: Agente, rid: String, forma: String, alvo: Ser, opcoes: Dictionary) -> void:
+	var op := {}
+	if opcoes.has("celula"):
+		op["celula"] = Comandos.vetor(opcoes.celula)
+	if opcoes.has("alvos"):
+		op["alvos"] = opcoes.alvos.map(func(x): return Comandos.ref(combate, x))
 	_modo = ""
-	_atualizar()
+	_enviar("conjurar", {"ritual": rid, "forma": forma, "alvo": Comandos.ref(combate, alvo), "opcoes": op})
 
 
 func _criatura_com_enigma() -> Ameaca:
@@ -544,12 +576,7 @@ func _decifrar() -> void:
 	var criatura := _criatura_com_enigma()
 	if agente == null or criatura == null:
 		return
-	var t := combate.decifrar_enigma(agente, criatura)
-	if t != null:
-		_ultimo_teste = t
-	else:
-		_registrar("[color=#e67e22]Sem ação padrão para decifrar o enigma.[/color]")
-	_atualizar()
+	_enviar("decifrar", {"alvo": Comandos.ref(combate, criatura)})
 
 
 ## Granadas pedem um ponto; itens contra criaturas (fertilizante…) pedem a criatura.
@@ -564,28 +591,24 @@ func _modo_item() -> void:
 
 
 func _apagar() -> void:
-	var agente := _agente_da_vez()
-	if agente != null:
-		combate.apagar_chamas(agente)
-	_atualizar()
+	if _agente_da_vez() != null:
+		_enviar("apagar")
 
 
 func _soltar() -> void:
-	var agente := _agente_da_vez()
-	if agente != null:
-		combate.escapar(agente)
-	_atualizar()
+	if _agente_da_vez() != null:
+		_enviar("soltar")
 
 
 func _encerrar_turno() -> void:
 	if _agente_da_vez() != null:
-		_avancar()
+		_enviar("encerrar_turno")
 
 
 func _reiniciar() -> void:
 	var jogo := get_node_or_null("/root/Jogo")
 	if not config.is_empty() and jogo != null:
-		jogo.voltar_do_combate(_vencedor)
+		_enviar("sair")
 	else:
 		get_tree().reload_current_scene()
 

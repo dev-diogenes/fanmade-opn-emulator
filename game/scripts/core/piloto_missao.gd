@@ -4,34 +4,17 @@ extends RefCounted
 ## (movimento, eventos, combates, investigações e descanso). Serve para testar seeds em série
 ## (critério da Fase 4) e, mais tarde, para simular a IA de agentes controlados pelo jogo.
 
-const LIMITE_TURNOS_COMBATE := 600
 const LIMITE_PASSOS := 20000
 
 
 ## Resolve o combate pendente da missão só com a IA. Retorna {vencedor, turnos, terminou}.
 static func resolver_combate(ruleset: Ruleset, config: Dictionary, membrana: Membrana) -> Dictionary:
-	var dados := Dados.new(int(config.get("semente", 1)))
-	var montado := MontagemCombate.montar(ruleset, config, dados, membrana)
-	var c: Combate = montado.combate
-	var armas: Dictionary = montado.armas
-	c.iniciar()
-	var turnos := 0
-	var participantes_antes := c.participantes.size()
-	while not c.encerrado and turnos < LIMITE_TURNOS_COMBATE:
-		var rodada_antes := c.rodada
-		var ser := c.proximo_turno()
-		if c.rodada != rodada_antes and membrana != null:
-			membrana.registrar("rodada_combate")
-		turnos += 1
-		if ser == null:
-			break
-		if c.participantes.size() != participantes_antes:   # cópias e invocações
-			for s in c.participantes:
-				if not armas.has(s):
-					armas[s] = MontagemCombate.arma_de(ruleset, s)
-			participantes_antes = c.participantes.size()
-		IaCombate.jogar(c, ser, armas)
-	return {"vencedor": c.lado_vencedor() if c.encerrado else "", "turnos": turnos, "terminou": c.encerrado, "rodadas": c.rodada}
+	var fluxo := FluxoCombate.montar(ruleset, config, membrana)
+	fluxo.ia_para_agentes = true
+	fluxo.iniciar()
+	fluxo.avancar_ate_decisao()
+	var c := fluxo.combate
+	return {"vencedor": c.lado_vencedor() if c.encerrado else "", "turnos": fluxo.turnos, "terminou": c.encerrado, "rodadas": c.rodada}
 
 
 ## Joga a cena de investigação pendente: cada agente procura no ponto em que tem mais chance.
@@ -82,8 +65,9 @@ static func resolver_pendencias(a: Agente) -> void:
 
 
 ## Joga a missão inteira. Retorna um relatório: {encerrada, vitoria, turnos_mundo, combates,
-## combates_sem_fim, eventos, investigacoes, passos, travou}.
-static func jogar(m: Missao, limite_turnos_mundo: int = 150) -> Dictionary:
+## combates_sem_fim, eventos, investigacoes, passos, travou}. As decisões no mapa viram
+## comandos (ADR 0007); com `registro`, eles ficam guardados para um replay.
+static func jogar(m: Missao, limite_turnos_mundo: int = 150, registro = null) -> Dictionary:
 	var rel := {"combates": 0, "combates_sem_fim": 0, "eventos": 0, "investigacoes": 0, "passos": 0, "travou": ""}
 	var objetivo := m.mapa.encontrar("objetivo")
 	var sem_progresso := 0
@@ -96,7 +80,7 @@ static func jogar(m: Missao, limite_turnos_mundo: int = 150) -> Dictionary:
 			rel.travou = "turnos do mundo demais"
 			break
 		if not m.evento_pendente.is_empty():
-			m.resolver_evento()
+			_cmd(m, {"acao": "resolver_evento"}, registro)
 			rel.eventos += 1
 			continue
 		if not m.encontro_pendente.is_empty():
@@ -115,32 +99,39 @@ static func jogar(m: Missao, limite_turnos_mundo: int = 150) -> Dictionary:
 			rel.travou = "sem agente da vez"
 			break
 		if a.pv * 2 < a.pv_maximo and m.pode_descansar():
-			m.descansar()
-			m.encerrar_turno()
+			_cmd(m, {"acao": "descansar"}, registro)
+			_cmd(m, {"acao": "encerrar_turno"}, registro)
 			continue
 		if not m.movimento_rolado:
-			m.rolar_movimento()
+			_cmd(m, {"acao": "rolar_movimento"}, registro)
 			continue
 		var destinos := m.destinos()
 		if destinos.is_empty():
-			m.encerrar_turno()
+			_cmd(m, {"acao": "encerrar_turno"}, registro)
 			continue
 		var destino := _escolher_destino(m, a, destinos, objetivo)
 		var pos_antes := m.posicao(a)
-		if not m.mover(destino) or m.posicao(a) == pos_antes:
+		if not _cmd(m, {"acao": "mover", "hex": Comandos.vetor(destino)}, registro).ok or m.posicao(a) == pos_antes:
 			sem_progresso += 1
-			m.encerrar_turno()
+			_cmd(m, {"acao": "encerrar_turno"}, registro)
 			if sem_progresso > 500:
 				rel.travou = "agentes não saem do lugar"
 				break
 			continue
 		sem_progresso = 0
 		if not m.ocupado() and m.movimento_restante <= 0:
-			m.encerrar_turno()
+			_cmd(m, {"acao": "encerrar_turno"}, registro)
 	rel["encerrada"] = m.encerrada
 	rel["vitoria"] = m.vitoria
 	rel["turnos_mundo"] = m.turno_mundo
 	return rel
+
+
+static func _cmd(m: Missao, args: Dictionary, registro) -> Dictionary:
+	var cmd := Comandos.novo("mapa", String(args.acao), args)
+	if registro is Array:
+		registro.append(cmd)
+	return Comandos.aplicar_mapa(m, cmd)
 
 
 ## Vai para o hex alcançável mais perto do objetivo (machucado e com uma vila perto, vai para a vila).

@@ -219,6 +219,8 @@ Pontos em que o livro é ambíguo e escolhemos uma leitura (revisar se surgir er
 | Reforços da Ordem (modo Normal) | 2 por missão. Um agente caído num combate perdido (ou morto) é resgatado: sai da missão com uma lesão (1d6 no atributo, como a regra de Lesões) |
 | Campanha e derrota | Perder uma missão da campanha não encerra a campanha: a mesma missão espera outra tentativa. As mortes e os PP seguem as regras de sempre |
 | Marcas da campanha | Uma pergunta do caso respondida numa missão vencida vira marca. As missões seguintes leem as marcas e aplicam um efeito que a investigação já tinha: Membrana, chefe enfraquecido ou covil revelado |
+| IA e cobertura total | Um atirador em alcance mas atrás de cobertura total anda até ter linha de tiro (antes ficava parado, e dois atiradores assim travavam o combate) |
+| IA e enigmas que só enfraquecem | Se o enigma não deixa a criatura imune (só tira resistência ou Defesa), a IA dos agentes só gasta a ação nele quando é treinada numa das perícias; senão, ataca |
 | Recrutas da campanha | Personagens da história entram no roster como recrutas de NEX 5%, iguais aos outros; quem morre vai para o memorial e não volta |
 
 ## 14. Ferramentas: Godot e o Tabletop Simulator ✅

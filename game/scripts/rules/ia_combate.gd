@@ -29,8 +29,8 @@ static func jogar(c: Combate, ser: Ser, armas: Dictionary) -> void:
 				return
 	if not pode_atacar(c, ser, alvo, arma):
 		var destino := c.grade.aproximar(ser, alvo, ser.deslocamento_quadrados())
-		if arma.get("ataque", "") != "corpo_a_corpo" and c.grade.em_alcance(ser, alvo, arma.get("alcance", "curto")):
-			destino = c.grade.posicao(ser)   # atirador já em alcance: não precisa andar
+		if arma.get("ataque", "") != "corpo_a_corpo" and c.grade.em_alcance(ser, alvo, arma.get("alcance", "curto")) and c.grade.cobertura(ser, alvo) != "total":
+			destino = c.grade.posicao(ser)   # atirador já em alcance: não precisa andar (atrás de cobertura total, anda)
 		if destino != c.grade.posicao(ser):
 			c.mover(ser, destino)
 	if pode_atacar(c, ser, alvo, arma) and not c.encerrado:
@@ -48,11 +48,20 @@ static func _tentar_enigma(c: Combate, ag: Agente) -> bool:
 		var am := s as Ameaca
 		if not am.enigma_pendente() or am.enigma.get("tipo", "") == "acumular_dano":
 			continue
+		# Enigma que só enfraquece (a criatura já sofre dano): só vale a ação de quem é treinado
+		if not _enigma_protege(am) and not am.etapa_atual().get("pericias", ["ocultismo"]).any(func(per): return ag.treinado_em(per)):
+			continue
 		if am.enigma.get("tipo", "") == "temporario" and (am.mods_cena.has("visivel_ate") or c.dados.rolar(2) == 1):
 			continue
 		if c.acoes_restantes(ag).padrao > 0 and c.decifrar_enigma(ag, am) != null:
 			return true
 	return false
+
+
+## O enigma impede o dano (imunidade até ser resolvido)?
+static func _enigma_protege(am: Ameaca) -> bool:
+	var ef = am.enigma.get("efeito", "remove_imunidade")
+	return ef is String or (ef is Dictionary and ef.get("remove_imunidade", true))
 
 
 static func inimigo_mais_proximo(c: Combate, ser: Ser) -> Ser:
