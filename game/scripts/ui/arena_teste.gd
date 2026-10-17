@@ -62,6 +62,7 @@ var _log: RichTextLabel
 var _painel_fim: PanelContainer
 var _lbl_fim: Label
 var _btn_fim: Button
+var _titulo_slots: Label
 var _caixa_mestre: VBoxContainer
 var _lbl_mestre: Label
 var _opt_ataque_m: OptionButton
@@ -79,6 +80,13 @@ func _ready() -> void:
 	if not config.is_empty() and semente < 0:
 		semente = int(config.get("semente", -1))
 	iniciar_combate(semente if semente >= 0 else randi())
+	Tutorial.botao_ajuda(self, "combate", _alvos_do_tutorial)
+	Tutorial.ao_entrar("combate", self, _alvos_do_tutorial())
+
+
+func _alvos_do_tutorial() -> Dictionary:
+	return {"tabuleiro": _vista, "acoes": _btn_mover.get_parent(), "slots": _titulo_slots, "foco": _spin_foco.get_parent(),
+		"membrana": _barra_membrana, "encerrar": _btn_encerrar}
 
 
 # --- Preparação ------------------------------------------------------------
@@ -214,6 +222,8 @@ func _avancar() -> void:
 			return   # vez do jogador
 		if not autoplay and not sessao.atrasado():
 			await get_tree().create_timer(0.6).timeout
+			while TourGuiado.em_andamento() and is_inside_tree():
+				await get_tree().create_timer(0.2).timeout   # a IA espera o tutorial fechar
 			if not is_inside_tree():
 				return
 		fluxo.jogar_ia(ser)
@@ -230,7 +240,7 @@ func _focar_para_controle() -> void:
 ## Só o dispositivo do dono do agente da vez age. Com um controle, nos modos que pedem um
 ## quadrado (mover, atacar, ritual, granada…), o direcional move o cursor, A escolhe e B cancela.
 func _input(evento: InputEvent) -> void:
-	if _controles == null:
+	if _controles == null or TourGuiado.em_andamento():
 		return
 	if not _controles.evento_permitido(evento, _agente_da_vez()):
 		get_viewport().set_input_as_handled()
@@ -457,7 +467,8 @@ func _montar_interface() -> void:
 	_lbl_ficha.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	painel.add_child(_lbl_ficha)
 
-	painel.add_child(_titulo("Último teste (slots de d20)"))
+	_titulo_slots = _titulo("Último teste (slots de d20)")
+	painel.add_child(_titulo_slots)
 	_slots = HBoxContainer.new()
 	painel.add_child(_slots)
 	_lbl_resultado = Label.new()
@@ -851,7 +862,7 @@ func _desenhar_slots() -> void:
 
 
 func _entrada_tabuleiro(evento: InputEvent) -> void:
-	if _tab3d == null:
+	if _tab3d == null or TourGuiado.em_andamento():
 		return
 	if evento is InputEventMouseButton and evento.pressed and evento.button_index == MOUSE_BUTTON_LEFT:
 		var c := _tab3d.celula_em(evento.position)

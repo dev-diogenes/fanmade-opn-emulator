@@ -48,6 +48,15 @@ func _ready() -> void:
 		if _jogo.aviso_rede != "":
 			_lbl_erros.text = _jogo.aviso_rede
 			_jogo.aviso_rede = ""
+	# Tutorial (docs/07-tutorial.md): convite ao abrir o jogo e o "?" desta tela
+	Tutorial.botao_ajuda(self, "base", _alvos_do_tutorial)
+	if Tutorial.convidar(self, func(): Tutorial.abrir("base", self, _alvos_do_tutorial())) == null:
+		Tutorial.ao_entrar("base", self, _alvos_do_tutorial())
+
+
+func _alvos_do_tutorial() -> Dictionary:
+	return {"agentes": _lista, "ficha": _ficha, "requisicao": _caixa_requisicao.get_parent(), "grupo": _caixa_grupo,
+		"jogadores": _caixa_jogadores, "missao": _opt_missao, "iniciar": _btn_iniciar}
 
 
 # --- Montagem ------------------------------------------------------------------
@@ -174,6 +183,11 @@ func _montar_interface() -> void:
 	var espaco := Control.new()
 	espaco.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	c3.add_child(espaco)
+	var chk_tutorial := CheckBox.new()
+	chk_tutorial.text = "Perguntar sobre o tutorial ao abrir o jogo"
+	chk_tutorial.button_pressed = Preferencias.perguntar_tutorial()
+	chk_tutorial.toggled.connect(func(v): Preferencias.definir_perguntar_tutorial(v))
+	c3.add_child(chk_tutorial)
 	c3.add_child(_botao("Nova carreira (apaga o save)", _nova_carreira))
 
 

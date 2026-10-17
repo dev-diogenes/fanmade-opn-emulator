@@ -45,7 +45,7 @@ reference/            Material pago LOCAL, ignorado pelo Git
 
 ### Base da Ordem (cena principal)
 
-Ao apertar **Play (F5)**, abre a Base da Ordem, o hub da carreira:
+Ao apertar **Play (F5)**, abre a Base da Ordem, o hub da carreira. Na primeira tela, o jogo pergunta se você quer ver o **tutorial**: um tour rápido que destaca cada parte da tela e explica o que fazer. Os tours do mapa, do combate e da investigação aparecem na primeira vez que você chega a cada um, e o botão **?** no canto de cada tela reabre o tour quando quiser. Veja [docs/07-tutorial.md](docs/07-tutorial.md).
 
 - **Agentes:** roster persistente (começa com Mauro, Bianca e Rita; dá para recrutar mais até 8). Clique num agente para ver a ficha.
 - **Escolhas de NEX:** quando um agente sobe de NEX, a ficha mostra o que escolher (trilha, poder, aumento de atributo, grau de treinamento).
@@ -152,6 +152,7 @@ GODOT=/caminho/para/Godot_v4.6.1-stable_win64_console.exe tools/rodar_testes.sh
 - [Missões da comunidade](docs/04-missoes-da-comunidade.md)
 - [Campanha](docs/05-campanha.md)
 - [Jogar online](docs/06-online.md)
+- [Tutorial e plano de validação](docs/07-tutorial.md)
 - [Decisões de arquitetura (ADRs)](docs/adr/)
 
 ## Contribuindo

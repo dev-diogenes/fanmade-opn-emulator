@@ -9,6 +9,7 @@
 | [04-missoes-da-comunidade.md](04-missoes-da-comunidade.md) | Formato `mission.json` v1 das missões da comunidade |
 | [05-campanha.md](05-campanha.md) | Formato `campanha.json` v1 e a campanha original O Fundo da Represa |
 | [06-online.md](06-online.md) | Como hospedar e entrar numa sessão online, rede e teste com dois processos |
+| [07-tutorial.md](07-tutorial.md) | Tutorial (tour guiado), personas e plano de validação nos playtests |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

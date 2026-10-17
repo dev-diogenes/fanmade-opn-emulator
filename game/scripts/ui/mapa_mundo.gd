@@ -75,6 +75,12 @@ func _ready() -> void:
 		_ao_encerrar(missao.vitoria)
 	_atualizar()
 	sessao.liberar()
+	Tutorial.botao_ajuda(self, "mapa", _alvos_do_tutorial)
+	Tutorial.ao_entrar("mapa", self, _alvos_do_tutorial())
+
+
+func _alvos_do_tutorial() -> Dictionary:
+	return {"vez": _lbl_turno, "rolar": _btn_rolar, "mapa": _vista, "botoes": _btn_rolar.get_parent(), "membrana": _barra_membrana, "registro": _log}
 
 
 func _ao_mudar_turno(_a: Agente) -> void:
@@ -96,6 +102,8 @@ func _focar_para_controle() -> void:
 ## Só o dispositivo do dono do agente da vez controla o mapa. Com um controle: o direcional
 ## move o cursor pelos hexes depois de rolar o movimento, A anda até ele, B volta aos botões.
 func _input(evento: InputEvent) -> void:
+	if TourGuiado.em_andamento():
+		return   # o tour do tutorial está aberto
 	if not _controles.evento_permitido(evento, missao.agente_atual()):
 		get_viewport().set_input_as_handled()
 		return

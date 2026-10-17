@@ -55,6 +55,12 @@ func _ready() -> void:
 	_log.append_text("[b]%s[/b] — urgência %s (%d rodadas).\n[i]Pista básica:[/i] %s\n" % [cena.cena.nome, String(cena.urgencia.get("nome", "")).to_lower(), cena.rodadas_max, cena.cena.pista_basica])
 	_atualizar()
 	sessao.liberar()
+	Tutorial.botao_ajuda(self, "investigacao", _alvos_do_tutorial)
+	Tutorial.ao_entrar("investigacao", self, _alvos_do_tutorial())
+
+
+func _alvos_do_tutorial() -> Dictionary:
+	return {"cena": _vista, "procurar": _btn_procurar, "facilitar": _opt_facilitar.get_parent(), "caso": _caso, "topo": _lbl_topo}
 
 
 # --- Interface -------------------------------------------------------------------
@@ -266,6 +272,8 @@ func _atualizar() -> void:
 
 ## Só o dispositivo do dono do agente da vez age na cena.
 func _input(evento: InputEvent) -> void:
+	if TourGuiado.em_andamento():
+		return
 	if _controles != null and cena != null and not _controles.evento_permitido(evento, cena.agente_atual()):
 		get_viewport().set_input_as_handled()
 
@@ -282,6 +290,8 @@ func _proximo_ponto() -> void:
 # --- Ações -----------------------------------------------------------------------
 
 func _entrada_3d(evento: InputEvent) -> void:
+	if TourGuiado.em_andamento():
+		return
 	if evento is InputEventMouseButton and evento.pressed and evento.button_index == MOUSE_BUTTON_LEFT:
 		var pid := _visao.ponto_em(evento.position)
 		if pid != "" and pid in cena.pontos_restantes:
