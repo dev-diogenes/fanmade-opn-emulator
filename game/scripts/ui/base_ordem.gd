@@ -1,17 +1,20 @@
 extends Control
-## Base da Ordem (hub entre missões, interface provisória):
-## roster e ficha dos agentes, escolhas de NEX pendentes, requisição de equipamento
-## pela patente, recrutamento, opções da run, relatório da última missão e partida.
+## Base da Ordem (hub entre missões) como dossiê (docs/09): abas Agentes, Arsenal, Missão
+## e Jogadores. A ficha do agente, o briefing e o relatório da última missão são folhas de
+## papel; o resto é a mesa escura da Ordem.
 
 var carreira: Carreira
 var _jogo: Node
 var _selecionado: Agente
 
 var _lista: ItemList
+var _abas: TabContainer
+var _sigilo_agente: Sigilo
+var _legenda_foto: Label
 var _opt_recruta: OptionButton
 var _ficha: RichTextLabel
 var _caixa_pendencia: VBoxContainer
-var _caixa_requisicao: VBoxContainer
+var _caixa_requisicao: HFlowContainer
 var _checks_itens: Dictionary = {}     ## item_id -> CheckBox
 var _opt_arma: OptionButton
 var _lbl_requisicao: Label
@@ -66,19 +69,59 @@ func _montar_interface() -> void:
 	add_child(Tema.fundo())
 	var margem := MarginContainer.new()
 	margem.set_anchors_preset(Control.PRESET_FULL_RECT)
-	for lado in ["left", "right", "top", "bottom"]:
-		margem.add_theme_constant_override("margin_" + lado, 10)
+	margem.add_theme_constant_override("margin_left", 18)
+	margem.add_theme_constant_override("margin_right", 18)
+	margem.add_theme_constant_override("margin_top", 12)
+	margem.add_theme_constant_override("margin_bottom", 14)
 	add_child(margem)
-	var colunas := HBoxContainer.new()
-	colunas.add_theme_constant_override("separation", 14)
-	margem.add_child(colunas)
+	var corpo := VBoxContainer.new()
+	corpo.add_theme_constant_override("separation", Tema.ESPACO_M)
+	margem.add_child(corpo)
 
-	# Coluna 1: roster
-	var c1 := _coluna(colunas, 300)
-	c1.add_child(_titulo("Base da Ordem", 20))
-	c1.add_child(_titulo("Agentes"))
+	# Cabeçalho: sigilo, título e atalhos
+	var cab := HBoxContainer.new()
+	cab.add_theme_constant_override("separation", Tema.ESPACO_G)
+	corpo.add_child(cab)
+	var sig := Sigilo.new()
+	sig.semente = 1987
+	sig.cor = Tema.SANGUE_CLARO
+	sig.espessura = 2.2
+	sig.custom_minimum_size = Vector2(46, 46)
+	cab.add_child(sig)
+	var vt := VBoxContainer.new()
+	vt.add_theme_constant_override("separation", 0)
+	cab.add_child(vt)
+	var t := _titulo("Base da Ordem", 20)
+	vt.add_child(t)
+	var sub := Label.new()
+	sub.text = "Arquivo de agentes · uso restrito"
+	sub.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+	sub.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	vt.add_child(sub)
+	var vazio := Control.new()
+	vazio.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cab.add_child(vazio)
+	cab.add_child(_botao("Menu principal", func(): get_tree().change_scene_to_file.call_deferred("res://scenes/titulo.tscn")))
+	var lugar_ajuda := Control.new()   # o botão "?" do tutorial fica no canto
+	lugar_ajuda.custom_minimum_size = Vector2(44, 0)
+	cab.add_child(lugar_ajuda)
+
+	_abas = TabContainer.new()
+	_abas.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	corpo.add_child(_abas)
+
+	# --- Aba Agentes: pastas à esquerda, a ficha como documento à direita
+	var agentes := HBoxContainer.new()
+	agentes.name = "Agentes"
+	agentes.add_theme_constant_override("separation", Tema.ESPACO_GG)
+	_abas.add_child(agentes)
+	var c1 := VBoxContainer.new()
+	c1.custom_minimum_size = Vector2(300, 0)
+	c1.add_theme_constant_override("separation", Tema.ESPACO_M)
+	agentes.add_child(c1)
+	c1.add_child(_titulo("Pastas de agentes"))
 	_lista = ItemList.new()
-	_lista.custom_minimum_size = Vector2(0, 220)
+	_lista.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_lista.item_selected.connect(_ao_selecionar)
 	c1.add_child(_lista)
 	var linha_rec := HBoxContainer.new()
@@ -87,39 +130,87 @@ func _montar_interface() -> void:
 	linha_rec.add_child(_opt_recruta)
 	linha_rec.add_child(_botao("Recrutar", _recrutar))
 	c1.add_child(linha_rec)
-	c1.add_child(_titulo("Última missão"))
-	_relatorio = RichTextLabel.new()
-	_relatorio.bbcode_enabled = true
-	_relatorio.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	c1.add_child(_relatorio)
-
-	# Coluna 2: ficha, pendências e requisição
-	var c2 := _coluna(colunas, 420)
+	var doc := _papel(true)
+	doc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	agentes.add_child(doc)
+	var hdoc := HBoxContainer.new()
+	hdoc.add_theme_constant_override("separation", Tema.ESPACO_GG)
+	doc.add_child(hdoc)
+	var vdoc := VBoxContainer.new()
+	vdoc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vdoc.add_theme_constant_override("separation", Tema.ESPACO_M)
+	hdoc.add_child(vdoc)
+	# Foto do agente presa na ficha (sigilo da classe, como uma polaroide)
+	var foto := PanelContainer.new()
+	var estilo := Tema.caixa(Color("f3efe6"), Color(0, 0, 0, 0.25), 1, 1, Vector2(8, 8))
+	estilo.shadow_color = Color(0, 0, 0, 0.35)
+	estilo.shadow_size = 5
+	foto.add_theme_stylebox_override("panel", estilo)
+	foto.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	foto.rotation_degrees = 3
+	foto.custom_minimum_size = Vector2(170, 0)
+	hdoc.add_child(foto)
+	var vf := VBoxContainer.new()
+	foto.add_child(vf)
+	var fundo_foto := ColorRect.new()
+	fundo_foto.color = Color("17141a")
+	fundo_foto.custom_minimum_size = Vector2(154, 150)
+	vf.add_child(fundo_foto)
+	_sigilo_agente = Sigilo.new()
+	_sigilo_agente.cor = Color(Tema.OURO_CLARO, 0.9)
+	_sigilo_agente.espessura = 2.4
+	_sigilo_agente.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_sigilo_agente.offset_left = 16
+	_sigilo_agente.offset_right = -16
+	_sigilo_agente.offset_top = 12
+	_sigilo_agente.offset_bottom = -12
+	fundo_foto.add_child(_sigilo_agente)
+	_legenda_foto = Label.new()
+	_legenda_foto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_legenda_foto.add_theme_color_override("font_color", Tema.TINTA)
+	vf.add_child(_legenda_foto)
 	_ficha = RichTextLabel.new()
 	_ficha.bbcode_enabled = true
-	_ficha.custom_minimum_size = Vector2(0, 230)
-	c2.add_child(_ficha)
+	_ficha.fit_content = true
+	_ficha.add_theme_color_override("default_color", Tema.TINTA)
+	vdoc.add_child(_ficha)
 	_caixa_pendencia = VBoxContainer.new()
-	c2.add_child(_caixa_pendencia)
-	c2.add_child(_titulo("Requisição de equipamento"))
+	_caixa_pendencia.theme = Tema.tema_papel()   # as escolhas de NEX ficam escritas na ficha
+	vdoc.add_child(_caixa_pendencia)
+
+	# --- Aba Arsenal: a gaveta de requisição
+	var arsenal := VBoxContainer.new()
+	arsenal.name = "Arsenal"
+	arsenal.add_theme_constant_override("separation", Tema.ESPACO_M)
+	_abas.add_child(arsenal)
+	arsenal.add_child(_titulo("Requisição de equipamento"))
+	_lbl_requisicao = Label.new()
+	_lbl_requisicao.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_lbl_requisicao.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+	arsenal.add_child(_lbl_requisicao)
 	var rolagem := ScrollContainer.new()
 	rolagem.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_caixa_requisicao = VBoxContainer.new()
+	rolagem.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_caixa_requisicao = HFlowContainer.new()
+	_caixa_requisicao.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_caixa_requisicao.add_theme_constant_override("h_separation", Tema.ESPACO_GG)
 	rolagem.add_child(_caixa_requisicao)
-	c2.add_child(rolagem)
+	arsenal.add_child(rolagem)
 	var linha_arma := HBoxContainer.new()
+	linha_arma.add_theme_constant_override("separation", Tema.ESPACO_M)
 	var lbl := Label.new()
 	lbl.text = "Arma empunhada:"
 	linha_arma.add_child(lbl)
 	_opt_arma = OptionButton.new()
+	_opt_arma.custom_minimum_size = Vector2(220, 0)
 	linha_arma.add_child(_opt_arma)
-	linha_arma.add_child(_botao("Requisitar", _requisitar))
-	c2.add_child(linha_arma)
-	_lbl_requisicao = Label.new()
-	_lbl_requisicao.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	c2.add_child(_lbl_requisicao)
+	var req := _botao("Requisitar", _requisitar)
+	req.theme_type_variation = "BotaoPrincipal"
+	linha_arma.add_child(req)
+	arsenal.add_child(linha_arma)
 	for item in _catalogo():
 		var chk := CheckBox.new()
+		chk.custom_minimum_size = Vector2(300, 0)
 		chk.text = "%s%s  [cat %s, %d esp.]" % ["☠ " if item.has("maldicoes") else "", item.nome, ["0", "I", "II", "III", "IV", "V"][mini(5, int(item.get("categoria", 0)))], int(item.get("espacos", 1))]
 		if item.has("maldicoes"):
 			chk.tooltip_text = "Maldições: %s" % ", ".join(PackedStringArray(item.maldicoes.map(func(m): return "%s (%s) — %s" % [m.nome, m.elemento, m.descricao])))
@@ -127,23 +218,27 @@ func _montar_interface() -> void:
 		_checks_itens[item.id] = chk
 		_caixa_requisicao.add_child(chk)
 
-	# Coluna 3: missão (rola quando não cabe na janela)
-	var rolagem_c3 := ScrollContainer.new()
-	rolagem_c3.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rolagem_c3.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	colunas.add_child(Tema.painel(rolagem_c3))
-	var c3 := _coluna(rolagem_c3, 0, false)
+	# --- Aba Missão: grupo e opções à esquerda; o briefing e o relatório em papel
+	var missao_aba := HBoxContainer.new()
+	missao_aba.name = "Missão"
+	missao_aba.add_theme_constant_override("separation", Tema.ESPACO_GG)
+	_abas.add_child(missao_aba)
+	var rolagem_m := ScrollContainer.new()
+	rolagem_m.custom_minimum_size = Vector2(380, 0)
+	rolagem_m.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	missao_aba.add_child(rolagem_m)
+	var c3 := VBoxContainer.new()
 	c3.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	c3.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	c3.add_theme_constant_override("separation", Tema.ESPACO_M)
+	rolagem_m.add_child(c3)
 	c3.add_child(_titulo("Grupo da missão (até 4)"))
 	_caixa_grupo = VBoxContainer.new()
 	c3.add_child(_caixa_grupo)
-	c3.add_child(_titulo("Jogadores (co-op local e online)"))
-	_caixa_jogadores = VBoxContainer.new()
-	c3.add_child(_caixa_jogadores)
-	c3.add_child(_titulo("Online"))
-	_caixa_online = VBoxContainer.new()
-	c3.add_child(_caixa_online)
+	c3.add_child(_titulo("Missão"))
+	_opt_missao = OptionButton.new()
+	_opt_missao.clip_text = true
+	_opt_missao.item_selected.connect(func(_i): _mostrar_missao())
+	c3.add_child(_opt_missao)
 	c3.add_child(_titulo("Opções da run"))
 	_opt_modo = OptionButton.new()
 	_opt_modo.add_item("Normal (2 Reforços da Ordem)")
@@ -158,36 +253,103 @@ func _montar_interface() -> void:
 	_chk_inspiracao.text = "Inspiração Resoluta (p.184)"
 	_chk_inspiracao.toggled.connect(func(v): carreira.opcoes.inspiracao_resoluta = v)
 	c3.add_child(_chk_inspiracao)
-	c3.add_child(_titulo("Missão"))
-	_opt_missao = OptionButton.new()
-	_opt_missao.clip_text = true
-	_opt_missao.item_selected.connect(func(_i): _mostrar_missao())
-	c3.add_child(_opt_missao)
+	c3.add_child(_botao("Editor de missões", _abrir_editor))
+	var direita := VBoxContainer.new()
+	direita.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	direita.add_theme_constant_override("separation", Tema.ESPACO_G)
+	missao_aba.add_child(direita)
+	var briefing := _papel(false)
+	briefing.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	direita.add_child(briefing)
+	var vb := VBoxContainer.new()
+	briefing.add_child(vb)
+	var tb := Label.new()
+	tb.text = "BRIEFING"
+	tb.theme_type_variation = "TextoPapel"
+	var fonte := Tema.fonte_titulo()
+	if fonte != null:
+		tb.add_theme_font_override("font", fonte)
+	vb.add_child(tb)
 	_txt_missao = RichTextLabel.new()
 	_txt_missao.bbcode_enabled = true
-	_txt_missao.custom_minimum_size = Vector2(0, 120)
-	_txt_missao.add_theme_color_override("default_color", Tema.TEXTO_SUAVE)
-	c3.add_child(_txt_missao)
-	c3.add_child(_botao("Editor de missões", _abrir_editor))
-	_btn_iniciar = _botao("Iniciar missão", _iniciar)
-	_btn_iniciar.theme_type_variation = "BotaoPrincipal"
-	c3.add_child(_btn_iniciar)
-	_btn_continuar = _botao("Continuar missão em andamento", _continuar)
-	c3.add_child(_btn_continuar)
+	_txt_missao.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_txt_missao.add_theme_color_override("default_color", Tema.TINTA)
+	vb.add_child(_txt_missao)
+	var acoes := HBoxContainer.new()
+	acoes.add_theme_constant_override("separation", Tema.ESPACO_M)
+	acoes.alignment = BoxContainer.ALIGNMENT_END
+	direita.add_child(acoes)
 	_lbl_erros = Label.new()
 	_lbl_erros.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_lbl_erros.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_lbl_erros.add_theme_color_override("font_color", Tema.PERIGO)
-	c3.add_child(_lbl_erros)
-	var espaco := Control.new()
-	espaco.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	c3.add_child(espaco)
+	acoes.add_child(_lbl_erros)
+	_btn_continuar = _botao("Continuar missão em andamento", _continuar)
+	acoes.add_child(_btn_continuar)
+	_btn_iniciar = _botao("Iniciar missão", _iniciar)
+	_btn_iniciar.theme_type_variation = "BotaoPrincipal"
+	acoes.add_child(_btn_iniciar)
+	var rel := _papel(false)
+	rel.custom_minimum_size = Vector2(0, 150)
+	direita.add_child(rel)
+	var vr := VBoxContainer.new()
+	rel.add_child(vr)
+	var tr := Label.new()
+	tr.text = "RELATÓRIO DA ÚLTIMA MISSÃO"
+	tr.theme_type_variation = "TextoPapel"
+	if fonte != null:
+		tr.add_theme_font_override("font", fonte)
+	vr.add_child(tr)
+	_relatorio = RichTextLabel.new()
+	_relatorio.bbcode_enabled = true
+	_relatorio.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_relatorio.add_theme_color_override("default_color", Tema.TINTA)
+	vr.add_child(_relatorio)
+
+	# --- Aba Jogadores: co-op local, online e preferências
+	var jog := ScrollContainer.new()
+	jog.name = "Jogadores"
+	jog.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_abas.add_child(jog)
+	var cj := VBoxContainer.new()
+	cj.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cj.add_theme_constant_override("separation", Tema.ESPACO_M)
+	jog.add_child(cj)
+	cj.add_child(_titulo("Jogadores (co-op local e online)"))
+	_caixa_jogadores = VBoxContainer.new()
+	cj.add_child(_caixa_jogadores)
+	cj.add_child(_titulo("Online"))
+	_caixa_online = VBoxContainer.new()
+	cj.add_child(_caixa_online)
+	cj.add_child(_titulo("Preferências"))
 	var chk_tutorial := CheckBox.new()
 	chk_tutorial.text = "Perguntar sobre o tutorial ao abrir o jogo"
 	chk_tutorial.button_pressed = Preferencias.perguntar_tutorial()
 	chk_tutorial.toggled.connect(func(v): Preferencias.definir_perguntar_tutorial(v))
-	c3.add_child(chk_tutorial)
-	c3.add_child(_botao("Nova carreira (apaga o save)", _nova_carreira))
-	c3.add_child(_botao("Menu principal", func(): get_tree().change_scene_to_file.call_deferred("res://scenes/titulo.tscn")))
+	cj.add_child(chk_tutorial)
+	var apagar := _botao("Nova carreira (apaga o save)", _nova_carreira)
+	apagar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	cj.add_child(apagar)
+
+
+## Folha de papel (dossiê). `carimbo` põe "CONFIDENCIAL" no canto.
+func _papel(carimbo: bool) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(22, 18)))
+	if carimbo:
+		var c := Label.new()
+		c.text = "CONFIDENCIAL"
+		c.add_theme_color_override("font_color", Color(Tema.SANGUE_CLARO, 0.75))
+		c.add_theme_stylebox_override("normal", Tema.caixa(Color(0, 0, 0, 0), Color(Tema.SANGUE_CLARO, 0.7), 2, 3, Vector2(8, 2)))
+		var f := Tema.fonte_titulo()
+		if f != null:
+			c.add_theme_font_override("font", f)
+		c.rotation_degrees = 8
+		c.size_flags_horizontal = Control.SIZE_SHRINK_END
+		c.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p.add_child(c)
+	return p
 
 
 func _coluna(pai: Control, largura: int, com_painel: bool = true) -> VBoxContainer:
@@ -284,6 +446,11 @@ func _atualizar_agente() -> void:
 		_ficha.text = "Nenhum agente."
 		return
 	var rs := carreira.ruleset
+	if _sigilo_agente != null:
+		var cores := {"combatente": Tema.SANGUE_CLARO, "especialista": Tema.OURO_CLARO, "ocultista": Tema.ELEMENTO.energia, "mundano": Tema.PERGAMINHO}
+		_sigilo_agente.semente = hash(a.id + a.nome)
+		_sigilo_agente.cor = cores.get(a.classe_id, Tema.PERGAMINHO)
+		_legenda_foto.text = "%s · %s" % [a.nome, rs.classe(a.classe_id).nome]
 	var linhas: Array[String] = []
 	linhas.append("[b]%s[/b] — %s (%s), origem %s" % [a.nome, rs.classe(a.classe_id).nome, a.trilha_id if a.trilha_id != "" else "sem trilha", rs.origem(a.origem_id).nome if a.origem_id != "" else "—"])
 	linhas.append("NEX %d%%   %s (%d PP)" % [a.nex, a.patente().get("nome", "?"), a.pp])
@@ -295,25 +462,25 @@ func _atualizar_agente() -> void:
 	var pers := PackedStringArray()
 	for p in a.pericias:
 		pers.append("%s%s" % [rs.pericia(p).nome, "" if a.pericias[p] == "treinado" else " (%s)" % a.pericias[p]])
-	linhas.append("[color=#a69b88]Perícias:[/color] " + ", ".join(pers))
+	linhas.append("[color=#6b5a48]Perícias:[/color] " + ", ".join(pers))
 	var habs := PackedStringArray()
 	for h in a.habilidades():
 		habs.append(h.nome + ("" if h.get("implementado", false) else "*"))
-	linhas.append("[color=#a69b88]Habilidades:[/color] " + ", ".join(habs))
+	linhas.append("[color=#6b5a48]Habilidades:[/color] " + ", ".join(habs))
 	if not a.poderes_paranormais.is_empty():
 		var pps := PackedStringArray()
 		for e in a.poderes_paranormais:
 			pps.append(rs.poder_paranormal(e.id).get("nome", e.id) + ("" if String(e.get("escolha", "")) == "" else " (%s)" % e.escolha))
-		linhas.append("[color=#b98ae6]Poderes paranormais:[/color] %s%s" % [", ".join(pps), "  ·  afinidade: " + a.afinidade if a.afinidade != "" else ""])
+		linhas.append("[color=#5b2a86]Poderes paranormais:[/color] %s%s" % [", ".join(pps), "  ·  afinidade: " + a.afinidade if a.afinidade != "" else ""])
 	if not a.rituais.is_empty():
 		var rits := PackedStringArray()
 		for rid in a.rituais:
 			rits.append(rs.ritual(rid).get("nome", rid) + ("" if rs.ritual(rid).get("implementado", false) else "*"))
-		linhas.append("[color=#b98ae6]Rituais:[/color] " + ", ".join(rits))
-	linhas.append("[color=#a69b88]Equipamento:[/color] %s  (%d/%d espaços)" % [", ".join(PackedStringArray(a.equipamento.map(func(i): return rs.equipamento(i).get("nome", i)))), a.espacos_usados(), a.capacidade_carga()])
+		linhas.append("[color=#5b2a86]Rituais:[/color] " + ", ".join(rits))
+	linhas.append("[color=#6b5a48]Equipamento:[/color] %s  (%d/%d espaços)" % [", ".join(PackedStringArray(a.equipamento.map(func(i): return rs.equipamento(i).get("nome", i)))), a.espacos_usados(), a.capacidade_carga()])
 	if not a.lesoes.is_empty():
-		linhas.append("[color=#eda64a]Lesões:[/color] " + ", ".join(PackedStringArray(a.lesoes)))
-	linhas.append("[color=#a69b88]* ainda sem efeito no motor[/color]")
+		linhas.append("[color=#9a4a10]Lesões:[/color] " + ", ".join(PackedStringArray(a.lesoes)))
+	linhas.append("[color=#6b5a48]* ainda sem efeito no motor[/color]")
 	_ficha.text = "\n".join(linhas)
 	for item_id in _checks_itens:
 		_checks_itens[item_id].set_pressed_no_signal(item_id in a.equipamento)
@@ -347,7 +514,7 @@ func _montar_pendencia(a: Agente) -> void:
 		"poder_paranormal": "Escolha um poder paranormal", "afinidade": "Afinidade elemental (NEX 50%)",
 		"grau": "Grau de Treinamento: escolha %d perícias" % int(p.get("quantidade", 0)), "versatilidade": "Versatilidade (NEX 50%)"}
 	var lbl := _titulo("[%d pendente(s)] %s" % [pend.size(), titulos[p.tipo]])
-	lbl.add_theme_color_override("font_color", Tema.OURO_CLARO)
+	lbl.add_theme_color_override("font_color", Tema.SANGUE)
 	_caixa_pendencia.add_child(lbl)
 	if p.tipo == "grau":
 		var lista := ItemList.new()
@@ -418,7 +585,7 @@ func _mostrar_relatorio() -> void:
 	for ag in r.agentes:
 		var s := "%s: %s" % [ag.nome, ag.situacao]
 		if ag.has("pp"):
-			s += ", %+d PP, NEX %d%%→%d%%, %s%s" % [int(ag.pp), int(ag.nex_antes), int(ag.nex), ag.patente, " [color=#6fcf8e](promovido!)[/color]" if ag.promovido else ""]
+			s += ", %+d PP, NEX %d%%→%d%%, %s%s" % [int(ag.pp), int(ag.nex_antes), int(ag.nex), ag.patente, " [color=#2f6b3f](promovido!)[/color]" if ag.promovido else ""]
 		linhas.append(s)
 	var camp: Dictionary = r.get("campanha", {})
 	if not camp.is_empty():
@@ -430,14 +597,14 @@ func _mostrar_relatorio() -> void:
 		if texto != "":
 			linhas.append("[i]%s[/i]" % texto)
 		for t in camp.get("marcas", []):
-			linhas.append("[color=#e3c27a]Marca: %s[/color]" % t)
+			linhas.append("[color=#7a5a12]Marca: %s[/color]" % t)
 		for nome in camp.get("recrutas", []):
-			linhas.append("[color=#6fcf8e]%s pode ser recrutado na Base.[/color]" % nome)
+			linhas.append("[color=#2f6b3f]%s pode ser recrutado na Base.[/color]" % nome)
 		if camp.get("concluida", false):
 			linhas.append("[b]Epílogo[/b]")
 			linhas.append("[i]%s[/i]" % camp.get("epilogo", ""))
 	if not carreira.memorial.is_empty():
-		linhas.append("[color=#a69b88]Memorial: %s[/color]" % ", ".join(PackedStringArray(carreira.memorial.map(func(m): return m.nome))))
+		linhas.append("[color=#6b5a48]Memorial: %s[/color]" % ", ".join(PackedStringArray(carreira.memorial.map(func(m): return m.nome))))
 	_relatorio.text = "\n".join(linhas)
 
 
@@ -705,7 +872,7 @@ func _mostrar_missao() -> void:
 			if d.has("nex_recomendado"):
 				texto += "  (NEX recomendado: %d%%)" % int(d.nex_recomendado)
 	if not op.erros.is_empty():
-		texto += "\n[color=#e0574a]Erros: %s[/color]" % "; ".join(PackedStringArray(op.erros))
+		texto += "\n[color=#a51c1c]Erros: %s[/color]" % "; ".join(PackedStringArray(op.erros))
 	_txt_missao.text = texto
 
 

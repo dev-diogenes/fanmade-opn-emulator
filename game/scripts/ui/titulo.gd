@@ -8,6 +8,7 @@ var _jogo: Node
 var _mapa3d: Mapa3D
 var _menu: VBoxContainer
 var _confirmar: ConfirmationDialog
+var _sigilo: Sigilo
 
 
 func _ready() -> void:
@@ -20,6 +21,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _mapa3d != null and _mapa3d.rig != null:
 		_mapa3d.rig.girar(delta * VELOCIDADE_GIRO)
+	if _sigilo != null:
+		_sigilo.rotation += delta * 0.03
 
 
 func _montar_diorama() -> void:
@@ -76,6 +79,17 @@ func _montar_menu() -> void:
 	faixa.offset_right = 620
 	add_child(faixa)
 
+	# Sigilo grande se desenhando atrás do logo (docs/09, 6), girando devagar
+	_sigilo = Sigilo.new()
+	_sigilo.semente = 1987
+	_sigilo.cor = Color(Tema.SANGUE_CLARO, 0.4)
+	_sigilo.espessura = 3.5
+	_sigilo.size = Vector2(460, 460)
+	_sigilo.position = Vector2(60, -40)
+	_sigilo.pivot_offset = _sigilo.size / 2.0
+	add_child(_sigilo)
+	_sigilo.revelar(2.2)
+
 	var margem := MarginContainer.new()
 	margem.set_anchors_preset(Control.PRESET_FULL_RECT)
 	margem.add_theme_constant_override("margin_left", 64)
@@ -119,7 +133,6 @@ func _montar_menu() -> void:
 	coluna.add_child(_menu)
 	var tem_save := Carreira.existe_save()
 	var principal := _botao("Continuar carreira" if tem_save else "Começar", _continuar)
-	principal.theme_type_variation = "BotaoPrincipal"
 	_botao("Nova carreira", _pedir_nova_carreira)
 	_botao("Editor de missões", _editor)
 	_botao("Sair", func(): get_tree().quit())
@@ -146,7 +159,25 @@ func _botao(texto: String, acao: Callable) -> Button:
 	var b := Button.new()
 	b.text = texto
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	b.custom_minimum_size = Vector2(0, 44)
+	b.theme_type_variation = "BotaoMenu"
+	b.custom_minimum_size = Vector2(0, 48)
+	# Um pequeno sigilo aparece ao lado do item com foco ou mouse
+	var marca := Sigilo.new()
+	marca.semente = _menu.get_child_count() + 40
+	marca.cor = Tema.SANGUE_CLARO
+	marca.espessura = 1.6
+	marca.size = Vector2(26, 26)
+	marca.position = Vector2(-34, 11)
+	marca.visible = false
+	b.add_child(marca)
+	var mostrar := func(sim: bool):
+		marca.visible = sim
+		if sim:
+			marca.revelar(0.25)
+	b.mouse_entered.connect(mostrar.bind(true))
+	b.mouse_exited.connect(func(): mostrar.call(b.has_focus()))
+	b.focus_entered.connect(mostrar.bind(true))
+	b.focus_exited.connect(mostrar.bind(false))
 	b.pressed.connect(acao)
 	_menu.add_child(b)
 	return b

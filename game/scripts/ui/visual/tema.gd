@@ -25,6 +25,16 @@ const MESTRE := Color("f2c6a0")      ## painel e ações do mestre
 const ELEMENTO := {"sangue": Color("c0392b"), "morte": Color("6b6670"), "conhecimento": Color("e3b341"),
 	"energia": Color("a35ce0"), "medo": Color("e8eef5")}
 
+## Materiais da Ordem (docs/09, 5.1): papel, tinta, cortiça e fio vermelho
+const PAPEL := Color("e8dcc0")
+const PAPEL_SOMBRA := Color("bfae8a")
+const TINTA := Color("2a2320")
+const CORTICA := Color("8a5a36")
+const FIO := Color("b3121c")
+const TRACO := Color(0.914, 0.875, 0.784, 0.75)
+
+static var _texturas: Dictionary = {}
+
 ## Cor de cada jogador: base da figura no 3D e borda do retrato
 const CORES_JOGADORES := [Color("3d7bd9"), Color("27ae60"), Color("af7ac5"), Color("e67e22")]
 
@@ -64,6 +74,48 @@ static func caixa(fundo: Color, borda: Color = Color.TRANSPARENT, largura: int =
 	return s
 
 
+static func _icone_marcar(marcado: bool, alfa: float = 1.0) -> ImageTexture:
+	var n := 18
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var borda := Color(OURO, alfa)
+	if marcado:
+		img.fill_rect(Rect2i(2, 2, n - 4, n - 4), Color(SANGUE, alfa))
+	for i in n:
+		for d in [1, 2]:
+			img.set_pixel(i, d, borda)
+			img.set_pixel(i, n - 1 - d, borda)
+			img.set_pixel(d, i, borda)
+			img.set_pixel(n - 1 - d, i, borda)
+	if marcado:
+		var tinta := Color(PERGAMINHO, alfa)
+		for p in [Vector2i(4, 9), Vector2i(5, 10), Vector2i(6, 11), Vector2i(7, 12), Vector2i(8, 11), Vector2i(9, 10),
+				Vector2i(10, 9), Vector2i(11, 8), Vector2i(12, 7), Vector2i(13, 6)]:
+			img.set_pixelv(p, tinta)
+			img.set_pixelv(p + Vector2i(0, -1), tinta)
+	return ImageTexture.create_from_image(img)
+
+
+## Tema para conteúdo escrito sobre papel (texto em tinta escura).
+static func tema_papel() -> Theme:
+	var t := Theme.new()
+	for tipo in ["Label", "Subtitulo", "CheckBox", "CheckButton"]:
+		t.set_color("font_color", tipo, TINTA)
+	t.set_color("default_color", "RichTextLabel", TINTA)
+	return t
+
+
+## Moldura em traço riscado com margens; `leve` = um traço só, sem sombra (botões).
+static func riscada(traco: Color, fundo: Color, margem := Vector2(14, 10), leve: bool = false) -> MolduraRiscada:
+	var m := MolduraRiscada.criar(traco, fundo, margem)
+	if leve:
+		m.tracos = 1
+		m.sombra = 0
+		m.escape = 3.0
+		m.desvio = 1.0
+	return m
+
+
 static func criar() -> Theme:
 	var t := Theme.new()
 	var texto := _fonte(ARQ_TEXTO)
@@ -78,15 +130,12 @@ static func criar() -> Theme:
 	painel.shadow_color = Color(0, 0, 0, 0.55)
 	painel.shadow_size = 8
 	painel.border_blend = true
-	t.set_stylebox("panel", "PanelContainer", painel)
-	t.set_stylebox("panel", "Panel", painel)
-	var lateral := painel.duplicate()
-	lateral.set_corner_radius_all(0)
-	lateral.border_width_top = 0
-	lateral.border_width_bottom = 0
-	lateral.border_width_right = 0
-	lateral.border_width_left = 3
-	lateral.border_color = OURO
+	# Painéis em traço riscado (docs/09): nada de caixa reta
+	var riscado := riscada(Color(OURO, 0.7), Color(PEDRA, 0.94), Vector2(14, 12))
+	t.set_stylebox("panel", "PanelContainer", riscado)
+	t.set_stylebox("panel", "Panel", riscado)
+	var lateral := riscada(OURO, Color(PEDRA, 0.94), Vector2(14, 12))
+	lateral.escape = 0.0
 	t.set_type_variation("PainelLateral", "PanelContainer")
 	t.set_stylebox("panel", "PainelLateral", lateral)
 
@@ -113,10 +162,10 @@ static func criar() -> Theme:
 	var normal := caixa(PEDRA_CLARA, OURO_ESCURO, 1, 4, Vector2(14, 7))
 	var foco := caixa(Color(0, 0, 0, 0), OURO_CLARO, 1, 4)
 	for tipo in ["Button", "OptionButton", "MenuButton"]:
-		t.set_stylebox("normal", tipo, normal)
-		t.set_stylebox("hover", tipo, caixa(Color("33283a"), OURO, 1, 4, Vector2(14, 7)))
-		t.set_stylebox("pressed", tipo, caixa(SANGUE, OURO_CLARO, 1, 4, Vector2(14, 7)))
-		t.set_stylebox("disabled", tipo, caixa(Color(PEDRA, 0.6), Color(OURO_ESCURO, 0.4), 1, 4, Vector2(14, 7)))
+		t.set_stylebox("normal", tipo, riscada(Color(OURO, 0.55), PEDRA_CLARA, Vector2(14, 7), true))
+		t.set_stylebox("hover", tipo, riscada(OURO_CLARO, Color("33283a"), Vector2(14, 7), true))
+		t.set_stylebox("pressed", tipo, riscada(OURO_CLARO, SANGUE, Vector2(14, 7), true))
+		t.set_stylebox("disabled", tipo, riscada(Color(OURO_ESCURO, 0.4), Color(PEDRA, 0.6), Vector2(14, 7), true))
 		t.set_stylebox("focus", tipo, foco)
 		t.set_color("font_color", tipo, PERGAMINHO)
 		t.set_color("font_hover_color", tipo, OURO_CLARO)
@@ -125,17 +174,64 @@ static func criar() -> Theme:
 		t.set_color("font_disabled_color", tipo, Color(TEXTO_SUAVE, 0.5))
 	# Botão de destaque (ação principal): sangue com borda dourada
 	t.set_type_variation("BotaoPrincipal", "Button")
-	t.set_stylebox("normal", "BotaoPrincipal", caixa(Color("6e1419"), OURO, 2, 4, Vector2(18, 10)))
-	t.set_stylebox("hover", "BotaoPrincipal", caixa(SANGUE_CLARO.darkened(0.2), OURO_CLARO, 2, 4, Vector2(18, 10)))
+	t.set_stylebox("normal", "BotaoPrincipal", riscada(OURO, Color("6e1419"), Vector2(18, 10)))
+	t.set_stylebox("hover", "BotaoPrincipal", riscada(OURO_CLARO, SANGUE_CLARO.darkened(0.2), Vector2(18, 10)))
+	# Item de menu (título): só texto; no hover, o traço riscado aparece em volta
+	t.set_type_variation("BotaoMenu", "Button")
+	t.set_stylebox("normal", "BotaoMenu", StyleBoxEmpty.new())
+	t.set_stylebox("hover", "BotaoMenu", riscada(OURO_CLARO, Color(SANGUE, 0.35), Vector2(18, 8), true))
+	t.set_stylebox("pressed", "BotaoMenu", riscada(OURO_CLARO, SANGUE, Vector2(18, 8), true))
+	t.set_stylebox("focus", "BotaoMenu", riscada(Color(OURO_CLARO, 0.8), Color(0, 0, 0, 0), Vector2(18, 8), true))
+	t.set_font_size("font_size", "BotaoMenu", FONTE_G + 2)
+	t.set_color("font_color", "BotaoMenu", PERGAMINHO)
+	t.set_color("font_hover_color", "BotaoMenu", OURO_CLARO)
+	t.set_color("font_focus_color", "BotaoMenu", OURO_CLARO)
+	if titulo != null:
+		t.set_font("font", "BotaoMenu", titulo)
 	t.set_font_size("font_size", "BotaoPrincipal", 18)
 	if titulo != null:
 		t.set_font("font", "BotaoPrincipal", titulo)
+	# Botão sobre papel (bilhetes e cartas): tinta escura; marcado = sangue (docs/09)
+	t.set_type_variation("BotaoPapel", "Button")
+	t.set_stylebox("normal", "BotaoPapel", caixa(Color(0, 0, 0, 0), Color(TINTA, 0.25), 1, 3, Vector2(10, 5)))
+	t.set_stylebox("hover", "BotaoPapel", caixa(Color(PAPEL_SOMBRA, 0.6), Color(TINTA, 0.5), 1, 3, Vector2(10, 5)))
+	t.set_stylebox("pressed", "BotaoPapel", caixa(Color(SANGUE, 0.9), SANGUE_CLARO, 1, 3, Vector2(10, 5)))
+	t.set_stylebox("hover_pressed", "BotaoPapel", caixa(SANGUE, SANGUE_CLARO, 1, 3, Vector2(10, 5)))
+	t.set_stylebox("disabled", "BotaoPapel", caixa(Color(0, 0, 0, 0), Color(TINTA, 0.1), 1, 3, Vector2(10, 5)))
+	t.set_stylebox("focus", "BotaoPapel", caixa(Color(0, 0, 0, 0), SANGUE_CLARO, 1, 3))
+	t.set_color("font_color", "BotaoPapel", TINTA)
+	t.set_color("font_hover_color", "BotaoPapel", TINTA)
+	t.set_color("font_pressed_color", "BotaoPapel", PAPEL)
+	t.set_color("font_hover_pressed_color", "BotaoPapel", PAPEL)
+	t.set_color("font_focus_color", "BotaoPapel", TINTA)
+	t.set_color("font_disabled_color", "BotaoPapel", Color(TINTA, 0.35))
+	t.set_type_variation("TextoPapel", "Label")
+	t.set_color("font_color", "TextoPapel", TINTA)
+	# Caixas de marcar desenhadas: quadrado riscado claro; marcado = sangue com ✓
+	t.set_icon("unchecked", "CheckBox", _icone_marcar(false))
+	t.set_icon("checked", "CheckBox", _icone_marcar(true))
+	t.set_icon("unchecked_disabled", "CheckBox", _icone_marcar(false, 0.4))
+	t.set_icon("checked_disabled", "CheckBox", _icone_marcar(true, 0.4))
 	for tipo in ["CheckBox", "CheckButton"]:
 		t.set_color("font_hover_color", tipo, OURO_CLARO)
 		t.set_stylebox("normal", tipo, StyleBoxEmpty.new())
 		t.set_stylebox("hover", tipo, StyleBoxEmpty.new())
 		t.set_stylebox("pressed", tipo, StyleBoxEmpty.new())
 		t.set_stylebox("focus", tipo, StyleBoxEmpty.new())
+
+	# Abas como pastas de arquivo (Base da Ordem)
+	t.set_stylebox("panel", "TabContainer", riscada(Color(OURO, 0.6), Color(PEDRA, 0.9), Vector2(18, 16)))
+	t.set_stylebox("tab_selected", "TabContainer", riscada(OURO_CLARO, Color("2a2230"), Vector2(18, 7), true))
+	t.set_stylebox("tab_unselected", "TabContainer", caixa(Color(PEDRA, 0.8), Color(OURO_ESCURO, 0.5), 1, 3, Vector2(18, 7)))
+	t.set_stylebox("tab_hovered", "TabContainer", riscada(OURO, Color("231d28"), Vector2(18, 7), true))
+	t.set_stylebox("tab_focus", "TabContainer", StyleBoxEmpty.new())
+	t.set_color("font_selected_color", "TabContainer", OURO_CLARO)
+	t.set_color("font_unselected_color", "TabContainer", TEXTO_SUAVE)
+	t.set_color("font_hovered_color", "TabContainer", PERGAMINHO)
+	t.set_constant("side_margin", "TabContainer", 12)
+	t.set_font_size("font_size", "TabContainer", FONTE_M + 1)
+	if titulo != null:
+		t.set_font("font", "TabContainer", titulo)
 
 	# Campos
 	var campo := caixa(Color("0f0d13"), OURO_ESCURO, 1, 3, Vector2(8, 5))
@@ -254,6 +350,59 @@ static func membrana_na_tela(vista: SubViewportContainer, valor: int) -> void:
 	var m := vista.material as ShaderMaterial
 	if m != null:
 		m.set_shader_parameter("intensidade", clampf((100.0 - valor) / 75.0, 0.0, 1.0))
+
+
+## Textura procedural (cache): "papel" (manchas suaves) ou "cortica" (grãos escuros).
+static func textura(tipo: String) -> Texture2D:
+	if _texturas.has(tipo):
+		return _texturas[tipo]
+	var ruido := FastNoiseLite.new()
+	ruido.seed = 7 if tipo == "papel" else 11
+	ruido.frequency = 0.012 if tipo == "papel" else 0.09
+	ruido.fractal_octaves = 4
+	var grao := FastNoiseLite.new()
+	grao.seed = 3
+	grao.frequency = 0.6
+	# Imagens "seamless": o papel e a cortiça se repetem sem emenda visível
+	ruido.frequency = 0.02 if tipo == "papel" else 0.09
+	var manchas := ruido.get_seamless_image(256, 256)
+	var graos := grao.get_seamless_image(256, 256)
+	var img := Image.create(256, 256, false, Image.FORMAT_RGB8)
+	for y in 256:
+		for x in 256:
+			var n := manchas.get_pixel(x, y).r
+			var g := graos.get_pixel(x, y).r
+			var cor: Color
+			if tipo == "papel":
+				cor = PAPEL.lerp(PAPEL_SOMBRA, smoothstep(0.5, 0.95, n) * 0.35).darkened(g * 0.06)
+			else:
+				cor = CORTICA.lerp(CORTICA.darkened(0.45), smoothstep(0.55, 0.8, g)).lerp(CORTICA.lightened(0.15), n * 0.35)
+			img.set_pixel(x, y, cor)
+	var tex := ImageTexture.create_from_image(img)
+	_texturas[tipo] = tex
+	return tex
+
+
+## Caixa de papel (bilhetes, cartas, fichas).
+static func caixa_papel(margem := Vector2(12, 10)) -> StyleBoxTexture:
+	var s := StyleBoxTexture.new()
+	s.texture = textura("papel")
+	s.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+	s.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+	s.content_margin_left = margem.x
+	s.content_margin_right = margem.x
+	s.content_margin_top = margem.y
+	s.content_margin_bottom = margem.y
+	return s
+
+
+## Pulso de VHS na vista (docs/09, 5.3): pista encontrada = 0.8/0.6 s; falha = 0.35/0.3 s.
+static func pulso_vhs(vista: SubViewportContainer, forca: float = 0.8, duracao: float = 0.6) -> void:
+	var m := vista.material as ShaderMaterial
+	if m == null or not vista.is_inside_tree():
+		return
+	m.set_shader_parameter("glitch", forca)
+	vista.create_tween().tween_method(func(v: float): m.set_shader_parameter("glitch", v), forca, 0.0, duracao)
 
 
 ## Fundo de tela: gradiente radial (vinheta) em vez de cor chapada.

@@ -11,6 +11,7 @@
 | [06-online.md](06-online.md) | Como hospedar e entrar numa sessão online, rede e teste com dois processos |
 | [07-tutorial.md](07-tutorial.md) | Tutorial (tour guiado), personas e plano de validação nos playtests |
 | [08-direcao-de-arte-e-ux.md](08-direcao-de-arte-e-ux.md) | Auditoria do sistema de design, crítica, pesquisa, brainstorm e spec visual (FTK2 + OP) |
+| [09-identidade-visual-op.md](09-identidade-visual-op.md) | Identidade visual de OP: estética por contexto, crítica e handoff (piloto: Investigação) |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

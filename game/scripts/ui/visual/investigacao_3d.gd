@@ -63,12 +63,13 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 		prop.rotation.y = -ang
 		add_child(prop)
 		_props[p.id] = prop
-		var marca := Pecas.marcador("investigacao")
-		marca.position = pos + Vector3(0, 0.6, 0)
+		# Sigilo procedural no chão do ponto de interesse, pulsando (docs/09)
+		var marca := _sigilo_no_chao(hash(p.id), Tema.ELEMENTO.conhecimento)
+		marca.position = pos + Vector3(0, 0.02, 0)
 		add_child(marca)
 		_marcas[p.id] = marca
-		var rot := Pecas.rotulo(p.nome, 52, Color("d0ece7"))
-		rot.position = pos + Vector3(0, 1.75, 0)
+		var rot := Pecas.rotulo(p.nome, 34, Tema.PERGAMINHO)
+		rot.position = pos + Vector3(0, 1.45, 0)
 		add_child(rot)
 	var cores := Tema.CORES_JOGADORES
 	for i in agentes.size():
@@ -78,7 +79,7 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 		r.position = Vector3(0, 1.15, 0)
 		f.add_child(r)
 		add_child(f)
-	_anel_sel = Pecas.anel(0.75, Color("48c9b0"))
+	_anel_sel = Pecas.anel(0.95, Tema.OURO_CLARO)
 	_anel_sel.visible = false
 	add_child(_anel_sel)
 	rig = CameraRig.new()
@@ -88,6 +89,28 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 	rig.distancia_max = 13.0
 	rig.limites = AABB(Vector3(-4, 0, -4), Vector3(8, 0, 8))
 	rig.focar(Vector3.ZERO, true)
+
+
+func _sigilo_no_chao(semente: int, cor: Color) -> MeshInstance3D:
+	var plano := PlaneMesh.new()
+	plano.size = Vector2(1.9, 1.9)
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = Sigilo.imagem(semente, 192, Color.WHITE, 5.0)
+	m.albedo_color = cor
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.emission_enabled = true
+	m.emission = cor
+	m.emission_energy_multiplier = 1.2
+	m.emission_texture = m.albedo_texture
+	var mi := MeshInstance3D.new()
+	mi.mesh = plano
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var pulso := mi.create_tween().set_loops()
+	pulso.tween_property(m, "albedo_color:a", 0.35, 1.2).set_trans(Tween.TRANS_SINE)
+	pulso.tween_property(m, "albedo_color:a", 1.0, 1.2).set_trans(Tween.TRANS_SINE)
+	return mi
 
 
 func _prop_para(cena_id: String, i: int) -> Node3D:

@@ -131,6 +131,8 @@ func mostrar(i: int) -> void:
 	_btn_voltar.disabled = indice == 0
 	_btn_proximo.text = "Concluir" if indice == passos.size() - 1 else "Próximo"
 	var alvo = p.get("alvo")
+	if alvo is Control and is_instance_valid(alvo):
+		_abrir_aba_de(alvo)
 	if alvo is Control and is_instance_valid(alvo) and alvo.is_visible_in_tree():
 		_rolar_ate(alvo)
 		await get_tree().process_frame
@@ -138,6 +140,17 @@ func mostrar(i: int) -> void:
 			return
 	_reposicionar()
 	_btn_proximo.grab_focus()
+
+
+## Se o alvo está numa aba fechada (Base como dossiê), abre a aba antes de destacar.
+func _abrir_aba_de(alvo: Control) -> void:
+	var filho: Node = alvo
+	var pai := alvo.get_parent()
+	while pai != null:
+		if pai is TabContainer:
+			(pai as TabContainer).current_tab = filho.get_index()
+		filho = pai
+		pai = pai.get_parent()
 
 
 func _reposicionar() -> void:

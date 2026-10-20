@@ -77,3 +77,82 @@ func test_tela_de_titulo_carrega():
 	await wait_frames(2)
 	assert_not_null(t._mapa3d)
 	assert_gt(t._menu.get_child_count(), 3)
+
+
+func test_sigilo_e_deterministico_e_varia():
+	assert_eq(Sigilo.gerar(7), Sigilo.gerar(7), "mesma semente, mesmo sigilo")
+	assert_ne(Sigilo.gerar(7), Sigilo.gerar(8))
+	assert_gt(Sigilo.gerar(7).size(), 4, "círculo, raios e arcos")
+
+
+func test_moldura_riscada_tem_margens():
+	var m := MolduraRiscada.criar(Tema.OURO, Tema.PEDRA, Vector2(14, 10))
+	assert_eq(m.get_content_margin(SIDE_LEFT), 14.0)
+	assert_eq(m.get_content_margin(SIDE_TOP), 10.0)
+
+
+func test_quadro_mostra_fotos_e_carimbo():
+	var caso := Caso.gerar(Dados.new(5))
+	var q := QuadroInvestigacao.new()
+	q.size = Vector2(470, 420)
+	add_child_autofree(q)
+	caso.registrar_pista("Pista um", "quem", "teste")
+	caso.registrar_pista("Pista dois", "quem", "teste")
+	q.atualizar(caso)
+	assert_eq(q._fios.size(), 2, "um fio por pista")
+	var textos: Array = q.find_children("*", "Label", true, false).map(func(l): return l.text)
+	assert_true(textos.any(func(t): return t.begins_with("RESOLVIDO")), "pergunta respondida recebe o carimbo")
+
+
+func test_investigacao_sem_formularios():
+	var tela = load("res://scenes/investigacao.tscn").instantiate()
+	add_child_autofree(tela)
+	await wait_frames(2)
+	for tipo in ["OptionButton", "CheckBox", "SpinBox"]:
+		var visiveis: Array = tela.find_children("*", tipo, true, false).filter(func(n): return n.is_visible_in_tree())
+		assert_eq(visiveis.size(), 0, "nenhum %s visível (docs/09, 5.5)" % tipo)
+	assert_eq(tela._cartas.size(), 4)
+	tela._selecionar_carta("ajudar")
+	assert_true(tela._cartas.ajudar.selecionada)
+
+
+func _sem_formularios(tela: Node) -> void:
+	for tipo in ["SpinBox"]:
+		var visiveis: Array = tela.find_children("*", tipo, true, false).filter(func(n): return n.is_visible_in_tree())
+		assert_eq(visiveis.size(), 0, "nenhum %s visível em %s" % [tipo, tela.name])
+
+
+func test_mapa_e_hud_flutuante():
+	var tela = load("res://scenes/mapa_mundo.tscn").instantiate()
+	add_child_autofree(tela)
+	await wait_frames(2)
+	_sem_formularios(tela)
+	assert_true(tela._log is RelatorioCampo, "registro recolhível")
+	assert_eq(tela._vista.anchor_right, 1.0, "3D em tela cheia")
+	tela._mostrar_dica(Vector2(400, 300))   # não quebra fora ou dentro de um hex
+
+
+func test_combate_tem_cartas():
+	var arena = load("res://scenes/arena_teste.tscn").instantiate()
+	arena.semente = 3
+	add_child_autofree(arena)
+	await wait_frames(2)
+	_sem_formularios(arena)
+	assert_eq(arena._cartas.size(), 5)
+	arena._abrir_bilhete("item")
+	assert_eq(arena._bilhete_tipo, "item")
+	arena._abrir_bilhete("item")
+	assert_eq(arena._bilhete_tipo, "", "clicar de novo fecha o bilhete")
+
+
+func test_base_e_dossie_com_abas():
+	var base = load("res://scenes/base_ordem.tscn").instantiate()
+	add_child_autofree(base)
+	await wait_frames(2)
+	assert_eq(base._abas.get_tab_count(), 4)
+	var tour := TourGuiado.new()   # fora da árvore: não conta como tour aberto
+	tour._abrir_aba_de(base._btn_iniciar)
+	tour.free()
+	assert_eq(base._abas.current_tab, 2, "o tour abre a aba Missão para mostrar o Iniciar")
+	for c in get_tree().root.find_children("ConviteTutorial", "", true, false):
+		c.queue_free()

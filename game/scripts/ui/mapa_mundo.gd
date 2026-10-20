@@ -1,5 +1,7 @@
 extends Control
-## Mapa-múndi da missão em 3D low poly (Mapa3D) com o painel de controle ao lado.
+## Mapa-múndi da missão em 3D low poly (Mapa3D), em tela cheia com HUD flutuante (docs/09):
+## turno e Membrana no topo, grupo embaixo à esquerda, dock de ações no centro, evento como
+## bilhete, relatório recolhível e dica de hex no hover.
 ## O jogador rola o movimento (slots de d20), clica num hex para andar e resolve
 ## eventos e encontros. Câmera: roda = zoom, botão direito = girar, botão do meio
 ## ou WASD/setas = deslizar, Q/E = girar.
@@ -21,16 +23,18 @@ var _grupo: HBoxContainer
 var _cartoes: Dictionary = {}   ## Agente -> CartaoAgente
 var _slots_desenhados = null
 var _lbl_mov: Label
-var _spin_foco: SpinBox
+var _foco: PassoFoco
 var _btn_rolar: Button
 var _btn_descansar: Button
 var _btn_encerrar: Button
 var _barra_membrana: ProgressBar
 var _lbl_membrana: Label
-var _painel_evento: VBoxContainer
+var _painel_evento: PanelContainer
 var _lbl_evento: Label
 var _btn_testar: Button
-var _log: RichTextLabel
+var _log: RelatorioCampo
+var _dica: Label
+var _hex_dica := Vector2i(-999, -999)
 var _painel_fim: PanelContainer
 var _lbl_fim: Label
 var _lbl_vez: Label
@@ -134,9 +138,7 @@ func _input(evento: InputEvent) -> void:
 # --- Ações -----------------------------------------------------------------
 
 func _rolar() -> void:
-	var foco := int(_spin_foco.value)
-	_spin_foco.value = 0
-	_enviar("rolar_movimento", {"foco": foco})
+	_enviar("rolar_movimento", {"foco": _foco.consumir()})
 
 
 func _descansar() -> void:
@@ -148,9 +150,7 @@ func _encerrar_turno() -> void:
 
 
 func _testar_evento() -> void:
-	var foco := int(_spin_foco.value)
-	_spin_foco.value = 0
-	_enviar("resolver_evento", {"foco": foco})
+	_enviar("resolver_evento", {"foco": _foco.consumir()})
 
 
 # --- Comandos (ADR 0007) ------------------------------------------------------
@@ -202,7 +202,7 @@ func _montar_painel_mestre(painel: VBoxContainer) -> void:
 	painel.add_child(_btn_painel_mestre)
 	_painel_mestre = PanelContainer.new()
 	_painel_mestre.visible = false
-	_painel_mestre.position = Vector2(12, 12)
+	_painel_mestre.position = Vector2(16, 120)
 	_painel_mestre.custom_minimum_size = Vector2(360, 0)
 	add_child(_painel_mestre)
 	var caixa := VBoxContainer.new()
@@ -356,6 +356,8 @@ func _nova_missao() -> void:
 
 
 func _clicar(evento: InputEvent) -> void:
+	if evento is InputEventMouseMotion:
+		_mostrar_dica(evento.position)
 	if evento is InputEventMouseButton and evento.pressed and evento.button_index == MOUSE_BUTTON_LEFT:
 		var h := _mapa3d.hex_em(evento.position)
 		if _chk_hex_mestre != null and _chk_hex_mestre.button_pressed and _sou_mestre():
@@ -390,16 +392,10 @@ func _montar_interface() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(Tema.fundo())
 
-	var raiz := HBoxContainer.new()
-	raiz.set_anchors_preset(Control.PRESET_FULL_RECT)
-	raiz.add_theme_constant_override("separation", 10)
-	add_child(raiz)
-
 	_vista = SubViewportContainer.new()
 	_vista.stretch = true
 	Tema.veu(_vista)
-	_vista.custom_minimum_size = Vector2(680, 0)
-	_vista.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_vista.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var vp := SubViewport.new()
 	vp.msaa_3d = Viewport.MSAA_4X
 	_vista.add_child(vp)
@@ -407,103 +403,207 @@ func _montar_interface() -> void:
 	vp.add_child(_mapa3d)
 	_mapa3d.construir(missao.mapa, _terrenos)
 	_vista.gui_input.connect(_clicar)
-	# O 3D fica numa área com o HUD do grupo por cima (docs/08, R3)
-	var area := Control.new()
-	area.custom_minimum_size = _vista.custom_minimum_size
-	area.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_vista.custom_minimum_size = Vector2.ZERO
-	_vista.set_anchors_preset(Control.PRESET_FULL_RECT)
-	area.add_child(_vista)
+	add_child(_vista)
+
+	# Topo à esquerda: turno, vez e a ficha curta do agente
+	var topo := PanelContainer.new()
+	topo.position = Vector2(16, 14)
+	topo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(topo)
+	var vt := VBoxContainer.new()
+	vt.add_theme_constant_override("separation", 2)
+	topo.add_child(vt)
+	_lbl_vez = Label.new()
+	_lbl_vez.add_theme_color_override("font_color", Tema.OURO_CLARO)
+	vt.add_child(_lbl_vez)
+	_lbl_turno = Label.new()
+	_lbl_turno.theme_type_variation = "Titulo"
+	_lbl_turno.add_theme_font_size_override("font_size", Tema.FONTE_G)
+	vt.add_child(_lbl_turno)
+	_lbl_ficha = Label.new()
+	_lbl_ficha.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+	_lbl_ficha.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	vt.add_child(_lbl_ficha)
+
+	# Topo central: a Membrana, com sigilo e estado
+	var membrana := PanelContainer.new()
+	membrana.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 14)
+	membrana.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	membrana.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(membrana)
+	var hm := HBoxContainer.new()
+	hm.add_theme_constant_override("separation", Tema.ESPACO_M)
+	membrana.add_child(hm)
+	var sig := Sigilo.new()
+	sig.semente = 666
+	sig.cor = Tema.SANGUE_CLARO
+	sig.custom_minimum_size = Vector2(40, 40)
+	hm.add_child(sig)
+	var vm := VBoxContainer.new()
+	vm.add_theme_constant_override("separation", 2)
+	hm.add_child(vm)
+	var tm := Label.new()
+	tm.text = "MEMBRANA"
+	tm.theme_type_variation = "Subtitulo"
+	vm.add_child(tm)
+	_barra_membrana = ProgressBar.new()
+	_barra_membrana.custom_minimum_size = Vector2(260, 14)
+	_barra_membrana.show_percentage = false
+	vm.add_child(_barra_membrana)
+	_lbl_membrana = Label.new()
+	_lbl_membrana.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	vm.add_child(_lbl_membrana)
+
+	# Grupo embaixo à esquerda
 	_grupo = HBoxContainer.new()
 	_grupo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_grupo.add_theme_constant_override("separation", Tema.ESPACO_M)
 	_grupo.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, Tema.ESPACO_G)
 	_grupo.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	area.add_child(_grupo)
-	raiz.add_child(area)
+	add_child(_grupo)
 
-	var painel := VBoxContainer.new()
-	painel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	painel.add_theme_constant_override("separation", 6)
-	raiz.add_child(Tema.painel(painel, true))
-
-	_lbl_vez = Label.new()
-	_lbl_vez.add_theme_font_size_override("font_size", 18)
-	_lbl_vez.add_theme_color_override("font_color", Tema.OURO_CLARO)
-	painel.add_child(_lbl_vez)
-	_lbl_turno = Label.new()
-	_lbl_turno.add_theme_font_size_override("font_size", 17)
-	painel.add_child(_lbl_turno)
-	_lbl_ficha = Label.new()
-	_lbl_ficha.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	painel.add_child(_lbl_ficha)
-
+	# Embaixo à direita: slots de d20 e o dock de ações (acima do relatório)
+	var dock := VBoxContainer.new()
+	dock.alignment = BoxContainer.ALIGNMENT_END
+	dock.add_theme_constant_override("separation", Tema.ESPACO_M)
+	dock.anchor_left = 1.0
+	dock.anchor_right = 1.0
+	dock.anchor_top = 1.0
+	dock.anchor_bottom = 1.0
+	dock.offset_left = -560
+	dock.offset_right = -16
+	dock.offset_bottom = -48
+	dock.offset_top = -48
+	dock.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	dock.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	dock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dock)
 	_slots = HBoxContainer.new()
-	painel.add_child(_slots)
+	_slots.alignment = BoxContainer.ALIGNMENT_END
+	_slots.add_theme_constant_override("separation", 6)
+	dock.add_child(_slots)
 	_lbl_mov = Label.new()
-	painel.add_child(_lbl_mov)
-
-	var linha_foco := HBoxContainer.new()
-	painel.add_child(linha_foco)
-	var lbl := Label.new()
-	lbl.text = "Foco (PE → +1 d20):"
-	linha_foco.add_child(lbl)
-	_spin_foco = SpinBox.new()
-	linha_foco.add_child(_spin_foco)
-
-	var botoes := HBoxContainer.new()
-	painel.add_child(botoes)
+	_lbl_mov.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_lbl_mov.add_theme_constant_override("outline_size", 6)
+	_lbl_mov.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	dock.add_child(_lbl_mov)
+	var botoes := PanelContainer.new()
+	botoes.size_flags_horizontal = Control.SIZE_SHRINK_END
+	dock.add_child(botoes)
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", Tema.ESPACO_M)
+	botoes.add_child(hb)
+	_foco = PassoFoco.criar()
+	hb.add_child(_foco)
 	_btn_rolar = _botao("Rolar movimento", _rolar)
+	_btn_rolar.theme_type_variation = "BotaoPrincipal"
+	_btn_rolar.tooltip_text = "1 d20 por ponto de Agilidade; cada 11+ vale um passo"
 	_btn_descansar = _botao("Descansar", _descansar)
+	_btn_descansar.tooltip_text = "Só numa vila, uma vez por visita"
 	_btn_encerrar = _botao("Encerrar turno", _encerrar_turno)
 	for b in [_btn_rolar, _btn_descansar, _btn_encerrar]:
-		botoes.add_child(b)
+		hb.add_child(b)
 
-	_painel_evento = VBoxContainer.new()
+	# Evento: bilhete no centro da tela (cartas e pastas)
+	_painel_evento = PanelContainer.new()
+	_painel_evento.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(20, 16)))
+	_painel_evento.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_painel_evento.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_painel_evento.grow_vertical = Control.GROW_DIRECTION_BOTH
+	_painel_evento.custom_minimum_size = Vector2(420, 0)
+	_painel_evento.rotation_degrees = -1.0
+	_painel_evento.visible = false
+	add_child(_painel_evento)
+	var ve := VBoxContainer.new()
+	ve.add_theme_constant_override("separation", Tema.ESPACO_M)
+	_painel_evento.add_child(ve)
+	var te := Label.new()
+	te.text = "EVENTO"
+	te.theme_type_variation = "TextoPapel"
+	var f := Tema.fonte_titulo()
+	if f != null:
+		te.add_theme_font_override("font", f)
+	ve.add_child(te)
 	_lbl_evento = Label.new()
+	_lbl_evento.theme_type_variation = "TextoPapel"
 	_lbl_evento.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_lbl_evento.add_theme_color_override("font_color", Tema.OURO_CLARO)
-	_painel_evento.add_child(_lbl_evento)
+	ve.add_child(_lbl_evento)
 	_btn_testar = _botao("Testar", _testar_evento)
-	_painel_evento.add_child(_btn_testar)
-	painel.add_child(_painel_evento)
+	_btn_testar.theme_type_variation = "BotaoPrincipal"
+	ve.add_child(_btn_testar)
 
-	var titulo := Label.new()
-	titulo.text = "Membrana"
-	titulo.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
-	painel.add_child(titulo)
-	_barra_membrana = ProgressBar.new()
-	_barra_membrana.custom_minimum_size = Vector2(0, 16)
-	painel.add_child(_barra_membrana)
-	_lbl_membrana = Label.new()
-	_lbl_membrana.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	painel.add_child(_lbl_membrana)
+	# Relatório de campo recolhível, embaixo à direita
+	_log = RelatorioCampo.new()
+	_log.ancorar_embaixo_direita(544.0)
+	add_child(_log)
 
-	_log = RichTextLabel.new()
-	_log.bbcode_enabled = true
-	_log.scroll_following = true
-	_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	painel.add_child(_log)
+	_dica = Label.new()
+	_dica.visible = false
+	_dica.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dica.add_theme_stylebox_override("normal", Tema.caixa_papel(Vector2(8, 4)))
+	_dica.add_theme_color_override("font_color", Tema.TINTA)
+	_dica.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	add_child(_dica)
 
-	_montar_painel_mestre(painel)
-
-	var legenda := Label.new()
-	legenda.text = "Vermelho: encontro · amarelo: evento · azul: início · branco: vila · esfera escura: covil\nCâmera: roda = zoom, botão direito = girar, WASD = deslizar"
-	legenda.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
-	legenda.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	painel.add_child(legenda)
+	var mestre := VBoxContainer.new()
+	mestre.anchor_left = 1.0
+	mestre.anchor_right = 1.0
+	mestre.offset_left = -230
+	mestre.offset_right = -70
+	mestre.offset_top = 16
+	add_child(mestre)
+	_montar_painel_mestre(mestre)
 
 	_painel_fim = PanelContainer.new()
 	_painel_fim.visible = false
-	_painel_fim.set_anchors_preset(Control.PRESET_CENTER)
+	_painel_fim.add_theme_stylebox_override("panel", MolduraRiscada.criar(Tema.OURO_CLARO, Color(Tema.FUNDO, 0.95), Vector2(32, 24)))
+	_painel_fim.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_painel_fim.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_painel_fim.grow_vertical = Control.GROW_DIRECTION_BOTH
 	var caixa := VBoxContainer.new()
+	caixa.add_theme_constant_override("separation", Tema.ESPACO_G)
 	_painel_fim.add_child(caixa)
 	_lbl_fim = Label.new()
-	_lbl_fim.add_theme_font_size_override("font_size", 28)
+	_lbl_fim.theme_type_variation = "Titulo"
+	_lbl_fim.add_theme_font_size_override("font_size", Tema.FONTE_TITULO + 8)
 	caixa.add_child(_lbl_fim)
 	var cliente: bool = _jogo != null and _jogo.rede.eh_cliente()
-	caixa.add_child(_botao("Voltar ao saguão" if cliente else "Voltar à Base", _nova_missao))
+	var voltar := _botao("Voltar ao saguão" if cliente else "Voltar à Base", _nova_missao)
+	voltar.theme_type_variation = "BotaoPrincipal"
+	caixa.add_child(voltar)
 	add_child(_painel_fim)
+
+
+## Dica em papel sobre o hex sob o mouse: terreno, custo e o que se sabe dele.
+func _mostrar_dica(pos: Vector2) -> void:
+	var h := _mapa3d.hex_em(pos)
+	if h == _hex_dica and _dica.visible:
+		_dica.position = pos + Vector2(18, 14)
+		return
+	_hex_dica = h
+	_dica.visible = missao.mapa.tem(h)
+	if not _dica.visible:
+		return
+	var revelado := missao.mapa.revelado(h) or _mapa3d.ver_tudo
+	var linhas: Array[String] = []
+	if not revelado:
+		linhas.append("Névoa do Outro Lado")
+		linhas.append("Ninguém sabe o que há aqui.")
+	else:
+		var t: Dictionary = _terrenos.get(missao.mapa.terreno(h), {})
+		var custo := int(t.get("custo", 1))
+		linhas.append(String(t.get("nome", missao.mapa.terreno(h))))
+		linhas.append("Intransponível" if custo < 0 else "Custo de movimento: %d" % custo)
+		var tipo := String(missao.mapa.conteudo(h).get("tipo", ""))
+		var nomes := {"encontro": "⚔ Encontro", "evento": "? Evento", "vila": "⌂ Vila (descanso)", "investigacao": "◎ Investigação",
+			"objetivo": "✝ Covil", "inicio": "Ponto de partida"}
+		if nomes.has(tipo):
+			linhas.append(nomes[tipo])
+		if h in missao.destinos():
+			linhas.append("Clique para ir")
+	_dica.text = "\n".join(linhas)
+	_dica.reset_size()
+	_dica.position = pos + Vector2(18, 14)
 
 
 func _botao(texto: String, acao: Callable) -> Button:
@@ -516,7 +616,8 @@ func _botao(texto: String, acao: Callable) -> Button:
 func _atualizar() -> void:
 	if _lbl_vez != null:
 		_lbl_vez.text = _controles.faixa_da_vez(missao.agente_atual())
-		_lbl_vez.visible = _lbl_vez.text != ""
+		if _lbl_vez.text == "" and missao.agente_atual() != null:
+			_lbl_vez.text = "Vez de %s" % missao.agente_atual().nome
 	if _mapa3d != null and missao.destinos().is_empty():
 		_cursor_ativo = false
 	if _mapa3d != null:
@@ -524,25 +625,24 @@ func _atualizar() -> void:
 	if _lbl_turno == null:
 		return
 	var a := missao.agente_atual()
-	_lbl_turno.text = "Turno %d do mundo — vez de %s" % [missao.turno_mundo, a.nome if a != null else "—"]
+	_lbl_turno.text = "Turno %d do mundo" % missao.turno_mundo
 	if a != null:
-		_lbl_ficha.text = "%s (%s, NEX %d%%)\nPV %d/%d   PE %d/%d   SAN %d/%d" % [a.nome, a.classe_id, a.nex, a.pv, a.pv_maximo, a.pe, a.pe_maximo, a.san, a.san_maximo]
+		_lbl_ficha.text = "%s · %s · NEX %d%%" % [a.nome, a.classe_id, a.nex]
 	var ocupado := missao.ocupado()
 	_btn_rolar.disabled = ocupado or missao.movimento_rolado
 	_btn_descansar.disabled = not missao.pode_descansar()
 	_btn_encerrar.disabled = ocupado
-	_spin_foco.max_value = a.pe_disponivel_no_turno() if a != null else 0
-	_lbl_mov.text = "Movimento restante: %d" % missao.movimento_restante if missao.movimento_rolado else "Role o movimento para andar."
+	_foco.definir(_foco.valor, a.pe_disponivel_no_turno() if a != null else 0)
+	_lbl_mov.text = ("Movimento restante: %d · clique num hex azul" % missao.movimento_restante) if missao.movimento_rolado else "Role o movimento para andar."
 	_desenhar_slots()
 	var ev := missao.evento_pendente
 	_painel_evento.visible = not ev.is_empty()
 	if not ev.is_empty():
-		_lbl_evento.text = "%s — %s" % [ev.evento.titulo, ev.evento.texto]
+		_lbl_evento.text = "%s\n\n%s" % [ev.evento.titulo, ev.evento.texto]
 		_btn_testar.text = "%s testa %s (DT %d)" % [ev.agente.nome, missao.ruleset.pericia(ev.evento.pericia).nome, int(ev.evento.dt)]
 	_barra_membrana.value = missao.membrana.valor
 	Tema.membrana_na_tela(_vista, missao.membrana.valor)
-	_lbl_membrana.text = "%d — %s
-Reforços da Ordem: %d   ·   Pistas: %d" % [missao.membrana.valor, missao.membrana.estado().get("nome", ""), missao.reforcos, missao.pistas]
+	_lbl_membrana.text = "%d · %s   ·   Reforços %d   ·   Pistas %d" % [missao.membrana.valor, missao.membrana.estado().get("nome", ""), missao.reforcos, missao.pistas]
 	_atualizar_mestre()
 	_atualizar_grupo()
 	_mapa3d.atualizar(missao, missao.destinos())

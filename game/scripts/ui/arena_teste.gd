@@ -1,10 +1,10 @@
 extends Control
-## Arena de Teste: primeira cena jogável. Combate tático 2D na grade, usando o motor
-## de regras (CriacaoAgente, Combate, Grade, Membrana). Interface provisória, só para
-## testar as regras — a apresentação 3D low poly vem depois.
+## Combate tático na grade 3D (Arena), com HUD flutuante (docs/09): rodada e ficha no topo,
+## Membrana no centro, último teste à direita, o grupo embaixo e as ações como cartas (1–5).
+## Ritual e Item abrem um bilhete com as opções. Ataques fazem um close rápido no alvo.
 ##
-## Controles: clique num agente/inimigo para ver a ficha; "Mover" e clique numa célula
-## destacada; "Atacar" e clique num inimigo; "Encerrar turno". Foco = PE gastos como +1 d20.
+## Controles: clique num ser para ver a ficha; "Mover" e clique numa célula destacada;
+## "Atacar" e clique num inimigo; "Encerrar". Foco = PE gastos como +1 d20.
 
 const COR_FUNDO := Tema.FUNDO
 const COLUNAS := 14
@@ -48,18 +48,25 @@ var _btn_ritual: Button
 var _btn_enigma: Button
 var _btn_soltar: Button
 var _btn_apagar: Button
-var _opt_item: OptionButton
 var _btn_item_combate: Button
 var _lbl_vez: Label
 var _controles: ControleLocal
 var _cursor := Vector2i.ZERO
 var _cursor_ativo := false
-var _opt_ritual: OptionButton
-var _spin_foco: SpinBox
-var _chk_ae: CheckBox
+var _foco: PassoFoco
+var _chk_ae: Button
+var _mao: Control
+var _cartas: Dictionary = {}
+var _grupo: HBoxContainer
+var _cartoes: Dictionary = {}
+var _bilhete: PanelContainer
+var _caixa_bilhete: VBoxContainer
+var _bilhete_tipo := ""
+var _ritual_sel: Array = []
+var _item_sel := ""
 var _barra_membrana: ProgressBar
 var _lbl_membrana: Label
-var _log: RichTextLabel
+var _log: RelatorioCampo
 var _painel_fim: PanelContainer
 var _lbl_fim: Label
 var _btn_fim: Button
@@ -86,7 +93,7 @@ func _ready() -> void:
 
 
 func _alvos_do_tutorial() -> Dictionary:
-	return {"tabuleiro": _vista, "acoes": _btn_mover.get_parent(), "slots": _titulo_slots, "foco": _spin_foco.get_parent(),
+	return {"tabuleiro": _vista, "acoes": _btn_mover.get_parent(), "slots": _titulo_slots, "foco": _foco.get_parent(),
 		"membrana": _barra_membrana, "encerrar": _btn_encerrar}
 
 
@@ -367,16 +374,16 @@ func _clicar_celula(celula: Vector2i) -> void:
 		_enviar("mover", {"celula": Comandos.vetor(celula)})
 	elif _modo == "granada" and agente != null:
 		_modo = ""
-		_enviar("granada", {"item": _opt_item.get_item_metadata(_opt_item.selected), "celula": Comandos.vetor(celula)})
+		_enviar("granada", {"item": _item_sel, "celula": Comandos.vetor(celula)})
 	elif _modo == "contra" and agente != null and alvo is Ameaca:
 		_modo = ""
-		_enviar("contra", {"alvo": Comandos.ref(combate, alvo), "item": _opt_item.get_item_metadata(_opt_item.selected)})
+		_enviar("contra", {"alvo": Comandos.ref(combate, alvo), "item": _item_sel})
 	elif _modo == "ritual_area" and agente != null:
-		var escolha: Array = _opt_ritual.get_item_metadata(_opt_ritual.selected)
+		var escolha: Array = _ritual_sel
 		_conjurar(agente, escolha[0], escolha[1], alvo, {"celula": celula})
 		return
 	elif _modo == "ritual" and agente != null and alvo != null:
-		var escolha: Array = _opt_ritual.get_item_metadata(_opt_ritual.selected)
+		var escolha: Array = _ritual_sel
 		var opcoes := {}
 		var e := combate.efeito_do_ritual(escolha[0], escolha[1])
 		if e.has("alvos"):
@@ -388,7 +395,9 @@ func _clicar_celula(celula: Vector2i) -> void:
 		if _chk_ae.button_pressed and agente.classe_id == "combatente":
 			opcoes["ataque_especial"] = {"ataque": 5}
 		_modo = ""
-		_enviar("agredir", {"alvo": Comandos.ref(combate, alvo), "foco": int(_spin_foco.value), "opcoes": opcoes})
+		_chk_ae.button_pressed = false
+		_close(alvo, opcoes.has("ataque_especial"))
+		_enviar("agredir", {"alvo": Comandos.ref(combate, alvo), "foco": _foco.consumir(), "opcoes": opcoes})
 	elif alvo != null:
 		_selecionado = alvo
 	_atualizar()
@@ -402,6 +411,8 @@ func _ao_atacar(r: ResultadoAtaque) -> void:
 		txt += " [i](%s)[/i]" % r.reacao
 	if r.acertou:
 		txt += " → [b]%d de dano[/b]%s" % [r.dano, " [color=#e3c27a]CRÍTICO[/color]" if r.critico else ""]
+		if r.critico:
+			Tema.pulso_vhs(_vista, 0.6, 0.45)
 	if r.pe_gasto > 0:
 		txt += " (%d PE)" % r.pe_gasto
 	_registrar(txt)
@@ -431,92 +442,51 @@ func _montar_interface() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(Tema.fundo())
 
-	var raiz := HBoxContainer.new()
-	raiz.set_anchors_preset(Control.PRESET_FULL_RECT)
-	raiz.add_theme_constant_override("separation", 12)
-	add_child(raiz)
-
 	_vista = SubViewportContainer.new()
 	_vista.stretch = true
 	Tema.veu(_vista)
-	_vista.custom_minimum_size = Vector2(680, 0)
-	_vista.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_vista.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var vp := SubViewport.new()
 	vp.msaa_3d = Viewport.MSAA_4X
 	_vista.add_child(vp)
 	_tab3d = Tabuleiro3D.new()
 	vp.add_child(_tab3d)
 	_vista.gui_input.connect(_entrada_tabuleiro)
-	raiz.add_child(_vista)
+	add_child(_vista)
 
-	var painel := VBoxContainer.new()
-	painel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	painel.add_theme_constant_override("separation", 6)
-	raiz.add_child(Tema.painel(painel, true))
-
+	# Topo à esquerda: rodada, vez e a ficha do ser escolhido
+	var topo := PanelContainer.new()
+	topo.position = Vector2(16, 14)
+	topo.custom_minimum_size = Vector2(300, 0)
+	topo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(topo)
+	var vt := VBoxContainer.new()
+	vt.add_theme_constant_override("separation", 3)
+	topo.add_child(vt)
 	_lbl_vez = Label.new()
-	_lbl_vez.add_theme_font_size_override("font_size", 18)
 	_lbl_vez.add_theme_color_override("font_color", Tema.OURO_CLARO)
-	painel.add_child(_lbl_vez)
+	vt.add_child(_lbl_vez)
 	_lbl_turno = Label.new()
-	_lbl_turno.add_theme_font_size_override("font_size", 18)
-	painel.add_child(_lbl_turno)
-
+	_lbl_turno.theme_type_variation = "Titulo"
+	_lbl_turno.add_theme_font_size_override("font_size", Tema.FONTE_G)
+	vt.add_child(_lbl_turno)
 	_lbl_ficha = Label.new()
 	_lbl_ficha.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	painel.add_child(_lbl_ficha)
-
-	_titulo_slots = _titulo("Último teste (slots de d20)")
-	painel.add_child(_titulo_slots)
-	_slots = HBoxContainer.new()
-	painel.add_child(_slots)
-	_lbl_resultado = Label.new()
-	painel.add_child(_lbl_resultado)
-
-	var botoes := HBoxContainer.new()
-	painel.add_child(botoes)
-	_btn_mover = _botao("Mover", _modo_mover)
-	_btn_atacar = _botao("Atacar", _modo_atacar)
-	_btn_encerrar = _botao("Encerrar turno", _encerrar_turno)
-	_btn_item = _botao("Cicatrizante", _usar_cicatrizante)
-	for b in [_btn_mover, _btn_atacar, _btn_item, _btn_encerrar]:
-		botoes.add_child(b)
-	var botoes2 := HBoxContainer.new()
-	painel.add_child(botoes2)
-	_btn_enigma = _botao("Decifrar enigma", _decifrar)
-	_btn_soltar = _botao("Soltar-se", _soltar)
-	botoes2.add_child(_btn_enigma)
-	botoes2.add_child(_btn_soltar)
-	_btn_apagar = _botao("Apagar chamas", _apagar)
-	botoes2.add_child(_btn_apagar)
-	var linha_item := HBoxContainer.new()
-	painel.add_child(linha_item)
-	_opt_item = OptionButton.new()
-	_opt_item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	linha_item.add_child(_opt_item)
-	_btn_item_combate = _botao("Usar item", _modo_item)
-	linha_item.add_child(_btn_item_combate)
-	var linha_ritual := HBoxContainer.new()
-	painel.add_child(linha_ritual)
-	_opt_ritual = OptionButton.new()
-	_opt_ritual.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_opt_ritual.clip_text = true
-	linha_ritual.add_child(_opt_ritual)
-	_btn_ritual = _botao("Conjurar", _modo_ritual)
-	linha_ritual.add_child(_btn_ritual)
-
+	_lbl_ficha.custom_minimum_size = Vector2(300, 0)
+	_lbl_ficha.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	vt.add_child(_lbl_ficha)
 	# Modo Mestre (Fase 8.3): só aparece na máquina do mestre, na vez de uma ameaça
 	_caixa_mestre = VBoxContainer.new()
 	_caixa_mestre.visible = false
-	painel.add_child(_caixa_mestre)
+	vt.add_child(_caixa_mestre)
 	_lbl_mestre = Label.new()
 	_lbl_mestre.add_theme_color_override("font_color", Tema.MESTRE)
 	_caixa_mestre.add_child(_lbl_mestre)
 	var linha_m := HBoxContainer.new()
 	_caixa_mestre.add_child(linha_m)
 	linha_m.add_child(_botao("Mover", _modo_mestre.bind("m_mover")))
-	linha_m.add_child(_botao("IA joga o turno", _ia_mestre))
-	linha_m.add_child(_botao("Encerrar turno", _encerrar_mestre))
+	linha_m.add_child(_botao("IA joga", _ia_mestre))
+	linha_m.add_child(_botao("Encerrar", _encerrar_mestre))
 	var linha_m2 := HBoxContainer.new()
 	_caixa_mestre.add_child(linha_m2)
 	_opt_ataque_m = OptionButton.new()
@@ -532,45 +502,286 @@ func _montar_interface() -> void:
 	linha_m3.add_child(_opt_hab_m)
 	linha_m3.add_child(_botao("Usar", _modo_mestre.bind("m_habilidade")))
 
-	var opcoes := HBoxContainer.new()
-	painel.add_child(opcoes)
-	var lbl_foco := Label.new()
-	lbl_foco.text = "Foco (PE → +1 d20):"
-	opcoes.add_child(lbl_foco)
-	_spin_foco = SpinBox.new()
-	_spin_foco.min_value = 0
-	_spin_foco.max_value = 0
-	opcoes.add_child(_spin_foco)
-	_chk_ae = CheckBox.new()
-	_chk_ae.text = "Ataque Especial (+5, 2 PE)"
-	opcoes.add_child(_chk_ae)
-
-	painel.add_child(_titulo("Membrana"))
+	# Topo central: a Membrana
+	var mem := PanelContainer.new()
+	mem.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 14)
+	mem.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	mem.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(mem)
+	var hm := HBoxContainer.new()
+	hm.add_theme_constant_override("separation", Tema.ESPACO_M)
+	mem.add_child(hm)
+	var sig := Sigilo.new()
+	sig.semente = 666
+	sig.cor = Tema.SANGUE_CLARO
+	sig.custom_minimum_size = Vector2(40, 40)
+	hm.add_child(sig)
+	var vm := VBoxContainer.new()
+	vm.add_theme_constant_override("separation", 2)
+	hm.add_child(vm)
+	var tm := Label.new()
+	tm.text = "MEMBRANA"
+	tm.theme_type_variation = "Subtitulo"
+	vm.add_child(tm)
 	_barra_membrana = ProgressBar.new()
 	_barra_membrana.max_value = 100
-	_barra_membrana.custom_minimum_size = Vector2(0, 18)
-	painel.add_child(_barra_membrana)
+	_barra_membrana.show_percentage = false
+	_barra_membrana.custom_minimum_size = Vector2(240, 14)
+	vm.add_child(_barra_membrana)
 	_lbl_membrana = Label.new()
-	painel.add_child(_lbl_membrana)
+	_lbl_membrana.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	vm.add_child(_lbl_membrana)
 
-	painel.add_child(_titulo("Registro"))
-	_log = RichTextLabel.new()
-	_log.bbcode_enabled = true
-	_log.scroll_following = true
-	_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	painel.add_child(_log)
+	# Grupo embaixo à esquerda
+	_grupo = HBoxContainer.new()
+	_grupo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_grupo.add_theme_constant_override("separation", Tema.ESPACO_M)
+	_grupo.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, Tema.ESPACO_G)
+	_grupo.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	add_child(_grupo)
+
+	# Último teste: slots de d20 no alto, à direita (o momento "vai dar o 20?")
+	var teste := VBoxContainer.new()
+	teste.anchor_left = 1.0
+	teste.anchor_right = 1.0
+	teste.offset_left = -360
+	teste.offset_right = -70
+	teste.offset_top = 16
+	teste.alignment = BoxContainer.ALIGNMENT_BEGIN
+	teste.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(teste)
+	_titulo_slots = _titulo("Último teste")
+	_titulo_slots.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	teste.add_child(_titulo_slots)
+	_slots = HBoxContainer.new()
+	_slots.alignment = BoxContainer.ALIGNMENT_END
+	_slots.add_theme_constant_override("separation", 6)
+	teste.add_child(_slots)
+	_lbl_resultado = Label.new()
+	_lbl_resultado.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_lbl_resultado.add_theme_constant_override("outline_size", 6)
+	_lbl_resultado.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	teste.add_child(_lbl_resultado)
+
+	# Cartas de ação, embaixo à direita (1–5)
+	_mao = Control.new()
+	_mao.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mao.anchor_left = 1.0
+	_mao.anchor_right = 1.0
+	_mao.anchor_top = 1.0
+	_mao.anchor_bottom = 1.0
+	var largura_carta := 112.0
+	_mao.offset_left = -5 * (largura_carta + 8) - 16
+	_mao.offset_right = -16
+	_mao.offset_top = -150 - 46
+	_mao.offset_bottom = -46
+	add_child(_mao)
+	var defs := [["mover", "Mover", "Clique numa célula azul", Tema.INFO, _modo_mover],
+		["atacar", "Atacar", "Clique num inimigo marcado", Tema.SANGUE_CLARO, _modo_atacar],
+		["ritual", "Ritual", "Conjurar com PE", Tema.ELEMENTO.energia, _abrir_bilhete.bind("ritual")],
+		["item", "Item", "Cicatrizante e itens de combate", Tema.OURO, _abrir_bilhete.bind("item")],
+		["encerrar", "Encerrar", "Passa a vez", Tema.ELEMENTO.morte, _encerrar_turno]]
+	for i in defs.size():
+		var d: Array = defs[i]
+		var carta := CartaAcao.criar(d[1], d[2], i + 1, 211 + i * 53, d[3])
+		carta.custom_minimum_size = Vector2(largura_carta, 150)
+		carta.size = carta.custom_minimum_size
+		carta._sigilo.custom_minimum_size = Vector2(0, 62)
+		carta.position = Vector2(i * (largura_carta + 8), 0)
+		carta.pressed.connect(d[4])
+		_mao.add_child(carta)
+		_cartas[d[0]] = carta
+	_btn_mover = _cartas.mover
+	_btn_atacar = _cartas.atacar
+	_btn_ritual = _cartas.ritual
+	_btn_item = _cartas.item
+	_btn_encerrar = _cartas.encerrar
+
+	# Acima das cartas: Foco, Ataque Especial e as ações de situação
+	var extras := HBoxContainer.new()
+	extras.anchor_left = 1.0
+	extras.anchor_right = 1.0
+	extras.anchor_top = 1.0
+	extras.anchor_bottom = 1.0
+	extras.offset_left = _mao.offset_left
+	extras.offset_right = -16
+	extras.offset_top = _mao.offset_top - 48
+	extras.offset_bottom = _mao.offset_top - 10
+	extras.alignment = BoxContainer.ALIGNMENT_END
+	extras.add_theme_constant_override("separation", Tema.ESPACO_M)
+	add_child(extras)
+	var caixa_foco := PanelContainer.new()
+	extras.add_child(caixa_foco)
+	_foco = PassoFoco.criar()
+	caixa_foco.add_child(_foco)
+	_chk_ae = Button.new()
+	_chk_ae.text = "✦ Ataque Especial (+5, 2 PE)"
+	_chk_ae.toggle_mode = true
+	_chk_ae.tooltip_text = "Combatente: +5 no ataque por 2 PE"
+	extras.add_child(_chk_ae)
+	_btn_enigma = _botao("Decifrar enigma", _decifrar)
+	_btn_soltar = _botao("Soltar-se", _soltar)
+	_btn_apagar = _botao("Apagar chamas", _apagar)
+	for b in [_btn_enigma, _btn_soltar, _btn_apagar]:
+		b.theme_type_variation = "BotaoPrincipal"
+		extras.add_child(b)
+
+	# Bilhete de rituais e itens (acima dos retratos do grupo)
+	_bilhete = PanelContainer.new()
+	_bilhete.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(16, 14)))
+	_bilhete.anchor_top = 1.0
+	_bilhete.anchor_bottom = 1.0
+	_bilhete.offset_left = 16
+	_bilhete.offset_right = 16 + 380
+	_bilhete.offset_bottom = -128
+	_bilhete.offset_top = -128
+	_bilhete.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_bilhete.rotation_degrees = -0.8
+	_bilhete.visible = false
+	add_child(_bilhete)
+	_caixa_bilhete = VBoxContainer.new()
+	_caixa_bilhete.add_theme_constant_override("separation", 6)
+	_bilhete.add_child(_caixa_bilhete)
+
+	_log = RelatorioCampo.new()
+	_log.ancorar_embaixo_direita(5 * (largura_carta + 8) - 8)
+	add_child(_log)
 
 	_painel_fim = PanelContainer.new()
 	_painel_fim.visible = false
-	_painel_fim.set_anchors_preset(Control.PRESET_CENTER)
+	_painel_fim.add_theme_stylebox_override("panel", MolduraRiscada.criar(Tema.OURO_CLARO, Color(Tema.FUNDO, 0.95), Vector2(32, 24)))
+	_painel_fim.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_painel_fim.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_painel_fim.grow_vertical = Control.GROW_DIRECTION_BOTH
 	var caixa := VBoxContainer.new()
+	caixa.add_theme_constant_override("separation", Tema.ESPACO_G)
 	_painel_fim.add_child(caixa)
 	_lbl_fim = Label.new()
-	_lbl_fim.add_theme_font_size_override("font_size", 28)
+	_lbl_fim.theme_type_variation = "Titulo"
+	_lbl_fim.add_theme_font_size_override("font_size", Tema.FONTE_TITULO + 8)
 	caixa.add_child(_lbl_fim)
 	_btn_fim = _botao("Jogar de novo", _reiniciar)
+	_btn_fim.theme_type_variation = "BotaoPrincipal"
 	caixa.add_child(_btn_fim)
 	add_child(_painel_fim)
+
+
+## Bilhete de opções de Ritual ou Item (docs/09: cartas e pastas).
+func _abrir_bilhete(tipo: String) -> void:
+	_bilhete_tipo = "" if _bilhete_tipo == tipo else tipo
+	_montar_bilhete()
+
+
+func _montar_bilhete() -> void:
+	for filho in _caixa_bilhete.get_children():
+		filho.visible = false
+		filho.queue_free()
+	var agente := _agente_da_vez()
+	_bilhete.visible = _bilhete_tipo != "" and agente != null and not combate.encerrado
+	for k in _cartas:
+		_cartas[k].selecionada = (k == _bilhete_tipo and _bilhete.visible) or (k == _modo)
+	if not _bilhete.visible:
+		return
+	_bilhete.offset_top = _bilhete.offset_bottom
+	var titulo := Label.new()
+	titulo.theme_type_variation = "TextoPapel"
+	titulo.add_theme_font_size_override("font_size", Tema.FONTE_G)
+	var f := Tema.fonte_titulo()
+	if f != null:
+		titulo.add_theme_font_override("font", f)
+	_caixa_bilhete.add_child(titulo)
+	if _bilhete_tipo == "ritual":
+		titulo.text = "Rituais"
+		var opcoes := _rituais_disponiveis(agente)
+		if opcoes.is_empty():
+			_texto_papel("%s não conhece rituais que possa conjurar agora." % agente.nome)
+		for o in opcoes:
+			var b := _botao_papel(o[2], o[0] == _ritual_sel)
+			b.pressed.connect(func():
+				_ritual_sel = o[0]
+				_bilhete_tipo = ""
+				_modo_ritual())
+	else:
+		titulo.text = "Itens"
+		var n := agente.equipamento.count("cicatrizante")
+		var cic := _botao_papel("Cicatrizante (%d) — cura você ou o aliado vizinho mais ferido" % n, false)
+		cic.disabled = n == 0
+		cic.pressed.connect(func():
+			_bilhete_tipo = ""
+			_usar_cicatrizante()
+			_montar_bilhete())
+		for it in _itens_de_combate(agente):
+			var b := _botao_papel(it[1], false)
+			b.pressed.connect(func():
+				_item_sel = it[0]
+				_bilhete_tipo = ""
+				_modo_item())
+
+
+func _texto_papel(texto: String) -> void:
+	var l := Label.new()
+	l.text = texto
+	l.theme_type_variation = "TextoPapel"
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_caixa_bilhete.add_child(l)
+
+
+func _botao_papel(texto: String, marcado: bool) -> Button:
+	var b := Button.new()
+	b.text = texto
+	b.theme_type_variation = "BotaoPapel"
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	b.toggle_mode = true
+	b.button_pressed = marcado
+	_caixa_bilhete.add_child(b)
+	return b
+
+
+## [[rid, forma], forma, texto] dos rituais que o agente pode conjurar.
+func _rituais_disponiveis(agente: Agente) -> Array:
+	var lista: Array = []
+	for rid in agente.rituais:
+		var rr := ruleset.ritual(rid)
+		if not rr.get("implementado", false):
+			continue
+		for forma in [""] + rr.get("formas", {}).keys():
+			if forma != "":
+				var fm: Dictionary = rr.formas[forma]
+				if int(fm.get("circulo", 1)) > agente.circulo_maximo() or (fm.get("afinidade", false) and agente.afinidade != rr.elemento):
+					continue
+			lista.append([[rid, forma], forma, "%s%s · %d PE" % [rr.nome, "" if forma == "" else " — " + forma, agente.custo_ritual(rid, forma)]])
+	return lista
+
+
+## [item_id, texto] dos itens de combate (explosivos e itens contra criaturas).
+func _itens_de_combate(agente: Agente) -> Array:
+	var lista: Array = []
+	var vistos := {}
+	for item_id in agente.equipamento:
+		var info := ruleset.equipamento(item_id)
+		if vistos.has(item_id) or not (info.has("explosivo") or info.get("contra", "") != ""):
+			continue
+		vistos[item_id] = true
+		lista.append([item_id, "%s (%d)" % [info.nome, agente.equipamento.count(item_id)]])
+	return lista
+
+
+## Close cinematográfico (docs/09, combate híbrido): a câmera aproxima do alvo por um instante.
+func _close(alvo: Ser, forte: bool = false) -> void:
+	if autoplay or _tab3d == null or _tab3d.rig == null or not is_inside_tree() or not grade.tem(alvo):
+		return
+	var rig := _tab3d.rig
+	var alvo_antes := rig.alvo
+	var dist_antes := rig.distancia
+	rig.focar(_tab3d.posicao(grade.posicao(alvo)))
+	rig.distancia = maxf(rig.distancia_min, dist_antes * 0.55)
+	if forte:
+		Tema.pulso_vhs(_vista, 0.7, 0.5)
+	await get_tree().create_timer(0.9).timeout
+	if is_instance_valid(rig):
+		rig.alvo = alvo_antes
+		rig.distancia = dist_antes
 
 
 func _modo_mover() -> void:
@@ -599,9 +810,9 @@ func _usar_cicatrizante() -> void:
 ## os outros, o clique no alvo (com vários alvos, vale o lado do alvo clicado).
 func _modo_ritual() -> void:
 	var agente := _agente_da_vez()
-	if agente == null or _opt_ritual.selected < 0:
+	if agente == null or _ritual_sel.is_empty():
 		return
-	var escolha: Array = _opt_ritual.get_item_metadata(_opt_ritual.selected)
+	var escolha: Array = _ritual_sel
 	var e := combate.efeito_do_ritual(escolha[0], escolha[1])
 	var nome: String = ruleset.ritual(escolha[0]).nome
 	if e.has("area") and e.area.forma == "explosao" or (not e.has("area") and String(e.get("alcance", "")).begins_with("pessoal")):
@@ -636,6 +847,8 @@ func _conjurar(_agente: Agente, rid: String, forma: String, alvo: Ser, opcoes: D
 	if opcoes.has("alvos"):
 		op["alvos"] = opcoes.alvos.map(func(x): return Comandos.ref(combate, x))
 	_modo = ""
+	if alvo != null:
+		_close(alvo, true)
 	_enviar("conjurar", {"ritual": rid, "forma": forma, "alvo": Comandos.ref(combate, alvo), "opcoes": op})
 
 
@@ -657,9 +870,9 @@ func _decifrar() -> void:
 ## Granadas pedem um ponto; itens contra criaturas (fertilizante…) pedem a criatura.
 func _modo_item() -> void:
 	var agente := _agente_da_vez()
-	if agente == null or _opt_item.selected < 0:
+	if agente == null or _item_sel == "":
 		return
-	var info := ruleset.equipamento(_opt_item.get_item_metadata(_opt_item.selected))
+	var info := ruleset.equipamento(_item_sel)
 	_modo = "granada" if info.has("explosivo") else "contra"
 	_registrar("Escolha %s para %s." % ["o ponto" if _modo == "granada" else "a criatura", info.nome])
 	_atualizar()
@@ -711,29 +924,13 @@ func _atualizar() -> void:
 		_lbl_turno.text = "Combate encerrado — rodada %d" % combate.rodada
 	elif atual != null:
 		var a := combate.acoes_restantes(atual)
-		_lbl_turno.text = "Rodada %d — vez de %s  (padrão %d, movimento %d)" % [combate.rodada, atual.nome, a.padrao, a.movimento]
+		_lbl_turno.text = "Rodada %d · %s" % [combate.rodada, atual.nome]
+		_lbl_turno.tooltip_text = "Ações: padrão %d, movimento %d" % [a.padrao, a.movimento]
 	_lbl_ficha.text = _ficha(_selecionado if _selecionado != null else atual)
 	_btn_mover.disabled = agente == null
 	_btn_atacar.disabled = agente == null
 	_btn_encerrar.disabled = agente == null
-	_btn_item.disabled = agente == null or not agente.tem_item("cicatrizante")
-	var selecionado_antes = _opt_ritual.get_item_metadata(_opt_ritual.selected) if _opt_ritual.selected >= 0 else []
-	_opt_ritual.clear()
-	if agente != null:
-		for rid in agente.rituais:
-			var rr := ruleset.ritual(rid)
-			if not rr.get("implementado", false):
-				continue
-			for forma in [""] + rr.get("formas", {}).keys():
-				if forma != "":
-					var f: Dictionary = rr.formas[forma]
-					if int(f.get("circulo", 1)) > agente.circulo_maximo() or (f.get("afinidade", false) and agente.afinidade != rr.elemento):
-						continue
-				_opt_ritual.add_item("%s%s (%d PE)" % [rr.nome, "" if forma == "" else " — " + forma, agente.custo_ritual(rid, forma)])
-				_opt_ritual.set_item_metadata(_opt_ritual.item_count - 1, [rid, forma])
-				if [rid, forma] == selecionado_antes:
-					_opt_ritual.select(_opt_ritual.item_count - 1)
-	_btn_ritual.disabled = agente == null or _opt_ritual.item_count == 0
+	_btn_ritual.disabled = agente == null or _rituais_disponiveis(agente).is_empty()
 	var com_enigma := _criatura_com_enigma()
 	_btn_enigma.visible = com_enigma != null
 	if com_enigma != null:
@@ -741,30 +938,38 @@ func _atualizar() -> void:
 	_btn_enigma.disabled = agente == null
 	_btn_soltar.visible = agente != null and agente.tem(Ser.AGARRADO)
 	_btn_apagar.visible = agente != null and agente.tem(Ser.EM_CHAMAS)
-	var item_antes = _opt_item.get_item_metadata(_opt_item.selected) if _opt_item.selected >= 0 else ""
-	_opt_item.clear()
-	if agente != null:
-		var vistos := {}
-		for item_id in agente.equipamento:
-			var info := ruleset.equipamento(item_id)
-			if vistos.has(item_id) or not (info.has("explosivo") or info.get("contra", "") != ""):
-				continue
-			vistos[item_id] = true
-			_opt_item.add_item("%s (%d)" % [info.nome, agente.equipamento.count(item_id)])
-			_opt_item.set_item_metadata(_opt_item.item_count - 1, item_id)
-			if item_id == item_antes:
-				_opt_item.select(_opt_item.item_count - 1)
-	_opt_item.get_parent().visible = _opt_item.item_count > 0
-	_opt_ritual.get_parent().visible = _opt_ritual.item_count > 0
-	_btn_item.text = "Cicatrizante (%d)" % (agente.equipamento.count("cicatrizante") if agente != null else 0)
-	_spin_foco.max_value = agente.pe_disponivel_no_turno() if agente != null else 0
+	_btn_item.disabled = agente == null or (not agente.tem_item("cicatrizante") and _itens_de_combate(agente).is_empty())
+	_foco.definir(_foco.valor, agente.pe_disponivel_no_turno() if agente != null else 0)
 	_chk_ae.visible = agente != null and agente.classe_id == "combatente"
 	_barra_membrana.value = membrana.valor
 	Tema.membrana_na_tela(_vista, membrana.valor)
 	_lbl_membrana.text = "%d — %s" % [membrana.valor, membrana.estado().get("nome", "")]
 	_atualizar_mestre()
 	_desenhar_slots()
+	_atualizar_grupo()
+	if _bilhete_tipo != "" or _bilhete.visible:
+		_montar_bilhete()
+	for k in _cartas:
+		_cartas[k].selecionada = k == _modo or k == _bilhete_tipo
 	_atualizar_3d()
+
+
+func _atualizar_grupo() -> void:
+	var i := 0
+	var vez := combate.ser_atual()
+	for s in combate.participantes:
+		if not s is Agente:
+			continue
+		var c: CartaoAgente = _cartoes.get(s)
+		if c == null:
+			c = CartaoAgente.criar(s, Tema.CORES_JOGADORES[i % Tema.CORES_JOGADORES.size()])
+			c.custom_minimum_size.x = 150
+			_grupo.add_child(c)
+			_cartoes[s] = c
+		c.visible = not s.tem(Ser.MORTO)
+		if c.visible:
+			c.atualizar(s == vez)
+		i += 1
 
 
 # --- Modo Mestre (Fase 8.3) ------------------------------------------------------
