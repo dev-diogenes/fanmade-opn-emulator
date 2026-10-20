@@ -50,3 +50,23 @@ static func registrar_tour(tela: String, evento: String, passo: int = 0) -> void
 
 static func estatisticas() -> Dictionary:
 	return ler().get("estatisticas_tutorial", {})
+
+
+## Efeitos visuais de terror (docs/10, acessibilidade): "grao" (granulação e vinheta),
+## "glitch" (pulsos de VHS e tremor do logo), "transicoes" (estática entre telas).
+## Todos ligados por padrão. A leitura é cacheada: os efeitos consultam a cada quadro.
+static var _efeitos_cache: Dictionary = {}
+
+static func efeito(nome: String) -> bool:
+	if _efeitos_cache.is_empty():
+		_efeitos_cache = ler().get("efeitos", {})
+	return bool(_efeitos_cache.get(nome, true))
+
+
+static func definir_efeito(nome: String, valor: bool) -> void:
+	var d := ler()
+	var e: Dictionary = d.get("efeitos", {})
+	e[nome] = valor
+	d["efeitos"] = e
+	gravar(d)
+	_efeitos_cache = e

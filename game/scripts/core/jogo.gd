@@ -37,6 +37,8 @@ var missao: Missao:
 func _ready() -> void:
 	_modo_captura()
 	Tema.aplicar()
+	# Toda tela nova entra com estática e o nome do arquivo datilografado (docs/10)
+	get_tree().node_added.connect(_ao_entrar_no)
 	Entrada.configurar()
 	rede = Rede.new()
 	rede.name = "Rede"
@@ -53,6 +55,14 @@ func _ready() -> void:
 	rede.controles_recebidos.connect(_ao_receber_controles)
 	rede.conexao_perdida.connect(_ao_perder_conexao)
 	rede.aviso.connect(func(t): aviso_rede = t)
+
+
+func _ao_entrar_no(no: Node) -> void:
+	if no.get_parent() != get_tree().root or no.scene_file_path == "" or not Preferencias.efeito("transicoes"):
+		return
+	if not no.scene_file_path.begins_with("res://scenes/"):
+		return
+	get_tree().root.add_child.call_deferred(Transicao.new(Transicao.para_cena(no.scene_file_path)))
 
 
 ## Captura de tela para a documentação: `godot --path game <cena> -- --captura=arquivo.png`.

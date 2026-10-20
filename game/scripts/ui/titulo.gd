@@ -7,8 +7,10 @@ const VELOCIDADE_GIRO := 0.06   ## radianos por segundo
 var _jogo: Node
 var _mapa3d: Mapa3D
 var _menu: VBoxContainer
-var _confirmar: ConfirmationDialog
 var _sigilo: Sigilo
+var _logo: Label
+var _ecos_logo: Array[Label] = []
+var _proxima_falha := 3.0
 
 
 func _ready() -> void:
@@ -23,6 +25,22 @@ func _process(delta: float) -> void:
 		_mapa3d.rig.girar(delta * VELOCIDADE_GIRO)
 	if _sigilo != null:
 		_sigilo.rotation += delta * 0.03
+	_proxima_falha -= delta
+	if _proxima_falha <= 0.0 and _logo != null and Preferencias.efeito("glitch"):
+		_proxima_falha = randf_range(4.0, 9.0)
+		_falha_no_logo()
+
+
+func _falha_no_logo() -> void:
+	var tw := create_tween()
+	for passo in 4:
+		tw.tween_callback(func():
+			for i in _ecos_logo.size():
+				var e := _ecos_logo[i]
+				e.visible = passo < 3
+				e.size = _logo.size
+				e.position = Vector2(randf_range(-7, 7) * (1 if i == 0 else -1), randf_range(-2, 2)))
+		tw.tween_interval(0.05)
 
 
 func _montar_diorama() -> void:
@@ -113,6 +131,16 @@ func _montar_menu() -> void:
 	logo.add_theme_constant_override("outline_size", 10)
 	logo.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	coluna.add_child(logo)
+	# Falha de fita no logo, de tempos em tempos: cópias vermelha e ciano deslocadas
+	for cor in [Color(1, 0.1, 0.15, 0.7), Color(0.2, 0.9, 1, 0.55)]:
+		var eco := logo.duplicate() as Label
+		eco.add_theme_color_override("font_color", cor)
+		eco.add_theme_constant_override("outline_size", 0)
+		eco.visible = false
+		eco.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		logo.add_child(eco)
+		_ecos_logo.append(eco)
+	_logo = logo
 	var fio := ColorRect.new()
 	fio.color = Tema.SANGUE_CLARO
 	fio.custom_minimum_size = Vector2(320, 3)
@@ -146,13 +174,6 @@ func _montar_menu() -> void:
 	rodape.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	coluna.add_child(rodape)
 
-	_confirmar = ConfirmationDialog.new()
-	_confirmar.title = "Nova carreira"
-	_confirmar.dialog_text = "Começar uma carreira nova apaga o save atual (agentes, memorial e missão em andamento). Continuar?"
-	_confirmar.ok_button_text = "Apagar e começar"
-	_confirmar.cancel_button_text = "Voltar"
-	_confirmar.confirmed.connect(_nova_carreira)
-	add_child(_confirmar)
 
 
 func _botao(texto: String, acao: Callable) -> Button:
@@ -191,7 +212,7 @@ func _continuar() -> void:
 
 func _pedir_nova_carreira() -> void:
 	if Carreira.existe_save():
-		_confirmar.popup_centered()
+		DialogoPapel.perguntar(self, "Nova carreira", "Começar uma carreira nova apaga o save atual: agentes, memorial e a missão em andamento. Não dá para desfazer.", "Apagar e começar", _nova_carreira)
 	else:
 		_nova_carreira()
 

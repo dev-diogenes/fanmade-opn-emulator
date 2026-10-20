@@ -12,6 +12,7 @@
 | [07-tutorial.md](07-tutorial.md) | Tutorial (tour guiado), personas e plano de validação nos playtests |
 | [08-direcao-de-arte-e-ux.md](08-direcao-de-arte-e-ux.md) | Auditoria do sistema de design, crítica, pesquisa, brainstorm e spec visual (FTK2 + OP) |
 | [09-identidade-visual-op.md](09-identidade-visual-op.md) | Identidade visual de OP: estética por contexto, crítica e handoff (piloto: Investigação) |
+| [10-terror-e-menus.md](10-terror-e-menus.md) | Transições, diálogos em papel, briefing, relatórios carimbados, pausa e ajustes de efeitos |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

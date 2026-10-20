@@ -327,7 +327,8 @@ func _montar_interface() -> void:
 	chk_tutorial.button_pressed = Preferencias.perguntar_tutorial()
 	chk_tutorial.toggled.connect(func(v): Preferencias.definir_perguntar_tutorial(v))
 	cj.add_child(chk_tutorial)
-	var apagar := _botao("Nova carreira (apaga o save)", _nova_carreira)
+	var apagar := _botao("Nova carreira (apaga o save)", func():
+		DialogoPapel.perguntar(self, "Nova carreira", "Isso apaga o save atual: agentes, memorial e a missão em andamento. Não dá para desfazer.", "Apagar e começar", _nova_carreira))
 	apagar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	cj.add_child(apagar)
 

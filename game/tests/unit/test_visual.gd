@@ -174,3 +174,58 @@ func test_ameacas_tem_figura():
 		var f := Pecas.ameaca(a)
 		add_child_autofree(f)
 		assert_gt(f.get_child_count(), 0, id)
+
+
+func test_dialogo_papel_confirma_e_cancela():
+	var resultado := []
+	var d := DialogoPapel.perguntar(self, "Teste", "Apagar?", "Sim", func(): resultado.append("sim"))
+	d._responder(true)
+	assert_eq(resultado, ["sim"])
+	var d2 := DialogoPapel.perguntar(self, "Teste", "Apagar?", "Sim", func(): resultado.append("de novo"))
+	d2._responder(false)
+	assert_eq(resultado, ["sim"], "voltar não confirma")
+	await wait_frames(1)
+
+
+func test_relatorio_fim_mostra_carimbo_e_resumo():
+	var r := RelatorioFim.new("Voltar")
+	add_child_autofree(r)
+	assert_false(r.aberto)
+	r.mostrar("CASO ENCERRADO", ["Linha 1", "Linha 2"], true)
+	assert_true(r.aberto)
+	assert_true(r.rotulo.is_visible_in_tree(), "o carimbo aparece junto com a folha")
+	assert_eq(r.rotulo.text, "CASO ENCERRADO")
+	assert_eq(r._resumo.text, "Linha 1\nLinha 2")
+
+
+func test_preferencias_de_efeitos_e_pausa():
+	var antes := Preferencias.caminho
+	Preferencias.caminho = "user://teste_preferencias_efeitos.json"
+	Preferencias._efeitos_cache = {}
+	assert_true(Preferencias.efeito("grao"), "ligado por padrão")
+	Preferencias.definir_efeito("grao", false)
+	assert_false(Preferencias.efeito("grao"))
+	var m := MenuPausa.abrir(self)
+	assert_true(MenuPausa.aberto(self))
+	assert_eq(m._ajustes.get_child_count(), 3)
+	m.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Preferencias.caminho))
+	Preferencias.caminho = antes
+	Preferencias._efeitos_cache = {}
+
+
+func test_transicao_some_sozinha():
+	var t := Transicao.new(Transicao.para_cena("res://scenes/mapa_mundo.tscn"))
+	assert_eq(t._texto.text, "OPERAÇÃO EM CAMPO")
+	add_child(t)
+	await wait_seconds(1.6)
+	assert_false(is_instance_valid(t), "a estática se desfaz")
+
+
+func test_barra_membrana_racha():
+	var b := BarraMembrana.new()
+	b.size = Vector2(200, 14)
+	add_child_autofree(b)
+	b.value = 20
+	await wait_frames(2)
+	assert_eq(b.value, 20.0)

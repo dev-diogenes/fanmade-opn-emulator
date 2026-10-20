@@ -67,7 +67,7 @@ var _item_sel := ""
 var _barra_membrana: ProgressBar
 var _lbl_membrana: Label
 var _log: RelatorioCampo
-var _painel_fim: PanelContainer
+var _painel_fim: RelatorioFim
 var _lbl_fim: Label
 var _btn_fim: Button
 var _titulo_slots: Label
@@ -426,9 +426,15 @@ func _ao_encerrar(vencedor: String) -> void:
 	if _btn_fim != null and not config.is_empty():
 		_btn_fim.text = "Voltar ao mapa"
 	_registrar("[b]%s[/b]" % texto)
-	if _lbl_fim != null:
-		_lbl_fim.text = texto
-		_painel_fim.visible = true
+	if _painel_fim != null:
+		var caidos := combate.participantes.filter(func(x): return x.lado != "agentes" and x.esta_fora_de_combate()).size()
+		var inimigos := combate.participantes.filter(func(x): return x.lado != "agentes").size()
+		var feridos := combate.participantes.filter(func(x): return x is Agente and x.esta_fora_de_combate()).size()
+		var linhas := ["Confronto encerrado na rodada %d." % combate.rodada,
+			"Ameaças neutralizadas: %d de %d." % [caidos, inimigos],
+			"Agentes caídos: %d." % feridos,
+			"Membrana ao fim do confronto: %d." % membrana.valor]
+		_painel_fim.mostrar(texto, linhas, vencedor == "agentes")
 
 
 func _registrar(texto: String) -> void:
@@ -523,7 +529,7 @@ func _montar_interface() -> void:
 	tm.text = "MEMBRANA"
 	tm.theme_type_variation = "Subtitulo"
 	vm.add_child(tm)
-	_barra_membrana = ProgressBar.new()
+	_barra_membrana = BarraMembrana.new()
 	_barra_membrana.max_value = 100
 	_barra_membrana.show_percentage = false
 	_barra_membrana.custom_minimum_size = Vector2(240, 14)
@@ -647,22 +653,10 @@ func _montar_interface() -> void:
 	_log.ancorar_embaixo_direita(5 * (largura_carta + 8) - 8)
 	add_child(_log)
 
-	_painel_fim = PanelContainer.new()
-	_painel_fim.visible = false
-	_painel_fim.add_theme_stylebox_override("panel", MolduraRiscada.criar(Tema.OURO_CLARO, Color(Tema.FUNDO, 0.95), Vector2(32, 24)))
-	_painel_fim.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	_painel_fim.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_painel_fim.grow_vertical = Control.GROW_DIRECTION_BOTH
-	var caixa := VBoxContainer.new()
-	caixa.add_theme_constant_override("separation", Tema.ESPACO_G)
-	_painel_fim.add_child(caixa)
-	_lbl_fim = Label.new()
-	_lbl_fim.theme_type_variation = "Titulo"
-	_lbl_fim.add_theme_font_size_override("font_size", Tema.FONTE_TITULO + 8)
-	caixa.add_child(_lbl_fim)
-	_btn_fim = _botao("Jogar de novo", _reiniciar)
-	_btn_fim.theme_type_variation = "BotaoPrincipal"
-	caixa.add_child(_btn_fim)
+	_painel_fim = RelatorioFim.new("Jogar de novo")
+	_painel_fim.botao.pressed.connect(_reiniciar)
+	_lbl_fim = _painel_fim.rotulo
+	_btn_fim = _painel_fim.botao
 	add_child(_painel_fim)
 
 
@@ -1074,6 +1068,15 @@ func _entrada_tabuleiro(evento: InputEvent) -> void:
 
 
 func _unhandled_input(evento: InputEvent) -> void:
+	if evento.is_action_pressed("ui_cancel") and not autoplay and not MenuPausa.aberto(self) and not TourGuiado.em_andamento():
+		get_viewport().set_input_as_handled()
+		if _bilhete_tipo != "" or _modo != "":
+			_bilhete_tipo = ""
+			_modo = ""
+			_atualizar()
+		else:
+			MenuPausa.abrir(self)   # no meio do combate não há saída: o estado não é salvo
+		return
 	if _tab3d != null and _tab3d.rig != null and evento is InputEventKey and _tab3d.rig.tratar_entrada(evento):
 		get_viewport().set_input_as_handled()
 

@@ -365,7 +365,9 @@ static func veu(vista: SubViewportContainer) -> void:
 static func membrana_na_tela(vista: SubViewportContainer, valor: int) -> void:
 	var m := vista.material as ShaderMaterial
 	if m != null:
-		m.set_shader_parameter("intensidade", clampf((100.0 - valor) / 75.0, 0.0, 1.0))
+		var ligado := Preferencias.efeito("grao")
+		m.set_shader_parameter("intensidade", clampf((100.0 - valor) / 75.0, 0.0, 1.0) if ligado else 0.0)
+		m.set_shader_parameter("grao", 1.0 if ligado else 0.0)
 
 
 ## Textura procedural (cache): "papel" (manchas suaves) ou "cortica" (grãos escuros).
@@ -415,10 +417,20 @@ static func caixa_papel(margem := Vector2(12, 10)) -> StyleBoxTexture:
 ## Pulso de VHS na vista (docs/09, 5.3): pista encontrada = 0.8/0.6 s; falha = 0.35/0.3 s.
 static func pulso_vhs(vista: SubViewportContainer, forca: float = 0.8, duracao: float = 0.6) -> void:
 	var m := vista.material as ShaderMaterial
-	if m == null or not vista.is_inside_tree():
+	if m == null or not vista.is_inside_tree() or not Preferencias.efeito("glitch"):
 		return
 	m.set_shader_parameter("glitch", forca)
 	vista.create_tween().tween_method(func(v: float): m.set_shader_parameter("glitch", v), forca, 0.0, duracao)
+
+
+## Datilografia (docs/10): o texto aparece letra a letra, como numa máquina de escrever.
+## Vale para Label e RichTextLabel. A duração acompanha o tamanho do texto (até `maximo` s).
+static func datilografar(rotulo: Control, por_letra: float = 0.018, maximo: float = 1.6) -> void:
+	if not (rotulo is Label or rotulo is RichTextLabel) or not rotulo.is_inside_tree():
+		return
+	var n: int = rotulo.get_total_character_count() if rotulo is RichTextLabel else rotulo.text.length()
+	rotulo.visible_ratio = 0.0
+	rotulo.create_tween().tween_property(rotulo, "visible_ratio", 1.0, minf(maximo, maxf(0.15, n * por_letra)))
 
 
 ## Fundo de tela: gradiente radial (vinheta) em vez de cor chapada.

@@ -33,7 +33,7 @@ var _relatorio: PanelContainer
 var _log: RichTextLabel
 var _relatorio_aberto := false
 var _dica: Label
-var _painel_fim: PanelContainer
+var _painel_fim: RelatorioFim
 var _controles: ControleLocal
 var _ultimo_agente: Agente
 var _tempo := 0.0
@@ -64,7 +64,7 @@ func _ready() -> void:
 	_controles = _jogo.controles() if _jogo != null and _jogo.missao == missao else ControleLocal.padrao()
 	_montar_interface()
 	cena.registro.connect(func(t): _log.append_text(t + "\n"))
-	cena.terminou.connect(func(_r): _painel_fim.visible = true)
+	cena.terminou.connect(func(_r): _encerrar_cena())
 	# Registro do início da cena (emitido antes da conexão)
 	_log.append_text("[b]%s[/b] — urgência %s (%d rodadas).\n[i]Pista básica:[/i] %s\n" % [cena.cena.nome, String(cena.urgencia.get("nome", "")).to_lower(), cena.rodadas_max, cena.cena.pista_basica])
 	_selecionar_carta("procurar")
@@ -72,6 +72,15 @@ func _ready() -> void:
 	sessao.liberar()
 	Tutorial.botao_ajuda(self, "investigacao", _alvos_do_tutorial)
 	Tutorial.ao_entrar("investigacao", self, _alvos_do_tutorial())
+
+
+func _encerrar_cena() -> void:
+	var linhas := ["Cena: %s." % cena.cena.nome, "Pistas encontradas nesta cena: %d." % cena.pistas_encontradas.size()]
+	for p in cena.pistas_encontradas:
+		linhas.append("  — " + String(p.texto))
+	if cena.urgencia_estourada:
+		linhas.append("A urgência estourou: o grupo saiu às pressas.")
+	_painel_fim.mostrar("CENA ENCERRADA", linhas, not cena.pistas_encontradas.is_empty())
 
 
 func _alvos_do_tutorial() -> Dictionary:
@@ -120,22 +129,8 @@ func _montar_interface() -> void:
 	_dica.add_theme_font_size_override("font_size", Tema.FONTE_P)
 	add_child(_dica)
 
-	_painel_fim = PanelContainer.new()
-	_painel_fim.visible = false
-	_painel_fim.add_theme_stylebox_override("panel", MolduraRiscada.criar(Tema.OURO_CLARO, Color(Tema.FUNDO, 0.95), Vector2(28, 22)))
-	_painel_fim.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	var caixa := VBoxContainer.new()
-	caixa.add_theme_constant_override("separation", Tema.ESPACO_G)
-	_painel_fim.add_child(caixa)
-	var t := Label.new()
-	t.text = "Investigação encerrada"
-	t.theme_type_variation = "Titulo"
-	caixa.add_child(t)
-	var b := Button.new()
-	b.text = "Voltar ao mapa"
-	b.theme_type_variation = "BotaoPrincipal"
-	b.pressed.connect(_voltar)
-	caixa.add_child(b)
+	_painel_fim = RelatorioFim.new("Voltar ao mapa")
+	_painel_fim.botao.pressed.connect(_voltar)
 	add_child(_painel_fim)
 
 
@@ -556,6 +551,10 @@ func _unhandled_key_input(evento: InputEvent) -> void:
 				"ajudar": _ajudar()
 				"passar": _passar()
 		KEY_ESCAPE:
+			if not _bilhete.visible:
+				MenuPausa.abrir(self)
+				get_viewport().set_input_as_handled()
+				return
 			_carta_sel = ""
 			for k in _cartas:
 				_cartas[k].selecionada = false

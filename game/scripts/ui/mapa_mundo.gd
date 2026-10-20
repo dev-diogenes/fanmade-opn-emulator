@@ -35,7 +35,7 @@ var _btn_testar: Button
 var _log: RelatorioCampo
 var _dica: Label
 var _hex_dica := Vector2i(-999, -999)
-var _painel_fim: PanelContainer
+var _painel_fim: RelatorioFim
 var _lbl_fim: Label
 var _lbl_vez: Label
 var _controles: ControleLocal
@@ -71,6 +71,7 @@ func _ready() -> void:
 	for linha in missao.historico:
 		_log.append_text(linha + "\n")
 	if missao.historico.is_empty():
+		_mostrar_briefing.call_deferred()
 		_registrar("[b]Missão iniciada.[/b] O covil carmesim está em algum lugar a leste. A Membrana já começa a ceder.")
 	missao.registro.connect(_registrar_sem_guardar)
 	missao.encontro_iniciado.connect(_ao_encontro)
@@ -344,8 +345,14 @@ func _ao_investigar(_config: Dictionary) -> void:
 
 
 func _ao_encerrar(venceu: bool) -> void:
-	_lbl_fim.text = "MISSÃO CUMPRIDA" if venceu else "MISSÃO FRACASSADA"
-	_painel_fim.visible = true
+	var linhas := ["Operação encerrada no turno %d do mundo." % missao.turno_mundo,
+		"Membrana: %d (%s)." % [missao.membrana.valor, missao.membrana.estado().get("nome", "")],
+		"Pistas reunidas: %d." % missao.pistas]
+	if missao.caso != null:
+		for q in missao.caso.perguntas:
+			linhas.append("%s %s%s" % ["[x]" if q.respondida else "[ ]", q.texto,
+				"  — " + missao.caso.resposta(q.id) if q.respondida else ""])
+	_painel_fim.mostrar("CASO ENCERRADO" if venceu else "MISSÃO FRACASSADA", linhas, venceu)
 
 
 func _nova_missao() -> void:
@@ -372,8 +379,35 @@ func _clicar(evento: InputEvent) -> void:
 
 
 func _unhandled_input(evento: InputEvent) -> void:
+	if evento.is_action_pressed("ui_cancel") and not MenuPausa.aberto(self) and not TourGuiado.em_andamento():
+		get_viewport().set_input_as_handled()
+		_pausar()
+		return
 	if _mapa3d != null and evento is InputEventKey and _mapa3d.rig.tratar_entrada(evento):
 		get_viewport().set_input_as_handled()
+
+
+## Pausa (docs/10). O mapa é salvo a cada passo: sair para a Base não perde nada.
+func _pausar() -> void:
+	var saidas: Array = []
+	if _jogo != null and not _jogo.rede.eh_cliente():
+		saidas.append(["Voltar à Base", func(): _jogo.ir_para_base(), ""])
+		saidas.append(["Menu principal", func(): get_tree().change_scene_to_file.call_deferred(Jogo.CENA_TITULO), ""])
+	MenuPausa.abrir(self, saidas)
+
+
+## Arquivo do caso na abertura da missão (docs/10): o briefing datilografado em papel.
+func _mostrar_briefing() -> void:
+	var c := missao.caso
+	var texto := ""
+	if c != null:
+		var perguntas: Array = c.perguntas.map(func(q): return "  [ ] " + String(q.texto))
+		texto = "%s\n\nOBJETIVO: %s\n\nPERGUNTAS EM ABERTO:\n%s" % [c.resumo, c.objetivo, "\n".join(PackedStringArray(perguntas))]
+	else:
+		texto = "Uma ameaça paranormal foi detectada na região. Encontrem a origem e contenham-na."
+	var d := DialogoPapel.perguntar(self, "Arquivo do caso", texto, "Iniciar operação", func(): pass, "Fechar", false)
+	d.layer = 60   # o tour do tutorial (se abrir) fica por cima
+
 
 
 func _registrar(texto: String) -> void:
@@ -446,7 +480,7 @@ func _montar_interface() -> void:
 	tm.text = "MEMBRANA"
 	tm.theme_type_variation = "Subtitulo"
 	vm.add_child(tm)
-	_barra_membrana = ProgressBar.new()
+	_barra_membrana = BarraMembrana.new()
 	_barra_membrana.custom_minimum_size = Vector2(260, 14)
 	_barra_membrana.show_percentage = false
 	vm.add_child(_barra_membrana)
@@ -554,23 +588,10 @@ func _montar_interface() -> void:
 	add_child(mestre)
 	_montar_painel_mestre(mestre)
 
-	_painel_fim = PanelContainer.new()
-	_painel_fim.visible = false
-	_painel_fim.add_theme_stylebox_override("panel", MolduraRiscada.criar(Tema.OURO_CLARO, Color(Tema.FUNDO, 0.95), Vector2(32, 24)))
-	_painel_fim.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	_painel_fim.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_painel_fim.grow_vertical = Control.GROW_DIRECTION_BOTH
-	var caixa := VBoxContainer.new()
-	caixa.add_theme_constant_override("separation", Tema.ESPACO_G)
-	_painel_fim.add_child(caixa)
-	_lbl_fim = Label.new()
-	_lbl_fim.theme_type_variation = "Titulo"
-	_lbl_fim.add_theme_font_size_override("font_size", Tema.FONTE_TITULO + 8)
-	caixa.add_child(_lbl_fim)
 	var cliente: bool = _jogo != null and _jogo.rede.eh_cliente()
-	var voltar := _botao("Voltar ao saguão" if cliente else "Voltar à Base", _nova_missao)
-	voltar.theme_type_variation = "BotaoPrincipal"
-	caixa.add_child(voltar)
+	_painel_fim = RelatorioFim.new("Voltar ao saguão" if cliente else "Voltar à Base")
+	_painel_fim.botao.pressed.connect(_nova_missao)
+	_lbl_fim = _painel_fim.rotulo
 	add_child(_painel_fim)
 
 
