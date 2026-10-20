@@ -170,9 +170,8 @@ func _atualizar_unidade(s: Ser) -> void:
 			Pecas.animar(no, "Idle")
 		if s.pv < pv_antes:
 			Pecas.animar(no, "Hit_A", 0.05)
-			get_tree().create_timer(0.6).timeout.connect(func():
-				if is_instance_valid(no) and not no.get_meta("caido", false):
-					Pecas.animar(no, "Idle"))
+			# Tween preso à figura: se a cena for liberada antes, ele morre junto
+			no.create_tween().tween_callback(_voltar_a_ficar_parado.bind(no)).set_delay(0.6)
 	if s.tem(Ser.MORTO):
 		no.rotation.z = PI / 2.0
 		no.position.y = 0.2
@@ -186,3 +185,8 @@ func _atualizar_unidade(s: Ser) -> void:
 		no.rotation.z = 0.0
 		rot.text = "%s  %d/%d" % [s.nome, s.pv, s.pv_maximo]
 		rot.modulate = Color("ecf0f1") if float(s.pv) / s.pv_maximo > 0.5 else Color("f5b041")
+
+
+func _voltar_a_ficar_parado(no: Node3D) -> void:
+	if not no.get_meta("caido", false):
+		Pecas.animar(no, "Idle")
