@@ -6,6 +6,9 @@ shader_type canvas_item;
 uniform float intensidade : hint_range(0.0, 1.0) = 0.0;
 uniform float glitch : hint_range(0.0, 1.0) = 0.0;
 uniform float grao : hint_range(0.0, 1.0) = 1.0;   // 0 = sem granulação nem vinheta (acessibilidade)
+// Loucura (docs/17, E6): sanidade baixa do agente da vez. A imagem respira, ondula,
+// fica com um "fantasma" deslocado e pulsa em vermelho.
+uniform float loucura : hint_range(0.0, 1.0) = 0.0;
 uniform vec4 cor_veu : source_color = vec4(0.32, 0.03, 0.10, 1.0);
 
 float ruido(vec2 p) {
@@ -19,15 +22,22 @@ void fragment() {
 	float desloca = (ruido(vec2(faixa, floor(TIME * 18.0))) - 0.5) * 0.06 * glitch;
 	desloca *= step(0.6, ruido(vec2(faixa * 1.7, 3.0 + floor(TIME * 9.0))));
 	uv.x += desloca;
+	// Ondulação e respiração da loucura
+	uv += vec2(sin(uv.y * 11.0 + TIME * 1.3), cos(uv.x * 9.0 + TIME * 1.1)) * 0.0045 * loucura;
+	uv = (uv - 0.5) * (1.0 - 0.012 * loucura * (0.5 + 0.5 * sin(TIME * 0.9))) + 0.5;
 	// Aberração cromática
 	float ab = 0.006 * glitch;
 	vec4 c = texture(TEXTURE, uv);
 	c.r = texture(TEXTURE, uv + vec2(ab, 0.0)).r;
 	c.b = texture(TEXTURE, uv - vec2(ab, 0.0)).b;
+	// Fantasma: uma segunda imagem, levemente deslocada
+	vec4 fantasma = texture(TEXTURE, uv + vec2(0.012 * sin(TIME * 0.7), 0.006 * cos(TIME * 0.5)) * loucura);
+	c.rgb = mix(c.rgb, fantasma.rgb, 0.28 * loucura);
 	float dist = length(UV - 0.5);
 	float vinheta = smoothstep(0.38 - 0.12 * intensidade, 0.85, dist);
 	c.rgb = mix(c.rgb, c.rgb * 0.2, vinheta * (0.45 + 0.4 * intensidade) * grao);
 	c.rgb = mix(c.rgb, cor_veu.rgb, vinheta * intensidade * 0.5);
+	c.rgb = mix(c.rgb, c.rgb * vec3(1.12, 0.72, 0.8), 0.4 * loucura * (0.5 + 0.5 * sin(TIME * 1.6)));
 	float luma = dot(c.rgb, vec3(0.299, 0.587, 0.114));
 	c.rgb = mix(c.rgb, vec3(luma), intensidade * 0.35);
 	// Linhas de varredura e grão

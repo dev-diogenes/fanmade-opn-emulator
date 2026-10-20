@@ -113,6 +113,11 @@ func _montar_interface() -> void:
 	_visao.construir(cena.cena, cena.agentes)
 	_vista.gui_input.connect(_entrada_3d)
 	add_child(_vista)
+	# Sanidade com consequência (docs/17, E6)
+	add_child(Alucinacoes.criar(_vista, _visao, func(): return cena.agente_atual(),
+		func():
+			var f := _visao.figura(cena.agente_atual()) if cena.agente_atual() != null else null
+			return f.position if f != null else Vector3.ZERO))
 
 	add_child(_Enquadramento.new())
 	_montar_topo()

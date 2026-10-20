@@ -234,3 +234,22 @@ func test_cena_da_base_abre():
 	assert_eq(base.carreira.roster.size(), 3)
 	jogo.carreira = antes
 	jogo.salvar_automaticamente = true
+
+
+func test_criar_agente_pela_ficha():
+	var c := Carreira.nova()
+	var ficha := {"nome": "Joana", "classe": "especialista", "origem": "academico", "nex": 5,
+		"atributos": {"agi": 2, "for": 0, "int": 3, "pre": 3, "vig": 1},
+		"pericias_livres": ["percepcao", "intuicao", "furtividade", "tecnologia", "medicina", "atualidades", "diplomacia", "reflexos", "vontade", "ocultismo"],
+		"perito": ["investigacao", "ciencias"]}
+	var res := c.recrutar_ficha(ficha)
+	assert_eq(res.erros, [], "ficha válida")
+	assert_not_null(res.agente)
+	assert_eq(res.agente.nome, "Joana")
+	assert_true(res.agente in c.roster)
+	assert_false(res.agente.equipamento.is_empty(), "recebe o kit da classe")
+	var de_novo := c.recrutar_ficha(ficha)
+	assert_null(de_novo.agente, "nome repetido não pode")
+	var ruim := c.recrutar_ficha({"nome": "X", "classe": "combatente", "origem": "academico", "nex": 5, "atributos": {"agi": 3, "for": 3, "int": 3, "pre": 3, "vig": 3}})
+	assert_null(ruim.agente)
+	assert_false(ruim.erros.is_empty(), "atributos acima dos pontos dão erro")

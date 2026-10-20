@@ -598,6 +598,9 @@ func _montar_interface() -> void:
 	_mapa3d.construir(missao.mapa, _terrenos)
 	_vista.gui_input.connect(_clicar)
 	add_child(_vista)
+	# Sanidade com consequência (docs/17, E6)
+	add_child(Alucinacoes.criar(_vista, _mapa3d, func(): return missao.agente_atual(),
+		func(): return _mapa3d.posicao_hex(missao.posicao(missao.agente_atual())) if missao.agente_atual() != null else Vector3.ZERO))
 
 	# Topo à esquerda: turno, vez e a ficha curta do agente
 	var topo := PanelContainer.new()

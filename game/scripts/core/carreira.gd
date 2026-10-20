@@ -63,6 +63,40 @@ func recrutar(nome: String) -> Agente:
 	return null
 
 
+## Agente criado pelo jogador (docs/17, E2). Valida com CriacaoAgente e dá o kit inicial
+## da classe (o primeiro recruta da mesma classe em recrutas.json). Retorna {agente, erros}.
+func recrutar_ficha(ficha: Dictionary) -> Dictionary:
+	if roster.size() >= MAX_ROSTER:
+		return {"agente": null, "erros": ["O arquivo já tem %d agentes (o máximo)." % MAX_ROSTER]}
+	if missao != null:
+		return {"agente": null, "erros": ["Há uma missão em andamento."]}
+	var nome := String(ficha.get("nome", "")).strip_edges()
+	if nome == "":
+		return {"agente": null, "erros": ["Dê um nome ao agente."]}
+	if roster.any(func(x): return x.nome == nome) or memorial.any(func(x): return x.nome == nome):
+		return {"agente": null, "erros": ["Já existe um agente chamado %s." % nome]}
+	var res := CriacaoAgente.criar(ruleset, ficha)
+	if res.agente == null:
+		return res
+	var a: Agente = res.agente
+	a.id = "ag%d" % _proximo_id
+	_proximo_id += 1
+	var kit: Dictionary = kit_da_classe(String(ficha.get("classe", "")))
+	for item in kit.get("equipamento", []):
+		a.equipamento.append(item)
+	a.arma_id = kit.get("arma", "")
+	roster.append(a)
+	return {"agente": a, "erros": [] as Array[String]}
+
+
+## Equipamento inicial de uma classe: o do primeiro recruta pronto daquela classe.
+func kit_da_classe(classe_id: String) -> Dictionary:
+	for r in DadosJogo.ler("recrutas").recrutas:
+		if r.get("classe", "") == classe_id:
+			return {"equipamento": r.get("equipamento", []), "arma": r.get("arma", "")}
+	return {"equipamento": [], "arma": ""}
+
+
 func agente_por_id(id: String) -> Agente:
 	for a in roster:
 		if a.id == id:

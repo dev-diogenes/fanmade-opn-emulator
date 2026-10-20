@@ -139,6 +139,10 @@ func _montar_interface() -> void:
 	linha_rec.add_child(_opt_recruta)
 	linha_rec.add_child(_botao("Recrutar", _recrutar))
 	c1.add_child(linha_rec)
+	# E2 (docs/17): criar o próprio agente, ficha por ficha
+	var novo := _botao("+ Novo agente (criar ficha)", _criar_agente)
+	novo.theme_type_variation = "BotaoPrincipal"
+	c1.add_child(novo)
 	var doc := _papel(true)
 	doc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	agentes.add_child(doc)
@@ -649,6 +653,17 @@ func _mostrar_relatorio() -> void:
 func _ao_selecionar(i: int) -> void:
 	_selecionado = carreira.roster[i]
 	_atualizar_agente()
+
+
+func _criar_agente() -> void:
+	if carreira.missao != null:
+		_lbl_erros.text = "Termine a missão em andamento antes de criar agentes."
+		return
+	CriacaoDossie.abrir(self, carreira, func(a: Agente):
+		_selecionado = a
+		_abas.current_tab = 0
+		_salvar()
+		_atualizar_tudo())
 
 
 func _recrutar() -> void:

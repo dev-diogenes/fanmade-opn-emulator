@@ -13,6 +13,8 @@ var cor := Color.WHITE
 var _nome: Label
 var _barras: Dictionary = {}   ## "pv" | "pe" | "san" -> ProgressBar
 var _estilo: StyleBoxFlat
+var _tremer := false
+var _t := 0.0
 
 
 static func criar(p_agente: Agente, p_cor: Color) -> CartaoAgente:
@@ -73,15 +75,21 @@ func _linha(chave: String) -> Control:
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	n.add_theme_font_size_override("font_size", Tema.FONTE_P - 1)
 	h.add_child(n)
-	_barras[chave] = {"barra": b, "numero": n}
+	_barras[chave] = {"barra": b, "numero": n, "titulo": l}
 	return h
 
 
 func atualizar(da_vez: bool) -> void:
 	var icone: String = ICONE_CLASSE.get(agente.classe_id, "●")
 	var caido := agente.esta_fora_de_combate()
+	var perturbado := agente.tem(Ser.PERTURBADO) or agente.tem(Ser.ENLOUQUECENDO)
 	_nome.text = "%s %s%s" % [icone, agente.nome, "  ✝" if caido else ""]
-	_nome.add_theme_color_override("font_color", Tema.OURO_CLARO if da_vez else Tema.PERGAMINHO)
+	# Perturbado: o rótulo SAN vira "SAN!" em vermelho (não depende só da cor do nome)
+	_barras["san"].titulo.text = "SAN!" if perturbado else "SAN"
+	_barras["san"].titulo.add_theme_color_override("font_color", Tema.SANGUE_CLARO.lightened(0.25) if perturbado else Tema.TEXTO_SUAVE)
+	tooltip_text = ("%s está perturbado: Sanidade abaixo da metade. Ficha e inventário (F)" % agente.nome) if perturbado else "Ficha e inventário (F)"
+	_nome.add_theme_color_override("font_color", Tema.SANGUE_CLARO.lightened(0.2) if perturbado else (Tema.OURO_CLARO if da_vez else Tema.PERGAMINHO))
+	_tremer = perturbado and not caido
 	_valor("pv", agente.pv, agente.pv_maximo)
 	_valor("pe", agente.pe, agente.pe_maximo)
 	_valor("san", agente.san, agente.san_maximo)
@@ -99,6 +107,15 @@ func _valor(chave: String, atual: int, maximo: int) -> void:
 	b.max_value = maxi(1, maximo)
 	b.value = clampi(atual, 0, maxi(1, maximo))
 	_barras[chave].numero.text = "%d/%d" % [atual, maximo]
+
+
+func _process(delta: float) -> void:
+	# Perturbado (E6): o retrato treme de leve, como uma mão nervosa segurando a foto
+	if _tremer:
+		_t += delta
+		rotation = sin(_t * 23.0) * 0.012 + sin(_t * 7.0) * 0.006
+	elif rotation != 0.0:
+		rotation = 0.0
 
 
 func _draw() -> void:

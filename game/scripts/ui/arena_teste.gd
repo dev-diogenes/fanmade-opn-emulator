@@ -501,6 +501,11 @@ func _montar_interface() -> void:
 	vp.add_child(_tab3d)
 	_vista.gui_input.connect(_entrada_tabuleiro)
 	add_child(_vista)
+	# Sanidade com consequência (docs/17, E6)
+	add_child(Alucinacoes.criar(_vista, _tab3d, func(): return _agente_da_vez(),
+		func():
+			var ag := _agente_da_vez()
+			return _tab3d.posicao(grade.posicao(ag)) if ag != null and grade != null and grade.tem(ag) else Vector3.ZERO))
 
 	# Topo à esquerda: rodada, vez e a ficha do ser escolhido
 	var topo := PanelContainer.new()

@@ -19,6 +19,7 @@
 | [14-pista-central.md](14-pista-central.md) | Pista central estilo GUMSHOE: examinar com treino, sem dados (PE nas DTs altas) |
 | [15-critica-acessibilidade-engajamento.md](15-critica-acessibilidade-engajamento.md) | Crítica de todas as telas: contraste medido, usabilidade, consistência e opções priorizadas de acessibilidade e engajamento |
 | [16-pacote-acessibilidade-engajamento.md](16-pacote-acessibilidade-engajamento.md) | Desfecho dos eventos, rastreador do caso, Base na aba Missão, escala, motivos dos bloqueios, velocidade do texto |
+| [17-criacao-e-sanidade.md](17-criacao-e-sanidade.md) | Criação de agente em dossiê (E2) e sanidade com consequência visual: vultos, sussurros, imagem que respira (E6) |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

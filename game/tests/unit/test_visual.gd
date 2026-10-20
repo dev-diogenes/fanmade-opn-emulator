@@ -357,3 +357,32 @@ func test_mapa_mostra_o_caso_e_os_motivos():
 	for c in get_tree().root.find_children("*", "", true, false):
 		if c is DialogoPapel or c is TourGuiado:
 			c.queue_free()
+
+
+func test_dossie_de_criacao_navega_e_valida():
+	var c := Carreira.nova()
+	var criados := []
+	var d := CriacaoDossie.abrir(self, c, func(a): criados.append(a))
+	assert_true(d._assinar.disabled, "sem nome e sem perícias, não dá para assinar")
+	for i in d._abas.get_tab_count():
+		d._abas.current_tab = i   # todas as páginas se desenham sem erro
+	d.ficha.classe = "ocultista"
+	d._abas.current_tab = 4
+	assert_gt(d._paginas["Rituais"].get_child_count(), 2, "o ocultista escolhe rituais")
+	d.free()
+
+
+func test_loucura_cresce_quando_a_sanidade_cai():
+	var rs := RulesetOp2022.carregar_padrao()
+	var a := Agente.criar(rs, "Teste", "combatente", {"agi": 1, "for": 2, "int": 1, "pre": 1, "vig": 2})
+	assert_eq(Alucinacoes.intensidade(a), 0.0, "sanidade cheia: nada")
+	a.san = a.san_maximo / 2
+	assert_eq(Alucinacoes.intensidade(a), 0.0, "na metade ainda não")
+	a.san = a.san_maximo / 4
+	assert_almost_eq(Alucinacoes.intensidade(a), 0.5, 0.15)
+	a.sofrer_dano_mental(a.san)
+	assert_eq(Alucinacoes.intensidade(a), 1.0, "sanidade zerada (enlouquecendo): máximo")
+	var c := CartaoAgente.criar(a, Tema.CORES_JOGADORES[0])
+	add_child_autofree(c)
+	c.atualizar(true)
+	assert_eq(c._barras["san"].titulo.text, "SAN!", "perturbado não depende só da cor")
