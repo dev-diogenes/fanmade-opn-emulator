@@ -262,3 +262,15 @@ func test_ritual_de_cura_fora_de_combate():
 	assert_gt(alvo.pv, pv)
 	assert_lt(a.pe, pe)
 	assert_eq(Comandos.aplicar_mapa(m, Comandos.novo("mapa", "conjurar", {"ritual": "cicatrizacao", "forma": "", "alvo": alvo.id})).ok, false, "já usou a ação")
+
+
+func test_evento_devolve_os_efeitos_para_o_desfecho():
+	var m := _missao()
+	var a := _com_evento(m, "ponte_podre")
+	m.dados.forcar([1, 1, 1, 1, 3])   # falha no Atletismo; 1d6 de dano = 3
+	var r := m.resolver_evento(0, 0)
+	assert_false(r.sucesso)
+	assert_eq(r.titulo, "Ponte podre")
+	assert_eq(r.efeitos.size(), 1)
+	assert_eq(r.efeitos[0].tipo, "dano")
+	assert_string_starts_with(r.efeitos[0].texto, "−")

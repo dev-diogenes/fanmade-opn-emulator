@@ -19,6 +19,7 @@ static func criar(titulo: String, dica: String, atalho: int, semente: int, cor: 
 	c.custom_minimum_size = TAMANHO
 	c.focus_mode = Control.FOCUS_ALL
 	c.tooltip_text = "%s (%d)" % [dica, atalho]
+	c.set_meta("dica", c.tooltip_text)
 	var v := VBoxContainer.new()
 	v.set_anchors_preset(Control.PRESET_FULL_RECT)
 	v.offset_left = 10
@@ -48,13 +49,13 @@ static func criar(titulo: String, dica: String, atalho: int, semente: int, cor: 
 	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	d.add_theme_color_override("font_color", Color(Tema.TINTA, 0.7))
-	d.add_theme_font_size_override("font_size", 12)
+	d.add_theme_font_size_override("font_size", 13)
 	v.add_child(d)
 	var n := Label.new()
 	n.text = str(atalho)
 	n.position = Vector2(8, 4)
-	n.add_theme_color_override("font_color", Color(Tema.TINTA, 0.55))
-	n.add_theme_font_size_override("font_size", 12)
+	n.add_theme_color_override("font_color", Color(Tema.TINTA, 0.7))
+	n.add_theme_font_size_override("font_size", 13)
 	n.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.add_child(n)
 	c.mouse_entered.connect(c._subir.bind(true))
@@ -82,6 +83,10 @@ func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), Tema.OURO_CLARO, false, 3.0)
 	if disabled:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.5))
+		# Cadeado (docs/16, A2): "indisponível" não depende só do cinza; o motivo vai no tooltip
+		var c := Vector2(size.x - 18, 18)
+		draw_arc(c + Vector2(0, -2), 5, PI, TAU, 10, Tema.PERGAMINHO, 2.0, true)
+		draw_rect(Rect2(c + Vector2(-7, -1), Vector2(14, 10)), Tema.PERGAMINHO)
 
 
 func _subir(sim: bool) -> void:

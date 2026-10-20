@@ -128,9 +128,17 @@ func _animar(res: Label) -> void:
 		_tw.tween_callback(_cair.bind(c))
 		_tw.tween_interval(ENTRE)
 	_tw.tween_property(res, "modulate:a", 1.0, 0.15)
-	_tw.tween_interval(FICA)
+	var ficar := Tema.duracao_resultado(FICA)
+	if ficar <= 0.0:
+		return   # fica até um clique (A3)
+	_tw.tween_interval(ficar)
 	_tw.tween_property(_raiz, "modulate:a", 0.0, 0.3)
 	_tw.tween_callback(queue_free)
+
+
+## Tempo até o resultado aparecer (o desfecho espera a rolagem terminar).
+static func duracao_ate_resultado(qtd_dados: int) -> float:
+	return GIRO + ENTRE * qtd_dados + 0.2
 
 
 func _cair(c: Array) -> void:

@@ -150,6 +150,8 @@ func test_base_e_dossie_com_abas():
 	add_child_autofree(base)
 	await wait_frames(2)
 	assert_eq(base._abas.get_tab_count(), 4)
+	assert_eq(base._abas.current_tab, 2, "a Base abre na aba Missão (E5)")
+	base._abas.current_tab = 0
 	var tour := TourGuiado.new()   # fora da árvore: não conta como tour aberto
 	tour._abrir_aba_de(base._btn_iniciar)
 	tour.free()
@@ -207,7 +209,7 @@ func test_preferencias_de_efeitos_e_pausa():
 	assert_false(Preferencias.efeito("grao"))
 	var m := MenuPausa.abrir(self)
 	assert_true(MenuPausa.aberto(self))
-	assert_eq(m._ajustes.get_child_count(), 6, "volume, câmera e quatro efeitos")
+	assert_eq(m._ajustes.get_child_count(), 9, "texto, resultados, escala, volume, câmera e quatro efeitos")
 	m.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Preferencias.caminho))
 	Preferencias.caminho = antes
@@ -311,3 +313,47 @@ func test_ficha_mostra_atributos_e_inventario():
 	botoes[0].pressed.emit()
 	assert_eq(usados, ["cicatrizante"])
 	await wait_frames(1)
+
+
+func test_bilhete_de_desfecho_mostra_selos():
+	var b := BilheteDesfecho.mostrar(self, "Ponte podre", "Uma tábua cede.", [{"tipo": "dano", "valor": 3, "texto": "−3 PV"}, {"tipo": "membrana", "valor": -2, "texto": "Membrana −2"}], false)
+	var textos: Array = b.find_children("*", "Label", true, false).map(func(l): return l.text)
+	assert_has(textos, "−3 PV")
+	assert_has(textos, "Membrana −2")
+	assert_has(textos, "FALHA")
+	b.free()
+
+
+func test_preferencias_de_leitura_e_escala():
+	var antes := Preferencias.caminho
+	Preferencias.caminho = "user://teste_preferencias_leitura.json"
+	assert_eq(Preferencias.velocidade_texto(), "normal")
+	Preferencias.definir_tempo_resultado("clique")
+	assert_eq(Tema.duracao_resultado(4.0), 0.0, "até clicar: o resultado não some")
+	Preferencias.definir_tempo_resultado("curto")
+	assert_lt(Tema.duracao_resultado(4.0), 4.0)
+	Preferencias.definir_escala(3.0)
+	assert_eq(Preferencias.escala(), 1.5, "a escala tem teto")
+	Preferencias.definir_velocidade_texto("instantanea")
+	var l := Label.new()
+	l.text = "Texto"
+	add_child_autofree(l)
+	Tema.datilografar(l)
+	assert_eq(l.visible_ratio, 1.0, "instantâneo: aparece inteiro")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Preferencias.caminho))
+	Preferencias.caminho = antes
+
+
+func test_mapa_mostra_o_caso_e_os_motivos():
+	var tela = load("res://scenes/mapa_mundo.tscn").instantiate()
+	add_child_autofree(tela)
+	await wait_frames(2)
+	assert_true(tela._caso.visible)
+	assert_string_contains(tela._lbl_caso.get_parsed_text(), "Covil")
+	assert_true(tela._btn_descansar.disabled or tela._btn_descansar.tooltip_text != "")
+	tela._rolar()
+	assert_true(tela._btn_rolar.disabled)
+	assert_string_contains(tela._btn_rolar.tooltip_text, "já foi rolado", "o motivo do bloqueio aparece no tooltip")
+	for c in get_tree().root.find_children("*", "", true, false):
+		if c is DialogoPapel or c is TourGuiado:
+			c.queue_free()

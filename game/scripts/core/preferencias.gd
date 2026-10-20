@@ -92,3 +92,36 @@ static func definir_camera(modo: String) -> void:
 	var d := ler()
 	d["camera"] = modo
 	gravar(d)
+
+
+## Leitura (docs/16, A3): velocidade da datilografia ("lenta", "normal", "instantanea") e
+## tempo dos resultados na tela ("curto", "normal", "clique" = fica até clicar).
+static func velocidade_texto() -> String:
+	return String(ler().get("velocidade_texto", "normal"))
+
+
+static func definir_velocidade_texto(v: String) -> void:
+	var d := ler()
+	d["velocidade_texto"] = v
+	gravar(d)
+
+
+static func tempo_resultado() -> String:
+	return String(ler().get("tempo_resultado", "normal"))
+
+
+static func definir_tempo_resultado(v: String) -> void:
+	var d := ler()
+	d["tempo_resultado"] = v
+	gravar(d)
+
+
+## Escala da interface (docs/16, A1): 0.8 a 1.5.
+static func escala() -> float:
+	return clampf(float(ler().get("escala", 1.0)), 0.8, 1.5)
+
+
+static func definir_escala(v: float) -> void:
+	var d := ler()
+	d["escala"] = clampf(v, 0.8, 1.5)
+	gravar(d)

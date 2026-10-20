@@ -159,7 +159,7 @@ func _foto(legenda: String, semente: int, graus: float) -> Control:
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	l.max_lines_visible = 2
 	l.theme_type_variation = "TextoPapel"
-	l.add_theme_font_size_override("font_size", 10)
+	l.add_theme_font_size_override("font_size", 11)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(l)
 	return moldura

@@ -56,7 +56,7 @@ func _linha(chave: String) -> Control:
 	var l := Label.new()
 	l.text = chave.to_upper()
 	l.custom_minimum_size = Vector2(30, 0)
-	l.add_theme_font_size_override("font_size", Tema.FONTE_P - 2)
+	l.add_theme_font_size_override("font_size", Tema.FONTE_P - 1)
 	l.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
 	h.add_child(l)
 	var b := ProgressBar.new()

@@ -177,7 +177,7 @@ static func criar() -> Theme:
 		t.set_color("font_hover_color", tipo, OURO_CLARO)
 		t.set_color("font_pressed_color", tipo, Color.WHITE)
 		t.set_color("font_focus_color", tipo, PERGAMINHO)
-		t.set_color("font_disabled_color", tipo, Color(TEXTO_SUAVE, 0.5))
+		t.set_color("font_disabled_color", tipo, Color("998d7a"))   # 5:1 sobre o botão apagado (docs/16, A2)
 	# Botão de destaque (ação principal): sangue com borda dourada
 	t.set_type_variation("BotaoPrincipal", "Button")
 	t.set_stylebox("normal", "BotaoPrincipal", riscada(OURO, Color("6e1419"), Vector2(18, 10)))
@@ -210,7 +210,7 @@ static func criar() -> Theme:
 	t.set_color("font_pressed_color", "BotaoPapel", PAPEL)
 	t.set_color("font_hover_pressed_color", "BotaoPapel", PAPEL)
 	t.set_color("font_focus_color", "BotaoPapel", TINTA)
-	t.set_color("font_disabled_color", "BotaoPapel", Color(TINTA, 0.35))
+	t.set_color("font_disabled_color", "BotaoPapel", Color(TINTA, 0.7))   # 4,9:1 no papel (A2)
 	t.set_type_variation("TextoPapel", "Label")
 	t.set_color("font_color", "TextoPapel", TINTA)
 	var maquina := _fonte(ARQ_MAQUINA)
@@ -245,7 +245,7 @@ static func criar() -> Theme:
 		t.set_font("font", "TabContainer", titulo)
 
 	# Campos
-	var campo := caixa(Color("0f0d13"), OURO_ESCURO, 1, 3, Vector2(8, 5))
+	var campo := caixa(Color("0f0d13"), Color("8a6d3e"), 1, 3, Vector2(8, 5))   # borda 3,8:1 (WCAG 1.4.11, A2)
 	t.set_stylebox("normal", "LineEdit", campo)
 	t.set_stylebox("focus", "LineEdit", caixa(Color("0f0d13"), OURO_CLARO, 1, 3, Vector2(8, 5)))
 	t.set_stylebox("read_only", "LineEdit", campo)
@@ -436,8 +436,12 @@ static func datilografar(rotulo: Control, por_letra: float = 0.018, maximo: floa
 	if not (rotulo is Label or rotulo is RichTextLabel) or not rotulo.is_inside_tree():
 		return
 	var n: int = rotulo.get_total_character_count() if rotulo is RichTextLabel else rotulo.text.length()
+	var ritmo: float = {"lenta": 1.7, "normal": 1.0, "instantanea": 0.0}.get(Preferencias.velocidade_texto(), 1.0)
+	if ritmo <= 0.0:
+		rotulo.visible_ratio = 1.0
+		return
 	rotulo.visible_ratio = 0.0
-	var duracao := minf(maximo, maxf(0.15, n * por_letra))
+	var duracao := minf(maximo * ritmo, maxf(0.15, n * por_letra * ritmo))
 	rotulo.create_tween().tween_property(rotulo, "visible_ratio", 1.0, duracao)
 	# As teclas batem junto (no máximo uma a cada 45 ms, para não virar zumbido)
 	var teclas := mini(n, int(duracao / 0.045))
@@ -445,6 +449,28 @@ static func datilografar(rotulo: Control, por_letra: float = 0.018, maximo: floa
 		var tw := rotulo.create_tween().set_loops(teclas)
 		tw.tween_callback(func(): Som.tocar("tecla"))
 		tw.tween_interval(duracao / teclas)
+
+
+## Quanto tempo um resultado fica na tela (A3): `normal` segundos, metade no "curto";
+## 0 = fica até o jogador clicar.
+static func duracao_resultado(normal: float) -> float:
+	match Preferencias.tempo_resultado():
+		"curto": return normal * 0.55
+		"clique": return 0.0
+	return normal
+
+
+## Escala da interface (A1): a janela inteira cresce ou diminui, textos e painéis juntos.
+static func aplicar_escala(janela: Window = null) -> void:
+	if janela == null:
+		var arvore := Engine.get_main_loop() as SceneTree
+		if arvore == null:
+			return
+		janela = arvore.root
+	# O HUD foi desenhado para 1280 × 720 lógicos: a escala não passa do que cabe na janela
+	var tamanho := Vector2(janela.size)
+	var cabe := minf(tamanho.x / 1180.0, tamanho.y / 660.0) if tamanho.x > 0 else 1.0
+	janela.content_scale_factor = clampf(minf(Preferencias.escala(), maxf(cabe, 0.8)), 0.8, 1.5)
 
 
 ## Fundo de tela: gradiente radial (vinheta) em vez de cor chapada.

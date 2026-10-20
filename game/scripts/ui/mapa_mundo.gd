@@ -33,6 +33,8 @@ var _painel_evento: PanelContainer
 var _lbl_evento: Label
 var _btn_testar: Button
 var _btn_acao: Button
+var _caso: PanelContainer
+var _lbl_caso: RichTextLabel
 var _caixa_opcoes: VBoxContainer
 var _bilhete_acao: PanelContainer
 var _log: RelatorioCampo
@@ -324,7 +326,7 @@ func _montar_painel_mestre(painel: VBoxContainer) -> void:
 	painel.add_child(_btn_painel_mestre)
 	_painel_mestre = PanelContainer.new()
 	_painel_mestre.visible = false
-	_painel_mestre.position = Vector2(16, 120)
+	_painel_mestre.position = Vector2(280, 120)
 	_painel_mestre.custom_minimum_size = Vector2(360, 0)
 	add_child(_painel_mestre)
 	var caixa := VBoxContainer.new()
@@ -467,12 +469,18 @@ func _mostrar_rolagem(cmd: Dictionary, res: Dictionary, opcao_evento: Dictionary
 				RolagemDados.mostrar(self, "Movimento", String(r.get("atributo", "agi")), r.slots, int(r.dt),
 					"%d de movimento" % int(r.total))
 		"resolver_evento":
-			var t = res.get("teste", {}).get("teste")
+			var r: Dictionary = res.get("teste", {})
+			var t = r.get("teste")
+			var atraso := 0.0
 			if t is ResultadoTeste:
 				var per := String(opcao_evento.get("pericia", ""))
 				RolagemDados.mostrar(self, missao.ruleset.pericia(per).get("nome", per), missao.ruleset.atributo_da_pericia(per),
 					t.slots, t.dt, "%d %+d = %d  →  %s" % [t.escolhido, t.bonus, t.total, "SUCESSO" if t.sucesso else "FALHA"],
 					RolagemDados.estados_do_teste(t), t.sucesso)
+				atraso = RolagemDados.duracao_ate_resultado(t.slots.size()) + 0.6
+			# Desfecho (docs/16, E1): o que aconteceu e os efeitos, depois da rolagem
+			BilheteDesfecho.mostrar(self, String(r.get("titulo", "Evento")), String(r.get("texto", "")), r.get("efeitos", []),
+				null if r.get("sem_teste", false) else r.get("sucesso", null), atraso)
 
 
 func _ao_encontro(config: Dictionary) -> void:
@@ -610,6 +618,29 @@ func _montar_interface() -> void:
 	_lbl_ficha.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
 	_lbl_ficha.add_theme_font_size_override("font_size", Tema.FONTE_P)
 	vt.add_child(_lbl_ficha)
+
+	# Rastreador do caso (docs/16, E3): as perguntas, quantas pistas faltam e o covil
+	_caso = PanelContainer.new()
+	_caso.position = Vector2(16, 120)
+	_caso.custom_minimum_size = Vector2(250, 0)
+	_caso.mouse_filter = Control.MOUSE_FILTER_PASS
+	_caso.tooltip_text = "O caso: cada pergunta precisa de 2 pistas (eventos e investigações)."
+	add_child(_caso)
+	var vc := VBoxContainer.new()
+	vc.add_theme_constant_override("separation", 2)
+	_caso.add_child(vc)
+	var tc := Label.new()
+	tc.text = "O CASO"
+	tc.theme_type_variation = "Subtitulo"
+	vc.add_child(tc)
+	_lbl_caso = RichTextLabel.new()
+	_lbl_caso.bbcode_enabled = true
+	_lbl_caso.fit_content = true
+	_lbl_caso.scroll_active = false
+	_lbl_caso.custom_minimum_size = Vector2(250, 0)
+	_lbl_caso.add_theme_font_size_override("normal_font_size", Tema.FONTE_P)
+	_lbl_caso.add_theme_font_size_override("bold_font_size", Tema.FONTE_P)
+	vc.add_child(_lbl_caso)
 
 	# Topo central: a Membrana, com sigilo e estado
 	var membrana := PanelContainer.new()
@@ -810,6 +841,7 @@ func _atualizar() -> void:
 	var ocupado := missao.ocupado()
 	_btn_rolar.disabled = ocupado or missao.movimento_rolado
 	_btn_descansar.disabled = not missao.pode_descansar()
+	_motivos_mapa(a, ocupado)
 	_btn_acao.disabled = not missao.pode_agir_no_mapa() or (missao.itens_fora_de_combate(a).is_empty() and missao.rituais_fora_de_combate(a).is_empty())
 	_btn_encerrar.disabled = ocupado
 	_foco.definir(_foco.valor, a.pe_disponivel_no_turno() if a != null else 0)
@@ -829,7 +861,42 @@ func _atualizar() -> void:
 	_lbl_membrana.text = "%d · %s   ·   Reforços %d   ·   Pistas %d" % [missao.membrana.valor, missao.membrana.estado().get("nome", ""), missao.reforcos, missao.pistas]
 	_atualizar_mestre()
 	_atualizar_grupo()
+	_atualizar_caso()
 	_mapa3d.atualizar(missao, missao.destinos())
+
+
+## Por que cada botão está apagado (docs/16, A2): o tooltip diz o motivo.
+func _motivos_mapa(a: Agente, ocupado: bool) -> void:
+	var evento := "Resolva o evento primeiro." if not missao.evento_pendente.is_empty() else ""
+	_btn_rolar.tooltip_text = "1 d20 por ponto de Agilidade, mais 2; cada 11+ vale um passo." if not _btn_rolar.disabled else \
+		(evento if evento != "" else "O movimento deste turno já foi rolado.")
+	var tipo := String(missao.mapa.conteudo(missao.posicao(a)).get("tipo", "")) if a != null else ""
+	_btn_descansar.tooltip_text = "Recupera parte dos PV, PE e SAN." if not _btn_descansar.disabled else \
+		(evento if evento != "" else ("Já descansou aqui nesta visita." if tipo in ["vila", "inicio"] else "Só dá para descansar numa vila ou no ponto de encontro."))
+	var sem_recurso := a != null and missao.itens_fora_de_combate(a).is_empty() and missao.rituais_fora_de_combate(a).is_empty()
+	_btn_acao.tooltip_text = "Usar um item de cura ou um ritual de cura (uma vez por turno)." if not _btn_acao.disabled else \
+		(evento if evento != "" else ("A ação deste turno já foi usada." if missao.acao_usada else
+		("Sem itens de cura nem rituais que funcionem fora de combate." if sem_recurso else "Indisponível agora.")))
+	_btn_encerrar.tooltip_text = "A vez passa ao próximo agente." if not _btn_encerrar.disabled else evento
+
+
+func _atualizar_caso() -> void:
+	var c := missao.caso
+	_caso.visible = c != null
+	if c == null:
+		return
+	var linhas: Array[String] = []
+	for q in c.perguntas:
+		var feitas := mini(int(q.encontradas), int(q.pistas_necessarias))
+		if q.respondida:
+			linhas.append(Tema.bb("✔ %s" % q.texto, Tema.SUCESSO) + "\n   " + Tema.bb(c.resposta(q.id), Tema.OURO_CLARO))
+		else:
+			var marcas := "●".repeat(feitas) + "○".repeat(int(q.pistas_necessarias) - feitas)
+			linhas.append("%s  %s" % [q.texto, Tema.bb(marcas, Tema.OURO)])
+	var obj := missao.mapa.encontrar("objetivo")
+	var covil_visto := missao.mapa.tem(obj) and missao.mapa.revelado(obj)
+	linhas.append(Tema.bb("Covil: " + ("localizado no mapa" if covil_visto else "desconhecido"), Tema.PERIGO if covil_visto else Tema.TEXTO_SUAVE))
+	_lbl_caso.text = "\n".join(linhas)
 
 
 func _atualizar_grupo() -> void:

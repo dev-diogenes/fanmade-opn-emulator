@@ -37,6 +37,8 @@ var missao: Missao:
 func _ready() -> void:
 	_modo_captura()
 	Tema.aplicar()
+	Tema.aplicar_escala(get_tree().root)
+	get_tree().root.size_changed.connect(func(): Tema.aplicar_escala(get_tree().root))
 	# Toda tela nova entra com estática e o nome do arquivo datilografado (docs/10)
 	get_tree().node_added.connect(_ao_entrar_no)
 	var som := Som.new()

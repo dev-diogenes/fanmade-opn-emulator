@@ -435,6 +435,27 @@ func _ao_atacar(r: ResultadoAtaque) -> void:
 		_registrar("[color=#e0574a]%s está morrendo![/color]" % r.alvo.nome)
 
 
+## Por que cada carta está bloqueada (docs/16, A2).
+func _motivos_cartas(agente: Agente, sem_padrao: bool) -> void:
+	var motivos := {}
+	if agente == null:
+		for k in _cartas:
+			motivos[k] = "Não é a vez de um agente seu."
+	else:
+		if sem_padrao:
+			for k in ["atacar", "ritual", "item"]:
+				motivos[k] = "Sem ação padrão neste turno."
+		if not motivos.has("ritual") and _rituais_disponiveis(agente).is_empty():
+			motivos["ritual"] = "%s não conhece rituais que possa conjurar agora." % agente.nome
+		if not motivos.has("item") and not agente.tem_item("cicatrizante") and _itens_de_combate(agente).is_empty():
+			motivos["item"] = "Sem itens de combate no inventário."
+		if _btn_mover.disabled:
+			motivos["mover"] = "Sem ação de movimento nem padrão neste turno."
+	for k in _cartas:
+		var carta: CartaAcao = _cartas[k]
+		carta.tooltip_text = ("Bloqueado: " + String(motivos[k])) if carta.disabled and motivos.has(k) else String(carta.get_meta("dica", ""))
+
+
 func _ao_conjurar(res: Dictionary) -> void:
 	Som.tocar("ritual")
 	if _tab3d != null and res.get("conjurador") is Ser:
@@ -958,6 +979,7 @@ func _atualizar() -> void:
 	_btn_soltar.visible = agente != null and agente.tem(Ser.AGARRADO)
 	_btn_apagar.visible = agente != null and agente.tem(Ser.EM_CHAMAS)
 	_btn_item.disabled = agente == null or sem_padrao or (not agente.tem_item("cicatrizante") and _itens_de_combate(agente).is_empty())
+	_motivos_cartas(agente, sem_padrao)
 	if sem_padrao and _modo in ["atacar", "ritual", "ritual_area", "granada", "contra"]:
 		_modo = ""
 	_foco.definir(_foco.valor, agente.pe_disponivel_no_turno() if agente != null else 0)

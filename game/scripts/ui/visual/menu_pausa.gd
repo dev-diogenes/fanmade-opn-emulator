@@ -48,10 +48,11 @@ func _montar(saidas: Array) -> void:
 	t.theme_type_variation = "Titulo"
 	_pasta.add_child(t)
 	var continuar := _item("Continuar", queue_free)
-	_item("Ajustes de efeitos", func(): _ajustes.visible = not _ajustes.visible)
+	_item("Ajustes", func(): _ajustes.visible = not _ajustes.visible)
 	_ajustes = VBoxContainer.new()
 	_ajustes.visible = false
 	_pasta.add_child(_ajustes)
+	montar_leitura(_ajustes)
 	var linha_vol := HBoxContainer.new()
 	linha_vol.add_theme_constant_override("separation", Tema.ESPACO_M)
 	_ajustes.add_child(linha_vol)
@@ -70,7 +71,7 @@ func _montar(saidas: Array) -> void:
 		Som.aplicar_volume())
 	linha_vol.add_child(volume)
 	var cam := Button.new()
-	cam.theme_type_variation = "BotaoPapel"
+	cam.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	cam.text = "Câmera: %s (C)" % CameraRig.NOMES_MODOS.get(Preferencias.camera(), "3ª pessoa")
 	cam.pressed.connect(func():
 		var i := CameraRig.MODOS.find(Preferencias.camera())
@@ -100,6 +101,48 @@ func _montar(saidas: Array) -> void:
 				DialogoPapel.perguntar(self, texto, aviso, "Sair", acao))
 	continuar.grab_focus.call_deferred()
 	Som.tocar("papel")
+
+
+## Ajustes de leitura e escala (docs/16, A1 e A3), usados na pausa e na Base.
+static func montar_leitura(caixa: Control) -> void:
+	var opcoes := [
+		["Texto", Preferencias.velocidade_texto, Preferencias.definir_velocidade_texto,
+			["lenta", "normal", "instantanea"], {"lenta": "devagar", "normal": "normal", "instantanea": "instantâneo"}],
+		["Resultados", Preferencias.tempo_resultado, Preferencias.definir_tempo_resultado,
+			["curto", "normal", "clique"], {"curto": "rápidos", "normal": "normais", "clique": "até clicar"}],
+	]
+	for o in opcoes:
+		var b := Button.new()   # botão comum: estes ajustes ficam sobre painel escuro
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		var atual: String = o[1].call()
+		b.text = "%s: %s" % [o[0], o[4].get(atual, atual)]
+		b.pressed.connect(func():
+			var lista: Array = o[3]
+			var novo: String = lista[(lista.find(o[1].call()) + 1) % lista.size()]
+			o[2].call(novo)
+			b.text = "%s: %s" % [o[0], o[4].get(novo, novo)])
+		caixa.add_child(b)
+	var linha := HBoxContainer.new()
+	linha.add_theme_constant_override("separation", Tema.ESPACO_M)
+	caixa.add_child(linha)
+	var l := Label.new()
+	l.text = "Tamanho da interface"
+	linha.add_child(l)
+	var escala := HSlider.new()
+	escala.min_value = 0.8
+	escala.max_value = 1.5
+	escala.step = 0.1
+	escala.value = Preferencias.escala()
+	escala.custom_minimum_size = Vector2(150, 0)
+	escala.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	linha.add_child(escala)
+	var pct := Label.new()
+	pct.text = "%d%%" % int(round(escala.value * 100))
+	linha.add_child(pct)
+	escala.drag_ended.connect(func(_mudou):
+		Preferencias.definir_escala(escala.value)
+		Tema.aplicar_escala())
+	escala.value_changed.connect(func(v): pct.text = "%d%%" % int(round(v * 100)))
 
 
 func _item(texto: String, acao: Callable) -> Button:

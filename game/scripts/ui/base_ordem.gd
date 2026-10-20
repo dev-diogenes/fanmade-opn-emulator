@@ -46,6 +46,15 @@ func _ready() -> void:
 	if not carreira.roster.is_empty():
 		_selecionado = carreira.roster[0]
 	_atualizar_tudo()
+	# E5 (docs/16): a Base abre na aba Missão, onde se monta o grupo e se começa a jogar.
+	# Se algum agente tem escolha de NEX pendente, abre na aba Agentes, nele.
+	_abas.current_tab = 2
+	for a in carreira.roster:
+		if not Progressao.pendencias(a).is_empty():
+			_abas.current_tab = 0
+			_selecionado = a
+			_atualizar_tudo()
+			break
 	if _jogo != null:
 		_jogo.jogadores_mudaram.connect(_ao_mudar_jogadores)
 		if _jogo.aviso_rede != "":
@@ -323,6 +332,12 @@ func _montar_interface() -> void:
 	chk_tutorial.button_pressed = Preferencias.perguntar_tutorial()
 	chk_tutorial.toggled.connect(func(v): Preferencias.definir_perguntar_tutorial(v))
 	cj.add_child(chk_tutorial)
+	cj.add_child(_titulo("Leitura e acessibilidade"))
+	var leitura := VBoxContainer.new()
+	leitura.add_theme_constant_override("separation", Tema.ESPACO_P)
+	leitura.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	cj.add_child(leitura)
+	MenuPausa.montar_leitura(leitura)   # os mesmos ajustes da pausa (docs/16, A1 e A3)
 	var apagar := _botao("Nova carreira (apaga o save)", func():
 		DialogoPapel.perguntar(self, "Nova carreira", "Isso apaga o save atual: agentes, memorial e a missão em andamento. Não dá para desfazer.", "Apagar e começar", _nova_carreira))
 	apagar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN

@@ -287,12 +287,17 @@ func resolver_evento(pe_foco: int = 0, opcao: int = 0) -> Dictionary:
 	_log(linha)
 	if String(lado.get("texto", "")) != "":
 		_log(lado.texto)
+	var aplicados: Array = []
 	for ef in lado.get("efeitos", []):
-		_aplicar_efeito(a, ef, evento_pendente.hex)
+		var feito := _aplicar_efeito(a, ef, evento_pendente.hex)
+		if not feito.is_empty():
+			aplicados.append(feito)
+	var titulo := String(evento_pendente.evento.get("titulo", ""))
 	mapa.limpar_conteudo(evento_pendente.hex)
 	evento_pendente = {}
 	_verificar_derrota()
-	return {"teste": teste, "sucesso": sucesso, "texto": lado.get("texto", "")}
+	return {"teste": teste, "sucesso": sucesso, "texto": lado.get("texto", ""), "efeitos": aplicados,
+		"titulo": titulo, "agente": a.nome, "sem_teste": o.get("sem_teste", false)}
 
 
 # --- Ação do turno no mapa (docs/13) ------------------------------------------------
@@ -398,30 +403,45 @@ func _valor(v) -> int:
 	return dados.rolar_expressao(v) if v is String else int(v)
 
 
-func _aplicar_efeito(a: Agente, ef: Dictionary, h: Vector2i) -> void:
+## Aplica um efeito de evento. Devolve o efeito como foi aplicado, para o bilhete de
+## desfecho (docs/16): {tipo, valor, texto}, ex.: {"tipo": "dano", "valor": 3, "texto": "−3 PV"}.
+func _aplicar_efeito(a: Agente, ef: Dictionary, h: Vector2i) -> Dictionary:
 	match ef.tipo:
 		"dano":
 			var d := _valor(ef.valor)
 			a.sofrer_dano(d)
 			_log("%s sofre %d de dano." % [a.nome, d])
+			return {"tipo": "dano", "valor": d, "texto": "−%d PV" % d}
 		"dano_mental":
 			var d := _valor(ef.valor)
 			a.sofrer_dano_mental(d)
 			_log("%s perde %d de Sanidade." % [a.nome, d])
+			return {"tipo": "dano_mental", "valor": d, "texto": "−%d SAN" % d}
 		"cura":
-			a.curar(_valor(ef.valor))
+			var v := _valor(ef.valor)
+			a.curar(v)
+			return {"tipo": "cura", "valor": v, "texto": "+%d PV" % v}
 		"recupera_pe":
-			a.recuperar_pe(_valor(ef.valor))
+			var v := _valor(ef.valor)
+			a.recuperar_pe(v)
+			return {"tipo": "recupera_pe", "valor": v, "texto": "+%d PE" % v}
 		"recupera_san":
-			a.recuperar_sanidade(_valor(ef.valor))
+			var v := _valor(ef.valor)
+			a.recuperar_sanidade(v)
+			return {"tipo": "recupera_san", "valor": v, "texto": "+%d SAN" % v}
 		"membrana":
-			membrana.alterar(_valor(ef.valor), "evento")
+			var v := _valor(ef.valor)
+			membrana.alterar(v, "evento")
+			return {"tipo": "membrana", "valor": v, "texto": "Membrana %+d" % v}
 		"revelar_raio":
 			mapa.revelar(h, _valor(ef.valor))
+			return {"tipo": "revelar_raio", "valor": _valor(ef.valor), "texto": "Mapa revelado em volta"}
 		"revelar_objetivo":
 			var obj := mapa.encontrar("objetivo")
 			mapa.revelar(obj, 1)
 			_log("O objetivo foi revelado no mapa.")
+			return {"tipo": "revelar_objetivo", "valor": 1, "texto": "Covil revelado"}
+	return {}
 
 
 # --- Encontros -------------------------------------------------------------
