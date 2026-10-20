@@ -207,7 +207,7 @@ func test_preferencias_de_efeitos_e_pausa():
 	assert_false(Preferencias.efeito("grao"))
 	var m := MenuPausa.abrir(self)
 	assert_true(MenuPausa.aberto(self))
-	assert_eq(m._ajustes.get_child_count(), 3)
+	assert_eq(m._ajustes.get_child_count(), 5, "volume e quatro efeitos")
 	m.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Preferencias.caminho))
 	Preferencias.caminho = antes
@@ -229,3 +229,14 @@ func test_barra_membrana_racha():
 	b.value = 20
 	await wait_frames(2)
 	assert_eq(b.value, 20.0)
+
+
+func test_som_procedural_gera_e_toca():
+	for nome in ["tecla", "carimbo", "pista", "drone"]:
+		var w := Som.gerar(nome)
+		assert_gt(w.data.size(), 100, nome)
+	assert_eq(Som.gerar("drone").loop_mode, AudioStreamWAV.LOOP_FORWARD, "o drone fica em laço")
+	assert_same(Som.gerar("tecla"), Som.gerar("tecla"), "cache")
+	Som.tocar("clique")        # com ou sem a instância do Jogo, não quebra
+	Som.ambiente(0.8)
+	Som.ambiente(0.0)

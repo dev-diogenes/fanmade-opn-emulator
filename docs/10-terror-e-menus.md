@@ -31,6 +31,5 @@ O terror não vem de mais escuridão, e sim de **ritmo e de documentos**:
 
 ## Ainda não
 
-- **Áudio:** sussurros, estática de rádio, máquina de escrever. Fica para a fase de áudio.
-- **Tooltips do tutorial datilografados:** o tour já usa papel e moldura.
+- **Áudio:** feito no [11-audio.md](11-audio.md). O tour do tutorial também passou a ser datilografado.
 - **Combate online:** sair no meio do combate não é oferecido, porque o estado do combate não é salvo.

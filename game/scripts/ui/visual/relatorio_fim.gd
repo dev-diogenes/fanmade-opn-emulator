@@ -90,5 +90,6 @@ func mostrar(carimbo: String, linhas: Array, sucesso: bool) -> void:
 	var tw := create_tween()
 	tw.tween_interval(0.9)
 	tw.tween_property(rotulo, "modulate:a", 0.88, 0.01)
+	tw.parallel().tween_callback(func(): Som.tocar("carimbo")).set_delay(0.14)
 	tw.parallel().tween_property(rotulo, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	botao.grab_focus.call_deferred()

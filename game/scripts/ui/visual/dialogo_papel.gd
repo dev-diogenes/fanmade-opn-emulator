@@ -69,6 +69,7 @@ func _montar(titulo: String, texto: String, sim: String, nao: String, perigoso: 
 
 
 func _ready() -> void:
+	Som.tocar("papel")
 	Tema.datilografar(_texto)
 	_confirmar.grab_focus.call_deferred()
 

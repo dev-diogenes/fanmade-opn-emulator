@@ -70,3 +70,14 @@ static func definir_efeito(nome: String, valor: bool) -> void:
 	d["efeitos"] = e
 	gravar(d)
 	_efeitos_cache = e
+
+
+## Volume geral (0..1), docs/11. O ambiente (drone e sussurros) liga e desliga por efeito("ambiente").
+static func volume() -> float:
+	return float(ler().get("volume", 0.8))
+
+
+static func definir_volume(valor: float) -> void:
+	var d := ler()
+	d["volume"] = clampf(valor, 0.0, 1.0)
+	gravar(d)

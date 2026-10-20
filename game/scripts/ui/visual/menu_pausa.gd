@@ -52,11 +52,31 @@ func _montar(saidas: Array) -> void:
 	_ajustes = VBoxContainer.new()
 	_ajustes.visible = false
 	_pasta.add_child(_ajustes)
-	for e in [["grao", "Granulação e vinheta"], ["glitch", "Glitch de VHS e tremores"], ["transicoes", "Estática entre as telas"]]:
+	var linha_vol := HBoxContainer.new()
+	linha_vol.add_theme_constant_override("separation", Tema.ESPACO_M)
+	_ajustes.add_child(linha_vol)
+	var lv := Label.new()
+	lv.text = "Volume"
+	linha_vol.add_child(lv)
+	var volume := HSlider.new()
+	volume.min_value = 0.0
+	volume.max_value = 1.0
+	volume.step = 0.05
+	volume.value = Preferencias.volume()
+	volume.custom_minimum_size = Vector2(180, 0)
+	volume.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	volume.value_changed.connect(func(v):
+		Preferencias.definir_volume(v)
+		Som.aplicar_volume())
+	linha_vol.add_child(volume)
+	for e in [["grao", "Granulação e vinheta"], ["glitch", "Glitch de VHS e tremores"], ["transicoes", "Estática entre as telas"],
+			["ambiente", "Som ambiente (drone e sussurros)"]]:
 		var c := CheckBox.new()
 		c.text = e[1]
 		c.button_pressed = Preferencias.efeito(e[0])
-		c.toggled.connect(func(v): Preferencias.definir_efeito(e[0], v))
+		c.toggled.connect(func(v):
+			Preferencias.definir_efeito(e[0], v)
+			Som.aplicar_volume())
 		_ajustes.add_child(c)
 	for s in saidas:
 		var texto: String = s[0]
@@ -68,6 +88,7 @@ func _montar(saidas: Array) -> void:
 			else:
 				DialogoPapel.perguntar(self, texto, aviso, "Sair", acao))
 	continuar.grab_focus.call_deferred()
+	Som.tocar("papel")
 
 
 func _item(texto: String, acao: Callable) -> Button:

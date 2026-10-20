@@ -679,6 +679,7 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 				_log.append_text(Tema.bb("Não dá para fazer esse teste (treino, PE ou habilidade).", Tema.AVISO) + "\n")
 			elif String(res.teste.get("pista", "")) != "":
 				Tema.pulso_vhs(_vista, 0.8, 0.6)   # o paranormal "aparece" na fita
+				Som.tocar("pista")
 				if not _quadro_aberto:
 					_alternar_quadro()
 			elif not res.teste.get("sucesso", true):

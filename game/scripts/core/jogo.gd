@@ -39,6 +39,9 @@ func _ready() -> void:
 	Tema.aplicar()
 	# Toda tela nova entra com estática e o nome do arquivo datilografado (docs/10)
 	get_tree().node_added.connect(_ao_entrar_no)
+	var som := Som.new()
+	som.name = "Som"
+	add_child(som)
 	Entrada.configurar()
 	rede = Rede.new()
 	rede.name = "Rede"
@@ -58,6 +61,16 @@ func _ready() -> void:
 
 
 func _ao_entrar_no(no: Node) -> void:
+	# Todo botão do jogo faz um clique seco; passar o mouse, um tique baixo (docs/11)
+	if no is BaseButton:
+		var b := no as BaseButton
+		b.pressed.connect(func(): Som.tocar("clique"))
+		b.mouse_entered.connect(func():
+			if not b.disabled:
+				Som.tocar("hover"))
+		return
+	if no.get_parent() == get_tree().root and no.scene_file_path in [CENA_BASE, CENA_EDITOR, CENA_SAGUAO]:
+		Som.ambiente(0.0)   # a Base é um lugar seguro: só o drone baixo
 	if no.get_parent() != get_tree().root or no.scene_file_path == "" or not Preferencias.efeito("transicoes"):
 		return
 	if not no.scene_file_path.begins_with("res://scenes/"):

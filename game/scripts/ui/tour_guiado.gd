@@ -127,6 +127,7 @@ func mostrar(i: int) -> void:
 	var p: Dictionary = passos[indice]
 	_lbl_titulo.text = String(p.get("titulo", ""))
 	_lbl_texto.text = String(p.get("texto", ""))
+	Tema.datilografar(_lbl_texto, 0.01, 0.9)   # o bilhete do tour também é datilografado
 	_lbl_contador.text = "%d de %d" % [indice + 1, passos.size()]
 	_btn_voltar.disabled = indice == 0
 	_btn_proximo.text = "Concluir" if indice == passos.size() - 1 else "Próximo"

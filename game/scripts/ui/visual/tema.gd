@@ -290,6 +290,11 @@ static func criar() -> Theme:
 		t.set_stylebox("grabber_highlight", tipo, caixa(OURO, Color.TRANSPARENT, 0, 3))
 		t.set_stylebox("grabber_pressed", tipo, caixa(OURO_CLARO, Color.TRANSPARENT, 0, 3))
 
+	# Slider (volume)
+	t.set_stylebox("slider", "HSlider", caixa(Color("0f0d13"), OURO_ESCURO, 1, 3, Vector2(0, 3)))
+	t.set_stylebox("grabber_area", "HSlider", caixa(SANGUE, Color.TRANSPARENT, 0, 3, Vector2(0, 3)))
+	t.set_stylebox("grabber_area_highlight", "HSlider", caixa(SANGUE_CLARO, Color.TRANSPARENT, 0, 3, Vector2(0, 3)))
+
 	# Separadores
 	t.set_stylebox("separator", "HSeparator", caixa(Color(OURO, 0.35), Color.TRANSPARENT, 0, 0, Vector2(0, 1)))
 	t.set_constant("separation", "HSeparator", 10)
@@ -364,6 +369,7 @@ static func veu(vista: SubViewportContainer) -> void:
 ## Intensidade do véu: quase nada com a Membrana em 100, máxima abaixo de 25.
 static func membrana_na_tela(vista: SubViewportContainer, valor: int) -> void:
 	var m := vista.material as ShaderMaterial
+	Som.ambiente(clampf((100.0 - valor) / 75.0, 0.0, 1.0))
 	if m != null:
 		var ligado := Preferencias.efeito("grao")
 		m.set_shader_parameter("intensidade", clampf((100.0 - valor) / 75.0, 0.0, 1.0) if ligado else 0.0)
@@ -420,6 +426,7 @@ static func pulso_vhs(vista: SubViewportContainer, forca: float = 0.8, duracao: 
 	if m == null or not vista.is_inside_tree() or not Preferencias.efeito("glitch"):
 		return
 	m.set_shader_parameter("glitch", forca)
+	Som.tocar("glitch")
 	vista.create_tween().tween_method(func(v: float): m.set_shader_parameter("glitch", v), forca, 0.0, duracao)
 
 
@@ -430,7 +437,14 @@ static func datilografar(rotulo: Control, por_letra: float = 0.018, maximo: floa
 		return
 	var n: int = rotulo.get_total_character_count() if rotulo is RichTextLabel else rotulo.text.length()
 	rotulo.visible_ratio = 0.0
-	rotulo.create_tween().tween_property(rotulo, "visible_ratio", 1.0, minf(maximo, maxf(0.15, n * por_letra)))
+	var duracao := minf(maximo, maxf(0.15, n * por_letra))
+	rotulo.create_tween().tween_property(rotulo, "visible_ratio", 1.0, duracao)
+	# As teclas batem junto (no máximo uma a cada 45 ms, para não virar zumbido)
+	var teclas := mini(n, int(duracao / 0.045))
+	if teclas > 0:
+		var tw := rotulo.create_tween().set_loops(teclas)
+		tw.tween_callback(func(): Som.tocar("tecla"))
+		tw.tween_interval(duracao / teclas)
 
 
 ## Fundo de tela: gradiente radial (vinheta) em vez de cor chapada.

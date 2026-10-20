@@ -47,6 +47,7 @@ func _init(legenda: String = "") -> void:
 
 
 func _ready() -> void:
+	Som.tocar("estatica")
 	var forca := func(v: float):
 		if _fundo.material != null:
 			(_fundo.material as ShaderMaterial).set_shader_parameter("forca", v)
