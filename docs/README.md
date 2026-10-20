@@ -17,6 +17,7 @@
 | [12-sensacao-de-jogo.md](12-sensacao-de-jogo.md) | Feedback: dano flutuante, sons de golpe/ritual/passos, Arsenal em etiquetas, caixinha de música |
 | [13-ajustes-de-playtest.md](13-ajustes-de-playtest.md) | Os 12 ajustes do playtest: movimento, estradas, rolagem FTK2, ficha, eventos com opções, câmera, ação no mapa, investigação com WASD |
 | [14-pista-central.md](14-pista-central.md) | Pista central estilo GUMSHOE: examinar com treino, sem dados (PE nas DTs altas) |
+| [15-critica-acessibilidade-engajamento.md](15-critica-acessibilidade-engajamento.md) | Crítica de todas as telas: contraste medido, usabilidade, consistência e opções priorizadas de acessibilidade e engajamento |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.
