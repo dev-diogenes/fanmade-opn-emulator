@@ -69,6 +69,8 @@ func _ao_entrar_no(no: Node) -> void:
 			if not b.disabled:
 				Som.tocar("hover"))
 		return
+	if no.get_parent() == get_tree().root and no.scene_file_path.begins_with("res://scenes/") and no.scene_file_path != CENA_TITULO:
+		Som.musica("")
 	if no.get_parent() == get_tree().root and no.scene_file_path in [CENA_BASE, CENA_EDITOR, CENA_SAGUAO]:
 		Som.ambiente(0.0)   # a Base é um lugar seguro: só o drone baixo
 	if no.get_parent() != get_tree().root or no.scene_file_path == "" or not Preferencias.efeito("transicoes"):

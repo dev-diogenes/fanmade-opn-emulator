@@ -240,6 +240,7 @@ func _atualizar_agentes(missao: Missao) -> void:
 				if Vector2(destino.x - ficha.position.x, destino.z - ficha.position.z).length() > 0.05:
 					ficha.look_at(Vector3(destino.x, ficha.global_position.y, destino.z), Vector3.UP, true)
 				Pecas.animar(ficha, "Walking_A")
+				Som.tocar("passo")
 				tw.tween_property(ficha, "position", destino, 0.35).set_trans(Tween.TRANS_SINE)
 				tw.tween_callback(Pecas.animar.bind(ficha, "Idle"))
 			else:

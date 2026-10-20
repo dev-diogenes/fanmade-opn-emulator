@@ -132,6 +132,7 @@ func iniciar_combate(semente: int) -> void:
 	if _tab3d != null:
 		_tab3d.construir(grade)
 	combate.ataque_resolvido.connect(_ao_atacar)
+	combate.ritual_conjurado.connect(_ao_conjurar)
 	combate.combate_encerrado.connect(_ao_encerrar)
 	combate.turno_perdido.connect(func(s, motivo): _registrar("%s perde o turno (%s)." % [s.nome, motivo]))
 	combate.lesao_sofrida.connect(func(a, attr): _registrar("[color=#eda64a]%s sofre uma lesão: −1 %s permanente.[/color]" % [a.nome, attr.to_upper()]))
@@ -409,15 +410,30 @@ func _ao_atacar(r: ResultadoAtaque) -> void:
 	var txt := "[color=%s]%s[/color] → %s com %s: %s" % [cor, r.atacante.nome, r.alvo.nome, r.arma.get("nome", "?"), r.teste.descrever()]
 	if r.reacao != "":
 		txt += " [i](%s)[/i]" % r.reacao
+	if _tab3d != null:
+		_tab3d.animar_ataque(r.atacante)
 	if r.acertou:
 		txt += " → [b]%d de dano[/b]%s" % [r.dano, " [color=#e3c27a]CRÍTICO[/color]" if r.critico else ""]
+		Som.tocar("golpe")
+		if _tab3d != null:
+			_tab3d.texto_flutuante(r.alvo, ("CRÍTICO −%d" if r.critico else "−%d") % r.dano, Tema.OURO_CLARO if r.critico else Tema.PERIGO, r.critico)
 		if r.critico:
 			Tema.pulso_vhs(_vista, 0.6, 0.45)
+	else:
+		Som.tocar("erro")
+		if _tab3d != null:
+			_tab3d.texto_flutuante(r.alvo, "ERROU", Tema.TEXTO_SUAVE)
 	if r.pe_gasto > 0:
 		txt += " (%d PE)" % r.pe_gasto
 	_registrar(txt)
 	if r.alvo.tem(Ser.MORRENDO):
 		_registrar("[color=#e0574a]%s está morrendo![/color]" % r.alvo.nome)
+
+
+func _ao_conjurar(res: Dictionary) -> void:
+	Som.tocar("ritual")
+	if _tab3d != null and res.get("conjurador") is Ser:
+		_tab3d.animar_ataque(res.conjurador, true)
 
 
 func _ao_encerrar(vencedor: String) -> void:

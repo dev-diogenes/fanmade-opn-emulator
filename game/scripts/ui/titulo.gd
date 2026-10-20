@@ -18,6 +18,7 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_montar_diorama()
 	_montar_menu()
+	Som.musica("caixinha")   # caixinha de música desafinada (docs/12)
 
 
 func _process(delta: float) -> void:

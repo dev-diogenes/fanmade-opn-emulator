@@ -10,7 +10,9 @@ const TAXA := 22050
 const VOZES := 8
 ## Efeito -> [volume em dB, variação de altura]
 const EFEITOS := {"estatica": [-14.0, 0.0], "tecla": [-16.0, 0.12], "carimbo": [-6.0, 0.05], "papel": [-14.0, 0.15],
-	"hover": [-26.0, 0.1], "clique": [-18.0, 0.08], "pista": [-10.0, 0.0], "glitch": [-14.0, 0.2]}
+	"hover": [-26.0, 0.1], "clique": [-18.0, 0.08], "pista": [-10.0, 0.0], "glitch": [-14.0, 0.2],
+	"golpe": [-8.0, 0.12], "erro": [-14.0, 0.1], "ritual": [-9.0, 0.05], "passo": [-20.0, 0.2], "encontro": [-8.0, 0.0],
+	"caixinha": [-16.0, 0.0]}
 
 static var _instancia: Som
 static var _cache: Dictionary = {}
@@ -19,6 +21,7 @@ var _vozes: Array[AudioStreamPlayer] = []
 var _proxima := 0
 var _drone: AudioStreamPlayer
 var _sussurro: AudioStreamPlayer
+var _musica: AudioStreamPlayer
 var _intensidade := 0.0
 
 
@@ -36,6 +39,9 @@ func _ready() -> void:
 	_sussurro = AudioStreamPlayer.new()
 	_sussurro.bus = "Ambiente"
 	add_child(_sussurro)
+	_musica = AudioStreamPlayer.new()
+	_musica.bus = "Ambiente"
+	add_child(_musica)
 	aplicar_volume()
 
 
@@ -76,6 +82,21 @@ func _tocar(nome: String) -> void:
 	p.volume_db = EFEITOS[nome][0]
 	p.pitch_scale = 1.0 + randf_range(-1.0, 1.0) * EFEITOS[nome][1]
 	p.play()
+
+
+## Música em laço (por enquanto só a caixinha do título); "" para parar.
+static func musica(nome: String) -> void:
+	if _instancia == null:
+		return
+	var p := _instancia._musica
+	if nome == "":
+		p.stop()
+		return
+	var w := gerar(nome)
+	if p.stream != w or not p.playing:
+		p.stream = w
+		p.volume_db = EFEITOS.get(nome, [-16.0])[0]
+		p.play()
 
 
 ## 0 = calmo (só o drone baixo), 1 = Membrana rompendo (drone alto e sussurros).
@@ -120,6 +141,14 @@ static func gerar(nome: String) -> AudioStreamWAV:
 		"clique": amostras = _clique(0.03, 1400.0, 0.8)
 		"pista": amostras = _pista()
 		"glitch": amostras = _glitch()
+		"golpe": amostras = _golpe()
+		"erro": amostras = _ruido(0.25, 0.15, func(t, d): return sin(PI * t / d) * 0.7)
+		"ritual": amostras = _ritual()
+		"passo": amostras = _clique(0.08, 110.0, 0.9)
+		"encontro": amostras = _encontro()
+		"caixinha":
+			amostras = _caixinha()
+			laco = true
 		"drone":
 			amostras = _drone_laco()
 			laco = true
@@ -239,6 +268,66 @@ static func _glitch() -> PackedFloat32Array:
 		if i % 40 == 0:
 			v = snappedf(randf_range(-1.0, 1.0), 0.25) * (0.0 if randf() < 0.2 else 1.0)
 		a[i] = 0.5 * v * (1.0 - float(i) / n)
+	return a
+
+
+## Golpe: estalo seco seguido de baque (arma acertando).
+static func _golpe() -> PackedFloat32Array:
+	var n := int(0.28 * TAXA)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	var y := 0.0
+	for i in n:
+		var t := float(i) / TAXA
+		y += 0.6 * (randf_range(-1.0, 1.0) - y)
+		a[i] = 0.5 * y * exp(-t / 0.015) + 0.45 * sin(TAU * (120.0 - 60.0 * t) * t) * exp(-t / 0.07)
+	return a
+
+
+## Ritual: um acorde dissonante que cresce ao contrário e corta seco.
+static func _ritual() -> PackedFloat32Array:
+	var d := 1.1
+	var n := int(d * TAXA)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	for i in n:
+		var t := float(i) / TAXA
+		var env := pow(t / d, 2.2) * (1.0 if t < d - 0.04 else (d - t) / 0.04)
+		a[i] = 0.3 * env * (sin(TAU * 146.8 * t) + sin(TAU * 155.6 * t) + sin(TAU * 207.7 * t) + 0.6 * sin(TAU * 311.1 * t))
+	return a
+
+
+## Encontro: duas notas graves que descem, dissonantes (algo te viu).
+static func _encontro() -> PackedFloat32Array:
+	var d := 1.2
+	var n := int(d * TAXA)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	for i in n:
+		var t := float(i) / TAXA
+		var f := 98.0 - 20.0 * t
+		var env := minf(1.0, t / 0.02) * exp(-t / 0.6)
+		a[i] = 0.4 * env * (sin(TAU * f * t) + sin(TAU * f * 1.06 * t) + 0.5 * sin(TAU * f * 2.83 * t))
+	return a
+
+
+## Caixinha de música desafinada (tema do título): notas com sino e leve desafinação.
+## Um laço de 8 s, notas fixas (sempre a mesma melodia).
+static func _caixinha() -> PackedFloat32Array:
+	var d := 8.0
+	var n := int(d * TAXA)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	# (início em s, frequência): menor, com uma nota "errada" que dá o desconforto
+	var notas := [[0.0, 659.3], [0.5, 587.3], [1.0, 523.3], [1.5, 493.9], [2.0, 523.3], [3.0, 440.0],
+		[4.0, 659.3], [4.5, 622.3], [5.0, 523.3], [5.5, 466.2], [6.0, 440.0], [7.0, 415.3]]
+	for nota in notas:
+		var ini := int(float(nota[0]) * TAXA)
+		var f: float = nota[1] * 1.008
+		for i in range(ini, mini(n, ini + int(1.6 * TAXA))):
+			var t := float(i - ini) / TAXA
+			var env := exp(-t / 0.45) * minf(1.0, t / 0.004)
+			a[i] += 0.22 * env * (sin(TAU * f * t) + 0.35 * sin(TAU * f * 2.0 * t) + 0.12 * sin(TAU * f * 3.01 * t))
 	return a
 
 

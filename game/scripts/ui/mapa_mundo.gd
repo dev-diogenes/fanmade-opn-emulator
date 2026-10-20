@@ -332,6 +332,8 @@ func _atualizar_mestre() -> void:
 
 func _ao_encontro(config: Dictionary) -> void:
 	_atualizar()
+	Som.tocar("encontro")   # algo viu o grupo: nota grave, fita falhando
+	Tema.pulso_vhs(_vista, 0.9, 1.0)
 	await get_tree().create_timer(1.0).timeout
 	if _jogo != null and is_inside_tree():
 		_jogo.ir_para_combate(config)
@@ -339,6 +341,7 @@ func _ao_encontro(config: Dictionary) -> void:
 
 func _ao_investigar(_config: Dictionary) -> void:
 	_atualizar()
+	Som.tocar("pista")
 	await get_tree().create_timer(1.0).timeout
 	if _jogo != null and is_inside_tree():
 		_jogo.ir_para_investigacao()
@@ -657,9 +660,13 @@ func _atualizar() -> void:
 	_lbl_mov.text = ("Movimento restante: %d · clique num hex azul" % missao.movimento_restante) if missao.movimento_rolado else "Role o movimento para andar."
 	_desenhar_slots()
 	var ev := missao.evento_pendente
+	var abriu := not ev.is_empty() and not _painel_evento.visible
 	_painel_evento.visible = not ev.is_empty()
 	if not ev.is_empty():
 		_lbl_evento.text = "%s\n\n%s" % [ev.evento.titulo, ev.evento.texto]
+		if abriu:
+			Som.tocar("papel")
+			Tema.datilografar(_lbl_evento)
 		_btn_testar.text = "%s testa %s (DT %d)" % [ev.agente.nome, missao.ruleset.pericia(ev.evento.pericia).nome, int(ev.evento.dt)]
 	_barra_membrana.value = missao.membrana.valor
 	Tema.membrana_na_tela(_vista, missao.membrana.valor)

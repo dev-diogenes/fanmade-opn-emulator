@@ -187,6 +187,37 @@ func _atualizar_unidade(s: Ser) -> void:
 		rot.modulate = Color("ecf0f1") if float(s.pv) / s.pv_maximo > 0.5 else Color("f5b041")
 
 
+## Texto que sobe e some sobre um ser: dano, "ERROU", "CRÍTICO" (docs/12).
+func texto_flutuante(s: Ser, texto: String, cor: Color, grande: bool = false) -> void:
+	var no: Node3D = _unidades.get(s)
+	if no == null or not is_inside_tree():
+		return
+	var l := Pecas.rotulo(texto, 72 if grande else 54, cor)
+	l.outline_size = 16
+	var fonte := Tema.fonte_titulo()
+	if fonte != null:
+		l.font = fonte
+	l.position = no.position + Vector3(randf_range(-0.2, 0.2), 1.5, 0)
+	add_child(l)
+	var tw := l.create_tween().set_parallel()
+	tw.tween_property(l, "position:y", l.position.y + 0.9, 1.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(l, "modulate:a", 0.0, 0.5).set_delay(0.6)
+	tw.chain().tween_callback(l.queue_free)
+
+
+## Animação de ataque em quem bate (quando o modelo tem).
+func animar_ataque(s: Ser, ritual: bool = false) -> void:
+	var no: Node3D = _unidades.get(s)
+	if no == null or not no.has_meta("anim") or not is_inside_tree():
+		return
+	var anim: AnimationPlayer = no.get_meta("anim")
+	for nome in (["Spellcast_Shoot", "Spellcasting"] if ritual else ["1H_Melee_Attack_Chop", "Unarmed_Melee_Attack_Punch_A", "2H_Melee_Attack_Chop"]):
+		if anim.has_animation(nome):
+			Pecas.animar(no, nome, 0.05)
+			no.create_tween().tween_callback(_voltar_a_ficar_parado.bind(no)).set_delay(0.7)
+			return
+
+
 func _voltar_a_ficar_parado(no: Node3D) -> void:
 	if not no.get_meta("caido", false):
 		Pecas.animar(no, "Idle")

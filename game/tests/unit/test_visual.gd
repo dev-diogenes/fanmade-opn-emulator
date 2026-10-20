@@ -240,3 +240,22 @@ func test_som_procedural_gera_e_toca():
 	Som.tocar("clique")        # com ou sem a instância do Jogo, não quebra
 	Som.ambiente(0.8)
 	Som.ambiente(0.0)
+
+
+func test_sons_do_combate_e_caixinha():
+	for nome in ["golpe", "erro", "ritual", "passo", "encontro"]:
+		assert_gt(Som.gerar(nome).data.size(), 100, nome)
+	assert_eq(Som.gerar("caixinha").loop_mode, AudioStreamWAV.LOOP_FORWARD)
+	Som.musica("")
+
+
+func test_arsenal_usa_etiquetas():
+	var base = load("res://scenes/base_ordem.tscn").instantiate()
+	add_child_autofree(base)
+	await wait_frames(2)
+	assert_false(base._checks_itens.is_empty())
+	for id in base._checks_itens:
+		assert_false(base._checks_itens[id] is CheckBox, "o Arsenal não usa mais caixas de marcar")
+		break
+	for c in get_tree().root.find_children("ConviteTutorial", "", true, false):
+		c.queue_free()

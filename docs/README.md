@@ -14,6 +14,7 @@
 | [09-identidade-visual-op.md](09-identidade-visual-op.md) | Identidade visual de OP: estética por contexto, crítica e handoff (piloto: Investigação) |
 | [10-terror-e-menus.md](10-terror-e-menus.md) | Transições, diálogos em papel, briefing, relatórios carimbados, pausa e ajustes de efeitos |
 | [11-audio.md](11-audio.md) | Áudio procedural: sons sintetizados, ambiente pela Membrana, volume |
+| [12-sensacao-de-jogo.md](12-sensacao-de-jogo.md) | Feedback: dano flutuante, sons de golpe/ritual/passos, Arsenal em etiquetas, caixinha de música |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

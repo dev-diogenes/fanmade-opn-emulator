@@ -15,7 +15,7 @@ var _opt_recruta: OptionButton
 var _ficha: RichTextLabel
 var _caixa_pendencia: VBoxContainer
 var _caixa_requisicao: HFlowContainer
-var _checks_itens: Dictionary = {}     ## item_id -> CheckBox
+var _checks_itens: Dictionary = {}     ## item_id -> Button (etiqueta que liga e desliga)
 var _opt_arma: OptionButton
 var _lbl_requisicao: Label
 var _caixa_grupo: VBoxContainer
@@ -209,11 +209,7 @@ func _montar_interface() -> void:
 	linha_arma.add_child(req)
 	arsenal.add_child(linha_arma)
 	for item in _catalogo():
-		var chk := CheckBox.new()
-		chk.custom_minimum_size = Vector2(300, 0)
-		chk.text = "%s%s  [cat %s, %d esp.]" % ["☠ " if item.has("maldicoes") else "", item.nome, ["0", "I", "II", "III", "IV", "V"][mini(5, int(item.get("categoria", 0)))], int(item.get("espacos", 1))]
-		if item.has("maldicoes"):
-			chk.tooltip_text = "Maldições: %s" % ", ".join(PackedStringArray(item.maldicoes.map(func(m): return "%s (%s) — %s" % [m.nome, m.elemento, m.descricao])))
+		var chk := _etiqueta_item(item)
 		chk.toggled.connect(func(_v): _atualizar_armas_requisicao())
 		_checks_itens[item.id] = chk
 		_caixa_requisicao.add_child(chk)
@@ -331,6 +327,59 @@ func _montar_interface() -> void:
 		DialogoPapel.perguntar(self, "Nova carreira", "Isso apaga o save atual: agentes, memorial e a missão em andamento. Não dá para desfazer.", "Apagar e começar", _nova_carreira))
 	apagar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	cj.add_child(apagar)
+
+
+## Etiqueta de evidência (Arsenal, docs/12): um cartão de papel que liga e desliga.
+## Categoria e espaços como carimbo; itens amaldiçoados com ☠ e borda vermelha.
+func _etiqueta_item(item: Dictionary) -> Button:
+	var b := Button.new()
+	b.toggle_mode = true
+	b.custom_minimum_size = Vector2(232, 64)
+	b.clip_text = true
+	var amaldicoado := item.has("maldicoes")
+	var papel := Tema.caixa_papel(Vector2(12, 8))
+	var marcado := Tema.caixa_papel(Vector2(12, 8))
+	marcado.modulate_color = Color(1.0, 0.93, 0.85)
+	for estado in ["normal", "hover", "focus", "disabled"]:
+		b.add_theme_stylebox_override(estado, papel)
+	for estado in ["pressed", "hover_pressed"]:
+		b.add_theme_stylebox_override(estado, marcado)
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	for cor in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(cor, Tema.SANGUE if amaldicoado else Tema.TINTA)
+	var maquina := Tema.fonte_maquina()
+	if maquina != null:
+		b.add_theme_font_override("font", maquina)
+	b.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+	var cat: String = ["0", "I", "II", "III", "IV", "V"][mini(5, int(item.get("categoria", 0)))]
+	b.text = "%s%s
+cat. %s · %d esp." % ["☠ " if amaldicoado else "", item.nome, cat, int(item.get("espacos", 1))]
+	if amaldicoado:
+		b.tooltip_text = "Maldições: %s" % ", ".join(PackedStringArray(item.maldicoes.map(func(m): return "%s (%s) — %s" % [m.nome, m.elemento, m.descricao])))
+	else:
+		b.tooltip_text = "%s — categoria %s, %d espaço(s)" % [item.nome, cat, int(item.get("espacos", 1))]
+	# Carimbo "REQUISITADO" quando marcado
+	var carimbo := Label.new()
+	carimbo.text = "REQUISITADO"
+	carimbo.add_theme_color_override("font_color", Color(Tema.SANGUE_CLARO, 0.85))
+	carimbo.add_theme_stylebox_override("normal", Tema.caixa(Color(0, 0, 0, 0), Color(Tema.SANGUE_CLARO, 0.8), 2, 2, Vector2(4, 0)))
+	carimbo.add_theme_font_size_override("font_size", 11)
+	var titulo := Tema.fonte_titulo()
+	if titulo != null:
+		carimbo.add_theme_font_override("font", titulo)
+	carimbo.position = Vector2(128, 30)
+	carimbo.rotation_degrees = -8
+	carimbo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	carimbo.visible = false
+	b.add_child(carimbo)
+	# No draw (e não no toggled): a Base marca as etiquetas com set_pressed_no_signal
+	b.draw.connect(func():
+		carimbo.visible = b.button_pressed
+		if amaldicoado:
+			b.draw_rect(Rect2(Vector2(1, 1), b.size - Vector2(2, 2)), Color(Tema.SANGUE_CLARO, 0.8), false, 2.0))
+	return b
 
 
 ## Folha de papel (dossiê). `carimbo` põe "CONFIDENCIAL" no canto.
