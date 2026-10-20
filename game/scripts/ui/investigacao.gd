@@ -67,10 +67,7 @@ func _alvos_do_tutorial() -> Dictionary:
 
 func _montar_interface() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var fundo := ColorRect.new()
-	fundo.color = Color("0b0b10")
-	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(fundo)
+	add_child(Tema.fundo())
 	var raiz := HBoxContainer.new()
 	raiz.set_anchors_preset(Control.PRESET_FULL_RECT)
 	raiz.add_theme_constant_override("separation", 10)
@@ -92,20 +89,20 @@ func _montar_interface() -> void:
 	var rolagem := ScrollContainer.new()
 	rolagem.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rolagem.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	raiz.add_child(rolagem)
+	raiz.add_child(Tema.painel(rolagem, true))
 	var p := VBoxContainer.new()
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	p.add_theme_constant_override("separation", 4)
 	rolagem.add_child(p)
 
 	_lbl_vez = _label(p, 18)
-	_lbl_vez.add_theme_color_override("font_color", Color("f7dc6f"))
+	_lbl_vez.add_theme_color_override("font_color", Tema.OURO_CLARO)
 	_lbl_topo = _label(p, 16)
 	_lbl_agente = _label(p)
 	var lp := HBoxContainer.new()
 	p.add_child(lp)
 	_lbl_ponto = _label(lp)
-	_lbl_ponto.add_theme_color_override("font_color", Color("76d7c4"))
+	_lbl_ponto.add_theme_color_override("font_color", Tema.INFO)
 	_lbl_ponto.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_botao(lp, "Próximo ponto", _proximo_ponto)
 
@@ -259,11 +256,11 @@ func _atualizar() -> void:
 			_botao(_caixa_habilidades, "Na Trilha Certa", _trilha_certa.bind(a))
 	var linhas: Array[String] = ["[b]Ficha do caso[/b]  ·  %s" % missao.caso.objetivo]
 	if missao.caso.resumo != "":
-		linhas.append("[i][color=#aab7b8]%s[/color][/i]" % missao.caso.resumo)
+		linhas.append("[i][color=#a69b88]%s[/color][/i]" % missao.caso.resumo)
 	for q in missao.caso.perguntas:
 		var resp := missao.caso.resposta(q.id)
-		linhas.append("%s %s  [color=#aab7b8](%d/%d)[/color]%s" % ["✔" if q.respondida else "•", q.texto, mini(int(q.encontradas), int(q.pistas_necessarias)), int(q.pistas_necessarias),
-			"  → [color=#f7dc6f]%s[/color]" % resp if resp != "" else ""])
+		linhas.append("%s %s  [color=#a69b88](%d/%d)[/color]%s" % ["✔" if q.respondida else "•", q.texto, mini(int(q.encontradas), int(q.pistas_necessarias)), int(q.pistas_necessarias),
+			"  → [color=#e3c27a]%s[/color]" % resp if resp != "" else ""])
 	_caso.text = "\n".join(linhas)
 	_visao.atualizar(cena, _ponto)
 
@@ -370,15 +367,15 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 	match String(cmd.get("acao", "")):
 		"procurar":
 			if not res.ok:
-				_log.append_text("[color=#e67e22]Não dá para fazer esse teste (treino, PE ou habilidade).[/color]\n")
+				_log.append_text("[color=#eda64a]Não dá para fazer esse teste (treino, PE ou habilidade).[/color]\n")
 		"facilitar":
 			if not res.ok:
-				_log.append_text("[color=#e67e22]Não dá para fazer esse teste.[/color]\n")
+				_log.append_text("[color=#eda64a]Não dá para fazer esse teste.[/color]\n")
 			elif res.teste.get("sucesso", false):
 				_visao.iluminar()
 		"ajudar":
 			if not res.ok:
-				_log.append_text("[color=#e67e22]Não dá para ajudar agora.[/color]\n")
+				_log.append_text("[color=#eda64a]Não dá para ajudar agora.[/color]\n")
 		"sair":
 			if res.ok and _jogo != null:
 				_jogo.voltar_da_investigacao(res.resultado)
@@ -399,5 +396,5 @@ func _ao_comando_aplicado(cmd: Dictionary, res: Dictionary) -> void:
 	if String(cmd.get("ctx", "")) != "mestre":
 		return
 	if cmd.get("acao", "") == "narrar" and res.get("ok", false):
-		_log.append_text("[color=#f5cba7][b]Mestre:[/b] %s[/color]\n" % res.texto)
+		_log.append_text("[color=#f2c6a0][b]Mestre:[/b] %s[/color]\n" % res.texto)
 	_atualizar()

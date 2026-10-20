@@ -18,10 +18,7 @@ func _ready() -> void:
 
 func _montar() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var fundo := ColorRect.new()
-	fundo.color = Color("101318")
-	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(fundo)
+	add_child(Tema.fundo())
 	var margem := MarginContainer.new()
 	margem.set_anchors_preset(Control.PRESET_FULL_RECT)
 	for lado in ["left", "right", "top", "bottom"]:
@@ -32,11 +29,11 @@ func _montar() -> void:
 	margem.add_child(caixa)
 	var titulo := Label.new()
 	titulo.text = "Sessão online"
-	titulo.add_theme_font_size_override("font_size", 22)
+	titulo.theme_type_variation = "Titulo"
 	caixa.add_child(titulo)
 	_lbl_status = Label.new()
 	_lbl_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_lbl_status.add_theme_color_override("font_color", Color("76d7c4"))
+	_lbl_status.add_theme_color_override("font_color", Tema.INFO)
 	caixa.add_child(_lbl_status)
 	_info = RichTextLabel.new()
 	_info.bbcode_enabled = true
@@ -67,7 +64,7 @@ func _atualizar() -> void:
 		linhas.append("[b]Agentes da carreira do host[/b]")
 		for a in info.agentes:
 			var seu: bool = int(a.get("peer", 1)) == meu
-			linhas.append("  %s (NEX %d%%) — %s%s" % [a.nome, int(a.nex), a.jogador, "  [color=#58d68d](seu)[/color]" if seu else ""])
+			linhas.append("  %s (NEX %d%%) — %s%s" % [a.nome, int(a.nex), a.jogador, "  [color=#6fcf8e](seu)[/color]" if seu else ""])
 	var rel: Dictionary = info.get("relatorio", {})
 	if not rel.is_empty():
 		linhas.append("")

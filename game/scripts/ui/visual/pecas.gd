@@ -5,6 +5,127 @@ extends RefCounted
 ## feitos no Blender, eles substituem estas funções peça por peça.
 
 static var _materiais: Dictionary = {}
+static var _cenas: Dictionary = {}
+
+## Modelos de terceiros (ADR 0008). Sem os arquivos, cada função cai na primitiva.
+const DIR_HEX := "res://assets/models/kaykit_hex/"
+const DIR_PERSONAGENS := "res://assets/models/kaykit_personagens/"
+## Raio externo do hex da KayKit (2 de largura entre lados planos)
+const RAIO_KAYKIT := 1.1547
+const PERSONAGEM_POR_CLASSE := {"combatente": "Knight", "especialista": "Rogue_Hooded",
+	"ocultista": "Mage", "mundano": "Barbarian"}
+## Tile e decorações por terreno do mapa-múndi
+const TILE_POR_TERRENO := {"agua": "hex_water", "pantano": "hex_water", "estrada": "hex_road_A"}
+const DECORACAO_POR_TERRENO := {
+	"floresta": ["trees_A_large", "trees_A_medium", "trees_B_large", "trees_B_medium"],
+	"morro": ["hills_A_trees", "hills_B", "mountain_A_grass_trees", "hill_single_A"],
+	"pantano": ["waterlily_A", "waterplant_A", "waterplant_B"],
+	"campo": ["tree_single_A", "tree_single_B", "rock_single_A", "", "", ""],
+	"cidade": ["barrel", "crate_A_big", "sack", "tent"],
+	"ruina": ["rock_single_C", "rock_single_E"],
+}
+
+
+## Instancia um modelo importado, ou null se o arquivo não existe (clone sem LFS, testes).
+static func modelo(caminho: String) -> Node3D:
+	if not _cenas.has(caminho):
+		_cenas[caminho] = load(caminho) if ResourceLoader.exists(caminho) else null
+	var cena: PackedScene = _cenas[caminho]
+	return cena.instantiate() if cena != null else null
+
+
+## Tile do mapa com modelo KayKit (topo na altura `altura`) e a decoração do terreno.
+## Devolve null sem os modelos: aí o mapa usa `tile_hex` e a decoração por código.
+static func tile_terreno(terreno: String, raio: float, altura: float, semente: int,
+		tinta: Color = Color.WHITE) -> Node3D:
+	var base := modelo(DIR_HEX + TILE_POR_TERRENO.get(terreno, "hex_grass") + ".gltf")
+	if base == null:
+		return null
+	if tinta != Color.WHITE:
+		tingir(base, tinta)
+	var s := raio / RAIO_KAYKIT * 0.985
+	var n := Node3D.new()
+	base.scale = Vector3(s, 0.5, s)
+	base.position.y = altura
+	n.add_child(base)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = semente
+	if terreno == "estrada":
+		base.rotation.y = PI / 3.0 * rng.randi_range(0, 2)
+	var opcoes: Array = DECORACAO_POR_TERRENO.get(terreno, [])
+	if not opcoes.is_empty():
+		var nome: String = opcoes[rng.randi() % opcoes.size()]
+		var deco := modelo(DIR_HEX + nome + ".gltf") if nome != "" else null
+		if deco != null:
+			if tinta != Color.WHITE:
+				tingir(deco, tinta.lerp(Color.WHITE, 0.45))
+			# As decorações de cobertura (árvores, morros) ocupam o tile; as soltas são menores e deslocadas
+			var solta := terreno in ["campo", "cidade", "ruina", "pantano"]
+			deco.scale = Vector3.ONE * s * (0.6 if solta else 1.0)
+			deco.rotation.y = PI / 3.0 * rng.randi_range(0, 5)
+			deco.position = Vector3(0, altura - (0.2 * 0.5 if terreno == "pantano" else 0.0), 0)
+			if solta:
+				var ang := rng.randf() * TAU
+				deco.position += Vector3(cos(ang), 0, sin(ang)) * raio * 0.45
+			n.add_child(deco)
+	return n
+
+
+## Multiplica a cor dos materiais de um modelo (o atlas da KayKit é claro demais
+## para o clima de OP; a tinta vem da cor do terreno no ruleset). Cache por material e tinta.
+static func tingir(raiz: Node, tinta: Color) -> void:
+	for mi: MeshInstance3D in raiz.find_children("*", "MeshInstance3D", true, false):
+		for i in mi.mesh.get_surface_count():
+			var original := mi.mesh.surface_get_material(i) as StandardMaterial3D
+			if original == null:
+				continue
+			var chave := "tinta|%d|%s" % [original.get_instance_id(), tinta.to_html()]
+			if not _materiais.has(chave):
+				var m := original.duplicate() as StandardMaterial3D
+				m.albedo_color = original.albedo_color * tinta
+				_materiais[chave] = m
+			mi.set_surface_override_material(i, _materiais[chave])
+
+
+## Figura de um agente: personagem animado da KayKit sobre uma base na cor do jogador
+## (como uma peça de tabuleiro). Sem o modelo, cai no peão de `figura`.
+static func agente(classe_id: String, cor: Color, escala: float = 1.0) -> Node3D:
+	var nome: String = PERSONAGEM_POR_CLASSE.get(classe_id, "Knight")
+	var m := modelo(DIR_PERSONAGENS + nome + ".glb")
+	if m == null:
+		return figura(cor, escala)
+	var n := Node3D.new()
+	var base := CylinderMesh.new()
+	base.top_radius = 0.3 * escala
+	base.bottom_radius = 0.34 * escala
+	base.height = 0.06 * escala
+	base.radial_segments = 16
+	n.add_child(_malha(base, material(cor.darkened(0.2), false, 0.25), Vector3(0, 0.03 * escala, 0)))
+	m.scale = Vector3.ONE * 0.42 * escala
+	m.position.y = 0.06 * escala
+	# O pacote traz todas as armas e escudos visíveis: fica só o corpo do personagem
+	var prefixo := nome.split("_")[0] + "_"
+	for mi in m.find_children("*", "MeshInstance3D", true, false):
+		mi.visible = String(mi.name).begins_with(prefixo)
+	n.add_child(m)
+	var anim: AnimationPlayer = m.find_children("*", "AnimationPlayer", true, false).front() \
+		if not m.find_children("*", "AnimationPlayer", true, false).is_empty() else null
+	if anim != null:
+		n.set_meta("anim", anim)
+		for a in ["Idle", "Walking_A", "Unarmed_Idle"]:
+			if anim.has_animation(a):
+				anim.get_animation(a).loop_mode = Animation.LOOP_LINEAR
+		animar(n, "Idle")
+	return n
+
+
+## Toca uma animação da figura (se ela tiver). Sem efeito nos peões por código.
+static func animar(figura_no: Node3D, nome: String, mistura: float = 0.2) -> void:
+	if not figura_no.has_meta("anim"):
+		return
+	var anim: AnimationPlayer = figura_no.get_meta("anim")
+	if anim.has_animation(nome) and anim.current_animation != nome:
+		anim.play(nome, mistura)
 
 
 ## Material fosco (cache por cor). `transparente` para destaques.
@@ -217,24 +338,109 @@ static func rotulo(texto: String, tamanho: int = 48, cor: Color = Color.WHITE) -
 	return l
 
 
-## Luz, ambiente e névoa de horror para qualquer cena 3D.
+## Tile de hexágono em diorama (ADR 0008): corpo de terra chanfrado e tampa na cor do terreno.
+static func tile_hex(raio: float, altura: float, cor: Color) -> Node3D:
+	var n := Node3D.new()
+	var tampa := 0.06
+	var corpo := CylinderMesh.new()
+	corpo.top_radius = raio * 0.97
+	corpo.bottom_radius = raio * 0.9
+	corpo.height = altura + 0.3   # desce abaixo do zero: o tile parece uma peça grossa
+	corpo.radial_segments = 6
+	corpo.rings = 1
+	var terra := cor.lerp(Color("4a3a2c"), 0.6).darkened(0.25)
+	n.add_child(_malha(corpo, material(terra), Vector3(0, (altura - tampa) - corpo.height / 2.0, 0)))
+	var topo := CylinderMesh.new()
+	topo.top_radius = raio * 0.93
+	topo.bottom_radius = raio
+	topo.height = tampa
+	topo.radial_segments = 6
+	topo.rings = 1
+	n.add_child(_malha(topo, material(cor), Vector3(0, altura - tampa / 2.0, 0)))
+	return n
+
+
+## Hex não revelado: peça escura com a névoa roxa animada do Outro Lado por cima (docs/08, R5).
+static func nevoa(raio: float, altura: float, cor: Color) -> Node3D:
+	var n := tile_hex(raio, altura, cor)
+	var shader: Shader = load("res://assets/shaders/nevoa_outro_lado.gdshader") 		if ResourceLoader.exists("res://assets/shaders/nevoa_outro_lado.gdshader") else null
+	if shader == null:
+		return n
+	if not _materiais.has("nevoa"):
+		var m := ShaderMaterial.new()
+		m.shader = shader
+		_materiais["nevoa"] = m
+	var topo := CylinderMesh.new()
+	topo.top_radius = raio * 0.95
+	topo.bottom_radius = raio * 0.95
+	topo.height = 0.01
+	topo.radial_segments = 6
+	topo.rings = 1
+	var mi := _malha(topo, _materiais["nevoa"], Vector3(0, altura + 0.006, 0))
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	n.add_child(mi)
+	return n
+
+
+## Luz, ambiente e névoa de horror para qualquer cena 3D (ADR 0008: luz quente,
+## céu em gradiente, névoa, SSAO, glow, ACES e desfoque de maquete nas bordas).
 static func ambiente(raiz: Node3D, cor_ceu: Color = Color("1b1a26")) -> void:
 	var sol := DirectionalLight3D.new()
-	sol.rotation_degrees = Vector3(-55, -35, 0)
-	sol.light_energy = 1.1
-	sol.light_color = Color("ffe8cc")
+	sol.rotation_degrees = Vector3(-50, -40, 0)
+	sol.light_energy = 1.2
+	sol.light_color = Color("fff0dc")
 	sol.shadow_enabled = true
+	sol.shadow_blur = 1.5
+	sol.directional_shadow_max_distance = 60.0
 	raiz.add_child(sol)
+	# Luz de recorte fria do lado oposto: separa as peças do fundo
+	var recorte := DirectionalLight3D.new()
+	recorte.rotation_degrees = Vector3(-25, 140, 0)
+	recorte.light_energy = 0.35
+	recorte.light_color = Color("7f8fd6")
+	raiz.add_child(recorte)
 	var amb := WorldEnvironment.new()
 	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = cor_ceu
+	var ceu := ProceduralSkyMaterial.new()
+	ceu.sky_top_color = cor_ceu.darkened(0.3)
+	ceu.sky_horizon_color = cor_ceu.lerp(Color("5a3a4a"), 0.45)
+	ceu.ground_horizon_color = ceu.sky_horizon_color
+	ceu.ground_bottom_color = cor_ceu.darkened(0.5)
+	ceu.sun_angle_max = 0.0
+	var sky := Sky.new()
+	sky.sky_material = ceu
+	env.background_mode = Environment.BG_SKY
+	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("6a6f8a")
-	env.ambient_light_energy = 0.55
+	env.ambient_light_color = Color("767c9c")
+	env.ambient_light_energy = 0.6
 	env.fog_enabled = true
-	env.fog_light_color = Color("2a2638")
-	env.fog_density = 0.012
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.fog_light_color = ceu.sky_horizon_color
+	env.fog_density = 0.018
+	env.fog_sky_affect = 0.4
+	env.ssao_enabled = true
+	env.ssao_radius = 0.6
+	env.ssao_intensity = 1.6
+	env.glow_enabled = true
+	env.glow_intensity = 0.6
+	env.glow_bloom = 0.05
+	env.glow_hdr_threshold = 1.1
+	env.tonemap_mode = Environment.TONE_MAPPER_ACES
+	env.tonemap_exposure = 0.95
+	env.adjustment_enabled = true
+	env.adjustment_saturation = 0.95
+	env.adjustment_contrast = 1.05
 	amb.environment = env
+	var camera_attr := CameraAttributesPractical.new()
+	camera_attr.dof_blur_far_enabled = true
+	camera_attr.dof_blur_far_distance = 16.0
+	camera_attr.dof_blur_far_transition = 12.0
+	camera_attr.dof_blur_amount = 0.06
+	amb.camera_attributes = camera_attr
 	raiz.add_child(amb)
+	# Mesa escura sob o diorama: o vazio deixa de ser uma cor chapada
+	var mesa := PlaneMesh.new()
+	mesa.size = Vector2(400, 400)
+	var chao := _malha(mesa, material(cor_ceu.lerp(Color("0d0c12"), 0.5)), Vector3(0, -0.5, 0))
+	chao.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	raiz.add_child(chao)

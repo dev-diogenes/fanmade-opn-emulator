@@ -9,7 +9,7 @@ extends CanvasLayer
 signal terminou(concluido: bool, passo: int)
 
 const COR_ESCURO := Color(0.02, 0.02, 0.04, 0.72)
-const COR_MOLDURA := Color("f7dc6f")
+const COR_MOLDURA := Tema.OURO_CLARO
 const MARGEM := 6.0
 
 ## Quantos tours estão abertos agora (as telas consultam para não agir por baixo do tour)
@@ -79,7 +79,7 @@ func _montar() -> void:
 
 	_balao = PanelContainer.new()
 	var fundo := StyleBoxFlat.new()
-	fundo.bg_color = Color("1b1f27")
+	fundo.bg_color = Tema.PEDRA
 	fundo.border_color = COR_MOLDURA
 	fundo.set_border_width_all(2)
 	fundo.set_corner_radius_all(8)
@@ -92,7 +92,7 @@ func _montar() -> void:
 	_balao.add_child(caixa)
 	_lbl_titulo = Label.new()
 	_lbl_titulo.add_theme_font_size_override("font_size", 19)
-	_lbl_titulo.add_theme_color_override("font_color", COR_MOLDURA)
+	_lbl_titulo.theme_type_variation = "Titulo"
 	caixa.add_child(_lbl_titulo)
 	_lbl_texto = RichTextLabel.new()
 	_lbl_texto.bbcode_enabled = true
@@ -104,7 +104,7 @@ func _montar() -> void:
 	linha.add_theme_constant_override("separation", 6)
 	caixa.add_child(linha)
 	_lbl_contador = Label.new()
-	_lbl_contador.add_theme_color_override("font_color", Color("aab7b8"))
+	_lbl_contador.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
 	_lbl_contador.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	linha.add_child(_lbl_contador)
 	var pular := Button.new()

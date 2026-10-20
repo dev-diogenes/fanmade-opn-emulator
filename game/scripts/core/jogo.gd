@@ -4,6 +4,7 @@ extends Node
 ## Online (Fase 8.2, ADR 0007): o host joga a própria carreira e manda o estado a quem entra;
 ## o cliente guarda a carreira dele de lado e joga a do host, sem salvar, até sair.
 
+const CENA_TITULO := "res://scenes/titulo.tscn"
 const CENA_BASE := "res://scenes/base_ordem.tscn"
 const CENA_MAPA := "res://scenes/mapa_mundo.tscn"
 const CENA_ARENA := "res://scenes/arena_teste.tscn"
@@ -34,6 +35,8 @@ var missao: Missao:
 
 
 func _ready() -> void:
+	_modo_captura()
+	Tema.aplicar()
 	Entrada.configurar()
 	rede = Rede.new()
 	rede.name = "Rede"
@@ -50,6 +53,20 @@ func _ready() -> void:
 	rede.controles_recebidos.connect(_ao_receber_controles)
 	rede.conexao_perdida.connect(_ao_perder_conexao)
 	rede.aviso.connect(func(t): aviso_rede = t)
+
+
+## Captura de tela para a documentação: `godot --path game <cena> -- --captura=arquivo.png`.
+## Não salva a carreira; espera a cena assentar, grava a imagem e fecha.
+func _modo_captura() -> void:
+	for arg in OS.get_cmdline_user_args():
+		if not arg.begins_with("--captura="):
+			continue
+		salvar_automaticamente = false
+		var caminho: String = arg.trim_prefix("--captura=")
+		for i in 90:
+			await get_tree().process_frame
+		get_viewport().get_texture().get_image().save_png(caminho)
+		get_tree().quit()
 
 
 ## Jogadores locais da carreira (um só, no teclado, se ainda não houver carreira).
@@ -105,6 +122,10 @@ func iniciar_missao_campanha(grupo: Array, campanha: Dictionary, semente: int = 
 		_mandar_estado()
 		get_tree().change_scene_to_file.call_deferred(CENA_MAPA)
 	return m
+
+
+func ir_para_base() -> void:
+	get_tree().change_scene_to_file.call_deferred(CENA_BASE)
 
 
 func ir_para_editor() -> void:

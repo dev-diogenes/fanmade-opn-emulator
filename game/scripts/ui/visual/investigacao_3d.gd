@@ -70,12 +70,12 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 		var rot := Pecas.rotulo(p.nome, 52, Color("d0ece7"))
 		rot.position = pos + Vector3(0, 1.75, 0)
 		add_child(rot)
-	var cores := [Color("3d7bd9"), Color("27ae60"), Color("af7ac5"), Color("e67e22")]
+	var cores := Tema.CORES_JOGADORES
 	for i in agentes.size():
-		var f := Pecas.figura(cores[i % cores.size()], 0.9)
+		var f := Pecas.agente(agentes[i].classe_id, cores[i % cores.size()], 0.9)
 		f.position = Vector3(-0.5 + 0.5 * i, 0, 0.3 * (i % 2))
 		var r := Pecas.rotulo(agentes[i].nome, 40)
-		r.position = Vector3(0, 0.95, 0)
+		r.position = Vector3(0, 1.15, 0)
 		f.add_child(r)
 		add_child(f)
 	_anel_sel = Pecas.anel(0.75, Color("48c9b0"))

@@ -63,10 +63,7 @@ func _alvos_do_tutorial() -> Dictionary:
 
 func _montar_interface() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var fundo := ColorRect.new()
-	fundo.color = Color("101318")
-	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(fundo)
+	add_child(Tema.fundo())
 	var margem := MarginContainer.new()
 	margem.set_anchors_preset(Control.PRESET_FULL_RECT)
 	for lado in ["left", "right", "top", "bottom"]:
@@ -134,8 +131,8 @@ func _montar_interface() -> void:
 	var rolagem_c3 := ScrollContainer.new()
 	rolagem_c3.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rolagem_c3.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	colunas.add_child(rolagem_c3)
-	var c3 := _coluna(rolagem_c3, 0)
+	colunas.add_child(Tema.painel(rolagem_c3))
+	var c3 := _coluna(rolagem_c3, 0, false)
 	c3.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	c3.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	c3.add_child(_titulo("Grupo da missão (até 4)"))
@@ -169,16 +166,17 @@ func _montar_interface() -> void:
 	_txt_missao = RichTextLabel.new()
 	_txt_missao.bbcode_enabled = true
 	_txt_missao.custom_minimum_size = Vector2(0, 120)
-	_txt_missao.add_theme_color_override("default_color", Color("aab7b8"))
+	_txt_missao.add_theme_color_override("default_color", Tema.TEXTO_SUAVE)
 	c3.add_child(_txt_missao)
 	c3.add_child(_botao("Editor de missões", _abrir_editor))
 	_btn_iniciar = _botao("Iniciar missão", _iniciar)
+	_btn_iniciar.theme_type_variation = "BotaoPrincipal"
 	c3.add_child(_btn_iniciar)
 	_btn_continuar = _botao("Continuar missão em andamento", _continuar)
 	c3.add_child(_btn_continuar)
 	_lbl_erros = Label.new()
 	_lbl_erros.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_lbl_erros.add_theme_color_override("font_color", Color("f1948a"))
+	_lbl_erros.add_theme_color_override("font_color", Tema.PERIGO)
 	c3.add_child(_lbl_erros)
 	var espaco := Control.new()
 	espaco.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -189,21 +187,23 @@ func _montar_interface() -> void:
 	chk_tutorial.toggled.connect(func(v): Preferencias.definir_perguntar_tutorial(v))
 	c3.add_child(chk_tutorial)
 	c3.add_child(_botao("Nova carreira (apaga o save)", _nova_carreira))
+	c3.add_child(_botao("Menu principal", func(): get_tree().change_scene_to_file.call_deferred("res://scenes/titulo.tscn")))
 
 
-func _coluna(pai: Control, largura: int) -> VBoxContainer:
+func _coluna(pai: Control, largura: int, com_painel: bool = true) -> VBoxContainer:
 	var v := VBoxContainer.new()
 	v.custom_minimum_size = Vector2(largura, 0)
 	v.add_theme_constant_override("separation", 6)
-	pai.add_child(v)
+	pai.add_child(Tema.painel(v) if com_painel else v)
 	return v
 
 
 func _titulo(texto: String, tamanho: int = 14) -> Label:
 	var l := Label.new()
 	l.text = texto
-	l.add_theme_font_size_override("font_size", tamanho)
-	l.add_theme_color_override("font_color", Color("d5d8dc") if tamanho > 14 else Color("aab7b8"))
+	l.theme_type_variation = "Titulo" if tamanho > 14 else "Subtitulo"
+	if tamanho > 14:
+		l.add_theme_font_size_override("font_size", tamanho + 6)
 	return l
 
 
@@ -295,25 +295,25 @@ func _atualizar_agente() -> void:
 	var pers := PackedStringArray()
 	for p in a.pericias:
 		pers.append("%s%s" % [rs.pericia(p).nome, "" if a.pericias[p] == "treinado" else " (%s)" % a.pericias[p]])
-	linhas.append("[color=#aab7b8]Perícias:[/color] " + ", ".join(pers))
+	linhas.append("[color=#a69b88]Perícias:[/color] " + ", ".join(pers))
 	var habs := PackedStringArray()
 	for h in a.habilidades():
 		habs.append(h.nome + ("" if h.get("implementado", false) else "*"))
-	linhas.append("[color=#aab7b8]Habilidades:[/color] " + ", ".join(habs))
+	linhas.append("[color=#a69b88]Habilidades:[/color] " + ", ".join(habs))
 	if not a.poderes_paranormais.is_empty():
 		var pps := PackedStringArray()
 		for e in a.poderes_paranormais:
 			pps.append(rs.poder_paranormal(e.id).get("nome", e.id) + ("" if String(e.get("escolha", "")) == "" else " (%s)" % e.escolha))
-		linhas.append("[color=#c39bd3]Poderes paranormais:[/color] %s%s" % [", ".join(pps), "  ·  afinidade: " + a.afinidade if a.afinidade != "" else ""])
+		linhas.append("[color=#b98ae6]Poderes paranormais:[/color] %s%s" % [", ".join(pps), "  ·  afinidade: " + a.afinidade if a.afinidade != "" else ""])
 	if not a.rituais.is_empty():
 		var rits := PackedStringArray()
 		for rid in a.rituais:
 			rits.append(rs.ritual(rid).get("nome", rid) + ("" if rs.ritual(rid).get("implementado", false) else "*"))
-		linhas.append("[color=#bb8fce]Rituais:[/color] " + ", ".join(rits))
-	linhas.append("[color=#aab7b8]Equipamento:[/color] %s  (%d/%d espaços)" % [", ".join(PackedStringArray(a.equipamento.map(func(i): return rs.equipamento(i).get("nome", i)))), a.espacos_usados(), a.capacidade_carga()])
+		linhas.append("[color=#b98ae6]Rituais:[/color] " + ", ".join(rits))
+	linhas.append("[color=#a69b88]Equipamento:[/color] %s  (%d/%d espaços)" % [", ".join(PackedStringArray(a.equipamento.map(func(i): return rs.equipamento(i).get("nome", i)))), a.espacos_usados(), a.capacidade_carga()])
 	if not a.lesoes.is_empty():
-		linhas.append("[color=#f5b041]Lesões:[/color] " + ", ".join(PackedStringArray(a.lesoes)))
-	linhas.append("[color=#7f8c8d]* ainda sem efeito no motor[/color]")
+		linhas.append("[color=#eda64a]Lesões:[/color] " + ", ".join(PackedStringArray(a.lesoes)))
+	linhas.append("[color=#a69b88]* ainda sem efeito no motor[/color]")
 	_ficha.text = "\n".join(linhas)
 	for item_id in _checks_itens:
 		_checks_itens[item_id].set_pressed_no_signal(item_id in a.equipamento)
@@ -347,7 +347,7 @@ func _montar_pendencia(a: Agente) -> void:
 		"poder_paranormal": "Escolha um poder paranormal", "afinidade": "Afinidade elemental (NEX 50%)",
 		"grau": "Grau de Treinamento: escolha %d perícias" % int(p.get("quantidade", 0)), "versatilidade": "Versatilidade (NEX 50%)"}
 	var lbl := _titulo("[%d pendente(s)] %s" % [pend.size(), titulos[p.tipo]])
-	lbl.add_theme_color_override("font_color", Color("f7dc6f"))
+	lbl.add_theme_color_override("font_color", Tema.OURO_CLARO)
 	_caixa_pendencia.add_child(lbl)
 	if p.tipo == "grau":
 		var lista := ItemList.new()
@@ -418,7 +418,7 @@ func _mostrar_relatorio() -> void:
 	for ag in r.agentes:
 		var s := "%s: %s" % [ag.nome, ag.situacao]
 		if ag.has("pp"):
-			s += ", %+d PP, NEX %d%%→%d%%, %s%s" % [int(ag.pp), int(ag.nex_antes), int(ag.nex), ag.patente, " [color=#58d68d](promovido!)[/color]" if ag.promovido else ""]
+			s += ", %+d PP, NEX %d%%→%d%%, %s%s" % [int(ag.pp), int(ag.nex_antes), int(ag.nex), ag.patente, " [color=#6fcf8e](promovido!)[/color]" if ag.promovido else ""]
 		linhas.append(s)
 	var camp: Dictionary = r.get("campanha", {})
 	if not camp.is_empty():
@@ -430,14 +430,14 @@ func _mostrar_relatorio() -> void:
 		if texto != "":
 			linhas.append("[i]%s[/i]" % texto)
 		for t in camp.get("marcas", []):
-			linhas.append("[color=#f7dc6f]Marca: %s[/color]" % t)
+			linhas.append("[color=#e3c27a]Marca: %s[/color]" % t)
 		for nome in camp.get("recrutas", []):
-			linhas.append("[color=#58d68d]%s pode ser recrutado na Base.[/color]" % nome)
+			linhas.append("[color=#6fcf8e]%s pode ser recrutado na Base.[/color]" % nome)
 		if camp.get("concluida", false):
 			linhas.append("[b]Epílogo[/b]")
 			linhas.append("[i]%s[/i]" % camp.get("epilogo", ""))
 	if not carreira.memorial.is_empty():
-		linhas.append("[color=#7f8c8d]Memorial: %s[/color]" % ", ".join(PackedStringArray(carreira.memorial.map(func(m): return m.nome))))
+		linhas.append("[color=#a69b88]Memorial: %s[/color]" % ", ".join(PackedStringArray(carreira.memorial.map(func(m): return m.nome))))
 	_relatorio.text = "\n".join(linhas)
 
 
@@ -488,7 +488,7 @@ func _montar_jogadores() -> void:
 		if jog_j.dispositivo == ControleLocal.REDE:
 			var online := Label.new()
 			online.text = "online: %s" % jog_j.get("nome", "?")
-			online.add_theme_color_override("font_color", Color("76d7c4"))
+			online.add_theme_color_override("font_color", Tema.INFO)
 			linha.add_child(online)
 			_caixa_jogadores.add_child(linha)
 			continue
@@ -524,7 +524,7 @@ func _montar_jogadores() -> void:
 		var dica := Label.new()
 		dica.text = "Cada agente do grupo tem um dono: na vez dele, só o dispositivo desse jogador controla o jogo."
 		dica.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		dica.add_theme_color_override("font_color", Color("aab7b8"))
+		dica.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
 		_caixa_jogadores.add_child(dica)
 
 
@@ -574,7 +574,7 @@ func _montar_online() -> void:
 		var lbl := Label.new()
 		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		lbl.text = "Hospedando na porta %d. Endereços desta máquina: %s. Quem entrar aparece em Jogadores; escolha os donos dos agentes no grupo." % [rede.porta, ", ".join(PackedStringArray(_enderecos_locais()))]
-		lbl.add_theme_color_override("font_color", Color("76d7c4"))
+		lbl.add_theme_color_override("font_color", Tema.INFO)
 		_caixa_online.add_child(lbl)
 		_caixa_online.add_child(_botao("Parar de hospedar", _parar_de_hospedar))
 		return
@@ -705,7 +705,7 @@ func _mostrar_missao() -> void:
 			if d.has("nex_recomendado"):
 				texto += "  (NEX recomendado: %d%%)" % int(d.nex_recomendado)
 	if not op.erros.is_empty():
-		texto += "\n[color=#f1948a]Erros: %s[/color]" % "; ".join(PackedStringArray(op.erros))
+		texto += "\n[color=#e0574a]Erros: %s[/color]" % "; ".join(PackedStringArray(op.erros))
 	_txt_missao.text = texto
 
 

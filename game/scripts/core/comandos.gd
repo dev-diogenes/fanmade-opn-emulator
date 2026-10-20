@@ -199,14 +199,14 @@ static func aplicar_mestre(m: Missao, cmd: Dictionary) -> Dictionary:
 			var t := String(cmd.get("texto", "")).replace("[", "(").replace("]", ")").strip_edges().substr(0, 400)
 			if t == "":
 				return {"ok": false, "erro": "nada para narrar"}
-			m._log("[color=#f5cba7][b]Mestre:[/b] %s[/color]" % t)
+			m._log("[color=#f2c6a0][b]Mestre:[/b] %s[/color]" % t)
 			return {"ok": true, "texto": t}
 		"membrana":
 			var v := clampi(int(cmd.get("valor", 0)), -50, 50)
 			if v == 0:
 				return {"ok": false, "erro": "valor zero"}
 			m.membrana.alterar(v, "mestre")
-			m._log("[color=#c39bd3]O mestre %s a Membrana (%+d).[/color]" % ["fortalece" if v > 0 else "enfraquece", v])
+			m._log("[color=#b98ae6]O mestre %s a Membrana (%+d).[/color]" % ["fortalece" if v > 0 else "enfraquece", v])
 			return {"ok": true}
 		"revelar":
 			var h := de_vetor(cmd.hex)
@@ -246,16 +246,16 @@ static func aplicar_mestre(m: Missao, cmd: Dictionary) -> Dictionary:
 			match String(cmd.acao):
 				"curar":
 					a.curar(absi(v))
-					m._log("[color=#f5cba7]O mestre: %s recupera %d PV.[/color]" % [a.nome, absi(v)])
+					m._log("[color=#f2c6a0]O mestre: %s recupera %d PV.[/color]" % [a.nome, absi(v)])
 				"ferir":
 					a.sofrer_dano(absi(v))
-					m._log("[color=#f5cba7]O mestre: %s sofre %d de dano.[/color]" % [a.nome, absi(v)])
+					m._log("[color=#f2c6a0]O mestre: %s sofre %d de dano.[/color]" % [a.nome, absi(v)])
 				"sanidade":
 					if v > 0:
 						a.recuperar_sanidade(v)
 					else:
 						a.perder_sanidade(-v)
-					m._log("[color=#f5cba7]O mestre: %s %s %d de Sanidade.[/color]" % [a.nome, "recupera" if v > 0 else "perde", absi(v)])
+					m._log("[color=#f2c6a0]O mestre: %s %s %d de Sanidade.[/color]" % [a.nome, "recupera" if v > 0 else "perde", absi(v)])
 			m._verificar_derrota()
 			return {"ok": true}
 	return {"ok": false, "erro": "ação de mestre desconhecida: %s" % cmd.get("acao", "")}

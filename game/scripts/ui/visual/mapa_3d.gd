@@ -9,7 +9,7 @@ const ALTURAS := {"agua": 0.08, "pantano": 0.12, "campo": 0.2, "estrada": 0.2, "
 	"ruina": 0.22, "floresta": 0.24, "morro": 0.5}
 const COR_NEVOA := Color("1c1b24")
 const COR_DESTAQUE := Color(0.35, 0.65, 1.0, 0.45)
-const CORES_AGENTES := [Color("3d7bd9"), Color("27ae60"), Color("af7ac5"), Color("e67e22")]
+const CORES_AGENTES := Tema.CORES_JOGADORES
 
 var rig: CameraRig
 var mapa: MapaHex
@@ -44,10 +44,16 @@ func construir(p_mapa: MapaHex, terrenos: Dictionary) -> void:
 		var cor := Color(_terrenos.get(t, {}).get("cor", "555555"))
 		var terreno := Node3D.new()
 		var altura: float = ALTURAS.get(t, 0.2)
-		terreno.add_child(Pecas.prisma_hex(RAIO * 0.97, altura, cor))
-		_decorar(terreno, h, t, altura)
+		var tile := Pecas.tile_terreno(t, RAIO, altura, hash(h), cor.lightened(0.2 if t in ["agua", "pantano"] else 0.4))
+		if tile != null:
+			terreno.add_child(tile)
+			if t in ["cidade", "ruina"]:   # casas e pilares continuam por código
+				_decorar(terreno, h, t, altura)
+		else:
+			terreno.add_child(Pecas.tile_hex(RAIO, altura, cor))
+			_decorar(terreno, h, t, altura)
 		raiz.add_child(terreno)
-		var nevoa := Pecas.prisma_hex(RAIO * 0.97, 0.16, COR_NEVOA)
+		var nevoa := Pecas.nevoa(RAIO, 0.16, COR_NEVOA)
 		raiz.add_child(nevoa)
 		_tiles[h] = {"terreno": terreno, "nevoa": nevoa}
 	_destaques = Node3D.new()
@@ -56,6 +62,15 @@ func construir(p_mapa: MapaHex, terrenos: Dictionary) -> void:
 	add_child(_anel_vez)
 	rig.limites = AABB(minimo, maximo - minimo)
 	rig.distancia = 10.0
+
+
+## Vitrine (tela de título): mostra o mapa inteiro, sem névoa nem peças.
+func revelar_tudo() -> void:
+	ver_tudo = true
+	for h in _tiles:
+		_tiles[h].terreno.visible = true
+		_tiles[h].nevoa.visible = false
+	_anel_vez.visible = false
 
 
 func posicao_hex(h: Vector2i, altura: float = -1.0) -> Vector3:
@@ -180,6 +195,20 @@ func _atualizar_marcador(h: Vector2i, tipo: String) -> void:
 	m.position = posicao_hex(h)
 	add_child(m)
 	_marcadores[h] = m
+	# Marcadores vivos (docs/08, R6): flutuam, giram devagar e iluminam o hex
+	var peca: Node3D = m.get_child(0)
+	var luz := OmniLight3D.new()
+	luz.light_color = (peca as MeshInstance3D).material_override.albedo_color if peca is MeshInstance3D else Color.WHITE
+	luz.light_energy = 0.9
+	luz.omni_range = 1.4
+	luz.position = Vector3(0, 0.55, 0)
+	m.add_child(luz)
+	var fase := float(hash(h) % 100) / 100.0
+	var sobe := m.create_tween().set_loops()
+	sobe.tween_property(peca, "position:y", peca.position.y + 0.08, 1.1 + fase * 0.4).set_trans(Tween.TRANS_SINE)
+	sobe.tween_property(peca, "position:y", peca.position.y, 1.1 + fase * 0.4).set_trans(Tween.TRANS_SINE)
+	var gira := m.create_tween().set_loops()
+	gira.tween_method(func(a: float): peca.rotation.y = a, 0.0, TAU, 6.0 + fase * 3.0)
 
 
 func _atualizar_agentes(missao: Missao) -> void:
@@ -189,9 +218,9 @@ func _atualizar_agentes(missao: Missao) -> void:
 		var ficha: Node3D = _fichas.get(a)
 		var fora := not a in missao.agentes or a.tem(Ser.MORTO)
 		if ficha == null:
-			ficha = Pecas.figura(CORES_AGENTES[i % CORES_AGENTES.size()], 0.75)
+			ficha = Pecas.agente(a.classe_id, CORES_AGENTES[i % CORES_AGENTES.size()], 0.75)
 			var rot := Pecas.rotulo(a.nome, 36)
-			rot.position = Vector3(0, 0.85, 0)
+			rot.position = Vector3(0, 1.0, 0)
 			ficha.add_child(rot)
 			add_child(ficha)
 			_fichas[a] = ficha
@@ -206,7 +235,11 @@ func _atualizar_agentes(missao: Missao) -> void:
 		if _ultima_posicao.get(a) != destino:
 			if _ultima_posicao.has(a) and is_inside_tree():
 				var tw := create_tween()
+				if Vector2(destino.x - ficha.position.x, destino.z - ficha.position.z).length() > 0.05:
+					ficha.look_at(Vector3(destino.x, ficha.global_position.y, destino.z), Vector3.UP, true)
+				Pecas.animar(ficha, "Walking_A")
 				tw.tween_property(ficha, "position", destino, 0.35).set_trans(Tween.TRANS_SINE)
+				tw.tween_callback(Pecas.animar.bind(ficha, "Idle"))
 			else:
 				ficha.position = destino
 			_ultima_posicao[a] = destino

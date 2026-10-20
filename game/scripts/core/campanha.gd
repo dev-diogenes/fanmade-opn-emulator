@@ -150,7 +150,7 @@ static func aplicar_marcas(m: Missao, etapa: Dictionary, marcas: Array) -> int:
 		if not String(ef.get("marca", "")) in marcas:
 			continue
 		aplicados += 1
-		m._log("[color=#f7dc6f]%s[/color]" % ef.get("texto", ""))
+		m._log("[color=#e3c27a]%s[/color]" % ef.get("texto", ""))
 		match String(ef.tipo):
 			"membrana":
 				m.membrana.alterar(int(ef.get("valor", 0)), "campanha")

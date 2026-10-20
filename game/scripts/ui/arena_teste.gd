@@ -6,7 +6,7 @@ extends Control
 ## Controles: clique num agente/inimigo para ver a ficha; "Mover" e clique numa célula
 ## destacada; "Atacar" e clique num inimigo; "Encerrar turno". Foco = PE gastos como +1 d20.
 
-const COR_FUNDO := Color("12141a")
+const COR_FUNDO := Tema.FUNDO
 const COLUNAS := 14
 const LINHAS := 9
 
@@ -38,6 +38,7 @@ var _tab3d: Tabuleiro3D
 var _lbl_turno: Label
 var _lbl_ficha: Label
 var _slots: HBoxContainer
+var _teste_desenhado = null
 var _lbl_resultado: Label
 var _btn_mover: Button
 var _btn_atacar: Button
@@ -102,7 +103,7 @@ func iniciar_combate(semente: int) -> void:
 		membrana = jogo.missao.membrana   # o combate também enfraquece a Membrana da missão
 	else:
 		membrana = Membrana.carregar_padrao()
-	membrana.estado_mudou.connect(func(e, _ant): _registrar("[color=#c39bd3]A Membrana está %s: %s[/color]" % [e.nome, e.descricao]))
+	membrana.estado_mudou.connect(func(e, _ant): _registrar("[color=#b98ae6]A Membrana está %s: %s[/color]" % [e.nome, e.descricao]))
 	if config.is_empty():
 		combate = Combate.new(ruleset, dados, {"lesoes": true, "inspiracao_resoluta": true, "presenca_perturbadora": true})
 		grade = Grade.new(COLUNAS, LINHAS)
@@ -118,7 +119,7 @@ func iniciar_combate(semente: int) -> void:
 	fluxo = FluxoCombate.de_combate(ruleset, combate, grade, armas, membrana)
 	fluxo.ia_para_agentes = autoplay
 	fluxo.ameacas_pelo_mestre = bool(config.get("mestre", false)) and not autoplay
-	fluxo.nova_rodada.connect(func(r): _registrar("[color=#7f8c8d]— Rodada %d —[/color]" % r))
+	fluxo.nova_rodada.connect(func(r): _registrar("[color=#a69b88]— Rodada %d —[/color]" % r))
 	combate.registro.connect(_registrar)
 	combate.ser_adicionado.connect(_ao_adicionar)
 	if _tab3d != null:
@@ -126,11 +127,11 @@ func iniciar_combate(semente: int) -> void:
 	combate.ataque_resolvido.connect(_ao_atacar)
 	combate.combate_encerrado.connect(_ao_encerrar)
 	combate.turno_perdido.connect(func(s, motivo): _registrar("%s perde o turno (%s)." % [s.nome, motivo]))
-	combate.lesao_sofrida.connect(func(a, attr): _registrar("[color=#e67e22]%s sofre uma lesão: −1 %s permanente.[/color]" % [a.nome, attr.to_upper()]))
+	combate.lesao_sofrida.connect(func(a, attr): _registrar("[color=#eda64a]%s sofre uma lesão: −1 %s permanente.[/color]" % [a.nome, attr.to_upper()]))
 	fluxo.iniciar()
 	for s in combate.participantes:
 		if s is Ameaca and (s as Ameaca).enigma_pendente():
-			_registrar("[color=#f5b041]Enigma de Medo — %s: %s Nada a fere até alguém decifrar (botão Decifrar).[/color]" % [s.nome, (s as Ameaca).enigma.get("texto", "")])
+			_registrar("[color=#eda64a]Enigma de Medo — %s: %s Nada a fere até alguém decifrar (botão Decifrar).[/color]" % [s.nome, (s as Ameaca).enigma.get("texto", "")])
 	var nomes := PackedStringArray()
 	for s in combate.ordem:
 		nomes.append("%s (%d)" % [s.nome, combate.iniciativas[s]])
@@ -189,7 +190,7 @@ func _ao_comando_aplicado(cmd: Dictionary, res: Dictionary) -> void:
 	if String(cmd.get("ctx", "")) != "mestre":
 		return
 	if cmd.get("acao", "") == "narrar" and res.get("ok", false):
-		_registrar("[color=#f5cba7][b]Mestre:[/b] %s[/color]" % res.texto)
+		_registrar("[color=#f2c6a0][b]Mestre:[/b] %s[/color]" % res.texto)
 	_atualizar()
 
 
@@ -308,27 +309,27 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 				for extra in r.ataques_extras:
 					_ultimo_teste = extra.teste
 			if not res.ok:
-				_registrar("[color=#e67e22]Ataque inválido (fora de alcance, sem ação ou PE).[/color]")
+				_registrar("[color=#eda64a]Ataque inválido (fora de alcance, sem ação ou PE).[/color]")
 		"conjurar":
 			if not res.get("ok", false):
-				_registrar("[color=#e67e22]Não deu para conjurar: %s.[/color]" % res.get("erro", "?"))
+				_registrar("[color=#eda64a]Não deu para conjurar: %s.[/color]" % res.get("erro", "?"))
 		"granada":
 			if not res.get("ok", false):
-				_registrar("[color=#e67e22]Não deu: %s.[/color]" % res.get("erro", "?"))
+				_registrar("[color=#eda64a]Não deu: %s.[/color]" % res.get("erro", "?"))
 		"contra":
 			if not res.ok:
-				_registrar("[color=#e67e22]Precisa estar ao lado da criatura (e de uma ação padrão).[/color]")
+				_registrar("[color=#eda64a]Precisa estar ao lado da criatura (e de uma ação padrão).[/color]")
 		"item":
 			var nome_item: String = ruleset.equipamento(String(cmd.get("item", ""))).get("nome", "item")
 			if res.ok:
 				_registrar("%s usa %s em %s: +%d PV." % [ator.nome, nome_item, res.alvo.nome, int(res.cura)])
 			else:
-				_registrar("[color=#e67e22]Não dá para usar %s agora.[/color]" % nome_item)
+				_registrar("[color=#eda64a]Não dá para usar %s agora.[/color]" % nome_item)
 		"decifrar":
 			if res.ok:
 				_ultimo_teste = res.teste
 			else:
-				_registrar("[color=#e67e22]Sem ação padrão para decifrar o enigma.[/color]")
+				_registrar("[color=#eda64a]Sem ação padrão para decifrar o enigma.[/color]")
 		"encerrar_turno", "ia":
 			if res.ok:
 				_avancar()
@@ -400,12 +401,12 @@ func _ao_atacar(r: ResultadoAtaque) -> void:
 	if r.reacao != "":
 		txt += " [i](%s)[/i]" % r.reacao
 	if r.acertou:
-		txt += " → [b]%d de dano[/b]%s" % [r.dano, " [color=#f4d03f]CRÍTICO[/color]" if r.critico else ""]
+		txt += " → [b]%d de dano[/b]%s" % [r.dano, " [color=#e3c27a]CRÍTICO[/color]" if r.critico else ""]
 	if r.pe_gasto > 0:
 		txt += " (%d PE)" % r.pe_gasto
 	_registrar(txt)
 	if r.alvo.tem(Ser.MORRENDO):
-		_registrar("[color=#c0392b]%s está morrendo![/color]" % r.alvo.nome)
+		_registrar("[color=#e0574a]%s está morrendo![/color]" % r.alvo.nome)
 
 
 func _ao_encerrar(vencedor: String) -> void:
@@ -428,10 +429,7 @@ func _registrar(texto: String) -> void:
 
 func _montar_interface() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var fundo := ColorRect.new()
-	fundo.color = COR_FUNDO
-	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(fundo)
+	add_child(Tema.fundo())
 
 	var raiz := HBoxContainer.new()
 	raiz.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -440,6 +438,7 @@ func _montar_interface() -> void:
 
 	_vista = SubViewportContainer.new()
 	_vista.stretch = true
+	Tema.veu(_vista)
 	_vista.custom_minimum_size = Vector2(680, 0)
 	_vista.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var vp := SubViewport.new()
@@ -453,11 +452,11 @@ func _montar_interface() -> void:
 	var painel := VBoxContainer.new()
 	painel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	painel.add_theme_constant_override("separation", 6)
-	raiz.add_child(painel)
+	raiz.add_child(Tema.painel(painel, true))
 
 	_lbl_vez = Label.new()
 	_lbl_vez.add_theme_font_size_override("font_size", 18)
-	_lbl_vez.add_theme_color_override("font_color", Color("f7dc6f"))
+	_lbl_vez.add_theme_color_override("font_color", Tema.OURO_CLARO)
 	painel.add_child(_lbl_vez)
 	_lbl_turno = Label.new()
 	_lbl_turno.add_theme_font_size_override("font_size", 18)
@@ -511,7 +510,7 @@ func _montar_interface() -> void:
 	_caixa_mestre.visible = false
 	painel.add_child(_caixa_mestre)
 	_lbl_mestre = Label.new()
-	_lbl_mestre.add_theme_color_override("font_color", Color("f5cba7"))
+	_lbl_mestre.add_theme_color_override("font_color", Tema.MESTRE)
 	_caixa_mestre.add_child(_lbl_mestre)
 	var linha_m := HBoxContainer.new()
 	_caixa_mestre.add_child(linha_m)
@@ -692,7 +691,7 @@ func _reiniciar() -> void:
 func _titulo(texto: String) -> Label:
 	var l := Label.new()
 	l.text = texto
-	l.add_theme_color_override("font_color", Color("aab7b8"))
+	l.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
 	return l
 
 
@@ -761,6 +760,7 @@ func _atualizar() -> void:
 	_spin_foco.max_value = agente.pe_disponivel_no_turno() if agente != null else 0
 	_chk_ae.visible = agente != null and agente.classe_id == "combatente"
 	_barra_membrana.value = membrana.valor
+	Tema.membrana_na_tela(_vista, membrana.valor)
 	_lbl_membrana.text = "%d — %s" % [membrana.valor, membrana.estado().get("nome", "")]
 	_atualizar_mestre()
 	_desenhar_slots()
@@ -835,27 +835,22 @@ func _ficha(ser: Ser) -> String:
 
 
 func _desenhar_slots() -> void:
+	if _ultimo_teste == _teste_desenhado and _slots.get_child_count() > 0:
+		return   # não repete a animação a cada atualização
+	_teste_desenhado = _ultimo_teste
 	for filho in _slots.get_children():
 		filho.queue_free()
 	if _ultimo_teste == null:
 		_lbl_resultado.text = "—"
 		return
 	var marcado := false
-	for valor in _ultimo_teste.slots:
-		var caixa := PanelContainer.new()
-		var estilo := StyleBoxFlat.new()
-		var eh_escolhido := valor == _ultimo_teste.escolhido and not marcado
-		if eh_escolhido:
+	for i in _ultimo_teste.slots.size():
+		var valor: int = _ultimo_teste.slots[i]
+		var estado := "neutro"
+		if valor == _ultimo_teste.escolhido and not marcado:
 			marcado = true
-			estilo.bg_color = Color("1e8449") if _ultimo_teste.sucesso else Color("922b21")
-		else:
-			estilo.bg_color = Color("34495e") if not _ultimo_teste.usa_pior else Color("6e2c00")
-		estilo.set_content_margin_all(6)
-		caixa.add_theme_stylebox_override("panel", estilo)
-		var l := Label.new()
-		l.text = "d20: %d" % valor
-		caixa.add_child(l)
-		_slots.add_child(caixa)
+			estado = "sucesso" if _ultimo_teste.sucesso else "falha"
+		_slots.add_child(Tema.slot_d20(valor, estado, i))
 	_lbl_resultado.text = "%s %d %+d = %d contra %d → %s" % [
 		"pior" if _ultimo_teste.usa_pior else "maior", _ultimo_teste.escolhido, _ultimo_teste.bonus,
 		_ultimo_teste.total, _ultimo_teste.dt, "SUCESSO" if _ultimo_teste.sucesso else "FALHA"]

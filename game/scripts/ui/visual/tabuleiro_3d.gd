@@ -132,13 +132,13 @@ func _atualizar_unidade(s: Ser) -> void:
 	var no: Node3D = _unidades.get(s)
 	if no == null:
 		if s is Agente:
-			no = Pecas.figura(COR_AGENTE)
+			no = Pecas.agente(s.classe_id, COR_AGENTE)
 		elif s.pv_maximo >= 25:
 			no = Pecas.criatura(COR_AMEACA, 1.2)
 		else:
 			no = Pecas.figura(COR_AMEACA)
 		var rot := Pecas.rotulo("", 44)
-		rot.position = Vector3(0, 1.05, 0)
+		rot.position = Vector3(0, 1.25, 0)
 		no.add_child(rot)
 		add_child(no)
 		_unidades[s] = no

@@ -4,8 +4,8 @@ extends Control
 ## eventos e encontros. Câmera: roda = zoom, botão direito = girar, botão do meio
 ## ou WASD/setas = deslizar, Q/E = girar.
 
-const COR_FUNDO := Color("0e1014")
-const CORES_AGENTES := [Color("3d7bd9"), Color("27ae60"), Color("af7ac5"), Color("e67e22")]
+const COR_FUNDO := Tema.FUNDO
+const CORES_AGENTES := Tema.CORES_JOGADORES
 
 var missao: Missao
 var sessao: Sessao
@@ -17,6 +17,9 @@ var _mapa3d: Mapa3D
 var _lbl_turno: Label
 var _lbl_ficha: Label
 var _slots: HBoxContainer
+var _grupo: HBoxContainer
+var _cartoes: Dictionary = {}   ## Agente -> CartaoAgente
+var _slots_desenhados = null
 var _lbl_mov: Label
 var _spin_foco: SpinBox
 var _btn_rolar: Button
@@ -207,7 +210,7 @@ func _montar_painel_mestre(painel: VBoxContainer) -> void:
 	_painel_mestre.add_child(caixa)
 	var titulo := Label.new()
 	titulo.text = "Mestre (só você vê este painel e o mapa inteiro)"
-	titulo.add_theme_color_override("font_color", Color("f5cba7"))
+	titulo.add_theme_color_override("font_color", Tema.MESTRE)
 	caixa.add_child(titulo)
 	_lbl_caso_mestre = Label.new()
 	_lbl_caso_mestre.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -385,10 +388,7 @@ func _registrar_sem_guardar(texto: String) -> void:
 
 func _montar_interface() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var fundo := ColorRect.new()
-	fundo.color = COR_FUNDO
-	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(fundo)
+	add_child(Tema.fundo())
 
 	var raiz := HBoxContainer.new()
 	raiz.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -397,6 +397,7 @@ func _montar_interface() -> void:
 
 	_vista = SubViewportContainer.new()
 	_vista.stretch = true
+	Tema.veu(_vista)
 	_vista.custom_minimum_size = Vector2(680, 0)
 	_vista.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var vp := SubViewport.new()
@@ -406,16 +407,29 @@ func _montar_interface() -> void:
 	vp.add_child(_mapa3d)
 	_mapa3d.construir(missao.mapa, _terrenos)
 	_vista.gui_input.connect(_clicar)
-	raiz.add_child(_vista)
+	# O 3D fica numa área com o HUD do grupo por cima (docs/08, R3)
+	var area := Control.new()
+	area.custom_minimum_size = _vista.custom_minimum_size
+	area.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_vista.custom_minimum_size = Vector2.ZERO
+	_vista.set_anchors_preset(Control.PRESET_FULL_RECT)
+	area.add_child(_vista)
+	_grupo = HBoxContainer.new()
+	_grupo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_grupo.add_theme_constant_override("separation", Tema.ESPACO_M)
+	_grupo.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, Tema.ESPACO_G)
+	_grupo.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	area.add_child(_grupo)
+	raiz.add_child(area)
 
 	var painel := VBoxContainer.new()
 	painel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	painel.add_theme_constant_override("separation", 6)
-	raiz.add_child(painel)
+	raiz.add_child(Tema.painel(painel, true))
 
 	_lbl_vez = Label.new()
 	_lbl_vez.add_theme_font_size_override("font_size", 18)
-	_lbl_vez.add_theme_color_override("font_color", Color("f7dc6f"))
+	_lbl_vez.add_theme_color_override("font_color", Tema.OURO_CLARO)
 	painel.add_child(_lbl_vez)
 	_lbl_turno = Label.new()
 	_lbl_turno.add_theme_font_size_override("font_size", 17)
@@ -448,7 +462,7 @@ func _montar_interface() -> void:
 	_painel_evento = VBoxContainer.new()
 	_lbl_evento = Label.new()
 	_lbl_evento.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_lbl_evento.add_theme_color_override("font_color", Color("f7dc6f"))
+	_lbl_evento.add_theme_color_override("font_color", Tema.OURO_CLARO)
 	_painel_evento.add_child(_lbl_evento)
 	_btn_testar = _botao("Testar", _testar_evento)
 	_painel_evento.add_child(_btn_testar)
@@ -456,7 +470,7 @@ func _montar_interface() -> void:
 
 	var titulo := Label.new()
 	titulo.text = "Membrana"
-	titulo.add_theme_color_override("font_color", Color("aab7b8"))
+	titulo.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
 	painel.add_child(titulo)
 	_barra_membrana = ProgressBar.new()
 	_barra_membrana.custom_minimum_size = Vector2(0, 16)
@@ -475,7 +489,7 @@ func _montar_interface() -> void:
 
 	var legenda := Label.new()
 	legenda.text = "Vermelho: encontro · amarelo: evento · azul: início · branco: vila · esfera escura: covil\nCâmera: roda = zoom, botão direito = girar, WASD = deslizar"
-	legenda.add_theme_color_override("font_color", Color("7f8c8d"))
+	legenda.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
 	legenda.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	painel.add_child(legenda)
 
@@ -526,25 +540,37 @@ func _atualizar() -> void:
 		_lbl_evento.text = "%s — %s" % [ev.evento.titulo, ev.evento.texto]
 		_btn_testar.text = "%s testa %s (DT %d)" % [ev.agente.nome, missao.ruleset.pericia(ev.evento.pericia).nome, int(ev.evento.dt)]
 	_barra_membrana.value = missao.membrana.valor
+	Tema.membrana_na_tela(_vista, missao.membrana.valor)
 	_lbl_membrana.text = "%d — %s
 Reforços da Ordem: %d   ·   Pistas: %d" % [missao.membrana.valor, missao.membrana.estado().get("nome", ""), missao.reforcos, missao.pistas]
 	_atualizar_mestre()
+	_atualizar_grupo()
 	_mapa3d.atualizar(missao, missao.destinos())
 
 
+func _atualizar_grupo() -> void:
+	var vez := missao.agente_atual()
+	for i in missao.agentes_iniciais.size():
+		var a: Agente = missao.agentes_iniciais[i]
+		var c: CartaoAgente = _cartoes.get(a)
+		if c == null:
+			c = CartaoAgente.criar(a, CORES_AGENTES[i % CORES_AGENTES.size()])
+			_grupo.add_child(c)
+			_cartoes[a] = c
+		c.visible = a in missao.agentes and not a.tem(Ser.MORTO)
+		if c.visible:
+			c.atualizar(a == vez)
+
+
 func _desenhar_slots() -> void:
+	var mov := missao.ultimo_movimento
+	if mov == _slots_desenhados:   # não repete a animação a cada atualização
+		return
+	_slots_desenhados = mov.duplicate()
 	for filho in _slots.get_children():
 		filho.queue_free()
-	var mov := missao.ultimo_movimento
 	if mov.is_empty():
 		return
-	for v in mov.slots:
-		var caixa := PanelContainer.new()
-		var estilo := StyleBoxFlat.new()
-		estilo.bg_color = Color("1e8449") if v >= int(mov.dt) else Color("4d5656")
-		estilo.set_content_margin_all(5)
-		caixa.add_theme_stylebox_override("panel", estilo)
-		var l := Label.new()
-		l.text = str(v)
-		caixa.add_child(l)
-		_slots.add_child(caixa)
+	for i in mov.slots.size():
+		var v: int = mov.slots[i]
+		_slots.add_child(Tema.slot_d20(v, "sucesso" if v >= int(mov.dt) else "falha", i))

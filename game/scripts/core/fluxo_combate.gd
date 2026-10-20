@@ -110,4 +110,4 @@ func _ao_inspirar(morto: Agente, efeito: String) -> void:
 			melhor = s
 	if melhor != null:
 		combate.aplicar_inspiracao(combate.inspiracoes_pendentes.size() - 1, melhor)
-		combate.registro.emit("[color=#bb8fce]Inspiração Resoluta de %s: %s para %s.[/color]" % [morto.nome, efeito.replace("_", " "), melhor.nome])
+		combate.registro.emit("[color=#b98ae6]Inspiração Resoluta de %s: %s para %s.[/color]" % [morto.nome, efeito.replace("_", " "), melhor.nome])

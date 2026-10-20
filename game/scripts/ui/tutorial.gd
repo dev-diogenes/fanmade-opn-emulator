@@ -80,8 +80,8 @@ static func convidar(raiz: Node, ao_aceitar: Callable) -> CanvasLayer:
 	camada.add_child(centro)
 	var painel := PanelContainer.new()
 	var estilo := StyleBoxFlat.new()
-	estilo.bg_color = Color("1b1f27")
-	estilo.border_color = Color("f7dc6f")
+	estilo.bg_color = Tema.PEDRA
+	estilo.border_color = Tema.OURO
 	estilo.set_border_width_all(2)
 	estilo.set_corner_radius_all(10)
 	estilo.set_content_margin_all(22)
@@ -95,7 +95,7 @@ static func convidar(raiz: Node, ao_aceitar: Callable) -> CanvasLayer:
 	var titulo := Label.new()
 	titulo.text = String(conv.get("titulo", "Bem-vindo à Ordem"))
 	titulo.add_theme_font_size_override("font_size", 24)
-	titulo.add_theme_color_override("font_color", Color("f7dc6f"))
+	titulo.theme_type_variation = "Titulo"
 	caixa.add_child(titulo)
 	var texto := Label.new()
 	texto.text = String(conv.get("texto", "Quer ver o tutorial?"))

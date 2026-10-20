@@ -197,10 +197,10 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 		pistas_encontradas.append({"ponto": ponto_id, "texto": texto, "responde": p.responde, "agente": a.nome})
 		var resp := caso.registrar_pista(p.pista, p.responde, cena.id)
 		resultado.pista = texto
-		_log("[color=#58d68d]Pista:[/color] %s" % texto)
+		_log("[color=#6fcf8e]Pista:[/color] %s" % texto)
 		if not resp.is_empty():
 			perguntas_respondidas.append(resp)
-			_log("[color=#f7dc6f][b]Pergunta respondida:[/b] %s → %s[/color]" % [resp.texto, caso.resposta(resp.id)])
+			_log("[color=#e3c27a][b]Pergunta respondida:[/b] %s → %s[/color]" % [resp.texto, caso.resposta(resp.id)])
 		var t: Dictionary = _trilha.get_or_add(a, {"sucessos": 0, "dados": 0})
 		t.sucessos += 1
 	else:
@@ -209,7 +209,7 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 			_trilha[a].sucessos = 0
 		if falhas % int(_cfg.get("falhas_para_perder_rodada", 3)) == 0:
 			rodadas_max -= 1
-			_log("[color=#e67e22]Descuidos acumulados: a urgência aumenta (−1 rodada).[/color]")
+			_log("[color=#eda64a]Descuidos acumulados: a urgência aumenta (−1 rodada).[/color]")
 	_acao_concluida()
 	return resultado
 
@@ -242,7 +242,7 @@ func facilitar(opcao_id: String, pericia: String, pe_foco: int = 0, opcoes: Dict
 			if aliado != a:
 				_facilitar[aliado] = bonus
 		_presteza_pendente = presteza
-		_log("[color=#5dade2]A cena fica mais fácil: aliados recebem +%d no próximo Procurar Pistas.[/color]" % bonus)
+		_log("[color=#7fd3c7]A cena fica mais fácil: aliados recebem +%d no próximo Procurar Pistas.[/color]" % bonus)
 	_acao_concluida()
 	return {"teste": teste, "sucesso": teste.sucesso}
 
@@ -333,7 +333,7 @@ func _estourar_urgencia() -> void:
 	penalidade = opcoes[dados.rolar(opcoes.size()) - 1]
 	if membrana != null:
 		membrana.registrar("urgencia_estourada")
-	_log("[color=#ec7063][b]O tempo acabou![/b] %s[/color]" % penalidade.texto)
+	_log("[color=#e0574a][b]O tempo acabou![/b] %s[/color]" % penalidade.texto)
 	encerrar("a urgência se esgotou")
 
 

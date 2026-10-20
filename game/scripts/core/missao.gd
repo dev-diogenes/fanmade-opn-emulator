@@ -337,7 +337,7 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool, semente_s
 		"mestre": bool(opcoes.get("mestre", false)),
 	}
 	if semente_salva < 0:
-		_log("[color=#ec7063][b]Encontro: %s![/b][/color] (%d agente(s) entram no combate)" % [info.nome, participantes.size()])
+		_log("[color=#e0574a][b]Encontro: %s![/b][/color] (%d agente(s) entram no combate)" % [info.nome, participantes.size()])
 	encontro_iniciado.emit(encontro_pendente)
 
 
@@ -436,11 +436,11 @@ func concluir_encontro(vencedor: String) -> void:
 				a.condicoes.erase(Ser.INCONSCIENTE)
 				_log("%s é socorrido e volta com 1 PV." % a.nome)
 		mapa.limpar_conteudo(h)
-		_log("[color=#58d68d]Encontro vencido.[/color]")
+		_log("[color=#6fcf8e]Encontro vencido.[/color]")
 		if chefe:
 			_encerrar(true)
 	else:
-		_log("[color=#ec7063]Os agentes caíram.[/color]")
+		_log("[color=#e0574a]Os agentes caíram.[/color]")
 		for a in participantes:
 			if a.esta_fora_de_combate() or a.tem(Ser.MORTO):
 				_tratar_queda(a)
@@ -467,15 +467,15 @@ func _tratar_queda(a: Agente) -> void:
 			a.atributos[attr] = maxi(0, int(a.atributos.get(attr, 0)) - 1)
 			a.lesoes.append(attr)
 			a.recalcular_maximos()
-			_log("[color=#f5b041]Reforços da Ordem resgatam %s (lesão: −1 %s). Reforços restantes: %d.[/color]" % [a.nome, attr.to_upper(), reforcos])
+			_log("[color=#eda64a]Reforços da Ordem resgatam %s (lesão: −1 %s). Reforços restantes: %d.[/color]" % [a.nome, attr.to_upper(), reforcos])
 		else:
-			_log("[color=#f5b041]Reforços da Ordem resgatam %s, sem sequelas. Reforços restantes: %d.[/color]" % [a.nome, reforcos])
+			_log("[color=#eda64a]Reforços da Ordem resgatam %s, sem sequelas. Reforços restantes: %d.[/color]" % [a.nome, reforcos])
 	else:
 		a.condicoes.clear()
 		a.condicoes[Ser.MORTO] = true
 		agentes.erase(a)
 		mortos.append(a)
-		_log("[color=#c0392b]%s morreu.[/color]" % a.nome)
+		_log("[color=#e0574a]%s morreu.[/color]" % a.nome)
 
 
 func _ajustar_indice() -> void:
@@ -496,7 +496,7 @@ func _preparar_investigacao(h: Vector2i, cena_id: String, semente_salva: int = -
 			participantes.append(a)
 	investigacao_pendente = {"hex": h, "cena": cena_id, "agentes": participantes, "semente": semente_salva if semente_salva >= 0 else dados.rolar(1000000)}
 	if semente_salva < 0:
-		_log("[color=#76d7c4][b]Investigação: %s![/b][/color] (%d agente(s) participam)" % [cena_info(cena_id).get("nome", ""), participantes.size()])
+		_log("[color=#7fd3c7][b]Investigação: %s![/b][/color] (%d agente(s) participam)" % [cena_info(cena_id).get("nome", ""), participantes.size()])
 	investigacao_iniciada.emit(investigacao_pendente)
 
 
@@ -527,7 +527,7 @@ func concluir_investigacao(resultado: Dictionary) -> void:
 	pistas += resultado.get("pistas", []).size()
 	for p in resultado.get("perguntas", []):
 		var ef: Dictionary = p.get("efeito", {})
-		_log("[color=#f7dc6f]%s[/color]" % ef.get("texto", ""))
+		_log("[color=#e3c27a]%s[/color]" % ef.get("texto", ""))
 		match ef.get("tipo", ""):
 			"chefe_enfraquecido":
 				modificador_chefe -= 0.2
@@ -559,7 +559,7 @@ func _iniciar_turno_do_agente_sem_reset() -> void:
 func _turno_do_mundo() -> void:
 	turno_mundo += 1
 	membrana.registrar("turno_mapa")
-	_log("[color=#7f8c8d]— Turno %d do mundo — Membrana %d (%s)[/color]" % [turno_mundo, membrana.valor, membrana.estado().get("nome", "")])
+	_log("[color=#a69b88]— Turno %d do mundo — Membrana %d (%s)[/color]" % [turno_mundo, membrana.valor, membrana.estado().get("nome", "")])
 	_turnos_sem_surgimento += 1
 	if _turnos_sem_surgimento >= int(_cfg.mundo.surgimento_a_cada_turnos) and membrana.nivel_ameaca() >= 1:
 		_turnos_sem_surgimento = 0
@@ -579,7 +579,7 @@ func _ataque_a_sanidade() -> void:
 		if t == null or not t.sucesso:
 			var antes := a.san
 			a.sofrer_dano_mental(dados.rolar_expressao(String(cfg.dano)))
-			_log("[color=#a569bd]O Medo sussurra para %s: −%d de Sanidade.[/color]" % [a.nome, antes - a.san])
+			_log("[color=#b98ae6]O Medo sussurra para %s: −%d de Sanidade.[/color]" % [a.nome, antes - a.san])
 	_verificar_derrota()
 
 
@@ -604,12 +604,12 @@ func _surgir_ameaca() -> void:
 		var ev: Dictionary = eventos_medo[dados.rolar(eventos_medo.size()) - 1]
 		mapa.definir_conteudo(h, {"tipo": "evento", "evento": ev.id})
 		mapa.revelar(h, 0)
-		_log("[color=#a569bd]O Medo se manifesta perto de %s: %s.[/color]" % [alvo.nome, ev.titulo])
+		_log("[color=#b98ae6]O Medo se manifesta perto de %s: %s.[/color]" % [alvo.nome, ev.titulo])
 		return
 	var e: Dictionary = opcoes[dados.rolar(opcoes.size()) - 1]
 	mapa.definir_conteudo(h, {"tipo": "encontro", "encontro": e.id})
 	mapa.revelar(h, 0)
-	_log("[color=#c39bd3]Com a Membrana %s, algo surge perto de %s: %s.[/color]" % [membrana.estado().nome.to_lower(), alvo.nome, e.nome])
+	_log("[color=#b98ae6]Com a Membrana %s, algo surge perto de %s: %s.[/color]" % [membrana.estado().nome.to_lower(), alvo.nome, e.nome])
 
 
 func _verificar_derrota() -> void:

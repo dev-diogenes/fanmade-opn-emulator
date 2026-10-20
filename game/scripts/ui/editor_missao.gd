@@ -3,7 +3,7 @@ extends Control
 ## pintar terreno ou pôr conteúdo com a ferramenta escolhida. À direita, os dados da missão,
 ## o covil, eventos próprios, validação e salvar/testar. A lógica fica em EditorMissao.
 
-const COR_FUNDO := Color("0e1014")
+const COR_FUNDO := Tema.FUNDO
 const TAMANHO_HEX := 22.0
 const MARCAS := {"inicio": "I", "objetivo": "X", "vila": "V", "encontro": "!", "evento": "?", "investigacao": "◆"}
 const FERRAMENTAS := [
@@ -77,7 +77,7 @@ func _desenhar() -> void:
 			if not cont.is_empty():
 				var marca: String = MARCAS.get(cont.tipo, "•")
 				_tela.draw_circle(c, TAMANHO_HEX * 0.45, Color(0, 0, 0, 0.55))
-				_tela.draw_string(get_theme_default_font(), c + Vector2(-6, 6), marca, HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Color("f7dc6f"))
+				_tela.draw_string(get_theme_default_font(), c + Vector2(-6, 6), marca, HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Tema.OURO_CLARO)
 
 
 func _clique_no_mapa(evento: InputEvent) -> void:
@@ -118,10 +118,7 @@ func _clique_no_mapa(evento: InputEvent) -> void:
 
 func _montar_interface() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var fundo := ColorRect.new()
-	fundo.color = COR_FUNDO
-	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(fundo)
+	add_child(Tema.fundo())
 	var raiz := HBoxContainer.new()
 	raiz.set_anchors_preset(Control.PRESET_FULL_RECT)
 	raiz.add_theme_constant_override("separation", 10)
@@ -134,7 +131,7 @@ func _montar_interface() -> void:
 	var dica := Label.new()
 	dica.text = "Clique (ou arraste) no mapa para usar a ferramenta. I = início, X = objetivo/covil, V = vila, ! = encontro, ? = evento, ◆ = investigação."
 	dica.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	dica.add_theme_color_override("font_color", Color("aab7b8"))
+	dica.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
 	esquerda.add_child(dica)
 	var linha_f := HBoxContainer.new()
 	esquerda.add_child(linha_f)
@@ -230,7 +227,7 @@ func _montar_interface() -> void:
 	p.add_child(_botao("Adicionar evento", _adicionar_evento))
 	_lbl_eventos = Label.new()
 	_lbl_eventos.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_lbl_eventos.add_theme_color_override("font_color", Color("aab7b8"))
+	_lbl_eventos.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
 	p.add_child(_lbl_eventos)
 
 	p.add_child(_titulo("Arquivo"))
@@ -254,15 +251,14 @@ func _montar_interface() -> void:
 	var pasta := Label.new()
 	pasta.text = "As missões ficam em %s (no Windows, %%APPDATA%%\\Godot\\app_userdata\\…\\missoes). Dá para editar o JSON à mão: veja docs/04-missoes-da-comunidade.md." % MissaoComunidade.PASTA_USUARIO
 	pasta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	pasta.add_theme_color_override("font_color", Color("7f8c8d"))
+	pasta.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
 	p.add_child(pasta)
 
 
 func _titulo(texto: String, tamanho: int = 14) -> Label:
 	var l := Label.new()
 	l.text = texto
-	l.add_theme_font_size_override("font_size", tamanho)
-	l.add_theme_color_override("font_color", Color("d5d8dc") if tamanho > 14 else Color("aab7b8"))
+	l.theme_type_variation = "Titulo" if tamanho > 14 else "Subtitulo"
 	return l
 
 
@@ -309,7 +305,7 @@ func _botao(texto: String, acao: Callable) -> Button:
 
 func _status(texto: String, erro: bool = false) -> void:
 	_lbl_status.text = texto
-	_lbl_status.add_theme_color_override("font_color", Color("f1948a") if erro else Color("58d68d"))
+	_lbl_status.add_theme_color_override("font_color", Tema.PERIGO if erro else Tema.SUCESSO)
 
 
 # --- Sincronizar campos e definição ---------------------------------------------------
