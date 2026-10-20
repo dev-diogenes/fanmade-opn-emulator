@@ -17,17 +17,17 @@ func test_missao_comeca_com_o_grupo_no_inicio():
 
 func test_rolar_movimento_conta_slots_acima_da_dt():
 	var m := _missao()
-	var mauro := m.agente_atual()   # AGI 1 -> 1 slot
-	m.dados.forcar([15])
+	var mauro := m.agente_atual()   # AGI 1 + 2 extras -> 3 slots
+	m.dados.forcar([15, 3, 11])
 	var r := m.rolar_movimento()
-	assert_eq(r.slots, [15])
-	assert_eq(r.total, 2, "base 1 + 1 sucesso")
+	assert_eq(r.slots, [15, 3, 11])
+	assert_eq(r.total, 4, "base 2 + 2 sucessos")
 	assert_true(m.rolar_movimento().is_empty(), "uma rolagem por turno")
-	assert_eq(m.movimento_restante, 2)
+	assert_eq(m.movimento_restante, 4)
 	m.encerrar_turno()
-	var bianca := m.agente_atual()  # AGI 2 + 1 de Foco = 3 slots
-	m.dados.forcar([3, 12, 20])
-	assert_eq(m.rolar_movimento(1).total, 3)
+	var bianca := m.agente_atual()  # AGI 2 + 2 extras + 1 de Foco = 5 slots
+	m.dados.forcar([3, 12, 20, 1, 5])
+	assert_eq(m.rolar_movimento(1).total, 4)
 	assert_eq(bianca.pe, bianca.pe_maximo - 1)
 	assert_ne(mauro, bianca)
 
@@ -193,3 +193,72 @@ func test_aliado_a_dois_hexes_entra_no_combate():
 	m._preparar_encontro(m.posicao(a), "celula_cultista", false)
 	assert_true(b in m.encontro_pendente.agentes)
 	assert_false(c in m.encontro_pendente.agentes)
+
+
+func _com_evento(m: Missao, evento_id: String) -> Agente:
+	var a := m.agente_atual()
+	var h := m.posicao(a) + Vector2i(1, 0)
+	m.mapa.celulas[h].terreno = "campo"
+	m.mapa.definir_conteudo(h, {"tipo": "evento", "evento": evento_id})
+	m.movimento_rolado = true
+	m.movimento_restante = 3
+	m.mover(h)
+	return a
+
+
+func test_eventos_tem_varias_opcoes():
+	var m := _missao()
+	var a := _com_evento(m, "morador")
+	var ops := m.opcoes_do_evento()
+	assert_gt(ops.size(), 3, "diplomacia, intimidação, enganação, luta… e seguir em frente")
+	var pericias := ops.map(func(o): return o.get("pericia", ""))
+	assert_has(pericias, "intimidacao")
+	if not a.pericias.has("sobrevivencia"):
+		assert_does_not_have(pericias, "sobrevivencia", "a opção de caçador só aparece para quem é treinado")
+
+
+func test_evento_sem_teste_so_segue_em_frente():
+	var m := _missao()
+	var a := _com_evento(m, "morador")
+	var ops := m.opcoes_do_evento()
+	var i := ops.find(ops.filter(func(o): return o.get("sem_teste", false))[0])
+	var pv := a.pv
+	var r := m.resolver_evento(0, i)
+	assert_true(r.sucesso)
+	assert_null(r.teste)
+	assert_eq(a.pv, pv)
+	assert_true(m.evento_pendente.is_empty())
+
+
+func test_item_fora_de_combate_gasta_a_acao_do_turno():
+	var m := _missao()
+	var a := m.agente_atual()
+	a.equipamento.append("cicatrizante")
+	a.equipamento.append("cicatrizante")
+	a.sofrer_dano(5)
+	var pv := a.pv
+	assert_has(m.itens_fora_de_combate(a), "cicatrizante")
+	var r := m.usar_item_no_mapa("cicatrizante", a)
+	assert_false(r.is_empty())
+	assert_gt(a.pv, pv)
+	assert_true(m.acao_usada)
+	assert_true(m.usar_item_no_mapa("cicatrizante", a).is_empty(), "uma ação por turno")
+	m.encerrar_turno()
+	assert_false(m.acao_usada, "a ação volta no turno seguinte")
+
+
+func test_ritual_de_cura_fora_de_combate():
+	var m := _missao()
+	var a := m.agente_atual()
+	a.rituais.append("cicatrizacao")
+	a.pe = a.pe_maximo
+	var alvo: Agente = m.agentes[1]
+	alvo.sofrer_dano(6)
+	assert_has(m.rituais_fora_de_combate(a), ["cicatrizacao", ""])
+	var pv := alvo.pv
+	var pe := a.pe
+	var r := m.conjurar_no_mapa("cicatrizacao", "", alvo)
+	assert_false(r.is_empty(), "o aliado está no mesmo hex (toque)")
+	assert_gt(alvo.pv, pv)
+	assert_lt(a.pe, pe)
+	assert_eq(Comandos.aplicar_mapa(m, Comandos.novo("mapa", "conjurar", {"ritual": "cicatrizacao", "forma": "", "alvo": alvo.id})).ok, false, "já usou a ação")

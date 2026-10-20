@@ -89,6 +89,7 @@ func _alvos_do_tutorial() -> Dictionary:
 
 func _process(delta: float) -> void:
 	_tempo += delta
+	_andar(delta)
 	if _rec != null:
 		var s := int(_tempo)
 		_rec.text = "%s REC   00:%02d:%02d" % ["●" if int(_tempo * 2.0) % 2 == 0 else "  ", s / 60, s % 60]
@@ -225,6 +226,7 @@ func _montar_grupo() -> void:
 	var cores := Tema.CORES_JOGADORES
 	for i in cena.agentes.size():
 		var c := CartaoAgente.criar(cena.agentes[i], cores[i % cores.size()])
+		c.escolhido.connect(func(ag): DossieAgente.abrir(self, ag))
 		c.custom_minimum_size.x = 150
 		_grupo.add_child(c)
 		_cartoes[cena.agentes[i]] = c
@@ -413,9 +415,9 @@ func _opcoes_procurar(a: Agente) -> void:
 	onde.theme_type_variation = "TextoPapel"
 	onde.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(onde)
-	_botao_papel(h, "Próximo ponto ▸", false, _proximo_ponto, false)
 	if pt.is_empty():
-		_texto_bilhete("Não restam pontos de interesse.", true)
+		onde.text = "Nenhum ponto ao alcance."
+		_texto_bilhete("Ande com WASD até um ponto de interesse (os sigilos dourados no chão) para procurar pistas." if not cena.pontos_restantes.is_empty() else "Não restam pontos de interesse.", true)
 		return
 	if not _pericia in pt.pericias:
 		_pericia = String(pt.pericias.keys()[0])
@@ -514,8 +516,6 @@ func _atualizar() -> void:
 		_cartas[k].disabled = a == null or cena.encerrada
 	if _ponto != "" and not _ponto in cena.pontos_restantes:
 		_ponto = ""
-	if _ponto == "" and not cena.pontos_restantes.is_empty():
-		_ponto = cena.pontos_restantes[0]
 	for ag in _cartoes:
 		_cartoes[ag].atualizar(ag == a)
 	_quadro.atualizar(missao.caso)
@@ -544,6 +544,12 @@ func _unhandled_key_input(evento: InputEvent) -> void:
 			_selecionar_carta(ids[evento.keycode - KEY_1])
 		KEY_TAB:
 			_alternar_quadro()
+		KEY_F:
+			if cena.agente_atual() != null:
+				DossieAgente.abrir(self, cena.agente_atual())
+		KEY_E:
+			if _ponto != "":
+				_selecionar_carta("procurar")
 		KEY_ENTER, KEY_KP_ENTER:
 			match _carta_sel:
 				"procurar": _procurar()
@@ -565,6 +571,42 @@ func _unhandled_key_input(evento: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
+## WASD (ou o direcional analógico) move o agente da vez pela cena (docs/13). Só dá para
+## procurar pistas no ponto de interesse ao alcance; a câmera acompanha quem anda.
+func _andar(delta: float) -> void:
+	var a := cena.agente_atual() if cena != null else null
+	if a == null or _visao == null or cena.encerrada or TourGuiado.em_andamento() or MenuPausa.aberto(self):
+		return
+	if not _controles.usa_teclado(a) and not _controles.usa_controle(a):
+		return
+	var entrada := Vector2.ZERO
+	if _controles.usa_teclado(a) and not get_viewport().gui_get_focus_owner() is LineEdit:
+		if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP): entrada.y -= 1
+		if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): entrada.y += 1
+		if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT): entrada.x -= 1
+		if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT): entrada.x += 1
+	elif _controles.usa_controle(a):
+		var j := int(_controles.jogadores[_controles.jogador_de(a)].get("indice", 0))
+		entrada = Vector2(Input.get_joy_axis(j, JOY_AXIS_LEFT_X), Input.get_joy_axis(j, JOY_AXIS_LEFT_Y))
+		if entrada.length() < 0.25:
+			entrada = Vector2.ZERO
+	var g := _visao.rig.giro
+	var frente := Vector3(-sin(g), 0, -cos(g))
+	var direita := Vector3(cos(g), 0, -sin(g))
+	_visao.mover_agente(a, direita * entrada.x + frente * -entrada.y, delta)
+	var f := _visao.figura(a)
+	if f != null:
+		_visao.rig.alvo = f.position
+		if _visao.rig.seguir != f:
+			_visao.rig.seguir = f
+	var perto := _visao.ponto_proximo(a, cena.pontos_restantes)
+	if perto != _ponto:
+		_ponto = perto
+		if perto != "":
+			Som.tocar("hover")
+		_atualizar()
+
+
 ## Troca o ponto de interesse sem o mouse (controles).
 func _proximo_ponto() -> void:
 	if cena.pontos_restantes.is_empty():
@@ -582,12 +624,7 @@ func _entrada_3d(evento: InputEvent) -> void:
 	if evento is InputEventMouseMotion:
 		_mostrar_dica(_visao.ponto_em(evento.position), evento.position)
 	if evento is InputEventMouseButton and evento.pressed and evento.button_index == MOUSE_BUTTON_LEFT:
-		var pid := _visao.ponto_em(evento.position)
-		if pid != "" and pid in cena.pontos_restantes:
-			_ponto = pid
-			_selecionar_carta("procurar")
-			_atualizar()
-		return
+		return   # o ponto é escolhido chegando perto dele (WASD), não clicando
 	if _visao.rig.tratar_entrada(evento):
 		_vista.accept_event()
 
@@ -673,6 +710,14 @@ func _enviar(acao: String, args: Dictionary = {}) -> Dictionary:
 ## Aplica um comando da cena (deste jogador ou, online, de outro) e atualiza a tela.
 func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 	var res := Comandos.aplicar_investigacao(cena, cmd)
+	# Rolagem no centro da tela (docs/13)
+	var t = res.get("teste", {}).get("teste") if res.get("teste") is Dictionary else null
+	if res.get("ok", false) and t is ResultadoTeste and is_inside_tree():
+		var per := String(cmd.get("pericia", ""))
+		var titulo: String = {"procurar": "Procurar pistas", "facilitar": "Facilitar", "ajudar": "Ajudar"}.get(String(cmd.acao), "Teste")
+		RolagemDados.mostrar(self, titulo, missao.ruleset.atributo_da_pericia(per), t.slots, t.dt,
+			"%s  ·  %d %+d = %d" % [missao.ruleset.pericia(per).get("nome", per), t.escolhido, t.bonus, t.total],
+			RolagemDados.estados_do_teste(t), t.sucesso)
 	match String(cmd.get("acao", "")):
 		"procurar":
 			if not res.ok:

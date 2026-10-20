@@ -81,3 +81,14 @@ static func definir_volume(valor: float) -> void:
 	var d := ler()
 	d["volume"] = clampf(valor, 0.0, 1.0)
 	gravar(d)
+
+
+## Modo de câmera: "terceira", "segunda" ou "primeira" (docs/13).
+static func camera() -> String:
+	return String(ler().get("camera", "terceira"))
+
+
+static func definir_camera(modo: String) -> void:
+	var d := ler()
+	d["camera"] = modo
+	gravar(d)

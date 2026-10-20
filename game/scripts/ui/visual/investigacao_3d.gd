@@ -13,6 +13,10 @@ var _luz: OmniLight3D
 var _ambiente: Environment
 var _anel_sel: MeshInstance3D
 var _nivel_luz := 0
+var _figuras: Dictionary = {}     ## Agente -> Node3D (andam com WASD, docs/13)
+const ALCANCE_PONTO := 1.5        ## distância para investigar um ponto
+const RAIO_CENA := 5.4            ## o grupo não sai do chão iluminado
+const VELOCIDADE := 2.6
 
 
 func construir(cena: Dictionary, agentes: Array) -> void:
@@ -75,6 +79,7 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 	for i in agentes.size():
 		var f := Pecas.agente(agentes[i].classe_id, cores[i % cores.size()], 0.9)
 		f.position = Vector3(-0.5 + 0.5 * i, 0, 0.3 * (i % 2))
+		_figuras[agentes[i]] = f
 		var r := Pecas.rotulo(agentes[i].nome, 40)
 		r.position = Vector3(0, 1.15, 0)
 		f.add_child(r)
@@ -152,6 +157,51 @@ func atualizar(cena: CenaInvestigacao, selecionado: String) -> void:
 	_anel_sel.visible = selecionado != "" and _props.has(selecionado)
 	if _anel_sel.visible:
 		_anel_sel.position = _props[selecionado].position + Vector3(0, 0.02, 0)
+
+
+## Anda com a figura do agente na direção `dir` (no plano), virada para onde vai.
+func mover_agente(a: Agente, dir: Vector3, delta: float) -> void:
+	var f: Node3D = _figuras.get(a)
+	if f == null:
+		return
+	if dir.length() < 0.01:
+		Pecas.animar(f, "Idle")
+		return
+	dir = dir.normalized()
+	var novo := f.position + dir * VELOCIDADE * delta
+	if Vector2(novo.x, novo.z).length() > RAIO_CENA:
+		novo = Vector3(novo.x, 0, novo.z).normalized() * RAIO_CENA
+	# Não atravessa os objetos dos pontos de interesse
+	for pid in _props:
+		var p: Vector3 = _props[pid].position
+		var dist := Vector2(novo.x - p.x, novo.z - p.z)
+		if dist.length() < 0.55:
+			var fora := dist.normalized() * 0.55
+			novo = Vector3(p.x + fora.x, 0, p.z + fora.y)
+	f.position = novo
+	f.rotation.y = atan2(dir.x, dir.z)
+	Pecas.animar(f, "Walking_A")
+
+
+## Ponto de interesse ao alcance do agente ("" se nenhum).
+func ponto_proximo(a: Agente, restantes: Array) -> String:
+	var f: Node3D = _figuras.get(a)
+	if f == null:
+		return ""
+	var melhor := ""
+	var melhor_d := ALCANCE_PONTO
+	for pid in _props:
+		if not pid in restantes:
+			continue
+		var d := Vector2(_props[pid].position.x - f.position.x, _props[pid].position.z - f.position.z).length()
+		if d < melhor_d:
+			melhor = pid
+			melhor_d = d
+	return melhor
+
+
+func figura(a: Agente) -> Node3D:
+	return _figuras.get(a)
 
 
 ## Ponto de interesse sob o ponteiro ("" se nenhum).

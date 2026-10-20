@@ -44,7 +44,8 @@ func construir(p_mapa: MapaHex, terrenos: Dictionary) -> void:
 		var cor := Color(_terrenos.get(t, {}).get("cor", "555555"))
 		var terreno := Node3D.new()
 		var altura: float = ALTURAS.get(t, 0.2)
-		var tile := Pecas.tile_terreno(t, RAIO, altura, hash(h), cor.lightened(0.2 if t in ["agua", "pantano"] else 0.4))
+		var cor_tile := cor if t != "estrada" else Color(_terrenos.get("campo", {}).get("cor", "4f6b3a"))
+		var tile := Pecas.tile_terreno(t, RAIO, altura, hash(h), cor_tile.lightened(0.2 if t in ["agua", "pantano"] else 0.4))
 		if tile != null:
 			terreno.add_child(tile)
 			if t in ["cidade", "ruina"]:   # casas e pilares continuam por código
@@ -56,12 +57,54 @@ func construir(p_mapa: MapaHex, terrenos: Dictionary) -> void:
 		var nevoa := Pecas.nevoa(RAIO, 0.16, COR_NEVOA)
 		raiz.add_child(nevoa)
 		_tiles[h] = {"terreno": terreno, "nevoa": nevoa}
+	_desenhar_estradas()
 	_destaques = Node3D.new()
 	add_child(_destaques)
 	_anel_vez = Pecas.anel(0.42, Color("f1c40f"))
 	add_child(_anel_vez)
 	rig.limites = AABB(minimo, maximo - minimo)
 	rig.distancia = 10.0
+
+
+## Estradas (docs/13): uma faixa de terra do centro até a borda de cada vizinho que também
+## é estrada, cidade, vila ou início. Assim os trechos sempre se encontram.
+func _desenhar_estradas() -> void:
+	var ligam := ["estrada", "cidade"]
+	var terra := Pecas.material(Color("8a6f4e"))
+	for h in mapa.celulas:
+		if mapa.terreno(h) != "estrada":
+			continue
+		var raiz: Node3D = _tiles[h].terreno
+		var altura: float = ALTURAS.get("estrada", 0.2)
+		var centro := posicao_hex(h, 0.0)
+		var ligou := false
+		for v in Hex.vizinhos(h):
+			if not mapa.tem(v):
+				continue
+			var tv := mapa.terreno(v)
+			var tipo := String(mapa.conteudo(v).get("tipo", ""))
+			if not (tv in ligam or tipo in ["vila", "inicio"]):
+				continue
+			ligou = true
+			var dir := posicao_hex(v, 0.0) - centro
+			var faixa := BoxMesh.new()
+			faixa.size = Vector3(0.3, 0.02, dir.length() / 2.0 + 0.15)
+			var mi := MeshInstance3D.new()
+			mi.mesh = faixa
+			mi.material_override = terra
+			mi.position = dir / 4.0 + Vector3(0, altura + 0.012, 0)
+			mi.rotation.y = atan2(dir.x, dir.z)
+			raiz.add_child(mi)
+		var miolo := CylinderMesh.new()
+		miolo.top_radius = 0.2 if ligou else 0.35
+		miolo.bottom_radius = miolo.top_radius
+		miolo.height = 0.024
+		miolo.radial_segments = 10
+		var mc := MeshInstance3D.new()
+		mc.mesh = miolo
+		mc.material_override = terra
+		mc.position = Vector3(0, altura + 0.012, 0)
+		raiz.add_child(mc)
 
 
 ## Vitrine (tela de título): mostra o mapa inteiro, sem névoa nem peças.
@@ -259,3 +302,4 @@ func focar_agente(missao: Missao, imediato: bool = false) -> void:
 	var a := missao.agente_atual()
 	if a != null:
 		rig.focar(posicao_hex(missao.posicao(a)), imediato)
+		rig.seguir = _fichas.get(a)   # 1ª e 2ª pessoa acompanham o agente da vez

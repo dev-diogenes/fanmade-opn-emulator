@@ -145,6 +145,16 @@ func faixa_da_vez(agente: Agente) -> String:
 	return "Vez de %s — %s" % [agente.nome, descricao(jogador_de(agente))]
 
 
+## O agente da vez anda com o teclado nesta máquina? (sem co-op, sim; online, na máquina do dono)
+func usa_teclado(agente: Agente) -> bool:
+	if not co_op() or agente == null:
+		return true
+	if not e_local(agente):
+		return false
+	var disp = jogadores[jogador_de(agente)].dispositivo
+	return disp == TECLADO or disp == REDE
+
+
 func usa_controle(agente: Agente) -> bool:
 	return jogadores[jogador_de(agente)].dispositivo == CONTROLE and e_local(agente)
 

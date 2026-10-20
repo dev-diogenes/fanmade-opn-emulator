@@ -1,63 +1,73 @@
 {
-  "nota": "Eventos do mapa (conteúdo original). Um agente faz o teste; os efeitos valem para quem testou, exceto os de mundo (membrana, revelar). 'eventos_medo' são manifestações do Medo: só surgem com a Membrana Fina ou pior.",
+  "nota": "Eventos do mapa (conteúdo original). Um agente faz o teste; os efeitos valem para quem testou, exceto os de mundo (membrana, revelar). 'eventos_medo' são manifestações do Medo: só surgem com a Membrana Fina ou pior. Cada evento tem 'opcoes' (docs/13): um teste de perícia diferente por opção, ou 'sem_teste'. 'treinada' só aparece para quem é treinado; 'habilidade', para quem a tem. 'pericia'/'dt'/'sucesso'/'falha' continuam valendo como a primeira opção (missões da comunidade antigas).",
   "efeitos_possiveis": ["dano", "dano_mental", "cura", "recupera_pe", "recupera_san", "membrana", "revelar_raio", "revelar_objetivo"],
   "eventos": [
-    { "id": "pegadas", "titulo": "Pegadas no barro",
-      "texto": "Marcas de pés descalços seguem para dentro da mata, em fila perfeita.",
-      "pericia": "sobrevivencia", "dt": 15,
-      "sucesso": { "texto": "Você segue o rastro e enxerga o caminho adiante.", "efeitos": [{ "tipo": "revelar_raio", "valor": 4 }] },
-      "falha": { "texto": "As pegadas somem na lama. Algo parece observar.", "efeitos": [{ "tipo": "dano_mental", "valor": "1d4" }] } },
-    { "id": "carro_abandonado", "titulo": "Carro abandonado",
-      "texto": "Um carro com as portas abertas, faróis ainda acesos. No banco, um caderno encharcado.",
-      "pericia": "investigacao", "dt": 15,
-      "sucesso": { "texto": "As anotações apontam o lugar do ritual.", "efeitos": [{ "tipo": "revelar_objetivo" }] },
-      "falha": { "texto": "Você mexe demais nos papéis; símbolos riscados no painel brilham por um instante.", "efeitos": [{ "tipo": "membrana", "valor": -3 }] } },
-    { "id": "sussurros", "titulo": "Sussurros",
-      "texto": "Vozes repetem seu nome do fundo de um poço seco.",
-      "pericia": "vontade", "dt": 15,
-      "sucesso": { "texto": "Você se concentra e as vozes se calam.", "efeitos": [] },
-      "falha": { "texto": "As vozes entram na sua cabeça.", "efeitos": [{ "tipo": "dano_mental", "valor": "2d4" }] } },
-    { "id": "morador", "titulo": "Morador assustado",
-      "texto": "Um senhor de chinelos segura uma espingarda sem munição e não quer conversa.",
-      "pericia": "diplomacia", "dt": 15,
-      "sucesso": { "texto": "Ele se acalma e indica uma trilha segura.", "efeitos": [{ "tipo": "revelar_raio", "valor": 3 }, { "tipo": "recupera_san", "valor": "1d4" }] },
-      "falha": { "texto": "Ele bate a porta. Você perde tempo.", "efeitos": [{ "tipo": "membrana", "valor": -2 }] } },
-    { "id": "ponte_podre", "titulo": "Ponte podre",
-      "texto": "A única passagem é uma ponte de madeira que range a cada passo.",
-      "pericia": "atletismo", "dt": 12,
-      "sucesso": { "texto": "Você atravessa com cuidado.", "efeitos": [] },
-      "falha": { "texto": "Uma tábua cede e você cai no riacho raso.", "efeitos": [{ "tipo": "dano", "valor": "1d6" }] } },
-    { "id": "kit_esquecido", "titulo": "Mochila esquecida",
-      "texto": "Uma mochila da Ordem, rasgada, presa num galho.",
-      "pericia": "percepcao", "dt": 12,
-      "sucesso": { "texto": "Dentro, curativos e uma barra de chocolate.", "efeitos": [{ "tipo": "cura", "valor": "2d4" }, { "tipo": "recupera_pe", "valor": 2 }] },
-      "falha": { "texto": "Só farrapos e sangue seco.", "efeitos": [{ "tipo": "dano_mental", "valor": 1 }] } },
-    { "id": "simbolo", "titulo": "Símbolo na parede",
-      "texto": "Um sigilo pintado com sangue ainda úmido pulsa devagar.",
-      "pericia": "ocultismo", "dt": 15,
-      "sucesso": { "texto": "Você desfaz o traço central. O ar fica mais leve.", "efeitos": [{ "tipo": "membrana", "valor": 5 }] },
-      "falha": { "texto": "Seus olhos ardem ao encarar o símbolo.", "efeitos": [{ "tipo": "dano_mental", "valor": "1d6" }, { "tipo": "membrana", "valor": -2 }] } },
-    { "id": "radio", "titulo": "Rádio chiando",
-      "texto": "Um rádio velho capta uma transmissão da Ordem, entrecortada.",
-      "pericia": "tecnologia", "dt": 15,
-      "sucesso": { "texto": "Você sintoniza: coordenadas de uma vila segura.", "efeitos": [{ "tipo": "revelar_raio", "valor": 5 }] },
-      "falha": { "texto": "Só estática… e uma respiração do outro lado.", "efeitos": [{ "tipo": "dano_mental", "valor": "1d4" }] } }
+    {"id": "pegadas", "titulo": "Pegadas no barro", "texto": "Marcas de pés descalços seguem para dentro da mata, em fila perfeita.", "pericia": "sobrevivencia", "dt": 15, "sucesso": {"texto": "Você segue o rastro e enxerga o caminho adiante.", "efeitos": [{"tipo": "revelar_raio", "valor": 4}]}, "falha": {"texto": "As pegadas somem na lama. Algo parece observar.", "efeitos": [{"tipo": "dano_mental", "valor": "1d4"}]}, "opcoes": [
+      {"texto": "Seguir o rastro", "pericia": "sobrevivencia", "dt": 15, "sucesso": {"texto": "Você segue o rastro e enxerga o caminho adiante.", "efeitos": [{"tipo": "revelar_raio", "valor": 4}]}, "falha": {"texto": "As pegadas somem na lama. Algo parece observar.", "efeitos": [{"tipo": "dano_mental", "valor": "1d4"}]}},
+      {"texto": "Ler os sinais do terreno com calma", "pericia": "investigacao", "dt": 18, "sucesso": {"texto": "O padrão das pegadas mostra para onde o grupo foi.", "efeitos": [{"tipo": "revelar_raio", "valor": 3}]}, "falha": {"texto": "Você perde tempo agachado no barro.", "efeitos": [{"tipo": "membrana", "valor": -2}]}},
+      {"texto": "Ficar escondido e esperar quem deixou as marcas", "pericia": "furtividade", "dt": 15, "sucesso": {"texto": "Ninguém aparece. Você ouve passos se afastando para o leste.", "efeitos": [{"tipo": "revelar_raio", "valor": 2}]}, "falha": {"texto": "Um galho estala sob o seu pé. Algo na mata também para.", "efeitos": [{"tipo": "dano_mental", "valor": "1d6"}]}},
+      {"texto": "Ignorar e seguir pela estrada", "sem_teste": true, "sucesso": {"texto": "Você segue viagem.", "efeitos": []}}
+    ]},
+    {"id": "carro_abandonado", "titulo": "Carro abandonado", "texto": "Um carro com as portas abertas, faróis ainda acesos. No banco, um caderno encharcado.", "pericia": "investigacao", "dt": 15, "sucesso": {"texto": "As anotações apontam o lugar do ritual.", "efeitos": [{"tipo": "revelar_objetivo"}]}, "falha": {"texto": "Você mexe demais nos papéis; símbolos riscados no painel brilham por um instante.", "efeitos": [{"tipo": "membrana", "valor": -3}]}, "opcoes": [
+      {"texto": "Ler o caderno encharcado", "pericia": "investigacao", "dt": 15, "sucesso": {"texto": "As anotações apontam o lugar do ritual.", "efeitos": [{"tipo": "revelar_objetivo"}]}, "falha": {"texto": "Você mexe demais nos papéis; símbolos riscados no painel brilham por um instante.", "efeitos": [{"tipo": "membrana", "valor": -3}]}},
+      {"texto": "Mexer no rádio e no painel do carro", "pericia": "tecnologia", "dt": 15, "sucesso": {"texto": "O GPS guarda a última rota: termina num lugar que não aparece no mapa.", "efeitos": [{"tipo": "revelar_objetivo"}]}, "falha": {"texto": "O rádio liga sozinho no volume máximo.", "efeitos": [{"tipo": "dano_mental", "valor": "1d4"}]}},
+      {"texto": "Revistar o porta-malas", "pericia": "percepcao", "dt": 12, "sucesso": {"texto": "Uma lanterna, uma garrafa d'água e uma barra de cereal.", "efeitos": [{"tipo": "recupera_pe", "valor": 2}]}, "falha": {"texto": "Só um cheiro forte de ferrugem que gruda na garganta.", "efeitos": [{"tipo": "dano_mental", "valor": 1}]}},
+      {"texto": "Não tocar em nada", "sem_teste": true, "sucesso": {"texto": "Você segue viagem.", "efeitos": []}}
+    ]},
+    {"id": "sussurros", "titulo": "Sussurros", "texto": "Vozes repetem seu nome do fundo de um poço seco.", "pericia": "vontade", "dt": 15, "sucesso": {"texto": "Você se concentra e as vozes se calam.", "efeitos": []}, "falha": {"texto": "As vozes entram na sua cabeça.", "efeitos": [{"tipo": "dano_mental", "valor": "2d4"}]}, "opcoes": [
+      {"texto": "Resistir às vozes", "pericia": "vontade", "dt": 15, "sucesso": {"texto": "Você se concentra e as vozes se calam.", "efeitos": []}, "falha": {"texto": "As vozes entram na sua cabeça.", "efeitos": [{"tipo": "dano_mental", "valor": "2d4"}]}},
+      {"texto": "Responder aos sussurros pelo nome do Outro Lado", "pericia": "ocultismo", "dt": 18, "sucesso": {"texto": "As vozes se calam, ofendidas, e deixam escapar um nome.", "efeitos": [{"tipo": "revelar_objetivo"}]}, "falha": {"texto": "Elas respondem de volta. Muitas.", "efeitos": [{"tipo": "dano_mental", "valor": "2d6"}, {"tipo": "membrana", "valor": -3}]}},
+      {"texto": "Tapar o poço com o que estiver à mão", "pericia": "atletismo", "dt": 15, "sucesso": {"texto": "A tampa improvisada abafa tudo.", "efeitos": [{"tipo": "membrana", "valor": 2}]}, "falha": {"texto": "Você se debruça demais sobre a borda.", "efeitos": [{"tipo": "dano", "valor": "1d6"}, {"tipo": "dano_mental", "valor": "1d4"}]}},
+      {"texto": "Afastar-se sem olhar para trás", "sem_teste": true, "sucesso": {"texto": "Você vai embora. As vozes ficam um pouco mais.", "efeitos": [{"tipo": "dano_mental", "valor": 1}]}}
+    ]},
+    {"id": "morador", "titulo": "Morador assustado", "texto": "Um senhor de chinelos segura uma espingarda sem munição e não quer conversa.", "pericia": "diplomacia", "dt": 15, "sucesso": {"texto": "Ele se acalma e indica uma trilha segura.", "efeitos": [{"tipo": "revelar_raio", "valor": 3}, {"tipo": "recupera_san", "valor": "1d4"}]}, "falha": {"texto": "Ele bate a porta. Você perde tempo.", "efeitos": [{"tipo": "membrana", "valor": -2}]}, "opcoes": [
+      {"texto": "Conversar com calma", "pericia": "diplomacia", "dt": 15, "sucesso": {"texto": "Ele se acalma e indica uma trilha segura.", "efeitos": [{"tipo": "revelar_raio", "valor": 3}, {"tipo": "recupera_san", "valor": "1d4"}]}, "falha": {"texto": "Ele bate a porta. Você perde tempo.", "efeitos": [{"tipo": "membrana", "valor": -2}]}},
+      {"texto": "Intimidar até ele largar a espingarda", "pericia": "intimidacao", "dt": 15, "sucesso": {"texto": "Ele larga a arma e aponta, tremendo, a trilha que os vultos usam.", "efeitos": [{"tipo": "revelar_raio", "valor": 3}]}, "falha": {"texto": "Ele aperta o gatilho por reflexo. Clique seco… e um soco no seu rosto.", "efeitos": [{"tipo": "dano", "valor": "1d4"}]}},
+      {"texto": "Fingir ser da Defesa Civil", "pericia": "enganacao", "dt": 15, "sucesso": {"texto": "Ele acredita, abre a porta e oferece café e um curativo.", "efeitos": [{"tipo": "cura", "valor": "1d6"}, {"tipo": "recupera_san", "valor": "1d4"}]}, "falha": {"texto": "\"Defesa Civil não anda armada\", ele diz, e grita para os vizinhos.", "efeitos": [{"tipo": "membrana", "valor": -2}]}},
+      {"texto": "Tomar a espingarda à força", "pericia": "luta", "dt": 15, "sucesso": {"texto": "Você o desarma sem machucar ninguém. Ele, envergonhado, conta o que viu.", "efeitos": [{"tipo": "revelar_raio", "valor": 2}]}, "falha": {"texto": "Vocês rolam no chão de terra até ele fugir para o mato.", "efeitos": [{"tipo": "dano", "valor": "1d6"}]}},
+      {"texto": "Mostrar sinais de quem também caçou criaturas", "pericia": "sobrevivencia", "dt": 18, "sucesso": {"texto": "Ele reconhece as marcas no seu equipamento e indica onde as viu.", "efeitos": [{"tipo": "revelar_objetivo"}]}, "falha": {"texto": "Ele só vê um forasteiro sujo de barro.", "efeitos": []}, "treinada": true},
+      {"texto": "Deixar o homem em paz", "sem_teste": true, "sucesso": {"texto": "Você segue viagem.", "efeitos": []}}
+    ]},
+    {"id": "ponte_podre", "titulo": "Ponte podre", "texto": "A única passagem é uma ponte de madeira que range a cada passo.", "pericia": "atletismo", "dt": 12, "sucesso": {"texto": "Você atravessa com cuidado.", "efeitos": []}, "falha": {"texto": "Uma tábua cede e você cai no riacho raso.", "efeitos": [{"tipo": "dano", "valor": "1d6"}]}, "opcoes": [
+      {"texto": "Atravessar com cuidado", "pericia": "atletismo", "dt": 12, "sucesso": {"texto": "Você atravessa com cuidado.", "efeitos": []}, "falha": {"texto": "Uma tábua cede e você cai no riacho raso.", "efeitos": [{"tipo": "dano", "valor": "1d6"}]}},
+      {"texto": "Reforçar as tábuas antes de passar", "pericia": "profissao", "dt": 15, "sucesso": {"texto": "Com duas tábuas soltas e um pouco de arame, a ponte aguenta.", "efeitos": []}, "falha": {"texto": "O reparo não segura e você cai no riacho raso.", "efeitos": [{"tipo": "dano", "valor": "1d6"}]}},
+      {"texto": "Atravessar pela água, segurando nas pedras", "pericia": "acrobacia", "dt": 15, "sucesso": {"texto": "Pedra a pedra, sem molhar os pés.", "efeitos": []}, "falha": {"texto": "A correnteza é mais forte do que parecia.", "efeitos": [{"tipo": "dano", "valor": "1d4"}, {"tipo": "membrana", "valor": -1}]}},
+      {"texto": "Procurar outra passagem", "sem_teste": true, "sucesso": {"texto": "O desvio custa tempo, e a Membrana não espera.", "efeitos": [{"tipo": "membrana", "valor": -2}]}}
+    ]},
+    {"id": "kit_esquecido", "titulo": "Mochila esquecida", "texto": "Uma mochila da Ordem, rasgada, presa num galho.", "pericia": "percepcao", "dt": 12, "sucesso": {"texto": "Dentro, curativos e uma barra de chocolate.", "efeitos": [{"tipo": "cura", "valor": "2d4"}, {"tipo": "recupera_pe", "valor": 2}]}, "falha": {"texto": "Só farrapos e sangue seco.", "efeitos": [{"tipo": "dano_mental", "valor": 1}]}, "opcoes": [
+      {"texto": "Revirar a mochila", "pericia": "percepcao", "dt": 12, "sucesso": {"texto": "Dentro, curativos e uma barra de chocolate.", "efeitos": [{"tipo": "cura", "valor": "2d4"}, {"tipo": "recupera_pe", "valor": 2}]}, "falha": {"texto": "Só farrapos e sangue seco.", "efeitos": [{"tipo": "dano_mental", "valor": 1}]}},
+      {"texto": "Ler o diário de campo do agente que a perdeu", "pericia": "investigacao", "dt": 15, "sucesso": {"texto": "As últimas anotações marcam um lugar seguro por perto.", "efeitos": [{"tipo": "revelar_raio", "valor": 4}]}, "falha": {"texto": "As páginas estão coladas de sangue.", "efeitos": [{"tipo": "dano_mental", "valor": "1d4"}]}},
+      {"texto": "Usar o kit de primeiros socorros que está dentro", "pericia": "medicina", "dt": 12, "sucesso": {"texto": "Curativos limpos e um analgésico.", "efeitos": [{"tipo": "cura", "valor": "3d4"}]}, "falha": {"texto": "Os remédios estão vencidos há anos.", "efeitos": []}},
+      {"texto": "Deixar a mochila onde está", "sem_teste": true, "sucesso": {"texto": "Você segue viagem.", "efeitos": []}}
+    ]},
+    {"id": "simbolo", "titulo": "Símbolo na parede", "texto": "Um sigilo pintado com sangue ainda úmido pulsa devagar.", "pericia": "ocultismo", "dt": 15, "sucesso": {"texto": "Você desfaz o traço central. O ar fica mais leve.", "efeitos": [{"tipo": "membrana", "valor": 5}]}, "falha": {"texto": "Seus olhos ardem ao encarar o símbolo.", "efeitos": [{"tipo": "dano_mental", "valor": "1d6"}, {"tipo": "membrana", "valor": -2}]}, "opcoes": [
+      {"texto": "Desfazer o sigilo", "pericia": "ocultismo", "dt": 15, "sucesso": {"texto": "Você desfaz o traço central. O ar fica mais leve.", "efeitos": [{"tipo": "membrana", "valor": 5}]}, "falha": {"texto": "Seus olhos ardem ao encarar o símbolo.", "efeitos": [{"tipo": "dano_mental", "valor": "1d6"}, {"tipo": "membrana", "valor": -2}]}},
+      {"texto": "Copiar o sigilo para estudar depois", "pericia": "investigacao", "dt": 15, "sucesso": {"texto": "O desenho, comparado às anotações da Ordem, aponta o culto por trás.", "efeitos": [{"tipo": "revelar_objetivo"}]}, "falha": {"texto": "Ao copiar, você erra um traço. O papel fica quente.", "efeitos": [{"tipo": "dano_mental", "valor": "1d4"}]}},
+      {"texto": "Apagar tudo com água e areia", "pericia": "fortitude", "dt": 15, "sucesso": {"texto": "Dá trabalho, mas o símbolo some.", "efeitos": [{"tipo": "membrana", "valor": 3}]}, "falha": {"texto": "O sangue não sai. Suas mãos ficam vermelhas por horas.", "efeitos": [{"tipo": "dano_mental", "valor": "1d6"}]}},
+      {"texto": "Não encarar e seguir em frente", "sem_teste": true, "sucesso": {"texto": "Você vira o rosto. O sigilo continua pulsando atrás de você.", "efeitos": [{"tipo": "membrana", "valor": -1}]}}
+    ]},
+    {"id": "radio", "titulo": "Rádio chiando", "texto": "Um rádio velho capta uma transmissão da Ordem, entrecortada.", "pericia": "tecnologia", "dt": 15, "sucesso": {"texto": "Você sintoniza: coordenadas de uma vila segura.", "efeitos": [{"tipo": "revelar_raio", "valor": 5}]}, "falha": {"texto": "Só estática… e uma respiração do outro lado.", "efeitos": [{"tipo": "dano_mental", "valor": "1d4"}]}, "opcoes": [
+      {"texto": "Sintonizar a transmissão", "pericia": "tecnologia", "dt": 15, "sucesso": {"texto": "Você sintoniza: coordenadas de uma vila segura.", "efeitos": [{"tipo": "revelar_raio", "valor": 5}]}, "falha": {"texto": "Só estática… e uma respiração do outro lado.", "efeitos": [{"tipo": "dano_mental", "valor": "1d4"}]}},
+      {"texto": "Decifrar o código que se repete no chiado", "pericia": "atualidades", "dt": 18, "sucesso": {"texto": "É o código de emergência da Ordem: a vila mais próxima ainda é segura.", "efeitos": [{"tipo": "revelar_raio", "valor": 5}]}, "falha": {"texto": "O código muda quando você o percebe.", "efeitos": [{"tipo": "dano_mental", "valor": "1d6"}]}},
+      {"texto": "Desligar o rádio à força", "pericia": "luta", "dt": 10, "sucesso": {"texto": "Um golpe seco e silêncio.", "efeitos": []}, "falha": {"texto": "O rádio cai, mas continua chiando no chão.", "efeitos": [{"tipo": "dano_mental", "valor": 1}]}},
+      {"texto": "Deixar o rádio chiando", "sem_teste": true, "sucesso": {"texto": "Você segue viagem.", "efeitos": []}}
+    ]}
   ],
   "eventos_medo": [
-    { "id": "reflexo_errado", "titulo": "Reflexo errado",
-      "texto": "Na vitrine, o seu reflexo vira a cabeça um segundo depois de você.",
-      "pericia": "vontade", "dt": 18,
-      "sucesso": { "texto": "Você desvia o olhar e segue em frente, sem correr.", "efeitos": [] },
-      "falha": { "texto": "O reflexo sorri. Você não.", "efeitos": [{ "tipo": "dano_mental", "valor": "2d6" }] } },
-    { "id": "silencio_absoluto", "titulo": "Silêncio",
-      "texto": "Os pássaros param. O vento para. Até o seu coração parece esperar.",
-      "pericia": "vontade", "dt": 17,
-      "sucesso": { "texto": "Você respira fundo e o mundo volta a fazer barulho.", "efeitos": [] },
-      "falha": { "texto": "Por um instante, você esquece como se respira.", "efeitos": [{ "tipo": "dano_mental", "valor": "1d8" }, { "tipo": "membrana", "valor": -2 }] } },
-    { "id": "nome_na_parede", "titulo": "Seu nome na parede",
-      "texto": "Alguém escreveu o seu nome completo, em letras ainda molhadas, num muro de tijolos.",
-      "pericia": "ocultismo", "dt": 18,
-      "sucesso": { "texto": "Você reconhece o sigilo e o apaga antes que se complete.", "efeitos": [{ "tipo": "membrana", "valor": 3 }] },
-      "falha": { "texto": "A tinta escorre e forma uma data. A de hoje.", "efeitos": [{ "tipo": "dano_mental", "valor": "2d4" }, { "tipo": "membrana", "valor": -3 }] } }
+    {"id": "reflexo_errado", "titulo": "Reflexo errado", "texto": "Na vitrine, o seu reflexo vira a cabeça um segundo depois de você.", "pericia": "vontade", "dt": 18, "sucesso": {"texto": "Você desvia o olhar e segue em frente, sem correr.", "efeitos": []}, "falha": {"texto": "O reflexo sorri. Você não.", "efeitos": [{"tipo": "dano_mental", "valor": "2d6"}]}, "opcoes": [
+      {"texto": "Desviar o olhar", "pericia": "vontade", "dt": 18, "sucesso": {"texto": "Você desvia o olhar e segue em frente, sem correr.", "efeitos": []}, "falha": {"texto": "O reflexo sorri. Você não.", "efeitos": [{"tipo": "dano_mental", "valor": "2d6"}]}},
+      {"texto": "Quebrar a vitrine", "pericia": "luta", "dt": 12, "sucesso": {"texto": "O vidro estoura. Nenhum reflexo sobra para sorrir.", "efeitos": [{"tipo": "membrana", "valor": 2}]}, "falha": {"texto": "Os cacos refletem dezenas de você. Todos atrasados.", "efeitos": [{"tipo": "dano", "valor": "1d4"}, {"tipo": "dano_mental", "valor": "1d6"}]}},
+      {"texto": "Encarar o reflexo até ele piscar primeiro", "pericia": "vontade", "dt": 22, "sucesso": {"texto": "Ele pisca. Depois, some.", "efeitos": [{"tipo": "recupera_san", "valor": "1d6"}]}, "falha": {"texto": "Você pisca primeiro.", "efeitos": [{"tipo": "dano_mental", "valor": "3d6"}]}}
+    ]},
+    {"id": "silencio_absoluto", "titulo": "Silêncio", "texto": "Os pássaros param. O vento para. Até o seu coração parece esperar.", "pericia": "vontade", "dt": 17, "sucesso": {"texto": "Você respira fundo e o mundo volta a fazer barulho.", "efeitos": []}, "falha": {"texto": "Por um instante, você esquece como se respira.", "efeitos": [{"tipo": "dano_mental", "valor": "1d8"}, {"tipo": "membrana", "valor": -2}]}, "opcoes": [
+      {"texto": "Respirar fundo", "pericia": "vontade", "dt": 17, "sucesso": {"texto": "Você respira fundo e o mundo volta a fazer barulho.", "efeitos": []}, "falha": {"texto": "Por um instante, você esquece como se respira.", "efeitos": [{"tipo": "dano_mental", "valor": "1d8"}, {"tipo": "membrana", "valor": -2}]}},
+      {"texto": "Quebrar o silêncio fazendo barulho", "pericia": "artes", "dt": 15, "sucesso": {"texto": "Você canta alto, desafinado. O mundo volta a fazer barulho.", "efeitos": []}, "falha": {"texto": "Sua voz não sai.", "efeitos": [{"tipo": "dano_mental", "valor": "1d6"}]}},
+      {"texto": "Rezar baixinho", "pericia": "religiao", "dt": 15, "sucesso": {"texto": "As palavras antigas preenchem o vazio.", "efeitos": [{"tipo": "recupera_san", "valor": "1d4"}]}, "falha": {"texto": "As palavras saem do avesso.", "efeitos": [{"tipo": "dano_mental", "valor": "1d8"}]}}
+    ]},
+    {"id": "nome_na_parede", "titulo": "Seu nome na parede", "texto": "Alguém escreveu o seu nome completo, em letras ainda molhadas, num muro de tijolos.", "pericia": "ocultismo", "dt": 18, "sucesso": {"texto": "Você reconhece o sigilo e o apaga antes que se complete.", "efeitos": [{"tipo": "membrana", "valor": 3}]}, "falha": {"texto": "A tinta escorre e forma uma data. A de hoje.", "efeitos": [{"tipo": "dano_mental", "valor": "2d4"}, {"tipo": "membrana", "valor": -3}]}, "opcoes": [
+      {"texto": "Apagar o sigilo", "pericia": "ocultismo", "dt": 18, "sucesso": {"texto": "Você reconhece o sigilo e o apaga antes que se complete.", "efeitos": [{"tipo": "membrana", "valor": 3}]}, "falha": {"texto": "A tinta escorre e forma uma data. A de hoje.", "efeitos": [{"tipo": "dano_mental", "valor": "2d4"}, {"tipo": "membrana", "valor": -3}]}},
+      {"texto": "Descobrir quem escreveu, pela letra", "pericia": "investigacao", "dt": 18, "sucesso": {"texto": "A caligrafia é a mesma das cartas do culto. Agora você sabe onde procurar.", "efeitos": [{"tipo": "revelar_objetivo"}]}, "falha": {"texto": "A letra é a sua.", "efeitos": [{"tipo": "dano_mental", "valor": "2d6"}]}},
+      {"texto": "Fugir dali correndo", "sem_teste": true, "sucesso": {"texto": "Você corre. O nome continua escrito.", "efeitos": [{"tipo": "dano_mental", "valor": "1d4"}]}}
+    ]}
   ]
 }

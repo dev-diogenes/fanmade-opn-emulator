@@ -2,8 +2,9 @@
   "nota": "Design do jogo (o livro não tem regras de viagem). Mapa-múndi em hexágonos, estilo For The King.",
   "tamanho": { "colunas": 16, "linhas": 11 },
   "movimento": {
-    "descricao": "No início do turno no mapa, o agente rola 1 d20 por ponto de Agilidade (mínimo 1), mais 1 por PE de Foco. Cada slot com resultado igual ou maior que a DT vale 1 ponto de movimento, somado à base.",
-    "base": 1,
+    "descricao": "No início do turno no mapa, o agente rola 1 d20 por ponto de Agilidade (mínimo 1), mais os slots extras e 1 por PE de Foco. Cada slot com resultado igual ou maior que a DT vale 1 ponto de movimento, somado à base. Revisado em 20/10/2026 (docs/13): com base 1 e só a Agilidade, um agente comum andava 1 ou 2 hexes; agora anda 3 ou 4, perto do For The King.",
+    "base": 2,
+    "slots_extras": 2,
     "dt_slot": 11,
     "atributo": "agi"
   },

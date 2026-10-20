@@ -23,6 +23,8 @@ var turno_mundo := 1
 var indice := 0
 var movimento_restante := 0
 var movimento_rolado := false
+## Ação do turno no mapa (docs/13): usar um item ou conjurar um ritual que não seja de ataque.
+var acao_usada := false
 var ultimo_movimento: Dictionary = {}   ## {"slots": [...], "dt": int, "sucessos": int, "total": int}
 var evento_pendente: Dictionary = {}    ## {"hex", "evento", "agente"}
 var encontro_pendente: Dictionary = {}  ## config para a arena
@@ -122,13 +124,14 @@ func rolar_movimento(pe_foco: int = 0) -> Dictionary:
 	if pe_foco > 0 and not a.gastar_pe(pe_foco):
 		return {}
 	var regra: Dictionary = _cfg.movimento
-	var qtd := maxi(1, a.atributo(regra.atributo)) + pe_foco
+	var qtd := maxi(1, a.atributo(regra.atributo)) + int(regra.get("slots_extras", 0)) + pe_foco
 	var dt := int(regra.dt_slot)
 	var slots := dados.rolar_varios(qtd, 20)
 	var sucessos := slots.filter(func(v): return v >= dt).size()
 	movimento_restante = int(regra.base) + sucessos
 	movimento_rolado = true
 	ultimo_movimento = {"slots": slots, "dt": dt, "sucessos": sucessos, "total": movimento_restante, "agente": a.nome}
+	ultimo_movimento["atributo"] = String(regra.atributo)
 	_log("%s rola movimento: %s (DT %d) → %d de movimento" % [a.nome, str(slots), dt, movimento_restante])
 	return ultimo_movimento
 
@@ -220,6 +223,7 @@ func encerrar_turno() -> void:
 func _iniciar_turno_do_agente() -> void:
 	movimento_restante = 0
 	movimento_rolado = false
+	acao_usada = false
 	ultimo_movimento = {}
 	var a := agente_atual()
 	if a != null:
@@ -240,27 +244,154 @@ func _evento(evento_id: String) -> Dictionary:
 	return {}
 
 
-## O agente que entrou no hex faz o teste do evento. Retorna {teste, sucesso, texto}.
-func resolver_evento(pe_foco: int = 0) -> Dictionary:
+## Opções do evento (docs/13): cada uma é um teste de perícia diferente, ou "sem_teste".
+## Eventos antigos (só "pericia" e "dt") viram uma opção única. Opções com "treinada"
+## só aparecem para quem é treinado na perícia; com "habilidade", para quem a tem.
+func opcoes_do_evento(ev: Dictionary = {}, a: Agente = null) -> Array:
+	if ev.is_empty() and not evento_pendente.is_empty():
+		ev = evento_pendente.evento
+		a = evento_pendente.agente
+	var lista: Array = ev.get("opcoes", [])
+	if lista.is_empty():
+		lista = [{"texto": "", "pericia": ev.get("pericia", ""), "dt": ev.get("dt", 10), "sucesso": ev.get("sucesso", {}), "falha": ev.get("falha", {})}]
+	return lista.filter(func(o):
+		if a == null:
+			return true
+		if o.get("treinada", false) and not a.pericias.has(String(o.get("pericia", ""))):
+			return false
+		if o.has("habilidade") and not a.tem_habilidade(String(o.habilidade)):
+			return false
+		return true)
+
+
+## O agente que entrou no hex escolhe uma opção e faz o teste. Retorna {teste, sucesso, texto}.
+func resolver_evento(pe_foco: int = 0, opcao: int = 0) -> Dictionary:
 	if evento_pendente.is_empty():
 		return {}
-	var ev: Dictionary = evento_pendente.evento
 	var a: Agente = evento_pendente.agente
-	var teste := a.testar(dados, ev.pericia, int(ev.dt), pe_foco)
-	var sucesso := teste != null and teste.sucesso
-	var lado: Dictionary = ev.sucesso if sucesso else ev.falha
-	if sucesso:
+	var opcoes := opcoes_do_evento()
+	var o: Dictionary = opcoes[clampi(opcao, 0, opcoes.size() - 1)]
+	var teste: ResultadoTeste = null
+	var sucesso := true
+	var linha := ""
+	if o.get("sem_teste", false):
+		linha = "%s: %s" % [a.nome, String(o.get("texto", "segue em frente"))]
+	else:
+		teste = a.testar(dados, String(o.pericia), int(o.dt), pe_foco)
+		sucesso = teste != null and teste.sucesso
+		linha = "%s testa %s (DT %d): %s" % [a.nome, ruleset.pericia(o.pericia).nome, int(o.dt),
+			teste.descrever() if teste != null else "sem treino — falha automática"]
+	var lado: Dictionary = o.get("sucesso", {}) if sucesso else o.get("falha", {})
+	if sucesso and not o.get("sem_teste", false):
 		pistas += 1
-	var linha := "%s testa %s (DT %d): %s" % [a.nome, ruleset.pericia(ev.pericia).nome, int(ev.dt),
-		teste.descrever() if teste != null else "sem treino — falha automática"]
 	_log(linha)
-	_log(lado.texto)
+	if String(lado.get("texto", "")) != "":
+		_log(lado.texto)
 	for ef in lado.get("efeitos", []):
 		_aplicar_efeito(a, ef, evento_pendente.hex)
 	mapa.limpar_conteudo(evento_pendente.hex)
 	evento_pendente = {}
 	_verificar_derrota()
-	return {"teste": teste, "sucesso": sucesso, "texto": lado.texto}
+	return {"teste": teste, "sucesso": sucesso, "texto": lado.get("texto", "")}
+
+
+# --- Ação do turno no mapa (docs/13) ------------------------------------------------
+
+## Agentes que o agente da vez alcança fora de combate: ele mesmo e quem está no mesmo hex.
+func alcance_de_toque() -> Array:
+	var a := agente_atual()
+	if a == null:
+		return []
+	return agentes.filter(func(x): return posicao(x) == posicao(a) and not x.tem(Ser.MORTO))
+
+
+## Itens que dá para usar fora de combate (consumíveis com "uso" de cura).
+func itens_fora_de_combate(a: Agente) -> Array:
+	var vistos := {}
+	var lista: Array = []
+	for item_id in a.equipamento:
+		var info := ruleset.equipamento(item_id)
+		if vistos.has(item_id) or not info.has("uso") or String(info.uso.get("cura", "")) == "":
+			continue
+		vistos[item_id] = true
+		lista.append(item_id)
+	return lista
+
+
+## Rituais que dá para conjurar fora de combate: só os de cura e PV temporários,
+## sem área e com alvo em você ou por toque. Devolve [[ritual_id, forma], …].
+func rituais_fora_de_combate(a: Agente) -> Array:
+	var lista: Array = []
+	for rid in a.rituais:
+		var r := ruleset.ritual(rid)
+		if not r.get("implementado", false):
+			continue
+		for forma in [""] + r.get("formas", {}).keys():
+			if _efeito_fora(r, forma).is_empty():
+				continue
+			if forma != "":
+				var f: Dictionary = r.formas[forma]
+				if int(f.get("circulo", 1)) > a.circulo_maximo() or (f.get("afinidade", false) and a.afinidade != r.elemento):
+					continue
+			lista.append([rid, forma])
+	return lista
+
+
+func _efeito_fora(r: Dictionary, forma: String) -> Dictionary:
+	var efeitos: Array = r.get("efeitos", [])
+	if efeitos.size() != 1:
+		return {}
+	var ef: Dictionary = efeitos[0].duplicate()
+	if forma != "":
+		var f: Dictionary = r.formas[forma]
+		if f.has("area") or f.has("tipo"):
+			return {}
+		if f.has("dados"):
+			ef["dados"] = f.dados
+	if not String(ef.get("tipo", "")) in ["cura", "pv_temporario"]:
+		return {}
+	return ef
+
+
+func pode_agir_no_mapa() -> bool:
+	var a := agente_atual()
+	return a != null and not acao_usada and not ocupado() and not a.esta_fora_de_combate()
+
+
+func usar_item_no_mapa(item_id: String, alvo: Agente) -> Dictionary:
+	var a := agente_atual()
+	if not pode_agir_no_mapa() or not item_id in itens_fora_de_combate(a) or not alvo in alcance_de_toque():
+		return {}
+	var info := ruleset.equipamento(item_id)
+	a.consumir_item(item_id)
+	var cura := dados.rolar_expressao(String(info.uso.get("cura", "0")))
+	alvo.curar(cura)
+	acao_usada = true
+	_log("%s usa %s em %s: +%d PV." % [a.nome, info.nome, alvo.nome, cura])
+	return {"cura": cura, "alvo": alvo}
+
+
+func conjurar_no_mapa(ritual_id: String, forma: String, alvo: Agente) -> Dictionary:
+	var a := agente_atual()
+	if not pode_agir_no_mapa() or not [ritual_id, forma] in rituais_fora_de_combate(a):
+		return {}
+	var r := ruleset.ritual(ritual_id)
+	var pessoal := String(r.get("alcance", "")).begins_with("pessoal")
+	if (pessoal and alvo != a) or not alvo in alcance_de_toque():
+		return {}
+	var custo := a.custo_ritual(ritual_id, forma)
+	if not a.gastar_pe(custo):
+		return {}
+	var ef := _efeito_fora(r, forma)
+	var valor := dados.rolar_expressao(String(ef.get("dados", "0")))
+	if ef.tipo == "cura":
+		alvo.curar(valor)
+	else:
+		alvo.pv_temporario = maxi(alvo.pv_temporario, valor)
+	acao_usada = true
+	_log("[color=#b98ae6]%s conjura %s%s em %s (%d PE): %s %d.[/color]" % [a.nome, r.nome, "" if forma == "" else " " + forma, alvo.nome, custo,
+		"+PV" if ef.tipo == "cura" else "PV temporários", valor])
+	return {"valor": valor, "tipo": ef.tipo, "alvo": alvo}
 
 
 func _valor(v) -> int:
@@ -651,7 +782,7 @@ func para_dicionario() -> Dictionary:
 		"agentes_iniciais": agentes_iniciais.map(func(a): return a.id),
 		"mortos": mortos.map(func(a): return a.id), "resgatados": resgatados.map(func(a): return a.id),
 		"posicoes": pos, "turno_mundo": turno_mundo, "indice": indice,
-		"movimento_restante": movimento_restante, "movimento_rolado": movimento_rolado,
+		"movimento_restante": movimento_restante, "movimento_rolado": movimento_rolado, "acao_usada": acao_usada,
 		"evento_pendente": ev, "encontro_pendente": enc, "reforcos": reforcos, "pistas": pistas,
 		"caso": caso.para_dicionario() if caso != null else {}, "modificador_chefe": modificador_chefe,
 		"investigacao_pendente": {"hex": [investigacao_pendente.hex.x, investigacao_pendente.hex.y], "cena": investigacao_pendente.cena,
@@ -696,6 +827,7 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.indice = int(d.get("indice", 0))
 	m.movimento_restante = int(d.get("movimento_restante", 0))
 	m.movimento_rolado = d.get("movimento_rolado", false)
+	m.acao_usada = d.get("acao_usada", false)
 	m.reforcos = int(d.get("reforcos", 0))
 	m.pistas = int(d.get("pistas", 0))
 	m._turnos_sem_surgimento = int(d.get("turnos_sem_surgimento", 0))

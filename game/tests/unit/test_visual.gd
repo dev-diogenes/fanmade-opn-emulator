@@ -207,7 +207,7 @@ func test_preferencias_de_efeitos_e_pausa():
 	assert_false(Preferencias.efeito("grao"))
 	var m := MenuPausa.abrir(self)
 	assert_true(MenuPausa.aberto(self))
-	assert_eq(m._ajustes.get_child_count(), 5, "volume e quatro efeitos")
+	assert_eq(m._ajustes.get_child_count(), 6, "volume, câmera e quatro efeitos")
 	m.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Preferencias.caminho))
 	Preferencias.caminho = antes
@@ -259,3 +259,55 @@ func test_arsenal_usa_etiquetas():
 		break
 	for c in get_tree().root.find_children("ConviteTutorial", "", true, false):
 		c.queue_free()
+
+
+func test_investigacao_exige_chegar_perto():
+	var tela = load("res://scenes/investigacao.tscn").instantiate()
+	add_child_autofree(tela)
+	await wait_frames(2)
+	var a: Agente = tela.cena.agente_atual()
+	assert_eq(tela._visao.ponto_proximo(a, tela.cena.pontos_restantes), "", "o grupo começa no centro, longe dos pontos")
+	var alvo: String = tela.cena.pontos_restantes[0]
+	var p: Vector3 = tela._visao._props[alvo].position
+	for i in 200:
+		var f: Node3D = tela._visao.figura(a)
+		var dir := Vector3(p.x - f.position.x, 0, p.z - f.position.z)
+		if dir.length() < 0.9:
+			break
+		tela._visao.mover_agente(a, dir, 0.05)
+	assert_eq(tela._visao.ponto_proximo(a, tela.cena.pontos_restantes), alvo, "andando até o ponto, ele fica ao alcance")
+
+
+func test_camera_troca_de_modo():
+	var antes := Preferencias.caminho
+	Preferencias.caminho = "user://teste_preferencias_camera.json"
+	var rig := CameraRig.new()
+	add_child_autofree(rig)
+	var fig := Node3D.new()
+	add_child_autofree(fig)
+	rig.seguir = fig
+	assert_eq(rig.modo, "terceira")
+	assert_eq(rig.proximo_modo(), "segunda")
+	assert_eq(rig.proximo_modo(), "primeira")
+	assert_false(fig.visible, "em 1ª pessoa a própria figura some")
+	rig.proximo_modo()
+	assert_true(fig.visible)
+	assert_eq(Preferencias.camera(), "terceira")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Preferencias.caminho))
+	Preferencias.caminho = antes
+
+
+func test_ficha_mostra_atributos_e_inventario():
+	var rs := RulesetOp2022.carregar_padrao()
+	var a := Agente.criar(rs, "Teste", "combatente", {"agi": 1, "for": 2, "int": 1, "pre": 1, "vig": 2})
+	a.equipamento.append("cicatrizante")
+	var texto := DossieAgente.ficha_bbcode(a)
+	assert_string_contains(texto, "Teste")
+	assert_string_contains(texto, "FOR 2")
+	var usados := []
+	var d := DossieAgente.abrir(self, a, func(item): usados.append(item))
+	var botoes: Array = d.find_children("*", "Button", true, false).filter(func(b): return b.text == "Usar")
+	assert_eq(botoes.size(), 1, "o Cicatrizante pode ser usado pela ficha no mapa")
+	botoes[0].pressed.emit()
+	assert_eq(usados, ["cicatrizante"])
+	await wait_frames(1)

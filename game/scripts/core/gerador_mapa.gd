@@ -64,6 +64,7 @@ static func _tentar(semente: int, cfg: Dictionary, forcar: bool = false) -> Mapa
 		if h != Vector2i(-999, -999):
 			mapa.celulas[h].terreno = "cidade"
 			mapa.definir_conteudo(h, {"tipo": "vila", "nome": "Vila"})
+			_tracar_estrada(mapa, inicio, h)
 
 	# Encontros e eventos
 	var encontros: Array = DadosJogo.ler("encontros").encontros.filter(func(e): return int(e.nivel) <= 1)
@@ -102,6 +103,14 @@ static func _tentar(semente: int, cfg: Dictionary, forcar: bool = false) -> Mapa
 		return null
 	mapa.revelar(inicio, int(cfg.visao))
 	return mapa
+
+
+## Estrada do início até a vila (docs/13): o caminho mais barato vira estrada onde é campo,
+## mata ou pântano. Não usa o rng, então o resto do mapa da seed não muda.
+static func _tracar_estrada(mapa: MapaHex, de: Vector2i, ate: Vector2i) -> void:
+	for h in mapa.caminho(de, ate, false):
+		if mapa.terreno(h) in ["campo", "floresta", "pantano"]:
+			mapa.celulas[h].terreno = "estrada"
 
 
 ## O objetivo precisa ser alcançável passando por hexes vazios OU resolvendo conteúdos;

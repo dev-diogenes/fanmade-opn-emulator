@@ -124,6 +124,9 @@ func atualizar(destinos: Array, alvos: Array, atual: Ser, selecionado: Ser, zona
 	_anel_vez.visible = atual != null and grade.tem(atual)
 	if _anel_vez.visible:
 		_anel_vez.position = posicao(grade.posicao(atual)) + Vector3(0, 0.01, 0)
+	var figura_vez: Node3D = _unidades.get(atual) if atual is Agente else null
+	if rig.seguir != figura_vez:
+		rig.seguir = figura_vez   # 1ª e 2ª pessoa acompanham o agente da vez
 	_anel_sel.visible = selecionado != null and selecionado != atual and grade.tem(selecionado)
 	if _anel_sel.visible:
 		_anel_sel.position = posicao(grade.posicao(selecionado)) + Vector3(0, 0.015, 0)

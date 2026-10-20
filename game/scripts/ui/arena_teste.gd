@@ -412,6 +412,11 @@ func _ao_atacar(r: ResultadoAtaque) -> void:
 		txt += " [i](%s)[/i]" % r.reacao
 	if _tab3d != null:
 		_tab3d.animar_ataque(r.atacante)
+	if not autoplay and is_inside_tree() and r.teste != null:
+		var per := String(r.arma.get("pericia", "luta"))
+		var resultado := ("%d de dano%s" % [r.dano, "  ·  CRÍTICO" if r.critico else ""]) if r.acertou else "errou"
+		RolagemDados.mostrar(self, "Ataque de %s" % r.atacante.nome, ruleset.atributo_da_pericia(per), r.teste.slots, r.teste.dt,
+			resultado, RolagemDados.estados_do_teste(r.teste), r.acertou)
 	if r.acertou:
 		txt += " → [b]%d de dano[/b]%s" % [r.dano, " [color=#e3c27a]CRÍTICO[/color]" if r.critico else ""]
 		Som.tocar("golpe")
@@ -937,10 +942,14 @@ func _atualizar() -> void:
 		_lbl_turno.text = "Rodada %d · %s" % [combate.rodada, atual.nome]
 		_lbl_turno.tooltip_text = "Ações: padrão %d, movimento %d" % [a.padrao, a.movimento]
 	_lbl_ficha.text = _ficha(_selecionado if _selecionado != null else atual)
-	_btn_mover.disabled = agente == null
-	_btn_atacar.disabled = agente == null
+	# Ações esgotadas ficam apagadas (docs/13): sem ação padrão, nada de atacar, conjurar
+	# ou usar item; sem padrão nem movimento, nada de mover.
+	var restam := combate.acoes_restantes(agente) if agente != null else {"padrao": 0, "movimento": 0}
+	var sem_padrao := int(restam.get("padrao", 0)) <= 0
+	_btn_mover.disabled = agente == null or (sem_padrao and int(restam.get("movimento", 0)) <= 0)
+	_btn_atacar.disabled = agente == null or sem_padrao
 	_btn_encerrar.disabled = agente == null
-	_btn_ritual.disabled = agente == null or _rituais_disponiveis(agente).is_empty()
+	_btn_ritual.disabled = agente == null or sem_padrao or _rituais_disponiveis(agente).is_empty()
 	var com_enigma := _criatura_com_enigma()
 	_btn_enigma.visible = com_enigma != null
 	if com_enigma != null:
@@ -948,7 +957,9 @@ func _atualizar() -> void:
 	_btn_enigma.disabled = agente == null
 	_btn_soltar.visible = agente != null and agente.tem(Ser.AGARRADO)
 	_btn_apagar.visible = agente != null and agente.tem(Ser.EM_CHAMAS)
-	_btn_item.disabled = agente == null or (not agente.tem_item("cicatrizante") and _itens_de_combate(agente).is_empty())
+	_btn_item.disabled = agente == null or sem_padrao or (not agente.tem_item("cicatrizante") and _itens_de_combate(agente).is_empty())
+	if sem_padrao and _modo in ["atacar", "ritual", "ritual_area", "granada", "contra"]:
+		_modo = ""
 	_foco.definir(_foco.valor, agente.pe_disponivel_no_turno() if agente != null else 0)
 	_chk_ae.visible = agente != null and agente.classe_id == "combatente"
 	_barra_membrana.value = membrana.valor
@@ -973,6 +984,7 @@ func _atualizar_grupo() -> void:
 		var c: CartaoAgente = _cartoes.get(s)
 		if c == null:
 			c = CartaoAgente.criar(s, Tema.CORES_JOGADORES[i % Tema.CORES_JOGADORES.size()])
+			c.escolhido.connect(func(ag): DossieAgente.abrir(self, ag))
 			c.custom_minimum_size.x = 150
 			_grupo.add_child(c)
 			_cartoes[s] = c
@@ -1084,6 +1096,12 @@ func _entrada_tabuleiro(evento: InputEvent) -> void:
 
 
 func _unhandled_input(evento: InputEvent) -> void:
+	if evento is InputEventKey and evento.pressed and not evento.echo and evento.keycode == KEY_F and not autoplay:
+		var ag := _agente_da_vez()
+		if ag != null:
+			get_viewport().set_input_as_handled()
+			DossieAgente.abrir(self, ag)
+			return
 	if evento.is_action_pressed("ui_cancel") and not autoplay and not MenuPausa.aberto(self) and not TourGuiado.em_andamento():
 		get_viewport().set_input_as_handled()
 		if _bilhete_tipo != "" or _modo != "":

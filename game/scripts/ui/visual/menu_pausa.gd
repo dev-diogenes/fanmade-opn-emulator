@@ -69,6 +69,17 @@ func _montar(saidas: Array) -> void:
 		Preferencias.definir_volume(v)
 		Som.aplicar_volume())
 	linha_vol.add_child(volume)
+	var cam := Button.new()
+	cam.theme_type_variation = "BotaoPapel"
+	cam.text = "Câmera: %s (C)" % CameraRig.NOMES_MODOS.get(Preferencias.camera(), "3ª pessoa")
+	cam.pressed.connect(func():
+		var i := CameraRig.MODOS.find(Preferencias.camera())
+		var novo: String = CameraRig.MODOS[(i + 1) % CameraRig.MODOS.size()]
+		Preferencias.definir_camera(novo)
+		for rig in get_tree().root.find_children("*", "CameraRig", true, false):
+			rig.definir_modo(novo)
+		cam.text = "Câmera: %s (C)" % CameraRig.NOMES_MODOS[novo])
+	_ajustes.add_child(cam)
 	for e in [["grao", "Granulação e vinheta"], ["glitch", "Glitch de VHS e tremores"], ["transicoes", "Estática entre as telas"],
 			["ambiente", "Som ambiente (drone e sussurros)"]]:
 		var c := CheckBox.new()

@@ -502,37 +502,7 @@ func _atualizar_agente() -> void:
 		_sigilo_agente.semente = hash(a.id + a.nome)
 		_sigilo_agente.cor = cores.get(a.classe_id, Tema.PERGAMINHO)
 		_legenda_foto.text = "%s · %s" % [a.nome, rs.classe(a.classe_id).nome]
-	var linhas: Array[String] = []
-	linhas.append("[b]%s[/b] — %s (%s), origem %s" % [a.nome, rs.classe(a.classe_id).nome, a.trilha_id if a.trilha_id != "" else "sem trilha", rs.origem(a.origem_id).nome if a.origem_id != "" else "—"])
-	linhas.append("NEX %d%%   %s (%d PP)" % [a.nex, a.patente().get("nome", "?"), a.pp])
-	linhas.append("PV %d   PE %d   SAN %d   Defesa %d   Desloc. %d m" % [a.pv_maximo, a.pe_maximo, a.san_maximo, a.defesa(), int(a.deslocamento_m())])
-	var attrs := PackedStringArray()
-	for k in ["agi", "for", "int", "pre", "vig"]:
-		attrs.append("%s %d" % [k.to_upper(), a.atributo(k)])
-	linhas.append("  ".join(attrs))
-	var pers := PackedStringArray()
-	for p in a.pericias:
-		pers.append("%s%s" % [rs.pericia(p).nome, "" if a.pericias[p] == "treinado" else " (%s)" % a.pericias[p]])
-	linhas.append("[color=#6b5a48]Perícias:[/color] " + ", ".join(pers))
-	var habs := PackedStringArray()
-	for h in a.habilidades():
-		habs.append(h.nome + ("" if h.get("implementado", false) else "*"))
-	linhas.append("[color=#6b5a48]Habilidades:[/color] " + ", ".join(habs))
-	if not a.poderes_paranormais.is_empty():
-		var pps := PackedStringArray()
-		for e in a.poderes_paranormais:
-			pps.append(rs.poder_paranormal(e.id).get("nome", e.id) + ("" if String(e.get("escolha", "")) == "" else " (%s)" % e.escolha))
-		linhas.append("[color=#5b2a86]Poderes paranormais:[/color] %s%s" % [", ".join(pps), "  ·  afinidade: " + a.afinidade if a.afinidade != "" else ""])
-	if not a.rituais.is_empty():
-		var rits := PackedStringArray()
-		for rid in a.rituais:
-			rits.append(rs.ritual(rid).get("nome", rid) + ("" if rs.ritual(rid).get("implementado", false) else "*"))
-		linhas.append("[color=#5b2a86]Rituais:[/color] " + ", ".join(rits))
-	linhas.append("[color=#6b5a48]Equipamento:[/color] %s  (%d/%d espaços)" % [", ".join(PackedStringArray(a.equipamento.map(func(i): return rs.equipamento(i).get("nome", i)))), a.espacos_usados(), a.capacidade_carga()])
-	if not a.lesoes.is_empty():
-		linhas.append("[color=#9a4a10]Lesões:[/color] " + ", ".join(PackedStringArray(a.lesoes)))
-	linhas.append("[color=#6b5a48]* ainda sem efeito no motor[/color]")
-	_ficha.text = "\n".join(linhas)
+	_ficha.text = DossieAgente.ficha_bbcode(a)
 	for item_id in _checks_itens:
 		_checks_itens[item_id].set_pressed_no_signal(item_id in a.equipamento)
 	_atualizar_armas_requisicao()

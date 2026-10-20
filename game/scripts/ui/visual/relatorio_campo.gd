@@ -38,6 +38,23 @@ func _init() -> void:
 	_atualizar_cabecalho()
 
 
+var _para_baixo := false
+
+
+## Ancora no alto, à direita, abrindo para baixo (mapa, docs/13).
+func ancorar_em_cima_direita(largura: float, topo: float = 64.0, margem: float = 16.0) -> void:
+	_para_baixo = true
+	grow_vertical = Control.GROW_DIRECTION_END
+	anchor_left = 1.0
+	anchor_right = 1.0
+	anchor_top = 0.0
+	anchor_bottom = 0.0
+	offset_left = -largura - margem
+	offset_right = -margem
+	offset_top = topo
+	offset_bottom = topo + 30.0
+
+
 ## Ancora no canto inferior direito, com a largura dada.
 func ancorar_embaixo_direita(largura: float, margem: float = 16.0, baixo: float = 8.0) -> void:
 	anchor_left = 1.0
@@ -58,7 +75,10 @@ func append_text(texto: String) -> void:
 func alternar() -> void:
 	aberto = not aberto
 	registro.visible = aberto
-	offset_top = offset_bottom - (altura_aberto if aberto else 30.0)
+	if _para_baixo:
+		offset_bottom = offset_top + (altura_aberto if aberto else 30.0)
+	else:
+		offset_top = offset_bottom - (altura_aberto if aberto else 30.0)
 	_atualizar_cabecalho()
 	alternado.emit(aberto)
 

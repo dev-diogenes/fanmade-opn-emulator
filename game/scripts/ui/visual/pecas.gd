@@ -16,7 +16,8 @@ const RAIO_KAYKIT := 1.1547
 const PERSONAGEM_POR_CLASSE := {"combatente": "Knight", "especialista": "Rogue_Hooded",
 	"ocultista": "Mage", "mundano": "Barbarian"}
 ## Tile e decorações por terreno do mapa-múndi
-const TILE_POR_TERRENO := {"agua": "hex_water", "pantano": "hex_water", "estrada": "hex_road_A"}
+## Estrada usa grama: o caminho é desenhado por cima, ligando os vizinhos (Mapa3D)
+const TILE_POR_TERRENO := {"agua": "hex_water", "pantano": "hex_water"}
 const DECORACAO_POR_TERRENO := {
 	"floresta": ["trees_A_large", "trees_A_medium", "trees_B_large", "trees_B_medium"],
 	"morro": ["hills_A_trees", "hills_B", "mountain_A_grass_trees", "hill_single_A"],
@@ -51,8 +52,6 @@ static func tile_terreno(terreno: String, raio: float, altura: float, semente: i
 	n.add_child(base)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = semente
-	if terreno == "estrada":
-		base.rotation.y = PI / 3.0 * rng.randi_range(0, 2)
 	var opcoes: Array = DECORACAO_POR_TERRENO.get(terreno, [])
 	if not opcoes.is_empty():
 		var nome: String = opcoes[rng.randi() % opcoes.size()]
@@ -61,13 +60,14 @@ static func tile_terreno(terreno: String, raio: float, altura: float, semente: i
 			if tinta != Color.WHITE:
 				tingir(deco, tinta.lerp(Color.WHITE, 0.45))
 			# As decorações de cobertura (árvores, morros) ocupam o tile; as soltas são menores e deslocadas
+			# O centro do hex fica livre para as figuras (docs/13): a decoração vai para a borda.
+			# Morros e matas ficam menores e num dos cantos; as peças soltas, menores ainda.
 			var solta := terreno in ["campo", "cidade", "ruina", "pantano"]
-			deco.scale = Vector3.ONE * s * (0.6 if solta else 1.0)
+			deco.scale = Vector3.ONE * s * (0.45 if solta else 0.6)
 			deco.rotation.y = PI / 3.0 * rng.randi_range(0, 5)
 			deco.position = Vector3(0, altura - (0.2 * 0.5 if terreno == "pantano" else 0.0), 0)
-			if solta:
-				var ang := rng.randf() * TAU
-				deco.position += Vector3(cos(ang), 0, sin(ang)) * raio * 0.45
+			var ang := PI / 3.0 * rng.randi_range(0, 5) + PI / 6.0
+			deco.position += Vector3(cos(ang), 0, sin(ang)) * raio * (0.5 if solta else 0.42)
 			n.add_child(deco)
 	return n
 

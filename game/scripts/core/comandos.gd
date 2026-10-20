@@ -6,7 +6,7 @@ extends RefCounted
 ## `participantes`; agentes da investigação, pelo índice na cena; hexes e células, como [x, y].
 ## Números chegam da rede como float: tudo passa por int() aqui.
 
-const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento"]
+const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar"]
 const ACOES_INVESTIGACAO := ["procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair"]
 const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair"]
 ## Modo Mestre (Fase 8.3): valem em qualquer tela, só do peer do mestre
@@ -45,8 +45,23 @@ static func aplicar_mapa(m: Missao, cmd: Dictionary) -> Dictionary:
 		"resolver_evento":
 			if m.evento_pendente.is_empty():
 				return {"ok": false, "erro": "nenhum evento pendente"}
-			return {"ok": true, "teste": m.resolver_evento(int(cmd.get("foco", 0)))}
+			return {"ok": true, "teste": m.resolver_evento(int(cmd.get("foco", 0)), int(cmd.get("opcao", 0)))}
+		"usar_item":
+			var alvo := _agente_da_missao(m, cmd.get("alvo", ""))
+			var r := m.usar_item_no_mapa(String(cmd.get("item", "")), alvo) if alvo != null else {}
+			return {"ok": not r.is_empty(), "resultado": r}
+		"conjurar":
+			var alvo := _agente_da_missao(m, cmd.get("alvo", ""))
+			var r := m.conjurar_no_mapa(String(cmd.get("ritual", "")), String(cmd.get("forma", "")), alvo) if alvo != null else {}
+			return {"ok": not r.is_empty(), "resultado": r}
 	return {"ok": false, "erro": "ação de mapa desconhecida: %s" % cmd.get("acao", "")}
+
+
+static func _agente_da_missao(m: Missao, agente_id) -> Agente:
+	for a in m.agentes:
+		if a.id == String(agente_id):
+			return a
+	return null
 
 
 # --- Investigação -----------------------------------------------------------------------

@@ -32,6 +32,9 @@ var _lbl_membrana: Label
 var _painel_evento: PanelContainer
 var _lbl_evento: Label
 var _btn_testar: Button
+var _btn_acao: Button
+var _caixa_opcoes: VBoxContainer
+var _bilhete_acao: PanelContainer
 var _log: RelatorioCampo
 var _dica: Label
 var _hex_dica := Vector2i(-999, -999)
@@ -150,8 +153,120 @@ func _encerrar_turno() -> void:
 	_enviar("encerrar_turno")
 
 
-func _testar_evento() -> void:
-	_enviar("resolver_evento", {"foco": _foco.consumir()})
+func _testar_evento(opcao: int = 0) -> void:
+	_enviar("resolver_evento", {"foco": _foco.consumir(), "opcao": opcao})
+
+
+## Opções do evento (docs/13): uma linha por perícia, com a DT; "seguir em frente" sem teste.
+func _montar_opcoes_evento() -> void:
+	for filho in _caixa_opcoes.get_children():
+		if filho != _btn_testar:
+			filho.queue_free()
+	if _btn_testar.get_parent() != null:
+		_btn_testar.get_parent().remove_child(_btn_testar)
+	var a: Agente = missao.evento_pendente.get("agente")
+	var ops := missao.opcoes_do_evento()
+	for i in ops.size():
+		var o: Dictionary = ops[i]
+		var b: Button = _btn_testar if i == 0 else Button.new()
+		if i == 0:
+			for c in b.pressed.get_connections():
+				b.pressed.disconnect(c.callable)
+		var texto := String(o.get("texto", ""))
+		if o.get("sem_teste", false):
+			b.text = "→ " + (texto if texto != "" else "Seguir em frente")
+			b.theme_type_variation = "BotaoPapel"
+		else:
+			var per := String(o.pericia)
+			var nome := String(missao.ruleset.pericia(per).get("nome", per))
+			var treinado := a != null and a.pericias.has(per)
+			b.text = "%s%s — %s %+d (DT %d)" % [texto if texto != "" else "Testar", "", nome, a.bonus_pericia(per) if a != null else 0, int(o.dt)]
+			b.theme_type_variation = "BotaoPrincipal" if i == 0 else "BotaoPapel"
+			b.tooltip_text = "%s rola %s%s" % [a.nome if a != null else "?", missao.ruleset.atributo_da_pericia(per).to_upper(), "" if treinado else " (destreinado)"]
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		b.pressed.connect(_testar_evento.bind(i))
+		_caixa_opcoes.add_child(b)
+
+
+## Ação do turno no mapa (docs/13): bilhete com itens e rituais, e em quem usar.
+func _abrir_acao() -> void:
+	if _bilhete_acao != null:
+		_bilhete_acao.queue_free()
+		_bilhete_acao = null
+		return
+	var a := missao.agente_atual()
+	if a == null:
+		return
+	_bilhete_acao = PanelContainer.new()
+	_bilhete_acao.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(16, 14)))
+	_bilhete_acao.theme = Tema.tema_papel()
+	_bilhete_acao.anchor_left = 1.0
+	_bilhete_acao.anchor_right = 1.0
+	_bilhete_acao.anchor_top = 1.0
+	_bilhete_acao.anchor_bottom = 1.0
+	_bilhete_acao.offset_left = -560
+	_bilhete_acao.offset_right = -200
+	_bilhete_acao.offset_bottom = -90
+	_bilhete_acao.offset_top = -90
+	_bilhete_acao.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_bilhete_acao.rotation_degrees = -0.8
+	add_child(_bilhete_acao)
+	Som.tocar("papel")
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	_bilhete_acao.add_child(v)
+	var t := Label.new()
+	t.text = "AÇÃO DO TURNO"
+	var f := Tema.fonte_titulo()
+	if f != null:
+		t.add_theme_font_override("font", f)
+	v.add_child(t)
+	var alvos := missao.alcance_de_toque()
+	for item_id in missao.itens_fora_de_combate(a):
+		var info := missao.ruleset.equipamento(item_id)
+		for alvo in alvos:
+			var b := Button.new()
+			b.theme_type_variation = "BotaoPapel"
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.text = "%s (%d) em %s  ·  cura %s" % [info.nome, a.equipamento.count(item_id), "si" if alvo == a else alvo.nome, info.uso.cura]
+			b.pressed.connect(func(): _fechar_acao(); _enviar("usar_item", {"item": item_id, "alvo": alvo.id}))
+			v.add_child(b)
+	for par in missao.rituais_fora_de_combate(a):
+		var r := missao.ruleset.ritual(par[0])
+		var pessoal := String(r.get("alcance", "")).begins_with("pessoal")
+		for alvo in alvos:
+			if pessoal and alvo != a:
+				continue
+			var b := Button.new()
+			b.theme_type_variation = "BotaoPapel"
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.add_theme_color_override("font_color", Color("5b2a86"))
+			b.text = "✦ %s%s em %s  ·  %d PE" % [r.nome, "" if par[1] == "" else " " + par[1], "si" if alvo == a else alvo.nome, a.custo_ritual(par[0], par[1])]
+			b.disabled = a.pe < a.custo_ritual(par[0], par[1])
+			b.pressed.connect(func(): _fechar_acao(); _enviar("conjurar", {"ritual": par[0], "forma": par[1], "alvo": alvo.id}))
+			v.add_child(b)
+	var nota := Label.new()
+	nota.text = "Alcance: você e quem está no mesmo hex."
+	nota.add_theme_color_override("font_color", Color(Tema.TINTA, 0.6))
+	nota.add_theme_font_size_override("font_size", Tema.FONTE_P - 1)
+	v.add_child(nota)
+
+
+func _fechar_acao() -> void:
+	if _bilhete_acao != null:
+		_bilhete_acao.queue_free()
+		_bilhete_acao = null
+
+
+## Ficha e inventário (F ou clique no retrato).
+func _abrir_ficha(a: Agente) -> void:
+	if a == null:
+		return
+	var usar := Callable()
+	if a == missao.agente_atual() and missao.pode_agir_no_mapa():
+		usar = func(item_id): _enviar("usar_item", {"item": item_id, "alvo": a.id})
+	DossieAgente.abrir(self, a, usar)
 
 
 # --- Comandos (ADR 0007) ------------------------------------------------------
@@ -162,8 +277,14 @@ func _enviar(acao: String, args: Dictionary = {}) -> Dictionary:
 
 ## Aplica um comando do mapa (deste jogador ou, online, de outro) e atualiza a tela.
 func _aplicar_comando(cmd: Dictionary) -> Dictionary:
+	# A perícia da opção do evento é lida antes: depois de resolver, o evento some
+	var opcao_evento: Dictionary = {}
+	if cmd.get("acao", "") == "resolver_evento" and not missao.evento_pendente.is_empty():
+		var ops := missao.opcoes_do_evento()
+		opcao_evento = ops[clampi(int(cmd.get("opcao", 0)), 0, ops.size() - 1)]
 	var res := Comandos.aplicar_mapa(missao, cmd)
 	var a := missao.agente_atual()
+	_mostrar_rolagem(cmd, res, opcao_evento)
 	match String(cmd.get("acao", "")):
 		"rolar_movimento":
 			if a != null and _controles.usa_controle(a) and not missao.destinos().is_empty():
@@ -330,6 +451,30 @@ func _atualizar_mestre() -> void:
 		_lbl_hex_mestre.text = "Hex [%d, %d]: %s, %s" % [_hex_mestre.x, _hex_mestre.y, missao.mapa.terreno(_hex_mestre), cont.get("tipo", "vazio")]
 
 
+## Rolagem no centro da tela (docs/13): movimento e testes de evento.
+func _mostrar_rolagem(cmd: Dictionary, res: Dictionary, opcao_evento: Dictionary) -> void:
+	if not res.get("ok", false) or not is_inside_tree():
+		return
+	match String(cmd.get("acao", "")):
+		"usar_item":
+			Som.tocar("clique")
+		"conjurar":
+			Som.tocar("ritual")
+			Tema.pulso_vhs(_vista, 0.4, 0.4)
+		"rolar_movimento":
+			var r: Dictionary = res.get("rolagem", {})
+			if not r.is_empty():
+				RolagemDados.mostrar(self, "Movimento", String(r.get("atributo", "agi")), r.slots, int(r.dt),
+					"%d de movimento" % int(r.total))
+		"resolver_evento":
+			var t = res.get("teste", {}).get("teste")
+			if t is ResultadoTeste:
+				var per := String(opcao_evento.get("pericia", ""))
+				RolagemDados.mostrar(self, missao.ruleset.pericia(per).get("nome", per), missao.ruleset.atributo_da_pericia(per),
+					t.slots, t.dt, "%d %+d = %d  →  %s" % [t.escolhido, t.bonus, t.total, "SUCESSO" if t.sucesso else "FALHA"],
+					RolagemDados.estados_do_teste(t), t.sucesso)
+
+
 func _ao_encontro(config: Dictionary) -> void:
 	_atualizar()
 	Som.tocar("encontro")   # algo viu o grupo: nota grave, fita falhando
@@ -382,6 +527,10 @@ func _clicar(evento: InputEvent) -> void:
 
 
 func _unhandled_input(evento: InputEvent) -> void:
+	if evento is InputEventKey and evento.pressed and not evento.echo and evento.keycode == KEY_F and not TourGuiado.em_andamento():
+		get_viewport().set_input_as_handled()
+		_abrir_ficha(missao.agente_atual())
+		return
 	if evento.is_action_pressed("ui_cancel") and not MenuPausa.aberto(self) and not TourGuiado.em_andamento():
 		get_viewport().set_input_as_handled()
 		_pausar()
@@ -509,8 +658,8 @@ func _montar_interface() -> void:
 	dock.anchor_bottom = 1.0
 	dock.offset_left = -560
 	dock.offset_right = -16
-	dock.offset_bottom = -48
-	dock.offset_top = -48
+	dock.offset_bottom = -14
+	dock.offset_top = -14
 	dock.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	dock.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	dock.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -537,8 +686,11 @@ func _montar_interface() -> void:
 	_btn_rolar.tooltip_text = "1 d20 por ponto de Agilidade; cada 11+ vale um passo"
 	_btn_descansar = _botao("Descansar", _descansar)
 	_btn_descansar.tooltip_text = "Só numa vila, uma vez por visita"
-	_btn_encerrar = _botao("Encerrar turno", _encerrar_turno)
-	for b in [_btn_rolar, _btn_descansar, _btn_encerrar]:
+	_btn_encerrar = _botao("Encerrar", _encerrar_turno)
+	_btn_encerrar.tooltip_text = "Encerrar o turno: a vez passa ao próximo agente"
+	_btn_acao = _botao("Ação", _abrir_acao)
+	_btn_acao.tooltip_text = "Uma ação por turno, além do movimento: usar um item ou um ritual que não seja de ataque"
+	for b in [_btn_rolar, _btn_acao, _btn_descansar, _btn_encerrar]:
 		hb.add_child(b)
 
 	# Evento: bilhete no centro da tela (cartas e pastas)
@@ -565,13 +717,16 @@ func _montar_interface() -> void:
 	_lbl_evento.theme_type_variation = "TextoPapel"
 	_lbl_evento.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	ve.add_child(_lbl_evento)
+	# Uma linha por opção (docs/13); o primeiro botão é o _btn_testar (foco do controle)
+	_caixa_opcoes = VBoxContainer.new()
+	_caixa_opcoes.add_theme_constant_override("separation", 4)
+	ve.add_child(_caixa_opcoes)
 	_btn_testar = _botao("Testar", _testar_evento)
-	_btn_testar.theme_type_variation = "BotaoPrincipal"
-	ve.add_child(_btn_testar)
+	_caixa_opcoes.add_child(_btn_testar)
 
 	# Relatório de campo recolhível, embaixo à direita
 	_log = RelatorioCampo.new()
-	_log.ancorar_embaixo_direita(544.0)
+	_log.ancorar_em_cima_direita(440.0)
 	add_child(_log)
 
 	_dica = Label.new()
@@ -655,6 +810,7 @@ func _atualizar() -> void:
 	var ocupado := missao.ocupado()
 	_btn_rolar.disabled = ocupado or missao.movimento_rolado
 	_btn_descansar.disabled = not missao.pode_descansar()
+	_btn_acao.disabled = not missao.pode_agir_no_mapa() or (missao.itens_fora_de_combate(a).is_empty() and missao.rituais_fora_de_combate(a).is_empty())
 	_btn_encerrar.disabled = ocupado
 	_foco.definir(_foco.valor, a.pe_disponivel_no_turno() if a != null else 0)
 	_lbl_mov.text = ("Movimento restante: %d · clique num hex azul" % missao.movimento_restante) if missao.movimento_rolado else "Role o movimento para andar."
@@ -667,7 +823,7 @@ func _atualizar() -> void:
 		if abriu:
 			Som.tocar("papel")
 			Tema.datilografar(_lbl_evento)
-		_btn_testar.text = "%s testa %s (DT %d)" % [ev.agente.nome, missao.ruleset.pericia(ev.evento.pericia).nome, int(ev.evento.dt)]
+			_montar_opcoes_evento()
 	_barra_membrana.value = missao.membrana.valor
 	Tema.membrana_na_tela(_vista, missao.membrana.valor)
 	_lbl_membrana.text = "%d · %s   ·   Reforços %d   ·   Pistas %d" % [missao.membrana.valor, missao.membrana.estado().get("nome", ""), missao.reforcos, missao.pistas]
@@ -683,6 +839,8 @@ func _atualizar_grupo() -> void:
 		var c: CartaoAgente = _cartoes.get(a)
 		if c == null:
 			c = CartaoAgente.criar(a, CORES_AGENTES[i % CORES_AGENTES.size()])
+			c.custom_minimum_size.x = 150
+			c.escolhido.connect(_abrir_ficha)
 			_grupo.add_child(c)
 			_cartoes[a] = c
 		c.visible = a in missao.agentes and not a.tem(Ser.MORTO)

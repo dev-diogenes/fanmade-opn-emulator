@@ -3,6 +3,9 @@ extends PanelContainer
 ## Retrato de um agente do grupo, fixo sobre o 3D como no FTK2 (docs/08, R3):
 ## nome, classe, PV, PE e SAN em barras; borda dourada na vez; apagado quando caído.
 
+## Clique no retrato: abre a ficha e o inventário (DossieAgente).
+signal escolhido(agente: Agente)
+
 const ICONE_CLASSE := {"combatente": "⚔", "especialista": "✦", "ocultista": "☾", "mundano": "●"}
 
 var agente: Agente
@@ -22,7 +25,12 @@ static func criar(p_agente: Agente, p_cor: Color) -> CartaoAgente:
 
 func _montar() -> void:
 	custom_minimum_size = Vector2(176, 0)
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	tooltip_text = "Ficha e inventário (F)"
+	gui_input.connect(func(e):
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			escolhido.emit(agente))
 	_estilo = Tema.caixa(Color(Tema.PEDRA, 0.9), Tema.OURO_ESCURO, 2, 6, Vector2(Tema.ESPACO_M, Tema.ESPACO_M - 2))
 	_estilo.border_width_left = 5
 	_estilo.shadow_color = Color(0, 0, 0, 0.5)
