@@ -28,7 +28,7 @@
 
 Ordem Paranormal nasceu inspirado no sistema GUMSHOE (*The Esoterrorists*). Lá, **a pista central nunca depende de um dado**: quem tem a habilidade certa e está no lugar certo encontra a pista. Os dados ficam para o que é extra ou para o perigo.
 
-Proposta para a próxima rodada (ainda **não** implementada, porque muda a regra da cena):
+Proposta para a próxima rodada. A pista central automática foi aprovada e implementada no [14-pista-central.md](14-pista-central.md):
 - **Pista central automática:** ao chegar perto de um ponto, o agente *treinado* numa das perícias do ponto recebe a pista básica sem teste.
 - **Gasto de foco por pistas extras:** PE para pistas adicionais ou para respostas mais completas.
 - **Teste só para o perigo e para o tempo:** a urgência e o Medo continuam sendo testados.

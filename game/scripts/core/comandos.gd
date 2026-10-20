@@ -7,7 +7,7 @@ extends RefCounted
 ## Números chegam da rede como float: tudo passa por int() aqui.
 
 const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar"]
-const ACOES_INVESTIGACAO := ["procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair"]
+const ACOES_INVESTIGACAO := ["examinar", "procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair"]
 const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair"]
 ## Modo Mestre (Fase 8.3): valem em qualquer tela, só do peer do mestre
 const ACOES_MESTRE := ["narrar", "membrana", "revelar", "encontro", "evento", "limpar", "curar", "ferir", "sanidade"]
@@ -68,6 +68,9 @@ static func _agente_da_missao(m: Missao, agente_id) -> Agente:
 
 static func aplicar_investigacao(cena: CenaInvestigacao, cmd: Dictionary) -> Dictionary:
 	match String(cmd.get("acao", "")):
+		"examinar":
+			var r := cena.examinar(String(cmd.ponto), String(cmd.pericia))
+			return {"ok": not r.is_empty(), "exame": r}
 		"procurar":
 			var r := cena.procurar(String(cmd.ponto), String(cmd.pericia), int(cmd.get("foco", 0)), _opcoes(cmd))
 			return {"ok": not r.is_empty(), "teste": r}

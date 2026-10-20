@@ -419,6 +419,24 @@ func _opcoes_procurar(a: Agente) -> void:
 		onde.text = "Nenhum ponto ao alcance."
 		_texto_bilhete("Ande com WASD até um ponto de interesse (os sigilos dourados no chão) para procurar pistas." if not cena.pontos_restantes.is_empty() else "Não restam pontos de interesse.", true)
 		return
+	# Pista central (docs/14): com o treino certo, a pista vem sem teste
+	var examinaveis: Array = pt.pericias.keys().filter(func(per): return cena.custo_examinar(a, _ponto, per) >= 0)
+	examinaveis.sort_custom(func(x, y): return cena.custo_examinar(a, _ponto, x) < cena.custo_examinar(a, _ponto, y))
+	for per in examinaveis:
+		var custo := cena.custo_examinar(a, _ponto, per)
+		var b := Button.new()
+		b.theme_type_variation = "BotaoPrincipal" if per == examinaveis[0] else "BotaoPapel"
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.text = "✦ Examinar com %s — pista garantida%s" % [missao.ruleset.pericia(per).nome, "" if custo == 0 else " (%d PE)" % custo]
+		b.tooltip_text = "Você tem treino em %s: encontra a pista sem rolar dados%s." % [missao.ruleset.pericia(per).nome,
+			"" if custo == 0 else ". Como a DT é %d, custa %d PE" % [int(pt.pericias[per]), custo]]
+		b.disabled = a.pe < custo
+		b.pressed.connect(_examinar.bind(per))
+		_caixa_bilhete.add_child(b)
+	if not examinaveis.is_empty():
+		_texto_bilhete("Ou procurar com teste:", true)
+	else:
+		_texto_bilhete("Sem treino nas perícias deste ponto: só procurando, com teste.", true)
 	if not _pericia in pt.pericias:
 		_pericia = String(pt.pericias.keys()[0])
 	for per in pt.pericias:
@@ -662,6 +680,11 @@ func _procurar() -> void:
 	_enviar("procurar", {"ponto": _ponto, "pericia": _pericia, "foco": foco, "opcoes": op})
 
 
+func _examinar(pericia: String) -> void:
+	if _ponto != "":
+		_enviar("examinar", {"ponto": _ponto, "pericia": pericia})
+
+
 func _facilitar() -> void:
 	var a := cena.agente_atual()
 	if a == null or _opcao_facilitar.is_empty():
@@ -719,6 +742,18 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 			"%s  ·  %d %+d = %d" % [missao.ruleset.pericia(per).get("nome", per), t.escolhido, t.bonus, t.total],
 			RolagemDados.estados_do_teste(t), t.sucesso)
 	match String(cmd.get("acao", "")):
+		"examinar":
+			if res.ok:
+				var ex: Dictionary = res.exame
+				var per := String(ex.get("pericia", ""))
+				RolagemDados.mostrar(self, "Pista central", missao.ruleset.atributo_da_pericia(per), [], 0,
+					"Sem dados: o treino em %s basta%s" % [missao.ruleset.pericia(per).get("nome", per), "" if int(ex.custo) == 0 else " (%d PE)" % int(ex.custo)], [], true)
+				Tema.pulso_vhs(_vista, 0.8, 0.6)
+				Som.tocar("pista")
+				if not _quadro_aberto:
+					_alternar_quadro()
+			else:
+				_log.append_text(Tema.bb("Não dá para examinar: falta treino ou PE.", Tema.AVISO) + "\n")
 		"procurar":
 			if not res.ok:
 				_log.append_text(Tema.bb("Não dá para fazer esse teste (treino, PE ou habilidade).", Tema.AVISO) + "\n")

@@ -16,6 +16,7 @@
 | [11-audio.md](11-audio.md) | Áudio procedural: sons sintetizados, ambiente pela Membrana, volume |
 | [12-sensacao-de-jogo.md](12-sensacao-de-jogo.md) | Feedback: dano flutuante, sons de golpe/ritual/passos, Arsenal em etiquetas, caixinha de música |
 | [13-ajustes-de-playtest.md](13-ajustes-de-playtest.md) | Os 12 ajustes do playtest: movimento, estradas, rolagem FTK2, ficha, eventos com opções, câmera, ação no mapa, investigação com WASD |
+| [14-pista-central.md](14-pista-central.md) | Pista central estilo GUMSHOE: examinar com treino, sem dados (PE nas DTs altas) |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

@@ -47,7 +47,7 @@
       "passos": [
         {"titulo": "Investigação", "texto": "Cenas de investigação respondem às perguntas do caso: [b]quem[/b], [b]o quê[/b] e [b]onde[/b]. Cada agente age uma vez por rodada, e a urgência limita as rodadas."},
         {"alvo": "cena", "titulo": "Pontos de interesse", "texto": "Os sigilos dourados no chão marcam lugares onde pode haver pista. Ande com [b]WASD[/b] até um deles: quando estiver perto, o ponto aparece no bilhete e dá para procurar (E)."},
-        {"alvo": "procurar", "titulo": "Procurar pistas", "texto": "Escolha a perícia (cada uma tem uma DT diferente) e procure. A cada 3 falhas, perde-se uma rodada."},
+        {"alvo": "procurar", "titulo": "Procurar pistas", "texto": "Se o agente tem [b]treino[/b] numa perícia do ponto, ele [b]examina[/b] e acha a pista sem rolar dados (de graça na DT 15; nas mais difíceis, gasta PE). Sem treino, escolha a perícia e procure com teste. A cada 3 falhas, perde-se uma rodada."},
         {"alvo": "facilitar", "titulo": "Facilitar e ajudar", "texto": "[b]Facilitar[/b] dá +2 aos próximos testes e ilumina a cena. [b]Ajudar[/b] dá um bônus a um aliado."},
         {"alvo": "caso", "titulo": "A ficha do caso", "texto": "Duas pistas respondem a uma pergunta. Descobrir [b]quem[/b] enfraquece o chefe; [b]o quê[/b] fortalece a Membrana; [b]onde[/b] revela o covil. Cada pista também vale PP."},
         {"alvo": "topo", "titulo": "Hora de sair", "texto": "Quando as rodadas acabam, ou quando você decide sair, a cena termina e o grupo volta ao mapa com o que descobriu."}

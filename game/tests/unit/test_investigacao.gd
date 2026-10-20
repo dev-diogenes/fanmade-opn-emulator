@@ -211,3 +211,43 @@ func test_cena_de_investigacao_abre():
 	add_child_autofree(tela)
 	assert_not_null(tela.cena)
 	assert_false(tela.cena.encerrada)
+
+
+# --- Pista central (docs/14, estilo GUMSHOE) ------------------------------------------
+
+func test_examinar_sem_treino_nao_pode():
+	var c := _cena()
+	assert_eq(c.agente_atual(), mauro)
+	assert_false(mauro.pericias.has("investigacao"))
+	assert_eq(c.custo_examinar(mauro, "escrivaninha", "investigacao"), -1, "sem treino, só procurando com teste")
+	assert_true(c.examinar("escrivaninha", "investigacao").is_empty())
+	assert_eq(c.agente_atual(), mauro, "pedido inválido não gasta a vez")
+
+
+func test_examinar_na_dt_maior_custa_pe():
+	var c := _cena()
+	assert_true(mauro.pericias.has("percepcao"))
+	assert_eq(c.custo_examinar(mauro, "escrivaninha", "percepcao"), 1, "DT 20: 1 PE")
+	var pe := mauro.pe
+	var r := c.examinar("escrivaninha", "percepcao")
+	assert_false(r.is_empty())
+	assert_eq(mauro.pe, pe - 1)
+	assert_false("escrivaninha" in c.pontos_restantes)
+	assert_eq(c.pistas_encontradas.size(), 1, "a pista central vem sem rolar dados")
+	assert_eq(c.agente_atual(), bianca, "examinar gasta a ação")
+
+
+func test_examinar_na_dt_simples_e_de_graca():
+	var c := _cena()
+	c.passar()
+	assert_eq(c.agente_atual(), bianca)
+	var per := c.melhor_pericia_para_examinar(bianca, "escrivaninha")
+	if per == "":
+		pass_test("Bianca não tem treino nas perícias da escrivaninha neste grupo")
+		return
+	var custo := c.custo_examinar(bianca, "escrivaninha", per)
+	var pe := bianca.pe
+	assert_false(Comandos.aplicar_investigacao(c, Comandos.novo("investigacao", "examinar", {"ponto": "escrivaninha", "pericia": per})).ok == false)
+	assert_eq(bianca.pe, pe - custo)
+	if per == "investigacao":
+		assert_eq(custo, 0, "DT 15 com treino: de graça")

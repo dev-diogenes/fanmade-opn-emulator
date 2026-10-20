@@ -192,15 +192,7 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 	var resultado := {"teste": teste, "sucesso": teste.sucesso, "pista": ""}
 	_log("%s procura em [b]%s[/b] com %s: %s" % [a.nome, p.nome, ruleset.pericia(pericia).nome, teste.descrever()])
 	if teste.sucesso:
-		var texto := caso.formatar(p.pista)
-		pontos_restantes.erase(ponto_id)
-		pistas_encontradas.append({"ponto": ponto_id, "texto": texto, "responde": p.responde, "agente": a.nome})
-		var resp := caso.registrar_pista(p.pista, p.responde, cena.id)
-		resultado.pista = texto
-		_log("[color=#6fcf8e]Pista:[/color] %s" % texto)
-		if not resp.is_empty():
-			perguntas_respondidas.append(resp)
-			_log("[color=#e3c27a][b]Pergunta respondida:[/b] %s → %s[/color]" % [resp.texto, caso.resposta(resp.id)])
+		resultado.pista = _encontrar_pista(a, ponto_id)
 		var t: Dictionary = _trilha.get_or_add(a, {"sucessos": 0, "dados": 0})
 		t.sucessos += 1
 	else:
@@ -212,6 +204,68 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 			_log("[color=#eda64a]Descuidos acumulados: a urgência aumenta (−1 rodada).[/color]")
 	_acao_concluida()
 	return resultado
+
+
+## Anota a pista do ponto e tira o ponto da cena. Devolve o texto da pista.
+func _encontrar_pista(a: Agente, ponto_id: String) -> String:
+	var p := ponto(ponto_id)
+	var texto := caso.formatar(p.pista)
+	pontos_restantes.erase(ponto_id)
+	pistas_encontradas.append({"ponto": ponto_id, "texto": texto, "responde": p.responde, "agente": a.nome})
+	var resp := caso.registrar_pista(p.pista, p.responde, cena.id)
+	_log("[color=#6fcf8e]Pista:[/color] %s" % texto)
+	if not resp.is_empty():
+		perguntas_respondidas.append(resp)
+		_log("[color=#e3c27a][b]Pergunta respondida:[/b] %s → %s[/color]" % [resp.texto, caso.resposta(resp.id)])
+	return texto
+
+
+# --- Pista central (docs/14, inspirado no GUMSHOE de The Esoterrorists) ---------
+# Design do jogo, não do livro: quem tem o treino certo e está no lugar certo encontra a
+# pista sem rolar dados. Numa perícia de DT simples (15), é de graça; nas mais difíceis,
+# o agente gasta PE (1 a cada 5 de DT acima de 15), como os pontos de habilidade do GUMSHOE.
+# Os dados ficam para quem não tem o treino, e para o tempo e o perigo da cena.
+const DT_PISTA_GRATIS := 15
+const DT_POR_PE := 5
+
+
+## Custo em PE para examinar o ponto com a perícia, ou -1 se o agente não pode (sem treino).
+func custo_examinar(a: Agente, ponto_id: String, pericia: String) -> int:
+	var p := ponto(ponto_id)
+	if a == null or p.is_empty() or not ponto_id in pontos_restantes or not p.pericias.has(pericia):
+		return -1
+	if not a.pericias.has(pericia):
+		return -1
+	return maxi(0, int(ceil(float(int(p.pericias[pericia]) - DT_PISTA_GRATIS) / DT_POR_PE)))
+
+
+## A perícia mais barata para examinar o ponto ("" se o agente não tem treino em nenhuma).
+func melhor_pericia_para_examinar(a: Agente, ponto_id: String) -> String:
+	var melhor := ""
+	var menor := 99
+	for per in ponto(ponto_id).get("pericias", {}):
+		var c := custo_examinar(a, ponto_id, per)
+		if c >= 0 and c < menor:
+			melhor = per
+			menor = c
+	return melhor
+
+
+## Examinar: a pista central do ponto, sem teste. Gasta a ação e os PE do custo.
+## Retorna {pista, custo} ou {} se inválido (sem treino, sem PE, ponto já vasculhado).
+func examinar(ponto_id: String, pericia: String) -> Dictionary:
+	var a := agente_atual()
+	var custo := custo_examinar(a, ponto_id, pericia)
+	if custo < 0 or (custo > 0 and not a.gastar_pe(custo)):
+		return {}
+	var p := ponto(ponto_id)
+	_log("%s examina [b]%s[/b] com o treino em %s%s: pista central, sem teste." % [a.nome, p.nome, ruleset.pericia(pericia).nome,
+		"" if custo == 0 else " (%d PE)" % custo])
+	var texto := _encontrar_pista(a, ponto_id)
+	var t: Dictionary = _trilha.get_or_add(a, {"sucessos": 0, "dados": 0})
+	t.sucessos += 1
+	_acao_concluida()
+	return {"pista": texto, "custo": custo, "pericia": pericia}
 
 
 ## Facilitar Investigação: um teste que muda a cena; se passar, cada aliado recebe +2 no
