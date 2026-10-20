@@ -72,7 +72,11 @@ func _desenhar() -> void:
 			var c := _centro(col, lin)
 			var t := editor.terreno_em(col, lin)
 			var cor := Color(String(_terrenos.get(t, {}).get("cor", "4f6b3a")))
-			_tela.draw_colored_polygon(Hex.vertices(c, TAMANHO_HEX * 0.96), cor)
+			var vertices := Hex.vertices(c, TAMANHO_HEX * 0.96)
+			_tela.draw_colored_polygon(vertices, cor)
+			var contorno := PackedVector2Array(vertices)
+			contorno.append(vertices[0])
+			_tela.draw_polyline(contorno, Color(0, 0, 0, 0.35), 1.5, true)
 			var cont := editor.conteudo_em(col, lin)
 			if not cont.is_empty():
 				var marca: String = MARCAS.get(cont.tipo, "•")
@@ -121,12 +125,17 @@ func _montar_interface() -> void:
 	add_child(Tema.fundo())
 	var raiz := HBoxContainer.new()
 	raiz.set_anchors_preset(Control.PRESET_FULL_RECT)
-	raiz.add_theme_constant_override("separation", 10)
+	raiz.offset_left = 14
+	raiz.offset_top = 12
+	raiz.offset_right = -14
+	raiz.offset_bottom = -12
+	raiz.add_theme_constant_override("separation", Tema.ESPACO_G)
 	add_child(raiz)
 
 	var esquerda := VBoxContainer.new()
 	esquerda.custom_minimum_size = Vector2(540, 0)
-	raiz.add_child(esquerda)
+	esquerda.add_theme_constant_override("separation", Tema.ESPACO_M)
+	raiz.add_child(Tema.painel(esquerda))
 	esquerda.add_child(_titulo("Editor de missões", 20))
 	var dica := Label.new()
 	dica.text = "Clique (ou arraste) no mapa para usar a ferramenta. I = início, X = objetivo/covil, V = vila, ! = encontro, ? = evento, ◆ = investigação."
@@ -155,7 +164,7 @@ func _montar_interface() -> void:
 	rolagem.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rolagem.custom_minimum_size = Vector2(560, 0)
 	rolagem.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	raiz.add_child(rolagem)
+	raiz.add_child(Tema.painel(rolagem))
 	var p := VBoxContainer.new()
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	p.add_theme_constant_override("separation", 4)

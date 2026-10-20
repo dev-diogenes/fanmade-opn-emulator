@@ -335,6 +335,7 @@ func _montar_interface() -> void:
 ## Folha de papel (dossiê). `carimbo` põe "CONFIDENCIAL" no canto.
 func _papel(carimbo: bool) -> PanelContainer:
 	var p := PanelContainer.new()
+	p.theme = Tema.tema_papel()
 	p.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(22, 18)))
 	if carimbo:
 		var c := Label.new()

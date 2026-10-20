@@ -185,10 +185,28 @@ Depois do piloto, o estilo foi aplicado ao resto do jogo:
 ![Combate](combate_v2.png)
 ![Base](base_v2.png)
 
+### Segunda rodada (20/10/2026)
+
+- **Inimigos em 3D:**
+  - criaturas viram esqueletos da KayKit (CC0), tingidos pela cor do elemento;
+  - as criaturas grandes são o Warrior, em escala maior;
+  - pessoas viram cultistas encapuzados em vermelho-sangue;
+  - há animações de dano e de queda.
+- **Marcos de OP no mapa:** sigilo no chão na cor do tipo.
+  - Encontro: um cultista em miniatura.
+  - Covil: um obelisco negro com núcleo vermelho.
+  - Evento: "?" em Cinzel.
+  - Investigação: ◎.
+  - Vila: ⌂, com luz de lampião.
+- **Casas brasileiras:** as casas do mapa são de reboco colorido (cal, amarelo, rosa, azul desbotado), com telha de barro.
+- **Máquina de escrever (Special Elite):** nos bilhetes, nas fichas em papel, no quadro do caso e no relatório de campo.
+- **Saguão:** sigilo ao fundo e a ficha da operação em papel.
+- **Tutorial:** o texto do mapa agora descreve os marcos novos.
+- **Editor:** colunas emolduradas e hexes com contorno.
+- **BBCode do registro:** continua em hex nos textos de `scripts/rules` e `scripts/core`. A lógica pura não pode depender da UI (`Tema`), e os tons já são os mesmos dos tokens. Fica assim por decisão.
+
+![Marcos no mapa](mapa_marcos.png)
+
 ### Ainda falta
 
-- **Inimigos em 3D:** ainda são cones e prismas. Precisam de modelos próprios (Blender) ou de um pack CC0 (Quaternius), com confirmação antes do download.
-- **Marcos de OP no mapa** (covil, vila, ruína): as casas ainda são as medievais por código.
-- **Saguão e editor de missões:** herdaram o tema, mas não foram redesenhados.
-- **Fonte de máquina de escrever** nos bilhetes e no relatório: depende de um download.
-- **Registro do combate e do mapa:** ainda usa cores em hex no BBCode, em vez de `Tema.bb()`.
+- **Covil e criaturas exclusivas de OP modelados no Blender.** Hoje são procedurais ou esqueletos recoloridos.

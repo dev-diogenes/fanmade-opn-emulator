@@ -53,6 +53,8 @@ const FONTE_LOGO := 64
 const ARQ_TITULO := "res://assets/fonts/Cinzel.ttf"
 const ARQ_TEXTO := "res://assets/fonts/AlegreyaSans-Regular.ttf"
 const ARQ_NEGRITO := "res://assets/fonts/AlegreyaSans-Bold.ttf"
+## Máquina de escrever (docs/09): bilhetes, fichas em papel e relatório de campo
+const ARQ_MAQUINA := "res://assets/fonts/SpecialElite-Regular.ttf"
 
 
 static func _fonte(caminho: String) -> Font:
@@ -102,6 +104,10 @@ static func tema_papel() -> Theme:
 	for tipo in ["Label", "Subtitulo", "CheckBox", "CheckButton"]:
 		t.set_color("font_color", tipo, TINTA)
 	t.set_color("default_color", "RichTextLabel", TINTA)
+	var maquina := _fonte(ARQ_MAQUINA)
+	if maquina != null:
+		t.set_font("font", "Label", maquina)
+		t.set_font("normal_font", "RichTextLabel", maquina)
 	return t
 
 
@@ -207,6 +213,11 @@ static func criar() -> Theme:
 	t.set_color("font_disabled_color", "BotaoPapel", Color(TINTA, 0.35))
 	t.set_type_variation("TextoPapel", "Label")
 	t.set_color("font_color", "TextoPapel", TINTA)
+	var maquina := _fonte(ARQ_MAQUINA)
+	if maquina != null:
+		t.set_font("font", "TextoPapel", maquina)
+		t.set_font("font", "BotaoPapel", maquina)
+		t.set_font_size("font_size", "BotaoPapel", FONTE_P + 1)
 	# Caixas de marcar desenhadas: quadrado riscado claro; marcado = sangue com ✓
 	t.set_icon("unchecked", "CheckBox", _icone_marcar(false))
 	t.set_icon("checked", "CheckBox", _icone_marcar(true))
@@ -288,6 +299,11 @@ static func criar() -> Theme:
 ## Trecho de BBCode colorido com um token: `Tema.bb("Encontro!", Tema.PERIGO)`.
 static func bb(texto: String, cor: Color) -> String:
 	return "[color=#%s]%s[/color]" % [cor.to_html(false), texto]
+
+
+## Fonte de máquina de escrever, ou null sem o arquivo.
+static func fonte_maquina() -> Font:
+	return _fonte(ARQ_MAQUINA)
 
 
 ## Fonte de títulos (Cinzel), ou null sem o arquivo.

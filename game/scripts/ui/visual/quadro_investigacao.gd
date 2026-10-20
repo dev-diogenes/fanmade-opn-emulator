@@ -116,7 +116,7 @@ func _bilhete(texto: String, tamanho: Vector2, graus: float, fonte: int) -> Pane
 	var l := Label.new()
 	l.text = texto
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.add_theme_color_override("font_color", Tema.TINTA)
+	l.theme_type_variation = "TextoPapel"
 	l.add_theme_font_size_override("font_size", fonte)
 	p.add_child(l)
 	return p
@@ -158,8 +158,8 @@ func _foto(legenda: String, semente: int, graus: float) -> Control:
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	l.max_lines_visible = 2
-	l.add_theme_color_override("font_color", Tema.TINTA)
-	l.add_theme_font_size_override("font_size", 11)
+	l.theme_type_variation = "TextoPapel"
+	l.add_theme_font_size_override("font_size", 10)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(l)
 	return moldura

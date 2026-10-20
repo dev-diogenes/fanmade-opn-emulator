@@ -6,6 +6,7 @@ extends Control
 var _jogo: Node
 var _lbl_status: Label
 var _info: RichTextLabel
+var _sigilo: Sigilo
 
 
 func _ready() -> void:
@@ -19,14 +20,26 @@ func _ready() -> void:
 func _montar() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(Tema.fundo())
-	var margem := MarginContainer.new()
-	margem.set_anchors_preset(Control.PRESET_FULL_RECT)
-	for lado in ["left", "right", "top", "bottom"]:
-		margem.add_theme_constant_override("margin_" + lado, 24)
-	add_child(margem)
+	# Sigilo grande ao fundo, girando devagar: a sessão "convoca" os agentes
+	_sigilo = Sigilo.new()
+	_sigilo.semente = 1987
+	_sigilo.cor = Color(Tema.SANGUE_CLARO, 0.18)
+	_sigilo.espessura = 3.0
+	_sigilo.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_sigilo.size = Vector2(620, 620)
+	_sigilo.position -= _sigilo.size / 2.0
+	_sigilo.pivot_offset = _sigilo.size / 2.0
+	add_child(_sigilo)
+	_sigilo.revelar(2.0)
+	var centro := CenterContainer.new()
+	centro.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(centro)
+	var painel := PanelContainer.new()
+	painel.custom_minimum_size = Vector2(620, 460)
+	centro.add_child(painel)
 	var caixa := VBoxContainer.new()
-	caixa.add_theme_constant_override("separation", 10)
-	margem.add_child(caixa)
+	caixa.add_theme_constant_override("separation", Tema.ESPACO_G)
+	painel.add_child(caixa)
 	var titulo := Label.new()
 	titulo.text = "Sessão online"
 	titulo.theme_type_variation = "Titulo"
@@ -35,14 +48,26 @@ func _montar() -> void:
 	_lbl_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_lbl_status.add_theme_color_override("font_color", Tema.INFO)
 	caixa.add_child(_lbl_status)
+	# O que o host mandou fica num papel, como a ficha da operação
+	var papel := PanelContainer.new()
+	papel.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(18, 14)))
+	papel.theme = Tema.tema_papel()
+	papel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	caixa.add_child(papel)
 	_info = RichTextLabel.new()
 	_info.bbcode_enabled = true
 	_info.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	caixa.add_child(_info)
+	papel.add_child(_info)
 	var sair := Button.new()
 	sair.text = "Sair da sessão"
+	sair.size_flags_horizontal = Control.SIZE_SHRINK_END
 	sair.pressed.connect(_sair)
 	caixa.add_child(sair)
+
+
+func _process(delta: float) -> void:
+	if _sigilo != null:
+		_sigilo.rotation += delta * 0.04
 
 
 func _atualizar() -> void:
@@ -64,7 +89,7 @@ func _atualizar() -> void:
 		linhas.append("[b]Agentes da carreira do host[/b]")
 		for a in info.agentes:
 			var seu: bool = int(a.get("peer", 1)) == meu
-			linhas.append("  %s (NEX %d%%) — %s%s" % [a.nome, int(a.nex), a.jogador, "  [color=#6fcf8e](seu)[/color]" if seu else ""])
+			linhas.append("  %s (NEX %d%%) — %s%s" % [a.nome, int(a.nex), a.jogador, "  [color=#2f6b3f](seu)[/color]" if seu else ""])
 	var rel: Dictionary = info.get("relatorio", {})
 	if not rel.is_empty():
 		linhas.append("")

@@ -118,7 +118,7 @@ func _decorar(raiz: Node3D, h: Vector2i, terreno: String, altura: float) -> void
 				raiz.add_child(r)
 		"cidade":
 			for p in pontos.call(3):
-				var c := Pecas.casa()
+				var c := Pecas.casa_br(hash(p) + hash(h))
 				c.position = p
 				c.rotation.y = rng.randf() * TAU
 				raiz.add_child(c)
@@ -189,26 +189,28 @@ func _atualizar_marcador(h: Vector2i, tipo: String) -> void:
 		_marcadores.erase(h)
 	if tipo == "":
 		return
-	var m := Pecas.marcador(tipo)
-	m.scale = Vector3.ONE * 1.8
+	var m := Pecas.marco(tipo)
 	m.set_meta("tipo", tipo)
 	m.position = posicao_hex(h)
 	add_child(m)
 	_marcadores[h] = m
-	# Marcadores vivos (docs/08, R6): flutuam, giram devagar e iluminam o hex
-	var peca: Node3D = m.get_child(0)
+	# Marcos vivos (docs/08, R6): a peça flutua um pouco e o marco ilumina o hex
+	var peca: Node3D = m.get_meta("peca")
 	var luz := OmniLight3D.new()
-	luz.light_color = (peca as MeshInstance3D).material_override.albedo_color if peca is MeshInstance3D else Color.WHITE
-	luz.light_energy = 0.9
-	luz.omni_range = 1.4
-	luz.position = Vector3(0, 0.55, 0)
+	luz.light_color = m.get_meta("cor")
+	luz.light_energy = 1.4 if tipo == "objetivo" else 0.8
+	luz.omni_range = 1.8 if tipo in ["objetivo", "vila"] else 1.2
+	luz.position = Vector3(0, 0.6, 0)
 	m.add_child(luz)
+	if tipo == "encontro":
+		return   # o cultista fica parado, em guarda
 	var fase := float(hash(h) % 100) / 100.0
 	var sobe := m.create_tween().set_loops()
-	sobe.tween_property(peca, "position:y", peca.position.y + 0.08, 1.1 + fase * 0.4).set_trans(Tween.TRANS_SINE)
+	sobe.tween_property(peca, "position:y", peca.position.y + 0.1, 1.1 + fase * 0.4).set_trans(Tween.TRANS_SINE)
 	sobe.tween_property(peca, "position:y", peca.position.y, 1.1 + fase * 0.4).set_trans(Tween.TRANS_SINE)
-	var gira := m.create_tween().set_loops()
-	gira.tween_method(func(a: float): peca.rotation.y = a, 0.0, TAU, 6.0 + fase * 3.0)
+	if tipo == "objetivo":
+		var gira := m.create_tween().set_loops()
+		gira.tween_method(func(a: float): peca.rotation.y = a, 0.0, TAU, 8.0)
 
 
 func _atualizar_agentes(missao: Missao) -> void:

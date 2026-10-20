@@ -30,6 +30,10 @@ func _init() -> void:
 	registro.scroll_following = true
 	registro.visible = false
 	registro.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var maquina := Tema.fonte_maquina()
+	if maquina != null:
+		registro.add_theme_font_override("normal_font", maquina)
+		registro.add_theme_font_size_override("normal_font_size", Tema.FONTE_P)
 	v.add_child(registro)
 	_atualizar_cabecalho()
 

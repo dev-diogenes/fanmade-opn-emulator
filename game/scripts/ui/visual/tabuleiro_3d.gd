@@ -18,6 +18,7 @@ var grade: Grade
 var _unidades: Dictionary = {}    ## Ser -> Node3D
 var _rotulos: Dictionary = {}     ## Ser -> Label3D
 var _posicoes: Dictionary = {}    ## Ser -> Vector3
+var _pv: Dictionary = {}          ## Ser -> PV na última atualização (para a animação de dano)
 var _destaques: Node3D
 var _anel_vez: MeshInstance3D
 var _anel_sel: MeshInstance3D
@@ -133,12 +134,12 @@ func _atualizar_unidade(s: Ser) -> void:
 	if no == null:
 		if s is Agente:
 			no = Pecas.agente(s.classe_id, COR_AGENTE)
-		elif s.pv_maximo >= 25:
-			no = Pecas.criatura(COR_AMEACA, 1.2)
+		elif s is Ameaca:
+			no = Pecas.ameaca(s)
 		else:
 			no = Pecas.figura(COR_AMEACA)
 		var rot := Pecas.rotulo("", 44)
-		rot.position = Vector3(0, 1.25, 0)
+		rot.position = Vector3(0, 1.55 if s.pv_maximo >= 25 and not s is Agente else 1.25, 0)
 		no.add_child(rot)
 		add_child(no)
 		_unidades[s] = no
@@ -152,6 +153,26 @@ func _atualizar_unidade(s: Ser) -> void:
 			no.position = destino
 		_posicoes[s] = destino
 	var rot: Label3D = _rotulos[s]
+	# Animações de dano e queda (quando o modelo tem)
+	var pv_antes: int = _pv.get(s, s.pv)
+	_pv[s] = s.pv
+	if no.has_meta("anim") and is_inside_tree():
+		if s.esta_fora_de_combate() or s.tem(Ser.MORTO):
+			if not no.get_meta("caido", false):
+				no.set_meta("caido", true)
+				Pecas.animar(no, "Death_A")
+			no.rotation.z = 0.0
+			rot.text = "%s (morto)" % s.nome if s.tem(Ser.MORTO) else "%s — caído" % s.nome
+			rot.modulate = Color("7f8c8d") if s.tem(Ser.MORTO) else Color("e67e22")
+			return
+		if no.get_meta("caido", false):   # levantou (cura, Inspiração Resoluta…)
+			no.set_meta("caido", false)
+			Pecas.animar(no, "Idle")
+		if s.pv < pv_antes:
+			Pecas.animar(no, "Hit_A", 0.05)
+			get_tree().create_timer(0.6).timeout.connect(func():
+				if is_instance_valid(no) and not no.get_meta("caido", false):
+					Pecas.animar(no, "Idle"))
 	if s.tem(Ser.MORTO):
 		no.rotation.z = PI / 2.0
 		no.position.y = 0.2

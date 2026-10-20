@@ -10,6 +10,7 @@ static var _cenas: Dictionary = {}
 ## Modelos de terceiros (ADR 0008). Sem os arquivos, cada função cai na primitiva.
 const DIR_HEX := "res://assets/models/kaykit_hex/"
 const DIR_PERSONAGENS := "res://assets/models/kaykit_personagens/"
+const DIR_ESQUELETOS := "res://assets/models/kaykit_esqueletos/"
 ## Raio externo do hex da KayKit (2 de largura entre lados planos)
 const RAIO_KAYKIT := 1.1547
 const PERSONAGEM_POR_CLASSE := {"combatente": "Knight", "especialista": "Rogue_Hooded",
@@ -91,9 +92,34 @@ static func tingir(raiz: Node, tinta: Color) -> void:
 ## (como uma peça de tabuleiro). Sem o modelo, cai no peão de `figura`.
 static func agente(classe_id: String, cor: Color, escala: float = 1.0) -> Node3D:
 	var nome: String = PERSONAGEM_POR_CLASSE.get(classe_id, "Knight")
-	var m := modelo(DIR_PERSONAGENS + nome + ".glb")
+	var n := personagem(DIR_PERSONAGENS + nome + ".glb", nome.split("_")[0] + "_", cor, escala)
+	return n if n != null else figura(cor, escala)
+
+
+## Figura de uma ameaça (docs/09): criaturas viram esqueletos tingidos pela cor do elemento;
+## pessoas e animais viram cultistas encapuzados em vermelho-sangue. Sem os modelos, peças por código.
+static func ameaca(ser: Ameaca, escala: float = 1.0) -> Node3D:
+	var grande := ser.pv_maximo >= 25
+	var cor_base := Color("b03a2e")
+	var n: Node3D = null
+	if ser.criatura or grande:   # a Aberração da arena de demonstração não vem marcada como criatura
+		var nome := "Skeleton_Warrior" if grande else "Skeleton_Minion"
+		var elemento: Color = Tema.ELEMENTO.get(ser.elemento, Tema.ELEMENTO.morte)
+		n = personagem(DIR_ESQUELETOS + nome + ".glb", nome + "_", elemento.darkened(0.3), escala * (1.25 if grande else 1.0),
+			elemento.lerp(Color.WHITE, 0.45))
+	else:
+		n = personagem(DIR_PERSONAGENS + "Rogue_Hooded.glb", "Rogue_", cor_base, escala, Color(0.62, 0.2, 0.22))
+	if n != null:
+		return n
+	return criatura(cor_base, escala * 1.2) if grande else figura(cor_base, escala)
+
+
+## Personagem animado sobre uma base colorida (peça de tabuleiro). `prefixo`: só ficam
+## visíveis as malhas do corpo (o pacote traz armas e escudos). `tinta` tinge os materiais.
+static func personagem(caminho: String, prefixo: String, cor: Color, escala: float = 1.0, tinta: Color = Color.WHITE) -> Node3D:
+	var m := modelo(caminho)
 	if m == null:
-		return figura(cor, escala)
+		return null
 	var n := Node3D.new()
 	var base := CylinderMesh.new()
 	base.top_radius = 0.3 * escala
@@ -103,19 +129,23 @@ static func agente(classe_id: String, cor: Color, escala: float = 1.0) -> Node3D
 	n.add_child(_malha(base, material(cor.darkened(0.2), false, 0.25), Vector3(0, 0.03 * escala, 0)))
 	m.scale = Vector3.ONE * 0.42 * escala
 	m.position.y = 0.06 * escala
-	# O pacote traz todas as armas e escudos visíveis: fica só o corpo do personagem
-	var prefixo := nome.split("_")[0] + "_"
 	for mi in m.find_children("*", "MeshInstance3D", true, false):
 		mi.visible = String(mi.name).begins_with(prefixo)
+	if tinta != Color.WHITE:
+		tingir(m, tinta)
 	n.add_child(m)
-	var anim: AnimationPlayer = m.find_children("*", "AnimationPlayer", true, false).front() \
-		if not m.find_children("*", "AnimationPlayer", true, false).is_empty() else null
+	var anims := m.find_children("*", "AnimationPlayer", true, false)
+	var anim: AnimationPlayer = anims.front() if not anims.is_empty() else null
 	if anim != null:
 		n.set_meta("anim", anim)
-		for a in ["Idle", "Walking_A", "Unarmed_Idle"]:
+		for a in ["Idle", "Walking_A", "Unarmed_Idle", "2H_Melee_Idle", "Skeletons_Idle"]:
 			if anim.has_animation(a):
 				anim.get_animation(a).loop_mode = Animation.LOOP_LINEAR
-		animar(n, "Idle")
+		for a in ["Idle", "Skeletons_Idle", "2H_Melee_Idle", "Unarmed_Idle"]:
+			if anim.has_animation(a):
+				n.set_meta("parado", a)
+				animar(n, a)
+				break
 	return n
 
 
@@ -123,6 +153,8 @@ static func agente(classe_id: String, cor: Color, escala: float = 1.0) -> Node3D
 static func animar(figura_no: Node3D, nome: String, mistura: float = 0.2) -> void:
 	if not figura_no.has_meta("anim"):
 		return
+	if nome == "Idle":
+		nome = String(figura_no.get_meta("parado", "Idle"))
 	var anim: AnimationPlayer = figura_no.get_meta("anim")
 	if anim.has_animation(nome) and anim.current_animation != nome:
 		anim.play(nome, mistura)
@@ -182,6 +214,15 @@ static func arvore(altura: float, cor: Color = Color("2e5e34")) -> Node3D:
 	copa.radial_segments = 6
 	n.add_child(_malha(copa, material(cor), Vector3(0, altura * 0.35 + altura * 0.4, 0)))
 	return n
+
+
+## Paredes de reboco do interior (cal, amarelo, rosa, azul desbotado) e telha de barro.
+const PAREDES_BR := [Color("e8e2d0"), Color("d9b45a"), Color("c98f86"), Color("8fa7b3"), Color("b9c49a")]
+
+static func casa_br(semente: int) -> Node3D:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = semente
+	return casa(PAREDES_BR[rng.randi() % PAREDES_BR.size()], Color("9a4a2c").darkened(rng.randf() * 0.2))
 
 
 static func casa(cor_parede: Color = Color("b8a88a"), cor_telhado: Color = Color("7b3f2e")) -> Node3D:
@@ -287,6 +328,79 @@ static func anel(raio: float, cor: Color) -> MeshInstance3D:
 	m.rings = 12
 	m.ring_segments = 4
 	return _malha(m, material(cor, false, 1.5), Vector3(0, 0.03, 0))
+
+
+## Marco de OP no mapa (docs/09): sigilo no chão na cor do tipo e uma peça flutuante
+## (cultista em miniatura no encontro, obelisco no covil, "?" no evento, foto na investigação).
+## Devolve um Node3D com meta "peca" (o que flutua) e "cor".
+const COR_MARCO := {"encontro": Color("c0392b"), "evento": Color("e3c27a"), "objetivo": Color("8e1b22"),
+	"investigacao": Color("7fd3c7"), "vila": Color("f2c6a0"), "inicio": Color("5dade2")}
+
+static func marco(tipo: String) -> Node3D:
+	var cor: Color = COR_MARCO.get(tipo, Color.WHITE)
+	var n := Node3D.new()
+	n.add_child(sigilo_no_chao(hash(tipo) % 997, cor, 0.8 if tipo != "objetivo" else 1.0))
+	var peca: Node3D
+	match tipo:
+		"encontro":
+			var cult := cultista_miniatura(0.55)
+			peca = cult if cult != null else _peca_do_marcador(tipo)
+		"objetivo":
+			peca = Node3D.new()
+			var obelisco := PrismMesh.new()
+			obelisco.size = Vector3(0.16, 0.7, 0.16)
+			peca.add_child(_malha(obelisco, material(Color("0b0a0e")), Vector3(0, 0.35, 0)))
+			var nucleo := SphereMesh.new()
+			nucleo.radius = 0.07
+			nucleo.height = 0.14
+			peca.add_child(_malha(nucleo, material(cor.lightened(0.3), false, 3.0), Vector3(0, 0.78, 0)))
+		"evento", "investigacao", "vila", "inicio":
+			var simbolo: String = {"evento": "?", "investigacao": "◎", "vila": "⌂", "inicio": "✦"}[tipo]
+			var l := rotulo(simbolo, 120, cor)
+			l.position = Vector3(0, 0.55, 0)
+			l.outline_size = 18
+			var fonte := Tema.fonte_titulo()
+			if fonte != null and tipo == "evento":
+				l.font = fonte
+			peca = Node3D.new()
+			peca.add_child(l)
+		_:
+			peca = _peca_do_marcador(tipo)
+	n.add_child(peca)
+	n.set_meta("peca", peca)
+	n.set_meta("cor", cor)
+	return n
+
+
+## A peça flutuante do marcador antigo (sem modelos), solta do nó que a criou.
+static func _peca_do_marcador(tipo: String) -> Node3D:
+	var antigo := marcador(tipo)
+	var peca: Node3D = antigo.get_child(0)
+	antigo.remove_child(peca)
+	antigo.free()
+	return peca
+
+
+## Cultista encapuzado em miniatura (encontros no mapa), ou null sem o modelo.
+static func cultista_miniatura(escala: float) -> Node3D:
+	return personagem(DIR_PERSONAGENS + "Rogue_Hooded.glb", "Rogue_", Color("b03a2e"), escala, Color(0.62, 0.2, 0.22))
+
+
+## Sigilo procedural deitado no chão (cache da textura por semente e cor).
+static func sigilo_no_chao(semente: int, cor: Color, tamanho: float = 0.9) -> MeshInstance3D:
+	var chave := "sigilo|%d|%s" % [semente, cor.to_html()]
+	if not _materiais.has(chave):
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = Sigilo.imagem(semente, 128, Color.WHITE, 4.0)
+		m.albedo_color = cor
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_materiais[chave] = m
+	var plano := PlaneMesh.new()
+	plano.size = Vector2(tamanho, tamanho)
+	var mi := _malha(plano, _materiais[chave], Vector3(0, 0.015, 0))
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
 
 
 ## Marcador flutuante (encontro, evento, objetivo).

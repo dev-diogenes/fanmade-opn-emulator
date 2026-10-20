@@ -156,3 +156,21 @@ func test_base_e_dossie_com_abas():
 	assert_eq(base._abas.current_tab, 2, "o tour abre a aba Missão para mostrar o Iniciar")
 	for c in get_tree().root.find_children("ConviteTutorial", "", true, false):
 		c.queue_free()
+
+
+func test_marcos_de_op_tem_peca_e_cor():
+	for tipo in ["encontro", "evento", "objetivo", "investigacao", "vila", "inicio", "desconhecido"]:
+		var m := Pecas.marco(tipo)
+		add_child_autofree(m)
+		assert_true(m.has_meta("peca"), tipo)
+		assert_true(m.get_meta("peca").get_parent() == m, "%s: a peça flutuante fica no marco" % tipo)
+
+
+func test_ameacas_tem_figura():
+	var rs := RulesetOp2022.carregar_padrao()
+	for id in ["zumbi_de_sangue", "iniciado", "tita_de_sangue"]:
+		var ficha := rs.ameaca(id)
+		var a := Ameaca.criar(rs, String(ficha.get("nome", id)), ficha)
+		var f := Pecas.ameaca(a)
+		add_child_autofree(f)
+		assert_gt(f.get_child_count(), 0, id)
