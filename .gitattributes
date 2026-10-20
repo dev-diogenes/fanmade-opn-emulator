@@ -3,6 +3,7 @@
 *.bat text eol=crlf
 
 # Assets binários via Git LFS (GitHub gratuito: 1 GB de armazenamento/banda — acompanhar uso)
+*.bin filter=lfs diff=lfs merge=lfs -text
 *.glb filter=lfs diff=lfs merge=lfs -text
 *.gltf filter=lfs diff=lfs merge=lfs -text
 *.fbx filter=lfs diff=lfs merge=lfs -text
