@@ -26,6 +26,7 @@ var ver_tudo := false
 
 
 var _env: Environment   ## noite do mapa (docs/22); a Membrana engrossa a névoa
+var _centro_mapa := Vector3.ZERO   ## as peças nascem viradas para cá (docs/30)
 
 
 ## A Membrana pesa no clima do mapa (docs/22).
@@ -72,12 +73,12 @@ func construir(p_mapa: MapaHex, terrenos: Dictionary) -> void:
 	add_child(_anel_vez)
 	rig.limites = AABB(minimo, maximo - minimo)
 	rig.distancia = 10.0
-	# 1ª pessoa no mapa (docs/19): olho acima da névoa, olhando para o chão à frente
-	rig.altura_olhos = 2.3
-	rig.olhar = -0.5
-	rig.recuo_primeira = 0.9
-	rig.fov_primeira = 70.0
-	rig.centro_olhar = (minimo + maximo) / 2.0
+	# 1ª e 2ª pessoa no mapa (docs/30): os olhos da miniatura (escala 0,75), olhando um pouco
+	# para baixo, para ver o caminho
+	rig.altura_olhos = 0.5
+	rig.avanco_primeira = 0.14
+	rig.olhar = -0.18
+	_centro_mapa = (minimo + maximo) / 2.0
 	rig.modo_mudou.connect(func(_m): _visibilidade_das_pecas())
 
 
@@ -296,6 +297,7 @@ func _atualizar_agentes(missao: Missao) -> void:
 			ficha.set_meta("rotulo", rot)
 			add_child(ficha)
 			_fichas[a] = ficha
+			ficha.set_meta("virar_para_centro", true)
 		ficha.set_meta("fora", fora)
 		if fora:
 			continue
@@ -315,6 +317,10 @@ func _atualizar_agentes(missao: Missao) -> void:
 				tw.tween_callback(Pecas.animar.bind(ficha, "Idle"))
 			else:
 				ficha.position = destino
+				if ficha.get_meta("virar_para_centro", false) and Vector2(_centro_mapa.x - destino.x, _centro_mapa.z - destino.z).length() > 0.5:
+					# A peça nasce olhando para o território: a 1ª pessoa começa vendo o mapa
+					ficha.look_at(Vector3(_centro_mapa.x, destino.y, _centro_mapa.z), Vector3.UP, true)
+				ficha.remove_meta("virar_para_centro")
 			_ultima_posicao[a] = destino
 		if a.esta_fora_de_combate():
 			ficha.scale = Vector3(1, 0.5, 1)
@@ -323,7 +329,7 @@ func _atualizar_agentes(missao: Missao) -> void:
 	if vez != null and rig.seguir != _fichas.get(vez):
 		rig.seguir = _fichas.get(vez)
 	_visibilidade_das_pecas()
-	_anel_vez.visible = vez != null
+	_anel_vez.visible = vez != null and rig.modo == "terceira"   # nos modos próximos, o anel atrapalha
 	if vez != null:
 		_anel_vez.position = posicao_hex(missao.posicao(vez)) + Vector3(0, 0.02, 0)
 
@@ -332,10 +338,13 @@ func _atualizar_agentes(missao: Missao) -> void:
 ## câmera está nos olhos dele) e quem divide o hex com ele (ficaria colado na lente).
 func _visibilidade_das_pecas() -> void:
 	var eu: Node3D = rig.seguir if rig.seguir != null and is_instance_valid(rig.seguir) else null
+	var perto_da_camera: bool = eu != null and rig.modo != "terceira"
 	for a in _fichas:
 		var f: Node3D = _fichas[a]
-		var junto: bool = eu != null and rig.modo == "primeira" and _ultima_posicao.has(a) and 			Vector2(f.position.x - eu.position.x, f.position.z - eu.position.z).length() < 0.8
-		f.visible = not bool(f.get_meta("fora", false)) and not junto
+		# Na 1ª e na 2ª pessoa (docs/30), quem divide o hex com o agente da vez some: ficaria
+		# colado na lente ou taparia a vista por cima do ombro
+		var junto: bool = perto_da_camera and f != eu and _ultima_posicao.has(a) and 			Vector2(f.position.x - eu.position.x, f.position.z - eu.position.z).length() < 0.8
+		f.visible = not bool(f.get_meta("fora", false)) and not junto and not (f == eu and rig.modo == "primeira")
 		# Quem divide o hex com outro só mostra o nome se for o da vez (docs/21): sem pilha de nomes
 		if f.has_meta("rotulo"):
 			var acompanhado := false
@@ -344,7 +353,24 @@ func _visibilidade_das_pecas() -> void:
 				if g != f and not bool(g.get_meta("fora", false)) and Vector2(g.position.x - f.position.x, g.position.z - f.position.z).length() < 0.8:
 					acompanhado = true
 					break
-			(f.get_meta("rotulo") as Label3D).visible = not acompanhado or f == rig.seguir
+			# Por cima do ombro, o próprio nome tapa a vista
+			(f.get_meta("rotulo") as Label3D).visible = (not acompanhado or f == rig.seguir) and not (f == eu and perto_da_camera)
+	# O hex onde o agente da vez está: o marco flutuante (estrela, "?") e, na 1ª pessoa, as
+	# casas e árvores dele ficam fora da vista
+	for h in _marcadores:
+		var m: Node3D = _marcadores[h]
+		var aqui: bool = perto_da_camera and Vector2(m.position.x - eu.position.x, m.position.z - eu.position.z).length() < 0.8
+		(m.get_meta("peca") as Node3D).visible = not aqui
+	for h in _tiles:
+		var terreno: Node3D = _tiles[h].terreno
+		var aqui: bool = eu != null and rig.modo == "primeira" and Vector2(terreno.global_position.x - eu.global_position.x, terreno.global_position.z - eu.global_position.z).length() < 0.8
+		for i in range(1, terreno.get_child_count()):
+			terreno.get_child(i).visible = not aqui
+		if terreno.get_child_count() > 0 and terreno.get_child(0).get_child_count() > 1:
+			for j in range(1, terreno.get_child(0).get_child_count()):   # decoração KayKit dentro do tile
+				terreno.get_child(0).get_child(j).visible = not aqui
+	if _anel_vez != null:
+		_anel_vez.visible = eu != null and rig.modo == "terceira"
 
 
 ## Centraliza a câmera no agente da vez.

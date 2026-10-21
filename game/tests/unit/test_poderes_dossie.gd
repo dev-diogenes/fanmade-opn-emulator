@@ -21,12 +21,12 @@ func _dossie(classe: String, atributos: Dictionary) -> CriacaoDossie:
 
 
 func _poderes_na_tela(d: CriacaoDossie) -> Array:
-	d._abas.current_tab = CriacaoDossie.PASSOS.find("Classe")
+	d._abas.current_tab = CriacaoDossie.PASSOS.find("Habilidades e inventário")
 	d._redesenhar()
 	var nomes: Array = []
 	for p in rs.dados.poderes_classe.poderes[String(d.ficha.classe)]:
 		nomes.append(String(p.nome))
-	return d._paginas["Classe"].find_children("*", "Button", true, false).map(func(b): return b.text).filter(func(t): return t in nomes)
+	return d._paginas["Habilidades e inventário"].find_children("*", "Button", true, false).map(func(b): return b.text).filter(func(t): return t in nomes)
 
 
 func test_esconde_poder_sem_pre_requisito():
@@ -79,7 +79,7 @@ func test_treinamento_em_pericia_escolhe_duas_novas():
 	d.ficha.perito = ["investigacao", "ciencias"]
 	d.ficha.poderes = ["treinamento_em_pericia"]
 	_poderes_na_tela(d)
-	var nomes: Array = d._paginas["Classe"].find_children("*", "Button", true, false).map(func(b): return b.text)
+	var nomes: Array = d._paginas["Habilidades e inventário"].find_children("*", "Button", true, false).map(func(b): return b.text)
 	assert_false(nomes.has("Percepção"), "perícia já treinada não aparece no treinamento")
 	assert_true(nomes.has("Crime"))
 	d.ficha.treinamentos = [["crime", "tatica"]]

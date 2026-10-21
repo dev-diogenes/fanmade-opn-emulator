@@ -2,9 +2,9 @@ class_name CameraRig
 extends Node3D
 ## Câmera estilo For The King: olha o tabuleiro de cima, em ângulo; gira, aproxima e desliza.
 ## A cena de UI chama os métodos (girar, zoom, deslizar) a partir dos eventos de entrada.
-## Modos (docs/13, tecla C): "terceira" (de cima, como no FTK), "segunda" (na frente do
-## agente da vez, olhando para ele) e "primeira" (dos olhos do agente). Os dois últimos
-## precisam de `seguir` (a figura do agente da vez).
+## Modos (docs/13, tecla C; revistos no docs/30): "terceira" (de cima, como no FTK),
+## "segunda" (por cima do ombro, um pouco atrás do agente da vez) e "primeira" (dos olhos
+## do agente, para onde ele está virado). Os dois últimos precisam de `seguir` (a figura).
 
 const MODOS := ["terceira", "segunda", "primeira"]
 const NOMES_MODOS := {"terceira": "3ª pessoa", "segunda": "2ª pessoa", "primeira": "1ª pessoa"}
@@ -28,16 +28,19 @@ var seguir: Node3D:
 		if seguir != null and is_instance_valid(seguir):
 			seguir.visible = true
 		seguir = v
+		_ultima_frente = Vector3.ZERO   # a próxima atualização vira para onde a figura olha
 		_atualizar_visibilidade()
-		_virar_para_o_centro()
-var olhar := -0.32          ## inclinação do olhar em 1ª pessoa (radianos)
-var altura_olhos := 0.7
-## Ajustes da 1ª pessoa por cena. No mapa (maquete), a miniatura é pequena perto dos hexes:
-## o olho sobe, recua um pouco e abre o campo de visão para enxergar o caminho (docs/19).
-var recuo_primeira := 0.0
-var fov_primeira := 55.0
-## Para onde a 1ª e a 2ª pessoa se viram ao trocar de agente ou de modo (null = não vira).
-var centro_olhar: Variant = null
+var olhar := -0.15          ## inclinação do olhar em 1ª pessoa (radianos; negativo = para baixo)
+## Altura dos olhos da miniatura acima da base. A cena ajusta pela escala das figuras
+## (medido nos modelos: ~0,66 da escala; docs/30).
+var altura_olhos := 0.66
+## Quanto o olho fica à frente do eixo da figura (a frente do rosto).
+var avanco_primeira := 0.18
+var fov_primeira := 70.0
+var _ultima_frente := Vector3.ZERO
+## Acompanhar a figura quando ela se vira. Na investigação, quem anda é o WASD relativo à
+## câmera: acompanhar a virada faria a câmera girar sem parar ao andar de lado.
+var acompanhar_virada := true
 
 var _alvo_atual := Vector3.ZERO
 var _distancia_atual := 10.0
@@ -63,17 +66,22 @@ func _process(delta: float) -> void:
 
 func _aplicar() -> void:
 	if modo != "terceira" and seguir != null and is_instance_valid(seguir) and seguir.is_inside_tree():
+		_seguir_a_frente_da_figura()
 		var cabeca := to_local(seguir.global_position) + Vector3(0, altura_olhos, 0)
+		var adiante := Vector3(-sin(giro), 0, -cos(giro))
 		if modo == "primeira":
+			# Nos olhos, logo à frente do rosto, vendo o que o agente vê
 			var frente := Vector3(-sin(giro) * cos(olhar), sin(olhar), -cos(giro) * cos(olhar))
 			camera.fov = fov_primeira
-			camera.position = cabeca - Vector3(-sin(giro), 0, -cos(giro)) * recuo_primeira
+			camera.position = cabeca + adiante * avanco_primeira
 			camera.look_at(camera.position + frente, Vector3.UP)
 		else:
-			var d := clampf(_distancia_atual * 0.3, 1.6, 4.0)
-			camera.fov = 55.0
-			camera.position = cabeca + Vector3(-sin(giro), 0.35, -cos(giro)) * d
-			camera.look_at(cabeca, Vector3.UP)
+			# Por cima do ombro: atrás, um pouco acima e de lado, olhando adiante do agente
+			var d := clampf(_distancia_atual * 0.2, 1.2, 3.5)
+			var direita := Vector3(cos(giro), 0, -sin(giro))
+			camera.fov = 60.0
+			camera.position = cabeca - adiante * d + Vector3.UP * (0.45 * d) + direita * (0.3 * d)
+			camera.look_at(cabeca + adiante * (1.5 * d), Vector3.UP)
 		return
 	camera.fov = 55.0
 	var dir := Vector3(sin(giro) * cos(inclinacao), sin(inclinacao), cos(giro) * cos(inclinacao))
@@ -90,18 +98,23 @@ func proximo_modo() -> String:
 func definir_modo(novo: String) -> void:
 	modo = novo if novo in MODOS else "terceira"
 	Preferencias.definir_camera(modo)
+	_ultima_frente = Vector3.ZERO
 	_atualizar_visibilidade()
-	_virar_para_o_centro()
 	modo_mudou.emit(modo)
 
 
-## Nos modos próximos, começa olhando do agente para o centro (no mapa: o território, não a borda).
-func _virar_para_o_centro() -> void:
-	if modo == "terceira" or centro_olhar == null or seguir == null or not is_instance_valid(seguir):
+## Na 1ª e na 2ª pessoa, a câmera vira para onde a figura está virada: ao trocar de agente
+## ou de modo e sempre que a figura se vira (anda). Entre um passo e outro, o botão direito
+## continua girando a visão. As figuras olham para +Z do modelo (look_at com use_model_front).
+func _seguir_a_frente_da_figura() -> void:
+	var z := seguir.global_transform.basis.z
+	z.y = 0.0
+	if z.length() < 0.01:
 		return
-	var d: Vector3 = (centro_olhar as Vector3) - seguir.position
-	if Vector2(d.x, d.z).length() > 0.5:
-		giro = atan2(-d.x, -d.z)
+	z = z.normalized()
+	if _ultima_frente == Vector3.ZERO or (acompanhar_virada and _ultima_frente.dot(z) < 0.999):
+		giro = atan2(-z.x, -z.z)
+		_ultima_frente = z
 
 
 ## Em 1ª pessoa, a figura do próprio agente some (a câmera está dentro dela).

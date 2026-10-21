@@ -21,10 +21,10 @@ func test_faixa_pela_idade():
 func test_conceito_e_idade_no_primeiro_passo():
 	var c := Carreira.nova()
 	var d := CriacaoDossie.abrir(self, c)
-	assert_eq(d._abas.get_tab_title(0), "Conceito")
+	assert_eq(d._abas.get_tab_title(0), "Agente", "a ficha começa pelo conceito (①), na página Agente")
 	assert_not_null(d._idade, "a idade fica no conceito")
 	assert_eq(int(d.ficha.idade_anos), 22)
-	assert_true(d._campos_descricao.has("conceito") and d._campos_descricao.has("genero"))
+	assert_true(d._campos_descricao.has("conceito"), "o conceito fica na página Agente")
 	# Sem a regra opcional, a idade não muda nada
 	d._idade.value = 70
 	assert_eq(String(d.ficha.idade), "")
@@ -37,6 +37,8 @@ func test_conceito_e_idade_no_primeiro_passo():
 	d._idade.value = 22
 	assert_eq(String(d.ficha.idade), "jovem")
 	assert_eq(int(d.ficha.nex), 5)
+	d._abas.current_tab = CriacaoDossie.PASSOS.find("Habilidades e inventário")
+	assert_true(d._campos_descricao.has("genero"), "o gênero, na descrição (página 2)")
 	d.free()
 
 
@@ -68,9 +70,9 @@ func test_adolescente_escolhe_beneficios_da_origem():
 	d.idade_variada = true
 	d._idade.value = 15
 	assert_eq(String(d.ficha.idade), "adolescente")
-	d._abas.current_tab = CriacaoDossie.PASSOS.find("Origem")
-	var textos: Array = d._paginas["Origem"].find_children("*", "Label", true, false).map(func(l): return l.text)
-	assert_true(textos.any(func(t): return t.begins_with("BENEFÍCIOS DA ORIGEM")), "a escolha da p.182 aparece")
+	d._redesenhar()
+	var textos: Array = d._paginas["Agente"].find_children("*", "Label", true, false).map(func(l): return l.text)
+	assert_true(textos.any(func(t): return t.begins_with("Benefícios da origem")), "a escolha da p.182 aparece")
 	d.free()
 
 

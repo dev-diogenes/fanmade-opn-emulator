@@ -2,6 +2,11 @@ class_name CartaoAgente
 extends PanelContainer
 ## Retrato de um agente do grupo, fixo sobre o 3D como no FTK2 (docs/08, R3):
 ## nome, classe, PV, PE e SAN em barras; borda dourada na vez; apagado quando caído.
+## Na vez do agente (docs/30), o retrato cresce: mais largo, nome e barras maiores e um brilho
+## dourado, para ver de relance quem age.
+
+const LARGURA := 176.0
+const LARGURA_VEZ := 222.0
 
 ## Clique no retrato: abre a ficha e o inventário (DossieAgente).
 signal escolhido(agente: Agente)
@@ -15,6 +20,8 @@ var _barras: Dictionary = {}   ## "pv" | "pe" | "san" -> ProgressBar
 var _estilo: StyleBoxFlat
 var _tremer := false
 var _t := 0.0
+var da_vez_atual := false
+var _crescendo: Tween
 
 
 static func criar(p_agente: Agente, p_cor: Color) -> CartaoAgente:
@@ -26,7 +33,7 @@ static func criar(p_agente: Agente, p_cor: Color) -> CartaoAgente:
 
 
 func _montar() -> void:
-	custom_minimum_size = Vector2(176, 0)
+	custom_minimum_size = Vector2(LARGURA, 0)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	tooltip_text = Atalhos.com_tecla("Ficha e inventário", "ficha")
@@ -96,11 +103,34 @@ func atualizar(da_vez: bool) -> void:
 	_valor("san", agente.san, agente.san_maximo)
 	_estilo.border_color = Tema.OURO_CLARO if da_vez else Tema.OURO_ESCURO
 	_estilo.border_width_left = 5
+	_estilo.shadow_color = Color(Tema.OURO_CLARO, 0.35) if da_vez else Color(0, 0, 0, 0.5)
+	_estilo.shadow_size = 12 if da_vez else 6
 	# A faixa da esquerda é a cor do jogador (a mesma da base da figura no 3D)
 	modulate = Color(1, 1, 1, 0.5) if caido else Color.WHITE
-	scale = Vector2.ONE * (1.04 if da_vez else 1.0)
-	pivot_offset = size / 2.0
+	_crescer(da_vez)
 	queue_redraw()
+
+
+## O retrato da vez cresce (largura animada; textos e barras maiores na hora).
+func _crescer(da_vez: bool) -> void:
+	if da_vez == da_vez_atual and _crescendo == null:
+		return
+	da_vez_atual = da_vez
+	_nome.add_theme_font_size_override("font_size", Tema.FONTE_G if da_vez else Tema.FONTE_M)
+	for chave in _barras:
+		var b: ProgressBar = _barras[chave].barra
+		b.custom_minimum_size.y = 18 if da_vez else 14
+		(_barras[chave].numero as Label).add_theme_font_size_override("font_size", Tema.FONTE_P + (2 if da_vez else 0))
+		(_barras[chave].titulo as Label).add_theme_font_size_override("font_size", Tema.FONTE_P + (1 if da_vez else 0))
+	if _crescendo != null:
+		_crescendo.kill()
+	var alvo := Vector2(LARGURA_VEZ if da_vez else LARGURA, 0)
+	if not is_inside_tree():
+		custom_minimum_size = alvo
+		return
+	_crescendo = create_tween()
+	_crescendo.tween_property(self, "custom_minimum_size", alvo, 0.18).set_trans(Tween.TRANS_SINE)
+	_crescendo.tween_callback(func(): _crescendo = null)
 
 
 func _valor(chave: String, atual: int, maximo: int) -> void:

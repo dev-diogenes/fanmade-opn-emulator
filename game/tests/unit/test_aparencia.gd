@@ -78,7 +78,7 @@ func test_cartas_com_texto_maior():
 	assert_true(tamanhos.all(func(t): return t >= 14), "nada abaixo de 14 px: %s" % [tamanhos])
 
 
-func test_primeira_pessoa_vira_para_o_centro_e_esconde_vizinhos():
+func test_primeira_pessoa_olha_para_onde_a_figura_olha():
 	var antes := Preferencias.caminho
 	Preferencias.caminho = "user://teste_preferencias_primeira.json"
 	var rig := CameraRig.new()
@@ -86,11 +86,37 @@ func test_primeira_pessoa_vira_para_o_centro_e_esconde_vizinhos():
 	var fig := Node3D.new()
 	fig.position = Vector3(5, 0, 0)
 	add_child_autofree(fig)
-	rig.centro_olhar = Vector3.ZERO
+	fig.look_at(Vector3(0, 0, 0), Vector3.UP, true)   # virada para -X
 	rig.seguir = fig
 	rig.definir_modo("primeira")
+	await wait_frames(2)
 	var frente := Vector3(-sin(rig.giro), 0, -cos(rig.giro))
-	assert_almost_eq(frente.x, -1.0, 0.01, "olha do agente para o centro do mapa")
+	assert_almost_eq(frente.x, -1.0, 0.01, "vê para onde a figura está virada")
+	var olho := rig.to_global(rig.camera.position)
+	assert_almost_eq(olho.y, rig.altura_olhos, 0.01, "na altura dos olhos")
+	assert_lt(olho.x, 5.0, "logo à frente do rosto, não atrás")
+	assert_gt(olho.x, 4.5, "e não no hex da frente")
+	# 2ª pessoa: atrás do agente e acima da cabeça
+	rig.definir_modo("segunda")
+	await wait_frames(2)
+	var ombro := rig.to_global(rig.camera.position)
+	assert_gt(ombro.x, 5.0, "atrás do agente")
+	assert_gt(ombro.y, rig.altura_olhos, "um pouco acima")
 	rig.definir_modo("terceira")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Preferencias.caminho))
 	Preferencias.caminho = antes
+
+
+func test_retrato_da_vez_cresce():
+	var rs := RulesetOp2022.carregar_padrao()
+	var a := Agente.criar(rs, "Mauro", "combatente", {"agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 2})
+	var c := CartaoAgente.criar(a, Tema.CORES_JOGADORES[0])
+	add_child_autofree(c)
+	assert_eq(c.custom_minimum_size.x, CartaoAgente.LARGURA)
+	c.atualizar(true)
+	await wait_seconds(0.3)
+	assert_eq(c.custom_minimum_size.x, CartaoAgente.LARGURA_VEZ, "na vez, mais largo")
+	assert_eq(c._nome.get_theme_font_size("font_size"), Tema.FONTE_G, "nome maior")
+	c.atualizar(false)
+	await wait_seconds(0.3)
+	assert_eq(c.custom_minimum_size.x, CartaoAgente.LARGURA, "volta ao tamanho normal")

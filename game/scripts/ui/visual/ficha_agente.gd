@@ -239,37 +239,42 @@ func _montar_agente() -> Control:
 	esq.add_child(defesa)
 	# Ataques
 	esq.add_child(aba("Ataques"))
-	var g := _grade(4, 14)
-	for cab in ["ATAQUE", "TESTE", "DANO", "CRÍTICO / ALCANCE / ESPECIAL"]:
-		g.add_child(_texto(cab, Tema.FONTE_P, Color(Tema.TINTA, 0.75), false))
-	for arma in _armas():
-		var per := String(arma.get("pericia", "luta"))
-		var dados := agente.dados_da_pericia(per)
-		var dano := String(arma.get("dano", "—"))
-		if arma.get("soma_forca", false) and agente.atributo("for") != 0:
-			dano += "%+d" % agente.atributo("for")
-		var especial := PackedStringArray(["%d/x%d" % [int(arma.get("margem", 20)), int(arma.get("multiplicador", 2))]])
-		especial.append("corpo a corpo" if String(arma.get("ataque", "corpo_a_corpo")) == "corpo_a_corpo" else String(arma.get("alcance", "curto")))
-		if arma.has("tipo_dano"):
-			especial.append(String(arma.tipo_dano))
-		g.add_child(_texto(String(arma.get("nome", "?")) + ("  ✦" if String(arma.get("id", "")) == agente.arma_id else "")))
-		g.add_child(_texto(LinhaTeste.dados(dados, agente.bonus_pericia(per))))
-		g.add_child(_texto(dano))
-		g.add_child(_texto(" · ".join(especial)))
-	esq.add_child(g)
+	esq.add_child(grade_ataques(agente))
 	esq.add_child(_texto("✦ arma empunhada", Tema.FONTE_P, Color(Tema.TINTA, 0.75)))
 	raiz.add_child(_tabela_pericias())
 	return raiz
 
 
-func _armas() -> Array:
+## A tabela de ataques da página 1 (também usada na criação, docs/30).
+static func grade_ataques(a: Agente) -> GridContainer:
+	var g := _grade(4, 14)
+	for cab in ["ATAQUE", "TESTE", "DANO", "CRÍTICO / ALCANCE / ESPECIAL"]:
+		g.add_child(_texto(cab, Tema.FONTE_P, Color(Tema.TINTA, 0.75), false))
+	for arma in armas_de(a):
+		var per := String(arma.get("pericia", "luta"))
+		var dados := a.dados_da_pericia(per)
+		var dano := String(arma.get("dano", "—"))
+		if arma.get("soma_forca", false) and a.atributo("for") != 0:
+			dano += "%+d" % a.atributo("for")
+		var especial := PackedStringArray(["%d/x%d" % [int(arma.get("margem", 20)), int(arma.get("multiplicador", 2))]])
+		especial.append("corpo a corpo" if String(arma.get("ataque", "corpo_a_corpo")) == "corpo_a_corpo" else String(arma.get("alcance", "curto")))
+		if arma.has("tipo_dano"):
+			especial.append(String(arma.tipo_dano))
+		g.add_child(_texto(String(arma.get("nome", "?")) + ("  ✦" if String(arma.get("id", "")) == a.arma_id else "")))
+		g.add_child(_texto(LinhaTeste.dados(dados, a.bonus_pericia(per))))
+		g.add_child(_texto(dano))
+		g.add_child(_texto(" · ".join(especial)))
+	return g
+
+
+static func armas_de(a: Agente) -> Array:
 	var lista: Array = []
-	for item_id in agente.equipamento:
-		var e := agente.ruleset.equipamento(item_id)
+	for item_id in a.equipamento:
+		var e := a.ruleset.equipamento(item_id)
 		if e.get("tipo", "") == "arma" and not lista.any(func(x): return x.get("id", "") == item_id):
 			lista.append(e)
 	if lista.is_empty():
-		lista.append(agente.ruleset.arma("desarmado"))
+		lista.append(a.ruleset.arma("desarmado"))
 	return lista
 
 

@@ -105,6 +105,9 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 	rig.distancia_max = 13.0
 	rig.limites = AABB(Vector3(-4, 0, -4), Vector3(8, 0, 8))
 	rig.focar(Vector3.ZERO, true)
+	rig.altura_olhos = 0.6   # figuras em escala 0,9 (docs/30)
+	rig.avanco_primeira = 0.16
+	rig.acompanhar_virada = false   # o WASD já anda relativo à câmera
 
 
 func _sigilo_no_chao(semente: int, cor: Color) -> MeshInstance3D:

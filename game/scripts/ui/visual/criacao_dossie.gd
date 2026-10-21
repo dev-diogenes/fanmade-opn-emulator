@@ -1,8 +1,9 @@
 class_name CriacaoDossie
 extends CanvasLayer
-## Criação de agente como um dossiê (docs/17, E2), na ordem do passo a passo do livro (p.23;
-## docs/27): conceito, atributos, origem, classe, perícias, rituais (ocultista), descrição
-## (toques finais, p.46-47) e a revisão da ficha, numa pasta de papel. A ficha é validada a cada mudança
+## Criação de agente preenchendo a própria ficha (docs/30): as mesmas páginas da ficha do
+## jogo (Agente; Habilidades e inventário; Rituais), editáveis. Os blocos levam os números do
+## passo a passo do livro (p.23): ① conceito, ② atributos, ③ origem, ④ classe, ⑤ perícias;
+## os toques finais (p.46-47) ficam na descrição. A ficha se calcula enquanto é preenchida. A ficha é validada a cada mudança
 ## por CriacaoAgente; "Assinar e arquivar" só fica liberado sem erros. Ao lado das abas, a
 ## foto 3x4 presa com clipe (docs/19): aparência e tom da roupa, que valem para a miniatura.
 ##   CriacaoDossie.abrir(self, carreira, func(agente): ...)
@@ -11,7 +12,8 @@ signal criado(agente: Agente)
 
 const CLASSES := ["combatente", "especialista", "ocultista"]
 ## Os passos do livro (p.23), mais a descrição dos toques finais (p.46-47).
-const PASSOS := ["Conceito", "Atributos", "Origem", "Classe", "Perícias", "Rituais", "Descrição", "Revisão"]
+const PASSOS := ["Agente", "Habilidades e inventário", "Rituais"]
+const NUMEROS := ["①", "②", "③", "④", "⑤"]
 const ATRIBUTOS := ["agi", "for", "int", "pre", "vig"]
 const NOMES_ATRIBUTOS := {"agi": "Agilidade", "for": "Força", "int": "Intelecto", "pre": "Presença", "vig": "Vigor"}
 
@@ -36,6 +38,7 @@ var _idade: SpinBox
 ## Campos da descrição (docs/26): reaproveitados entre redesenhos, como o nome.
 var _campos_descricao: Dictionary = {}   ## "personalidade" | "historico" | "objetivo" -> LineEdit/TextEdit
 var _foto: FotoAgente
+var _bloco_foto: HBoxContainer
 var _lbl_aparencia: Label
 
 
@@ -64,7 +67,7 @@ func _montar() -> void:
 	centro.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(centro)
 	var pasta := VBoxContainer.new()
-	pasta.custom_minimum_size = Vector2(980, 600)
+	pasta.custom_minimum_size = Vector2(1180, 620)
 	pasta.add_theme_constant_override("separation", 6)
 	centro.add_child(pasta)
 	var cab := HBoxContainer.new()
@@ -85,10 +88,10 @@ func _montar() -> void:
 	_abas = TabContainer.new()
 	_abas.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_abas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_abas.custom_minimum_size = Vector2(900, 0)
+	_abas.custom_minimum_size = Vector2(1180, 0)
 	_abas.add_theme_font_size_override("font_size", Tema.FONTE_M - 1)   # os oito passos do livro cabem   # a pasta não muda de largura entre as abas
 	meio.add_child(_abas)
-	meio.add_child(_coluna_foto())
+	_montar_foto()
 	for nome in PASSOS:
 		var papel := PanelContainer.new()
 		papel.name = nome
@@ -154,77 +157,61 @@ func _redesenhar() -> void:
 	_assinar.tooltip_text = "" if erros.is_empty() else "Bloqueado: " + "; ".join(PackedStringArray(erros))
 	var pagina := _abas.get_tab_title(_abas.current_tab)
 	var v: VBoxContainer = _paginas[pagina]
-	if _idade != null and _idade.get_parent() != null:
-		_idade.get_parent().remove_child(_idade)   # a idade mora numa linha que é refeita
+	# Campos de texto e a foto são reaproveitados (mantêm o cursor e não refazem o retrato)
+	for c in [_nome, _idade, _bloco_foto] + _campos_descricao.values():
+		if c != null and c.get_parent() != null:
+			c.get_parent().remove_child(c)
 	for filho in v.get_children():
-		if filho == _nome or filho == _idade or filho in _campos_descricao.values():
-			v.remove_child(filho)   # campos de texto são reaproveitados (mantêm o cursor)
-			continue
 		filho.visible = false
 		filho.queue_free()
 	_atualizar_foto()
 	match pagina:
-		"Conceito": _pagina_conceito(v)
-		"Origem": _pagina_origem(v)
-		"Classe": _pagina_classe(v)
-		"Atributos": _pagina_atributos(v)
-		"Perícias": _pagina_pericias(v)
+		"Agente": _pagina_agente(v, res)
+		"Habilidades e inventário": _pagina_habilidades(v, res)
 		"Rituais": _pagina_rituais(v)
-		"Descrição": _pagina_descricao(v)
-		"Revisão": _pagina_revisao(v, res, erros)
 
 
 # --- Foto 3x4 (docs/19) --------------------------------------------------------------
 
-func _coluna_foto() -> Control:
-	var caixa := VBoxContainer.new()
-	var vao := Control.new()
-	vao.custom_minimum_size = Vector2(0, 38)   # alinha com o papel, abaixo das abas
-	caixa.add_child(vao)
-	var painel := PanelContainer.new()
-	painel.theme_type_variation = "PainelLateral"
-	painel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	caixa.add_child(painel)
-	var col := VBoxContainer.new()
-	col.custom_minimum_size = Vector2(176, 0)
-	col.add_theme_constant_override("separation", 6)
-	painel.add_child(col)
-	var topo := Control.new()
-	topo.custom_minimum_size = Vector2(0, 8)   # espaço para o clipe
-	col.add_child(topo)
+## A foto 3x4 e os botões de aparência: criados uma vez, colocados na descrição (página 2).
+func _montar_foto() -> void:
+	_bloco_foto = HBoxContainer.new()
+	_bloco_foto.add_theme_constant_override("separation", 12)
 	_foto = FotoAgente.new()
-	_foto.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	col.add_child(_foto)
+	_foto.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_bloco_foto.add_child(_foto)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	_bloco_foto.add_child(col)
 	_lbl_aparencia = Label.new()
-	_lbl_aparencia.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_lbl_aparencia.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+	_lbl_aparencia.add_theme_color_override("font_color", Tema.TINTA)
 	col.add_child(_lbl_aparencia)
 	var linha := HBoxContainer.new()
-	linha.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_child(linha)
 	for par in [["◂", -1], ["▸", 1]]:
 		var b := Button.new()
 		b.text = par[0]
+		b.theme_type_variation = "BotaoPapel"
 		b.tooltip_text = "Outra aparência (vale para a miniatura no mapa e no combate)"
 		b.pressed.connect(_trocar_aparencia.bind(par[1]))
 		linha.add_child(b)
 		if par[1] < 0:
 			var l := Label.new()
-			l.text = "Aparência"
+			l.text = " Modelo "
+			l.add_theme_color_override("font_color", Tema.TINTA)
 			linha.add_child(l)
 	var tom := Button.new()
 	tom.text = "Tom da roupa"
+	tom.theme_type_variation = "BotaoPapel"
 	tom.tooltip_text = "Original, sépia, noite ou luto"
 	tom.pressed.connect(_trocar_tom.bind(1))
 	col.add_child(tom)
 	var nota := Label.new()
 	nota.text = "A foto vale para a miniatura no mapa, no combate e na investigação."
 	nota.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	nota.custom_minimum_size = Vector2(176, 0)
-	nota.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
-	nota.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	nota.custom_minimum_size = Vector2(220, 0)
+	nota.add_theme_color_override("font_color", Color(Tema.TINTA, 0.75))
 	col.add_child(nota)
-	return caixa
 
 
 func _trocar_aparencia(passo: int) -> void:
@@ -305,27 +292,23 @@ func _nome_pericia(p: String) -> String:
 
 ## Passo 1 (p.23-24): quem é o agente, numa frase. Nome, gênero e idade são dos toques
 ## finais (p.46-47), mas a idade vem primeiro: com a regra opcional, ela muda os atributos.
-func _pagina_conceito(v: VBoxContainer) -> void:
-	_titulo(v, "Conceito")
-	_nota(v, "Antes dos números, a ideia: o que o agente fazia antes de topar com o paranormal, que evento causou esse primeiro contato, o quanto ele sabe do Outro Lado e como age numa investigação e numa briga. Resuma numa frase.")
-	_rotulo(v, "Nome")
+## Garante o campo do nome (reaproveitado entre redesenhos).
+func _campo_nome() -> LineEdit:
 	if _nome == null:
 		_nome = LineEdit.new()
-		_nome.placeholder_text = "Nome do agente (de preferência, coerente com a nacionalidade)"
-		_nome.custom_minimum_size = Vector2(360, 0)
+		_nome.placeholder_text = "Nome do agente (coerente com a nacionalidade)"
 		_nome.max_length = 24
 		_nome.text_changed.connect(func(t):
 			ficha.nome = t
-			_foto.legenda = String(t).strip_edges()
+			if _foto != null:
+				_foto.legenda = String(t).strip_edges()
 			var res := _validar()
 			_assinar.disabled = String(t).strip_edges() == "" or not res.erros.is_empty())
-	v.add_child(_nome)
-	for c in CAMPOS_CONCEITO:
-		_campo_texto(v, c)
-	_rotulo(v, "Idade")
-	var linha := HBoxContainer.new()
-	linha.add_theme_constant_override("separation", 10)
-	v.add_child(linha)
+	_nome.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return _nome
+
+
+func _campo_idade() -> SpinBox:
 	if _idade == null:
 		_idade = SpinBox.new()
 		_idade.min_value = 9
@@ -338,32 +321,459 @@ func _pagina_conceito(v: VBoxContainer) -> void:
 			if idade_variada:
 				_aplicar_faixa()
 				_redesenhar())
-	linha.add_child(_idade)
+	return _idade
+
+
+## Selo com o número do passo do livro (p.23) e o rótulo preto da ficha.
+func _cabeca(numero: int, texto: String) -> HBoxContainer:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 4)
+	if numero > 0:
+		var n := Label.new()
+		n.text = NUMEROS[numero - 1]
+		n.add_theme_color_override("font_color", Tema.SANGUE)
+		n.add_theme_font_size_override("font_size", Tema.FONTE_G)
+		n.tooltip_text = "Passo %d do livro (p.23)" % numero
+		n.mouse_filter = Control.MOUSE_FILTER_PASS
+		h.add_child(n)
+	var a := FichaAgente.aba(texto)
+	a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(a)
+	return h
+
+
+## Linha de formulário: rótulo preto e um controle à direita.
+func _linha_campo(rotulo: String, controle: Control) -> HBoxContainer:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 6)
+	h.add_child(FichaAgente.aba(rotulo))
+	controle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(controle)
+	return h
+
+
+## O agente como ficaria: o da validação (com o kit) quando a ficha fecha; senão, null.
+func _previa(res: Dictionary) -> Agente:
+	var a: Agente = res.agente
+	if a == null:
+		return null
+	a.nome = String(ficha.nome).strip_edges()
+	var kit := carreira.kit_da_classe(String(ficha.classe))
+	for item in kit.get("equipamento", []):
+		a.equipamento.append(item)
+	a.arma_id = String(kit.get("arma", ""))
+	return a
+
+
+## Página 1 — Agente (docs/30): a ficha oficial preenchida na hora.
+func _pagina_agente(v: VBoxContainer, res: Dictionary) -> void:
+	var previa := _previa(res)
+	var raiz := HFlowContainer.new()
+	raiz.add_theme_constant_override("h_separation", 18)
+	raiz.add_theme_constant_override("v_separation", 14)
+	v.add_child(raiz)
+	var esq := VBoxContainer.new()
+	esq.custom_minimum_size = Vector2(570, 0)
+	esq.add_theme_constant_override("separation", 7)
+	raiz.add_child(esq)
+	_nota(esq, "Preencha na ordem dos números, como no passo a passo do livro. O rodapé diz o que falta.")
+	# ① Conceito
+	esq.add_child(_cabeca(1, "Conceito"))
+	esq.add_child(_linha_campo("Personagem", _campo_nome()))
+	_campo_linha(esq, CAMPOS_CONCEITO[0])
+	var linha_idade := HBoxContainer.new()
+	linha_idade.add_theme_constant_override("separation", 6)
+	linha_idade.add_child(FichaAgente.aba("Idade"))
+	linha_idade.add_child(_campo_idade())
 	var rolar := Button.new()
-	rolar.text = "Rolar 2d6+15"
+	rolar.text = "2d6+15"
 	rolar.theme_type_variation = "BotaoPapel"
 	rolar.tooltip_text = "Sem idade em mente? O livro sugere 2d6+15 (17 a 27 anos), ou a idade que combine com a origem."
 	rolar.pressed.connect(func(): _idade.value = 15 + randi_range(1, 6) + randi_range(1, 6))
-	linha.add_child(rolar)
+	linha_idade.add_child(rolar)
 	var regra := CheckBox.new()
-	regra.text = "Regra opcional: idade variada"
-	regra.tooltip_text = "Com esta regra, a faixa etária muda o jogo: crianças e adolescentes têm atributos limitados e parte dos benefícios da origem; adultos ganham um poder; maduros e idosos começam com NEX maior e carregam desvantagens. Combine com a mesa."
+	regra.text = "Idade variada (regra opcional)"
+	regra.tooltip_text = "A faixa etária muda o jogo: crianças e adolescentes têm atributos limitados e parte dos benefícios da origem; adultos ganham um poder; maduros e idosos começam com NEX maior e carregam desvantagens. Combine com a mesa."
 	regra.button_pressed = idade_variada
 	regra.toggled.connect(func(on):
 		idade_variada = on
 		_aplicar_faixa()
 		_redesenhar())
-	v.add_child(regra)
-	if idade_variada and String(ficha.idade) != "":
-		var faixa := rs.faixa_idade(String(ficha.idade))
-		_nota(v, "Faixa: %s (%s) — %s" % [faixa.nome, faixa.get("idade", ""), faixa.get("habilidade", {}).get("descricao", "")])
-		var n := int(faixa.get("desvantagens", 0))
-		if n > 0:
-			_nota(v, "Escolha %d desvantage%s de idade (%d/%d):" % [n, "m" if n == 1 else "ns", (ficha.desvantagens_idade as Array).size(), n])
-			var g := _grade(v, 3)
-			for dv in rs.dados.idades.desvantagens:
-				_opcao(g, String(dv.nome), String(dv.id) in ficha.desvantagens_idade, func():
-					_alternar(ficha.desvantagens_idade, String(dv.id), n), String(dv.get("descricao", "")))
+	linha_idade.add_child(regra)
+	esq.add_child(linha_idade)
+	_detalhes_idade(esq)
+	# ② Atributos ao lado de ③ origem e ④ classe
+	var meio := HBoxContainer.new()
+	meio.add_theme_constant_override("separation", 12)
+	esq.add_child(meio)
+	var col_attr := VBoxContainer.new()
+	col_attr.add_child(_cabeca(2, "Atributos"))
+	col_attr.add_child(_pentagono_editavel())
+	meio.add_child(col_attr)
+	var ident := VBoxContainer.new()
+	ident.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ident.add_theme_constant_override("separation", 6)
+	meio.add_child(ident)
+	ident.add_child(_cabeca(3, "Origem"))
+	ident.add_child(_lista_origens())
+	var origem := rs.origem(String(ficha.origem))
+	var poder := _nota(ident, "Poder: %s — %s" % [origem.get("poder", {}).get("nome", "—"), origem.get("poder", {}).get("descricao", "")])
+	poder.custom_minimum_size = Vector2(300, 0)
+	_beneficios_origem(ident)
+	ident.add_child(_cabeca(4, "Classe"))
+	ident.add_child(_lista_classes())
+	var c := rs.classe(String(ficha.classe))
+	_nota(ident, "PV %d + VIG · PE %d + PRE · SAN %d" % [int(c.pv.inicial), int(c.pe.inicial), int(c.san.inicial)])
+	if int(ficha.nex) >= 10:
+		ident.add_child(_linha_campo("Trilha", _lista_trilhas()))
+	var nums := HBoxContainer.new()
+	nums.add_theme_constant_override("separation", 8)
+	nums.add_child(FichaAgente.campo("NEX", "%d%%" % int(ficha.nex), 40))
+	nums.add_child(FichaAgente.campo("PE/rodada", str(rs.limite_pe(int(ficha.nex))), 24))
+	nums.add_child(FichaAgente.campo("Desl.", "9 m" if previa == null else "%d m" % int(previa.deslocamento_m()), 40))
+	ident.add_child(nums)
+	# PV, PE, SAN e Defesa: a conta do livro (p.46), ao vivo
+	var vig := int(ficha.atributos.vig)
+	var pre := int(ficha.atributos.pre)
+	var pv := previa.pv_maximo if previa != null else int(c.pv.inicial) + vig
+	var pe := previa.pe_maximo if previa != null else int(c.pe.inicial) + pre
+	var san := previa.san_maximo if previa != null else int(c.san.inicial)
+	var status := HBoxContainer.new()
+	status.add_theme_constant_override("separation", 10)
+	status.add_child(FichaAgente.caixa_status("PV", "Pontos de vida", pv, pv, Tema.SANGUE))
+	status.add_child(FichaAgente.caixa_status("PE", "Pontos de esforço", pe, pe, Tema.ELEMENTO.energia.darkened(0.3)))
+	status.add_child(FichaAgente.caixa_status("SAN", "Sanidade", san, san, Color("2f6f7a")))
+	esq.add_child(status)
+	var agi := int(ficha.atributos.agi)
+	var defesa := previa.defesa() if previa != null else 10 + agi
+	_nota(esq, "Defesa %d = 10 + %d AGI%s · PV %d = %d + %d VIG · PE %d = %d + %d PRE · SAN %d (classe)" % [defesa, agi,
+		"" if defesa == 10 + agi else " e modificadores", pv, int(c.pv.inicial), vig, pe, int(c.pe.inicial), pre, san])
+	esq.add_child(FichaAgente.aba("Ataques"))
+	if previa != null:
+		esq.add_child(FichaAgente.grade_ataques(previa))
+	else:
+		var kit := carreira.kit_da_classe(String(ficha.classe))
+		_nota(esq, "Com a arma do kit (%s), os números aparecem quando a ficha fechar." % rs.equipamento(String(kit.get("arma", "desarmado"))).get("nome", "desarmado"))
+	# ⑤ Perícias, como a tabela da ficha
+	raiz.add_child(_tabela_pericias_criacao())
+
+
+## Campo de uma linha com rótulo preto (conceito), reaproveitado entre redesenhos.
+func _campo_linha(v: Control, c: Array) -> void:
+	var id: String = c[0]
+	if not _campos_descricao.has(id):
+		var le := LineEdit.new()
+		le.max_length = Carreira.LIMITE_DESCRICAO[id]
+		le.placeholder_text = c[2]
+		le.text_changed.connect(func(t): ficha[id] = t)
+		le.tooltip_text = "Até %d caracteres." % le.max_length
+		_campos_descricao[id] = le
+	v.add_child(_linha_campo(c[1], _campos_descricao[id]))
+
+
+## Faixa e desvantagens da idade variada (p.182).
+func _detalhes_idade(v: Control) -> void:
+	if not idade_variada or String(ficha.idade) == "":
+		return
+	var faixa := rs.faixa_idade(String(ficha.idade))
+	_nota(v, "Faixa: %s (%s) — %s" % [faixa.nome, faixa.get("idade", ""), faixa.get("habilidade", {}).get("descricao", "")])
+	var n := int(faixa.get("desvantagens", 0))
+	if n > 0:
+		_nota(v, "Escolha %d desvantage%s de idade (%d/%d):" % [n, "m" if n == 1 else "ns", (ficha.desvantagens_idade as Array).size(), n])
+		var g := _grade(v, 3)
+		for dv in rs.dados.idades.desvantagens:
+			_opcao(g, String(dv.nome), String(dv.id) in ficha.desvantagens_idade, func():
+				_alternar(ficha.desvantagens_idade, String(dv.id), n), String(dv.get("descricao", "")))
+
+
+## ② Os atributos no pentágono da ficha, com − e + em volta de cada círculo (p.24).
+func _pentagono_editavel() -> Control:
+	var gastos := 0
+	var zerados := 0
+	for k in ATRIBUTOS:
+		gastos += int(ficha.atributos[k]) - 1
+		zerados += 1 if int(ficha.atributos[k]) == 0 else 0
+	var caixa := VBoxContainer.new()
+	var area := Control.new()
+	area.custom_minimum_size = PentagonoAtributos.TAMANHO + Vector2(44, 0)
+	caixa.add_child(area)
+	var p := PentagonoAtributos.new()
+	p.position = Vector2(22, 0)
+	p.size = PentagonoAtributos.TAMANHO
+	var temp := Agente.criar(rs, "?", String(ficha.classe), ficha.atributos)
+	p.agente = temp
+	area.add_child(p)
+	var vertices := p.vertices()
+	for i in PentagonoAtributos.ORDEM.size():
+		var k: String = PentagonoAtributos.ORDEM[i]
+		var valor := int(ficha.atributos[k])
+		var centro := vertices[i] + p.position
+		var menos := _botao_mini("−", valor <= 0 or (valor == 1 and zerados >= 1), func():
+			ficha.atributos[k] = valor - 1
+			_redesenhar())
+		menos.position = centro + Vector2(23, 2)   # − embaixo e + em cima, à direita do círculo
+		menos.tooltip_text = "Baixar %s" % NOMES_ATRIBUTOS[k]
+		area.add_child(menos)
+		var mais := _botao_mini("+", valor >= 3 or gastos >= 4, func():
+			ficha.atributos[k] = valor + 1
+			_redesenhar())
+		mais.position = centro + Vector2(23, -26)
+		mais.tooltip_text = "Subir %s — %s" % [NOMES_ATRIBUTOS[k], {"agi": "Defesa, iniciativa e o movimento no mapa", "for": "Dano corpo a corpo e carga",
+			"int": "Perícias extras e rituais", "pre": "PE e Sanidade", "vig": "PV e resistência"}[k]]
+		area.add_child(mais)
+	_nota(caixa, "Pontos: %d de 4 · máximo 3 · um em 0 dá +1" % (4 - gastos))
+	return caixa
+
+
+func _botao_mini(texto: String, desligado: bool, acao: Callable) -> Button:
+	var b := Button.new()
+	b.text = texto
+	b.theme_type_variation = "BotaoPapel"
+	b.custom_minimum_size = Vector2(24, 24)
+	b.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	b.disabled = desligado
+	b.pressed.connect(acao)
+	return b
+
+
+## ③ As 26 origens numa lista, com as perícias e o poder na dica de cada uma.
+func _lista_origens() -> OptionButton:
+	var o := OptionButton.new()
+	var lista: Array = rs.dados.origens.origens
+	for i in lista.size():
+		var org: Dictionary = lista[i]
+		o.add_item(String(org.nome))
+		var pers := PackedStringArray((org.get("pericias", []) as Array).map(func(p): return _nome_pericia(p)))
+		o.set_item_tooltip(i, "Perícias: %s\nPoder: %s — %s" % [", ".join(pers) if not pers.is_empty() else "escolha %d" % int(org.get("pericias_escolha", 0)),
+			org.get("poder", {}).get("nome", "—"), org.get("poder", {}).get("descricao", "")])
+		if org.id == ficha.origem:
+			o.select(i)
+	o.item_selected.connect(func(i):
+		ficha.origem = String(lista[i].id)
+		ficha.pericias_origem = []
+		ficha.beneficios_origem = []
+		_redesenhar())
+	return o
+
+
+## Criança e adolescente escolhem parte dos benefícios da origem (p.182).
+func _beneficios_origem(v: Control) -> void:
+	var faixa := rs.faixa_idade(String(ficha.idade)) if String(ficha.idade) != "" else {}
+	if not faixa.has("beneficios_de_origem"):
+		return
+	var n := int(faixa.beneficios_de_origem)
+	var atual := rs.origem(String(ficha.origem))
+	_nota(v, "Benefícios da origem (%s): escolha %d" % [faixa.nome, n])
+	var opcoes: Array = (atual.get("pericias", []) as Array).map(func(p): return "pericia:" + String(p))
+	opcoes.append("poder")
+	var gb := _grade(v, 3)
+	for b in opcoes:
+		var texto := "Poder" if b == "poder" else _nome_pericia(String(b).trim_prefix("pericia:"))
+		_opcao(gb, texto, b in ficha.beneficios_origem, func(): _alternar(ficha.beneficios_origem, b, n))
+
+
+## ④ As classes numa lista; trocar zera o que depende dela.
+func _lista_classes() -> OptionButton:
+	var o := OptionButton.new()
+	for i in CLASSES.size():
+		var c := rs.classe(CLASSES[i])
+		o.add_item(String(c.nome))
+		o.set_item_tooltip(i, String(c.get("descricao", "")))
+		if CLASSES[i] == ficha.classe:
+			o.select(i)
+	o.item_selected.connect(func(i):
+		ficha.classe = CLASSES[i]
+		ficha.pericias_classe = []
+		ficha.pericias_livres = []
+		ficha.perito = []
+		ficha.rituais = []
+		ficha.trilha = ""
+		ficha.poderes = []
+		ficha.treinamentos = []
+		ficha.escolhas = {}
+		_redesenhar())
+	return o
+
+
+func _lista_trilhas() -> OptionButton:
+	var o := OptionButton.new()
+	o.add_item("— escolha —")
+	var ids: Array = [""]
+	for t in rs.dados.trilhas.trilhas.get(String(ficha.classe), []):
+		if falta_pre(t.get("pre", {})) != "":
+			continue
+		o.add_item(String(t.nome))
+		o.set_item_tooltip(o.item_count - 1, String(t.get("descricao", "")))
+		ids.append(String(t.id))
+		if ficha.trilha == t.id:
+			o.select(o.item_count - 1)
+	if not ficha.trilha in ids:
+		ficha.trilha = ""
+	o.item_selected.connect(func(i):
+		ficha.trilha = ids[i]
+		_redesenhar())
+	return o
+
+
+## ⑤ A tabela de perícias da ficha, para marcar: as da origem e da classe já vêm marcadas;
+## as livres e as escolhas (classe, origem com escolha, Perito) se marcam clicando.
+func _tabela_pericias_criacao() -> Control:
+	var origem := rs.origem(String(ficha.origem))
+	var classe := rs.classe(String(ficha.classe))
+	var escolha_origem := int(origem.get("pericias_escolha", 0))
+	var da_origem: Array = (ficha.pericias_origem as Array).duplicate() if escolha_origem > 0 else (origem.get("pericias", []) as Array).duplicate()
+	var faixa := rs.faixa_idade(String(ficha.idade)) if String(ficha.idade) != "" else {}
+	if faixa.has("beneficios_de_origem"):
+		da_origem = (ficha.beneficios_origem as Array).filter(func(b): return b != "poder").map(func(b): return String(b).trim_prefix("pericia:"))
+	var pares: Array = classe.get("pericias_fixas_escolha", [])
+	var da_classe: Array = (classe.get("pericias_fixas", []) as Array).duplicate()
+	for par in pares:
+		for p in par:
+			if p in ficha.pericias_classe:
+				da_classe.append(p)
+	var garantidas := {}
+	for p in da_origem + da_classe:
+		garantidas[p] = true
+	var livres := int(classe.pericias_livres.base) + int(ficha.atributos.get("int", 0)) + (da_origem.size() + da_classe.size() - garantidas.size())
+	ficha.pericias_livres = (ficha.pericias_livres as Array).filter(func(p): return not garantidas.has(p))
+	var especialista := String(ficha.classe) == "especialista"
+	var perito := rs.habilidade_classe("perito") if especialista else {}
+	var v := VBoxContainer.new()
+	v.custom_minimum_size = Vector2(470, 0)
+	v.add_theme_constant_override("separation", 4)
+	v.add_child(_cabeca(5, "Perícias"))
+	var resumo := PackedStringArray()
+	if escolha_origem > 0:
+		resumo.append("origem: escolha %d (%d/%d)" % [escolha_origem, da_origem.size(), escolha_origem])
+	for par in pares:
+		resumo.append("classe: %s" % " ou ".join(PackedStringArray((par as Array).map(func(p): return _nome_pericia(p)))))
+	resumo.append("livres: %d/%d (classe + INT)" % [(ficha.pericias_livres as Array).size(), livres])
+	if especialista:
+		resumo.append("Perito: %d/%d" % [(ficha.perito as Array).size(), int(perito.quantidade_pericias)])
+	_nota(v, " · ".join(resumo))
+	var g := GridContainer.new()
+	g.columns = 5 if especialista else 4
+	g.add_theme_constant_override("h_separation", 10)
+	g.add_theme_constant_override("v_separation", 1)
+	v.add_child(g)
+	for cab in ["PERÍCIA", "DADOS", "TREINO", "FONTE"] + (["PERITO"] if especialista else []):
+		var l := Label.new()
+		l.text = cab
+		l.add_theme_color_override("font_color", Color(Tema.TINTA, 0.75))
+		g.add_child(l)
+	var siglas := FichaAgente.SIGLAS
+	for p in rs.dados.pericias.pericias:
+		var pid := String(p.id)
+		var fonte := ""
+		var travada := false
+		if pid in da_origem:
+			fonte = "origem"
+			travada = escolha_origem == 0 and not faixa.has("beneficios_de_origem")
+		elif pid in da_classe:
+			fonte = "classe"
+			travada = pid in classe.get("pericias_fixas", [])
+		elif pid in ficha.pericias_livres:
+			fonte = "livre"
+		var treinada := fonte != ""
+		var b := Button.new()
+		b.theme_type_variation = "BotaoPapel"
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.text = "%s %s%s" % ["☑" if treinada else "☐", p.nome, "*" if p.get("somente_treinada", false) else ""]
+		b.disabled = travada
+		b.tooltip_text = "Vem da %s." % fonte if travada else ("Clique para marcar ou desmarcar." + (" Só pode ser usada com treino." if p.get("somente_treinada", false) else ""))
+		b.pressed.connect(_marcar_pericia.bind(pid, escolha_origem, pares, livres))
+		g.add_child(b)
+		var attr := rs.atributo_da_pericia(pid)
+		var d := Label.new()
+		d.text = "%d %s" % [int(ficha.atributos.get(attr, 1)), siglas.get(attr, "?")]
+		d.add_theme_color_override("font_color", Tema.TINTA)
+		g.add_child(d)
+		var t := Label.new()
+		t.text = "+5" if treinada else "—"
+		t.add_theme_color_override("font_color", Tema.TINTA)
+		g.add_child(t)
+		var fl := Label.new()
+		fl.text = fonte
+		fl.add_theme_color_override("font_color", Color(Tema.TINTA, 0.75))
+		g.add_child(fl)
+		if especialista:
+			if treinada and not pid in perito.get("exceto", []):
+				var pb := _botao_mini("◆" if pid in ficha.perito else "◇", false, func():
+					_alternar(ficha.perito, pid, int(perito.quantidade_pericias))
+					_redesenhar())
+				pb.tooltip_text = "Perito: soma um dado com PE nesta perícia"
+				g.add_child(pb)
+			else:
+				g.add_child(Control.new())
+	_nota(v, "* somente treinada")
+	return v
+
+
+func _marcar_pericia(pid: String, escolha_origem: int, pares: Array, livres: int) -> void:
+	if escolha_origem > 0 and (pid in ficha.pericias_origem or (ficha.pericias_origem as Array).size() < escolha_origem):
+		_alternar(ficha.pericias_origem, pid, escolha_origem)
+	else:
+		var no_par := false
+		for par in pares:
+			if pid in par:
+				no_par = true
+				for outra in par:
+					(ficha.pericias_classe as Array).erase(outra)
+				if not pid in ficha.pericias_livres:
+					(ficha.pericias_classe as Array).append(pid)
+		if not no_par or pid in ficha.pericias_livres:
+			_alternar(ficha.pericias_livres, pid, livres)
+	_redesenhar()
+
+
+## Página 2 — Habilidades e inventário (docs/30): habilidades, trilha e poderes, a descrição
+## com a foto, e os recursos e o equipamento inicial.
+func _pagina_habilidades(v: VBoxContainer, res: Dictionary) -> void:
+	var previa := _previa(res)
+	var raiz := HFlowContainer.new()
+	raiz.add_theme_constant_override("h_separation", 26)
+	raiz.add_theme_constant_override("v_separation", 14)
+	v.add_child(raiz)
+	var esq := VBoxContainer.new()
+	esq.custom_minimum_size = Vector2(600, 0)
+	esq.add_theme_constant_override("separation", 7)
+	raiz.add_child(esq)
+	esq.add_child(FichaAgente.aba("Habilidades"))
+	var habs := RichTextLabel.new()
+	habs.bbcode_enabled = true
+	habs.fit_content = true
+	habs.add_theme_color_override("default_color", Tema.TINTA)
+	var linhas := PackedStringArray()
+	if previa != null:
+		for h in previa.habilidades():
+			linhas.append("[b]%s[/b] — %s" % [h.get("nome", "?"), h.get("descricao", "")])
+	else:
+		var o := rs.origem(String(ficha.origem))
+		linhas.append("[b]%s[/b] (origem) — %s" % [o.get("poder", {}).get("nome", "—"), o.get("poder", {}).get("descricao", "")])
+		linhas.append("[i]As habilidades da classe aparecem quando a página Agente fechar.[/i]")
+	habs.text = "\n".join(linhas)
+	esq.add_child(habs)
+	_bloco_trilha_e_poderes(esq)
+	esq.add_child(FichaAgente.aba("Descrição"))
+	esq.add_child(_bloco_foto)
+	_campo_linha(esq, CAMPOS_CONCEITO[1])   # gênero
+	for c in CAMPOS_DESCRICAO:
+		_campo_texto(esq, c)
+	var dir := VBoxContainer.new()
+	dir.custom_minimum_size = Vector2(440, 0)
+	dir.add_theme_constant_override("separation", 8)
+	raiz.add_child(dir)
+	var l1 := HBoxContainer.new()
+	l1.add_theme_constant_override("separation", 10)
+	l1.add_child(FichaAgente.campo("Pontos de prestígio", "0", 40))
+	l1.add_child(FichaAgente.campo("Patente", "Recruta", 90))
+	dir.add_child(l1)
+	dir.add_child(FichaAgente.aba("Inventário inicial"))
+	var kit := carreira.kit_da_classe(String(ficha.classe))
+	for item in kit.get("equipamento", []):
+		var e := rs.equipamento(item)
+		_nota(dir, "%s · cat. %s · %d esp." % [e.get("nome", item), ["0", "I", "II", "III", "IV"][mini(4, int(e.get("categoria", 0)))], int(e.get("espacos", 1))])
+	_nota(dir, "Livro (p.23): a Ordem entrega o necessário na primeira missão. Requisite mais no Arsenal da Base.")
 
 
 const CAMPOS_CONCEITO := [
@@ -403,32 +813,6 @@ static func faixa_por_anos(ruleset: Ruleset, anos: int) -> String:
 
 ## Passo 3 (p.26-31): o que fazia antes da Ordem. Crianças e adolescentes, na regra de idade,
 ## escolhem só parte dos benefícios (p.182).
-func _pagina_origem(v: VBoxContainer) -> void:
-	_titulo(v, "Origem")
-	_nota(v, "O que o agente fazia antes da Ordem. Dá duas perícias treinadas e um poder.")
-	var g := _grade(v, 4)
-	for o in rs.dados.origens.origens:
-		var pers := PackedStringArray((o.get("pericias", []) as Array).map(func(p): return _nome_pericia(p)))
-		var dica := "%s\nPerícias: %s\nPoder: %s — %s" % [o.nome, ", ".join(pers) if not pers.is_empty() else "escolha %d" % int(o.get("pericias_escolha", 0)),
-			o.get("poder", {}).get("nome", "—"), o.get("poder", {}).get("descricao", "")]
-		_opcao(g, o.nome, ficha.origem == o.id, func():
-			ficha.origem = o.id
-			ficha.pericias_origem = []
-			ficha.beneficios_origem = [], dica)
-	var atual := rs.origem(ficha.origem)
-	_nota(v, "%s · %s" % [atual.nome, atual.get("poder", {}).get("descricao", "")])
-	var faixa := rs.faixa_idade(String(ficha.idade)) if String(ficha.idade) != "" else {}
-	if faixa.has("beneficios_de_origem"):
-		var n := int(faixa.beneficios_de_origem)
-		_rotulo(v, "Benefícios da origem (%s): escolha %d" % [faixa.nome, n])
-		var opcoes: Array = (atual.get("pericias", []) as Array).map(func(p): return "pericia:" + String(p))
-		opcoes.append("poder")
-		var gb := _grade(v, 3)
-		for b in opcoes:
-			var texto := "Poder: " + String(atual.get("poder", {}).get("nome", "")) if b == "poder" else _nome_pericia(String(b).trim_prefix("pericia:"))
-			_opcao(gb, texto, b in ficha.beneficios_origem, func(): _alternar(ficha.beneficios_origem, b, n))
-
-
 func _rotulo(v: Control, texto: String) -> void:
 	var l := Label.new()
 	l.text = texto.to_upper()
@@ -465,26 +849,6 @@ func _campo_texto(v: Control, c: Array) -> void:
 		campo.tooltip_text = "Até %d caracteres." % limite
 		_campos_descricao[id] = campo
 	v.add_child(_campos_descricao[id])
-
-
-func _pagina_classe(v: VBoxContainer) -> void:
-	_titulo(v, "Classe")
-	for cid in CLASSES:
-		var c := rs.classe(cid)
-		var texto := "%s — %s\nPV %d + VIG · PE %d + PRE · SAN %d" % [c.nome, c.get("descricao", ""), int(c.pv.inicial), int(c.pe.inicial), int(c.san.inicial)]
-		var b := _opcao(v, texto, ficha.classe == cid, func():
-			ficha.classe = cid
-			ficha.pericias_classe = []
-			ficha.pericias_livres = []
-			ficha.perito = []
-			ficha.rituais = []
-			ficha.trilha = ""
-			ficha.poderes = []
-			ficha.treinamentos = []
-			ficha.escolhas = {})
-		b.custom_minimum_size = Vector2(0, 58)
-		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_bloco_trilha_e_poderes(v)
 
 
 ## Trilha (NEX 10%) e poderes de classe, quando a idade variada faz o agente começar com
@@ -538,17 +902,7 @@ func falta_pre(pre: Dictionary) -> String:
 
 
 func _bloco_trilha_e_poderes(v: VBoxContainer) -> void:
-	var nex := int(ficha.nex)
-	if nex >= 10:
-		_rotulo(v, "Trilha (NEX 10%)")
-		var gt := _grade(v, 3)
-		for t in rs.dados.trilhas.trilhas.get(String(ficha.classe), []):
-			var falta := falta_pre(t.get("pre", {}))
-			if falta != "":
-				if ficha.trilha == t.id:
-					ficha.trilha = ""
-				continue
-			_opcao(gt, String(t.nome), ficha.trilha == t.id, func(): ficha.trilha = String(t.id), String(t.get("descricao", "")))
+	var nex := int(ficha.nex)   # a trilha fica na página Agente (docs/30)
 	var n := poderes_esperados()
 	if n <= 0:
 		return
@@ -619,103 +973,6 @@ func _escolhas_dos_poderes(v: VBoxContainer) -> void:
 				func(): ficha.escolhas["ritual_predileto"] = rid)
 
 
-func _pagina_atributos(v: VBoxContainer) -> void:
-	_titulo(v, "Atributos")
-	var gastos := 0
-	var zerados := 0
-	for k in ATRIBUTOS:
-		gastos += int(ficha.atributos[k]) - 1
-		zerados += 1 if int(ficha.atributos[k]) == 0 else 0
-	_nota(v, "Todos começam em 1. Distribua 4 pontos (máximo 3). Dá para baixar um atributo para 0 e ganhar 1 ponto.  Pontos restantes: %d" % (4 - gastos))
-	for k in ATRIBUTOS:
-		var h := HBoxContainer.new()
-		h.add_theme_constant_override("separation", 8)
-		v.add_child(h)
-		var l := Label.new()
-		l.text = NOMES_ATRIBUTOS[k]
-		l.custom_minimum_size = Vector2(140, 0)
-		h.add_child(l)
-		var valor := int(ficha.atributos[k])
-		var menos := Button.new()
-		menos.text = " − "
-		menos.theme_type_variation = "BotaoPapel"
-		menos.disabled = valor <= 0 or (valor == 1 and zerados >= 1)
-		menos.pressed.connect(func():
-			ficha.atributos[k] = valor - 1
-			_redesenhar())
-		h.add_child(menos)
-		var n := Label.new()
-		n.text = str(valor)
-		n.custom_minimum_size = Vector2(30, 0)
-		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		n.add_theme_font_size_override("font_size", Tema.FONTE_G)
-		h.add_child(n)
-		var mais := Button.new()
-		mais.text = " + "
-		mais.theme_type_variation = "BotaoPapel"
-		mais.disabled = valor >= 3 or gastos >= 4
-		mais.pressed.connect(func():
-			ficha.atributos[k] = valor + 1
-			_redesenhar())
-		h.add_child(mais)
-		var efeito := Label.new()
-		efeito.text = {"agi": "Defesa, iniciativa e o movimento no mapa", "for": "Dano corpo a corpo e carga",
-			"int": "Perícias extras e rituais", "pre": "PE e Sanidade", "vig": "PV e resistência"}[k]
-		efeito.add_theme_color_override("font_color", Color(Tema.TINTA, 0.7))
-		h.add_child(efeito)
-
-
-func _pagina_pericias(v: VBoxContainer) -> void:
-	var origem := rs.origem(ficha.origem)
-	var classe := rs.classe(ficha.classe)
-	_titulo(v, "Perícias")
-	var garantidas: Array = []
-	if int(origem.get("pericias_escolha", 0)) > 0:
-		_nota(v, "Origem %s: escolha %d perícias." % [origem.nome, int(origem.pericias_escolha)])
-		var g := _grade(v, 4)
-		for p in rs.dados.pericias.pericias:
-			var pid: String = p.id
-			_opcao(g, p.nome, pid in ficha.pericias_origem, func(): _alternar(ficha.pericias_origem, pid, int(origem.pericias_escolha)))
-		garantidas.append_array(ficha.pericias_origem)
-	else:
-		garantidas.append_array(origem.pericias)
-		_nota(v, "Da origem (%s): %s." % [origem.nome, ", ".join(PackedStringArray((origem.pericias as Array).map(func(p): return _nome_pericia(p))))])
-	garantidas.append_array(classe.get("pericias_fixas", []))
-	if not classe.get("pericias_fixas", []).is_empty():
-		_nota(v, "Da classe: %s." % ", ".join(PackedStringArray((classe.pericias_fixas as Array).map(func(p): return _nome_pericia(p)))))
-	for par in classe.get("pericias_fixas_escolha", []):
-		_nota(v, "Da classe, escolha uma:")
-		var h := HBoxContainer.new()
-		v.add_child(h)
-		for p in par:
-			_opcao(h, _nome_pericia(p), p in ficha.pericias_classe, func():
-				for outra in par:
-					ficha.pericias_classe.erase(outra)
-				ficha.pericias_classe.append(p))
-		garantidas.append_array((par as Array).filter(func(p): return p in ficha.pericias_classe))
-	var unicas := {}
-	for p in garantidas:
-		unicas[p] = true
-	var livres := int(classe.pericias_livres.base) + int(ficha.atributos.get("int", 0)) + (garantidas.size() - unicas.size())
-	ficha.pericias_livres = ficha.pericias_livres.filter(func(p): return not unicas.has(p))
-	_nota(v, "Livres: escolha %d (%d da classe + Intelecto). Faltam %d." % [livres, int(classe.pericias_livres.base), livres - ficha.pericias_livres.size()])
-	var g2 := _grade(v, 4)
-	for p in rs.dados.pericias.pericias:
-		var pid: String = p.id
-		if unicas.has(pid):
-			continue
-		_opcao(g2, p.nome, pid in ficha.pericias_livres, func(): _alternar(ficha.pericias_livres, pid, livres))
-	if ficha.classe == "especialista":
-		var perito := rs.habilidade_classe("perito")
-		_nota(v, "Perito: escolha %d perícias treinadas (exceto Luta e Pontaria) para somar um dado com PE." % int(perito.quantidade_pericias))
-		var g3 := _grade(v, 4)
-		var treinadas: Array = unicas.keys() + ficha.pericias_livres
-		for pid in treinadas:
-			if pid in perito.exceto:
-				continue
-			_opcao(g3, _nome_pericia(pid), pid in ficha.perito, func(): _alternar(ficha.perito, pid, int(perito.quantidade_pericias)))
-
-
 func _pagina_rituais(v: VBoxContainer) -> void:
 	_titulo(v, "Rituais")
 	if ficha.classe != "ocultista":
@@ -758,54 +1015,6 @@ const CAMPOS_DESCRICAO := [
 ]
 
 
-func _pagina_descricao(v: VBoxContainer) -> void:
-	_titulo(v, "Descrição")
-	_nota(v, "Opcional, e pode crescer ao longo do jogo. Atributos, origem e classe ajudam: Presença alta pede alguém falante; um militar fala curto e grosso. A foto ao lado é a aparência da miniatura.")
-	for c in CAMPOS_DESCRICAO:
-		_campo_texto(v, c)
-
-
-## Revisão (docs/26): a página 1 da ficha nova, como o agente vai ficar — já com o
-## equipamento inicial da classe, para os ataques e a Defesa saírem certos.
-func _pagina_revisao(v: VBoxContainer, res: Dictionary, erros: Array) -> void:
-	_titulo(v, "Revisão da ficha")
-	if res.agente != null:
-		var a: Agente = res.agente
-		a.nome = String(ficha.nome).strip_edges() if String(ficha.nome).strip_edges() != "" else "(sem nome)"
-		a.aparencia = String(ficha.aparencia)
-		a.tom = int(ficha.tom)
-		a.conceito = String(ficha.conceito)
-		var kit := carreira.kit_da_classe(ficha.classe)
-		for item in kit.get("equipamento", []):
-			a.equipamento.append(item)
-		a.arma_id = String(kit.get("arma", ""))
-		# "Revise sua ficha" (p.23 e p.46): as características derivadas com a conta
-		var c := rs.classe(String(ficha.classe))
-		var conta := PackedStringArray()
-		conta.append("PV %d = %d (classe) + %d VIG" % [a.pv_maximo, int(c.pv.inicial), a.atributo("vig")])
-		conta.append("PE %d = %d (classe) + %d PRE" % [a.pe_maximo, int(c.pe.inicial), a.atributo("pre")])
-		conta.append("SAN %d (classe)" % a.san_maximo)
-		conta.append("Defesa %d = 10 + %d AGI e modificadores" % [a.defesa(), a.atributo("agi")])
-		conta.append("Deslocamento %d m" % int(a.deslocamento_m()))
-		_nota(v, " · ".join(conta))
-		var pend := Progressao.pendencias(a)
-		if not pend.is_empty():
-			_nota(v, "Depois de assinar, %d escolha%s na ficha (ex.: o poder extra do adulto)." % [pend.size(), "" if pend.size() == 1 else "s"])
-		_revisao = FichaAgente.pagina_um(a)
-		v.add_child(_revisao)
-		_nota(v, "Equipamento (p.23: a Ordem entrega o necessário na primeira missão): %s." % ", ".join(PackedStringArray((kit.equipamento as Array).map(func(i): return rs.equipamento(i).get("nome", i)))))
-		var desc := PackedStringArray()
-		for campo in CAMPOS_DESCRICAO:
-			if String(ficha.get(campo[0], "")).strip_edges() != "":
-				desc.append("%s: %s" % [campo[1], String(ficha[campo[0]]).strip_edges()])
-		_nota(v, "\n".join(desc) if not desc.is_empty() else "Descrição em branco (opcional).")
-	for e in erros:
-		var l := _nota(v, "• " + String(e))
-		l.add_theme_color_override("font_color", Tema.SANGUE)
-
-
-## Liga/desliga um item numa lista com limite (o mais antigo sai se passar do limite).
-var _revisao: Control   ## a página 1 da ficha na revisão (para os testes)
 
 
 func _alternar(lista: Array, valor: String, limite: int) -> void:
@@ -832,6 +1041,14 @@ func _assinar_ficha() -> void:
 	Som.tocar("carimbo")
 	criado.emit(res.agente)
 	queue_free()
+
+
+## Os campos reaproveitados podem estar fora da árvore (entre um redesenho e outro): saem junto.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		for c in [_nome, _idade, _bloco_foto] + _campos_descricao.values():
+			if c != null and is_instance_valid(c) and c.get_parent() == null:
+				c.free()
 
 
 func _unhandled_input(evento: InputEvent) -> void:
