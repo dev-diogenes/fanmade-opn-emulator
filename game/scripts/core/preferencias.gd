@@ -125,3 +125,55 @@ static func definir_escala(v: float) -> void:
 	var d := ler()
 	d["escala"] = clampf(v, 0.8, 1.5)
 	gravar(d)
+
+
+## Teclas remapeadas (docs/18, A4): id da ação -> keycode. Só guarda o que mudou do padrão.
+static func atalhos() -> Dictionary:
+	var d = ler().get("atalhos", {})
+	return d if d is Dictionary else {}
+
+
+static func definir_atalhos(mapa: Dictionary) -> void:
+	var d := ler()
+	d["atalhos"] = mapa
+	gravar(d)
+
+
+## Fotossensibilidade (docs/18, A5): "suave" (padrão: pulsos de VHS fracos e no máximo
+## três trocas de quadro por segundo) ou "completo". Com efeito("glitch") desligado, nada pisca.
+static func flashes() -> String:
+	return String(ler().get("flashes", "suave"))
+
+
+static func definir_flashes(v: String) -> void:
+	var d := ler()
+	d["flashes"] = v
+	gravar(d)
+
+
+## Se o aviso de fotossensibilidade já apareceu nesta máquina.
+static func aviso_flashes_visto() -> bool:
+	return bool(ler().get("aviso_flashes_visto", false))
+
+
+static func marcar_aviso_flashes() -> void:
+	var d := ler()
+	d["aviso_flashes_visto"] = true
+	gravar(d)
+
+
+## Paleta para daltonismo (docs/18, A6): sucesso em azul e falha em laranja, no lugar de
+## verde e vermelho. Cacheada: as cores são consultadas ao montar cada resultado.
+static var _daltonismo_cache := -1
+
+static func daltonismo() -> bool:
+	if _daltonismo_cache < 0:
+		_daltonismo_cache = 1 if bool(ler().get("daltonismo", false)) else 0
+	return _daltonismo_cache == 1
+
+
+static func definir_daltonismo(v: bool) -> void:
+	var d := ler()
+	d["daltonismo"] = v
+	gravar(d)
+	_daltonismo_cache = 1 if v else 0

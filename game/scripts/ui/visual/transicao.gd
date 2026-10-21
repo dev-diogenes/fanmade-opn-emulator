@@ -27,6 +27,7 @@ func _init(legenda: String = "") -> void:
 	if ResourceLoader.exists(caminho):
 		var m := ShaderMaterial.new()
 		m.shader = load(caminho)
+		m.set_shader_parameter("ritmo", 0.1 if Preferencias.flashes() == "suave" else 1.0)   # A5
 		_fundo.material = m
 	else:
 		_fundo.color = Tema.FUNDO

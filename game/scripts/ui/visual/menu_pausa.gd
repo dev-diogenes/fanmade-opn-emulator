@@ -72,14 +72,14 @@ func _montar(saidas: Array) -> void:
 	linha_vol.add_child(volume)
 	var cam := Button.new()
 	cam.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	cam.text = "Câmera: %s (C)" % CameraRig.NOMES_MODOS.get(Preferencias.camera(), "3ª pessoa")
+	cam.text = "Câmera: %s (%s)" % [CameraRig.NOMES_MODOS.get(Preferencias.camera(), "3ª pessoa"), Atalhos.nome_tecla("camera_modo")]
 	cam.pressed.connect(func():
 		var i := CameraRig.MODOS.find(Preferencias.camera())
 		var novo: String = CameraRig.MODOS[(i + 1) % CameraRig.MODOS.size()]
 		Preferencias.definir_camera(novo)
 		for rig in get_tree().root.find_children("*", "CameraRig", true, false):
 			rig.definir_modo(novo)
-		cam.text = "Câmera: %s (C)" % CameraRig.NOMES_MODOS[novo])
+		cam.text = "Câmera: %s (%s)" % [CameraRig.NOMES_MODOS[novo], Atalhos.nome_tecla("camera_modo")])
 	_ajustes.add_child(cam)
 	for e in [["grao", "Granulação e vinheta"], ["glitch", "Glitch de VHS e tremores"], ["transicoes", "Estática entre as telas"],
 			["ambiente", "Som ambiente (drone e sussurros)"]]:
@@ -103,7 +103,8 @@ func _montar(saidas: Array) -> void:
 	Som.tocar("papel")
 
 
-## Ajustes de leitura e escala (docs/16, A1 e A3), usados na pausa e na Base.
+## Ajustes de leitura, escala e acessibilidade (docs/16 A1 e A3; docs/18 A4, A5 e A6),
+## usados na pausa e na Base.
 static func montar_leitura(caixa: Control) -> void:
 	var opcoes := [
 		["Texto", Preferencias.velocidade_texto, Preferencias.definir_velocidade_texto,
@@ -143,6 +144,30 @@ static func montar_leitura(caixa: Control) -> void:
 		Preferencias.definir_escala(escala.value)
 		Tema.aplicar_escala())
 	escala.value_changed.connect(func(v): pct.text = "%d%%" % int(round(v * 100)))
+	# A5: fotossensibilidade
+	var flashes := Button.new()
+	flashes.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	flashes.tooltip_text = "Suaves: pulsos de VHS fracos e no máximo três trocas por segundo.\nCompletos: a fita trepida como no original.\nPara tirar todos os glitches, desmarque \"Glitch de VHS e tremores\"."
+	var nomes_flashes := {"suave": "suaves", "completo": "completos"}
+	flashes.text = "Flashes: %s" % nomes_flashes.get(Preferencias.flashes(), "suaves")
+	flashes.pressed.connect(func():
+		var novo := "completo" if Preferencias.flashes() == "suave" else "suave"
+		Preferencias.definir_flashes(novo)
+		flashes.text = "Flashes: %s" % nomes_flashes[novo])
+	caixa.add_child(flashes)
+	# A6: paleta para daltonismo
+	var dalt := CheckBox.new()
+	dalt.text = "Cores para daltonismo (azul e laranja)"
+	dalt.tooltip_text = "Sucesso em azul e falha em laranja, no lugar de verde e vermelho. Os símbolos ✓ e ✗ continuam."
+	dalt.button_pressed = Preferencias.daltonismo()
+	dalt.toggled.connect(func(v): Preferencias.definir_daltonismo(v))
+	caixa.add_child(dalt)
+	# A4: folha de atalhos
+	var atalhos := Button.new()
+	atalhos.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	atalhos.text = Atalhos.com_tecla("Atalhos de teclado", "folha_atalhos")
+	atalhos.pressed.connect(func(): FolhaAtalhos.abrir(caixa))
+	caixa.add_child(atalhos)
 
 
 func _item(texto: String, acao: Callable) -> Button:

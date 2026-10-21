@@ -6,6 +6,9 @@ shader_type canvas_item;
 uniform float intensidade : hint_range(0.0, 1.0) = 0.0;
 uniform float glitch : hint_range(0.0, 1.0) = 0.0;
 uniform float grao : hint_range(0.0, 1.0) = 1.0;   // 0 = sem granulação nem vinheta (acessibilidade)
+// Fotossensibilidade (docs/18, A5): velocidade das trocas de faixa e do grão do glitch.
+// 1 = 18 trocas/s; 0,15 = ~2,7/s, abaixo do limite de 3 flashes por segundo.
+uniform float ritmo : hint_range(0.05, 1.0) = 1.0;
 // Loucura (docs/17, E6): sanidade baixa do agente da vez. A imagem respira, ondula,
 // fica com um "fantasma" deslocado e pulsa em vermelho.
 uniform float loucura : hint_range(0.0, 1.0) = 0.0;
@@ -18,9 +21,10 @@ float ruido(vec2 p) {
 void fragment() {
 	vec2 uv = UV;
 	// Faixas horizontais deslocadas (tracking de fita)
-	float faixa = floor(uv.y * 24.0 + floor(TIME * 18.0));
-	float desloca = (ruido(vec2(faixa, floor(TIME * 18.0))) - 0.5) * 0.06 * glitch;
-	desloca *= step(0.6, ruido(vec2(faixa * 1.7, 3.0 + floor(TIME * 9.0))));
+	float quadro = floor(TIME * 18.0 * ritmo);
+	float faixa = floor(uv.y * 24.0 + quadro);
+	float desloca = (ruido(vec2(faixa, quadro)) - 0.5) * 0.06 * glitch;
+	desloca *= step(0.6, ruido(vec2(faixa * 1.7, 3.0 + floor(quadro * 0.5))));
 	uv.x += desloca;
 	// Ondulação e respiração da loucura
 	uv += vec2(sin(uv.y * 11.0 + TIME * 1.3), cos(uv.x * 9.0 + TIME * 1.1)) * 0.0045 * loucura;

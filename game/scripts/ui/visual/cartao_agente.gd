@@ -29,7 +29,7 @@ func _montar() -> void:
 	custom_minimum_size = Vector2(176, 0)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	tooltip_text = "Ficha e inventário (F)"
+	tooltip_text = Atalhos.com_tecla("Ficha e inventário", "ficha")
 	gui_input.connect(func(e):
 		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
 			escolhido.emit(agente))
@@ -87,7 +87,8 @@ func atualizar(da_vez: bool) -> void:
 	# Perturbado: o rótulo SAN vira "SAN!" em vermelho (não depende só da cor do nome)
 	_barras["san"].titulo.text = "SAN!" if perturbado else "SAN"
 	_barras["san"].titulo.add_theme_color_override("font_color", Tema.SANGUE_CLARO.lightened(0.25) if perturbado else Tema.TEXTO_SUAVE)
-	tooltip_text = ("%s está perturbado: Sanidade abaixo da metade. Ficha e inventário (F)" % agente.nome) if perturbado else "Ficha e inventário (F)"
+	var ficha := Atalhos.com_tecla("Ficha e inventário", "ficha")
+	tooltip_text = ("%s está perturbado: Sanidade abaixo da metade. %s" % [agente.nome, ficha]) if perturbado else ficha
 	_nome.add_theme_color_override("font_color", Tema.SANGUE_CLARO.lightened(0.2) if perturbado else (Tema.OURO_CLARO if da_vez else Tema.PERGAMINHO))
 	_tremer = perturbado and not caido
 	_valor("pv", agente.pv, agente.pv_maximo)

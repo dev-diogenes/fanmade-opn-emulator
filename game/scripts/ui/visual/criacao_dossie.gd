@@ -125,7 +125,7 @@ func _redesenhar() -> void:
 	if String(ficha.nome).strip_edges() == "":
 		erros = ["Dê um nome ao agente."] + erros
 	_erros.text = ("Faltam %d ajuste(s): %s" % [erros.size(), erros[0]]) if not erros.is_empty() else "Ficha completa: pronta para assinar."
-	_erros.add_theme_color_override("font_color", Tema.AVISO if not erros.is_empty() else Tema.SUCESSO)
+	_erros.add_theme_color_override("font_color", Tema.AVISO if not erros.is_empty() else Tema.cor_sucesso(true))
 	_assinar.disabled = not erros.is_empty()
 	_assinar.tooltip_text = "" if erros.is_empty() else "Bloqueado: " + "; ".join(PackedStringArray(erros))
 	var pagina := _abas.get_tab_title(_abas.current_tab)

@@ -18,6 +18,7 @@ static func configurar() -> void:
 		var ev := _botao(par[1])
 		if InputMap.has_action(par[0]) and not InputMap.action_has_event(par[0], ev):
 			InputMap.action_add_event(par[0], ev)
+	Atalhos.configurar()   # teclado remapeável (docs/18, A4)
 
 
 const DIRECOES := {"cursor_esquerda": Vector2i(-1, 0), "cursor_direita": Vector2i(1, 0), "cursor_cima": Vector2i(0, -1), "cursor_baixo": Vector2i(0, 1)}

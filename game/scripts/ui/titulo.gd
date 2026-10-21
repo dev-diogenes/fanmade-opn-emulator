@@ -11,6 +11,8 @@ var _sigilo: Sigilo
 var _logo: Label
 var _ecos_logo: Array[Label] = []
 var _proxima_falha := 3.0
+## Mostra o aviso de fotossensibilidade na primeira vez (docs/18, A5). Os testes desligam.
+var avisar_flashes := true
 
 
 func _ready() -> void:
@@ -19,6 +21,30 @@ func _ready() -> void:
 	_montar_diorama()
 	_montar_menu()
 	Som.musica("caixinha")   # caixinha de música desafinada (docs/12)
+	if avisar_flashes and not Preferencias.aviso_flashes_visto() and not _capturando():
+		_avisar_flashes.call_deferred()
+
+
+## Aviso de fotossensibilidade (docs/18, A5), uma vez por máquina. Esc ou "Desligar" tira os
+## glitches; "Manter" fica com o modo suave, que já é o padrão.
+func _avisar_flashes() -> void:
+	Preferencias.marcar_aviso_flashes()
+	var d := DialogoPapel.perguntar(self, "Aviso de fotossensibilidade",
+		"Este jogo imita fita VHS: a imagem treme, faixas pulam, há estática entre as telas e " +
+		"clarões quando o paranormal aparece. Os efeitos começam no modo suave, com no máximo " +
+		"três trocas por segundo.\n\nSe luzes piscando incomodam você, desligue os glitches agora. " +
+		"Dá para mudar a qualquer hora em Pausa › Ajustes.",
+		"Manter suave", func(): pass, "Desligar glitches", false)
+	d.respondido.connect(func(ok: bool):
+		if not ok:
+			Preferencias.definir_efeito("glitch", false))
+
+
+func _capturando() -> bool:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--captura="):
+			return true
+	return false
 
 
 func _process(delta: float) -> void:
@@ -33,15 +59,18 @@ func _process(delta: float) -> void:
 
 
 func _falha_no_logo() -> void:
+	# Modo suave (docs/18, A5): dois saltos lentos em vez de três trancos a 20 por segundo
+	var suave := Preferencias.flashes() == "suave"
+	var passos := 3 if suave else 4
 	var tw := create_tween()
-	for passo in 4:
+	for passo in passos:
 		tw.tween_callback(func():
 			for i in _ecos_logo.size():
 				var e := _ecos_logo[i]
-				e.visible = passo < 3
+				e.visible = passo < passos - 1
 				e.size = _logo.size
-				e.position = Vector2(randf_range(-7, 7) * (1 if i == 0 else -1), randf_range(-2, 2)))
-		tw.tween_interval(0.05)
+				e.position = Vector2(randf_range(-7, 7) * (1 if i == 0 else -1), randf_range(-2, 2)) * (0.6 if suave else 1.0))
+		tw.tween_interval(0.35 if suave else 0.05)
 
 
 func _montar_diorama() -> void:

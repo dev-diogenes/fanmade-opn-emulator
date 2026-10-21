@@ -301,6 +301,33 @@ static func criar() -> Theme:
 	return t
 
 
+## Sucesso e falha (docs/18, A6). Com a paleta para daltonismo, azul e laranja (Okabe-Ito)
+## no lugar de verde e vermelho. `papel`: a versão escura, para tinta sobre papel.
+##   Escuro: 7,9:1 e 8,1:1 sobre a pedra. Papel: 5,4:1 e 4,8:1.
+static func cor_sucesso(papel := false) -> Color:
+	if Preferencias.daltonismo():
+		return Color("0b5a8f") if papel else Color("56b4e9")
+	return Color("2f6b3f") if papel else SUCESSO
+
+
+static func cor_falha(papel := false) -> Color:
+	if Preferencias.daltonismo():
+		return Color("9a4500") if papel else Color("e69f00")
+	return SANGUE if papel else PERIGO
+
+
+## Fundo, borda e texto do dado (slot) de sucesso ou falha. Normal: dourado e sangue.
+static func cores_slot(estado: String) -> Array:
+	if Preferencias.daltonismo():
+		match estado:
+			"sucesso": return [Color("1f5f99"), Color("56b4e9"), PERGAMINHO]
+			"falha": return [Color("8a4a00"), Color("e69f00"), PERGAMINHO]
+	match estado:
+		"sucesso": return [OURO, OURO_CLARO, FUNDO]
+		"falha": return [SANGUE, SANGUE_CLARO, PERGAMINHO]
+	return [PEDRA_CLARA, OURO_ESCURO, TEXTO_SUAVE]
+
+
 ## Trecho de BBCode colorido com um token: `Tema.bb("Encontro!", Tema.PERIGO)`.
 static func bb(texto: String, cor: Color) -> String:
 	return "[color=#%s]%s[/color]" % [cor.to_html(false), texto]
@@ -329,8 +356,9 @@ static func aplicar() -> void:
 ## ou "neutro" (pedra: dado que não decidiu o teste). `ordem` atrasa a entrada.
 static func slot_d20(valor: int, estado: String, ordem: int = 0) -> Control:
 	var caixa := PanelContainer.new()
-	var fundo: Color = {"sucesso": OURO, "falha": SANGUE}.get(estado, PEDRA_CLARA)
-	var borda: Color = {"sucesso": OURO_CLARO, "falha": SANGUE_CLARO}.get(estado, OURO_ESCURO)
+	var cores := cores_slot(estado)
+	var fundo: Color = cores[0]
+	var borda: Color = cores[1]
 	var estilo := caixa(fundo, borda, 2, 6, Vector2(8, 2))
 	estilo.shadow_color = Color(borda, 0.45) if estado != "neutro" else Color(0, 0, 0, 0.4)
 	estilo.shadow_size = 6 if estado != "neutro" else 3
@@ -344,7 +372,7 @@ static func slot_d20(valor: int, estado: String, ordem: int = 0) -> Control:
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override("font_size", FONTE_M)
 	l.add_theme_constant_override("line_spacing", -6)
-	l.add_theme_color_override("font_color", FUNDO if estado == "sucesso" else (PERGAMINHO if estado == "falha" else TEXTO_SUAVE))
+	l.add_theme_color_override("font_color", cores[2])
 	caixa.add_child(l)
 	caixa.scale = Vector2.ONE * 0.6
 	caixa.modulate.a = 0.0
@@ -421,10 +449,20 @@ static func caixa_papel(margem := Vector2(12, 10)) -> StyleBoxTexture:
 
 
 ## Pulso de VHS na vista (docs/09, 5.3): pista encontrada = 0.8/0.6 s; falha = 0.35/0.3 s.
+## Fração da velocidade da fita no modo suave: 18 trocas/s viram 2,7 (docs/18, A5).
+const RITMO_SUAVE := 0.15
+
 static func pulso_vhs(vista: SubViewportContainer, forca: float = 0.8, duracao: float = 0.6) -> void:
 	var m := vista.material as ShaderMaterial
 	if m == null or not vista.is_inside_tree() or not Preferencias.efeito("glitch"):
 		return
+	# Fotossensibilidade (docs/18, A5): no modo suave o pulso é mais fraco, dura mais e a fita
+	# troca de faixa no máximo ~3 vezes por segundo (WCAG 2.3.1), em vez de 18.
+	var suave := Preferencias.flashes() == "suave"
+	if suave:
+		forca *= 0.45
+		duracao = maxf(duracao, 0.9)
+	m.set_shader_parameter("ritmo", RITMO_SUAVE if suave else 1.0)
 	m.set_shader_parameter("glitch", forca)
 	Som.tocar("glitch")
 	vista.create_tween().tween_method(func(v: float): m.set_shader_parameter("glitch", v), forca, 0.0, duracao)

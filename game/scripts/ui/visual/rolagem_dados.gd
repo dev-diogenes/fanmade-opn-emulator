@@ -83,7 +83,7 @@ func _montar(titulo: String, atributo: String, slots: Array, dt: int, resultado:
 		res.add_theme_font_override("font", maquina)
 	var cor_res := Tema.PERGAMINHO
 	if sucesso_geral != null:
-		cor_res = Tema.SUCESSO if sucesso_geral else Tema.PERIGO
+		cor_res = Tema.cor_sucesso() if sucesso_geral else Tema.cor_falha()
 	res.add_theme_color_override("font_color", cor_res)
 	res.modulate.a = 0.0
 	v.add_child(res)
@@ -147,13 +147,14 @@ func _cair(c: Array) -> void:
 	var estado: String = c[3]
 	p.set_meta("caiu", true)
 	l.text = "%d%s" % [c[2], {"sucesso": "✓", "falha": "✗"}.get(estado, "")]
-	var fundo: Color = {"sucesso": Tema.OURO, "falha": Tema.SANGUE}.get(estado, Tema.PEDRA_CLARA)
-	var borda: Color = {"sucesso": Tema.OURO_CLARO, "falha": Tema.SANGUE_CLARO}.get(estado, Tema.OURO_ESCURO)
+	var cores := Tema.cores_slot(estado)   # dourado e sangue, ou azul e laranja (docs/18, A6)
+	var fundo: Color = cores[0]
+	var borda: Color = cores[1]
 	var estilo := Tema.caixa(fundo, borda, 2, 8, Vector2(6, 4))
 	estilo.shadow_color = Color(borda, 0.6)
 	estilo.shadow_size = 10 if estado != "neutro" else 2
 	p.add_theme_stylebox_override("panel", estilo)
-	l.add_theme_color_override("font_color", Tema.FUNDO if estado == "sucesso" else Tema.PERGAMINHO)
+	l.add_theme_color_override("font_color", cores[2] if estado != "neutro" else Tema.PERGAMINHO)
 	p.pivot_offset = p.size / 2.0
 	p.scale = Vector2.ONE * 1.35
 	p.create_tween().tween_property(p, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)

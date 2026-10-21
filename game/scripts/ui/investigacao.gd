@@ -191,7 +191,7 @@ func _montar_quadro() -> void:
 	_posicionar_quadro(true)
 	add_child(_quadro)
 	_btn_quadro = Button.new()
-	_btn_quadro.text = "Quadro (Tab)"
+	_btn_quadro.text = Atalhos.com_tecla("Quadro", "quadro")
 	_btn_quadro.anchor_left = 1.0
 	_btn_quadro.anchor_right = 1.0
 	_btn_quadro.offset_left = -190
@@ -557,40 +557,45 @@ func _input(evento: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-## Atalhos: 1–4 escolhem a carta, Tab abre o quadro, Enter confirma, Esc fecha o bilhete.
+## Atalhos (remapeáveis, docs/18): 1–4 escolhem a carta, Tab abre o quadro, Enter confirma,
+## E procura no ponto próximo; Esc fecha o bilhete ou pausa.
 func _unhandled_key_input(evento: InputEvent) -> void:
 	if not evento is InputEventKey or not evento.pressed or evento.echo or TourGuiado.em_andamento():
 		return
 	var ids := ["procurar", "facilitar", "ajudar", "passar"]
-	match evento.keycode:
-		KEY_1, KEY_2, KEY_3, KEY_4:
-			_selecionar_carta(ids[evento.keycode - KEY_1])
-		KEY_TAB:
-			_alternar_quadro()
-		KEY_F:
-			if cena.agente_atual() != null:
-				DossieAgente.abrir(self, cena.agente_atual())
-		KEY_E:
-			if _ponto != "":
-				_selecionar_carta("procurar")
-		KEY_ENTER, KEY_KP_ENTER:
-			match _carta_sel:
-				"procurar": _procurar()
-				"facilitar": _facilitar()
-				"ajudar": _ajudar()
-				"passar": _passar()
-		KEY_ESCAPE:
-			if not _bilhete.visible:
-				MenuPausa.abrir(self)
-				get_viewport().set_input_as_handled()
-				return
-			_carta_sel = ""
-			for k in _cartas:
-				_cartas[k].selecionada = false
-				_cartas[k]._subir(false)
-			_bilhete.visible = false
-		_:
+	var carta := -1
+	for i in ids.size():
+		if Atalhos.pressionou(evento, "carta_%d" % (i + 1)):
+			carta = i
+	# Teclas remapeáveis (docs/18, A4); Esc é fixo
+	if carta >= 0:
+		_selecionar_carta(ids[carta])
+	elif Atalhos.pressionou(evento, "quadro"):
+		_alternar_quadro()
+	elif Atalhos.pressionou(evento, "ficha"):
+		if cena.agente_atual() != null:
+			DossieAgente.abrir(self, cena.agente_atual())
+	elif Atalhos.pressionou(evento, "examinar"):
+		if _ponto != "":
+			_selecionar_carta("procurar")
+	elif Atalhos.pressionou(evento, "confirmar_carta"):
+		match _carta_sel:
+			"procurar": _procurar()
+			"facilitar": _facilitar()
+			"ajudar": _ajudar()
+			"passar": _passar()
+	elif evento.keycode == KEY_ESCAPE:
+		if not _bilhete.visible:
+			MenuPausa.abrir(self)
+			get_viewport().set_input_as_handled()
 			return
+		_carta_sel = ""
+		for k in _cartas:
+			_cartas[k].selecionada = false
+			_cartas[k]._subir(false)
+		_bilhete.visible = false
+	else:
+		return
 	get_viewport().set_input_as_handled()
 
 
@@ -604,10 +609,10 @@ func _andar(delta: float) -> void:
 		return
 	var entrada := Vector2.ZERO
 	if _controles.usa_teclado(a) and not get_viewport().gui_get_focus_owner() is LineEdit:
-		if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP): entrada.y -= 1
-		if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): entrada.y += 1
-		if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT): entrada.x -= 1
-		if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT): entrada.x += 1
+		if Atalhos.segurando("mover_cima"): entrada.y -= 1
+		if Atalhos.segurando("mover_baixo"): entrada.y += 1
+		if Atalhos.segurando("mover_esquerda"): entrada.x -= 1
+		if Atalhos.segurando("mover_direita"): entrada.x += 1
 	elif _controles.usa_controle(a):
 		var j := int(_controles.jogadores[_controles.jogador_de(a)].get("indice", 0))
 		entrada = Vector2(Input.get_joy_axis(j, JOY_AXIS_LEFT_X), Input.get_joy_axis(j, JOY_AXIS_LEFT_Y))

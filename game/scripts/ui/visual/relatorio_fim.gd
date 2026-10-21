@@ -67,10 +67,11 @@ func _init(texto_botao: String = "Continuar") -> void:
 	_carimbo.add_child(rotulo)
 
 
-## Mostra a folha. `sucesso` deixa o carimbo verde-escuro; senão, vermelho-sangue.
+## Mostra a folha. `sucesso` deixa o carimbo verde-escuro; senão, vermelho-sangue (azul e
+## laranja na paleta para daltonismo, docs/18).
 func mostrar(carimbo: String, linhas: Array, sucesso: bool) -> void:
 	rotulo.text = carimbo
-	var cor := Color("2f6b3f") if sucesso else Tema.SANGUE_CLARO
+	var cor := Tema.cor_sucesso(true) if sucesso else Tema.cor_falha(true)
 	rotulo.add_theme_color_override("font_color", cor)
 	rotulo.add_theme_stylebox_override("normal", Tema.caixa(Color(0, 0, 0, 0), cor, 4, 6, Vector2(18, 6)))
 	_resumo.text = "\n".join(PackedStringArray(linhas.map(func(l): return String(l))))

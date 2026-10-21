@@ -314,7 +314,7 @@ func _botao(texto: String, acao: Callable) -> Button:
 
 func _status(texto: String, erro: bool = false) -> void:
 	_lbl_status.text = texto
-	_lbl_status.add_theme_color_override("font_color", Tema.PERIGO if erro else Tema.SUCESSO)
+	_lbl_status.add_theme_color_override("font_color", Tema.cor_falha() if erro else Tema.cor_sucesso())
 
 
 # --- Sincronizar campos e definição ---------------------------------------------------

@@ -62,6 +62,14 @@ func _ready() -> void:
 	rede.aviso.connect(func(t): aviso_rede = t)
 
 
+## H abre a folha de atalhos em qualquer tela (docs/18, A4). As telas tratam as próprias
+## teclas antes: esta só recebe o que ninguém usou.
+func _unhandled_key_input(evento: InputEvent) -> void:
+	if Atalhos.pressionou(evento, "folha_atalhos") and not FolhaAtalhos.aberta(get_tree().root):
+		get_viewport().set_input_as_handled()
+		FolhaAtalhos.abrir(get_tree().current_scene if get_tree().current_scene != null else self)
+
+
 func _ao_entrar_no(no: Node) -> void:
 	# Todo botão do jogo faz um clique seco; passar o mouse, um tique baixo (docs/11)
 	if no is BaseButton:

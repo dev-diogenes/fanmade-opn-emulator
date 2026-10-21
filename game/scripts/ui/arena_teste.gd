@@ -1123,12 +1123,21 @@ func _entrada_tabuleiro(evento: InputEvent) -> void:
 
 
 func _unhandled_input(evento: InputEvent) -> void:
-	if evento is InputEventKey and evento.pressed and not evento.echo and evento.keycode == KEY_F and not autoplay:
+	if Atalhos.pressionou(evento, "ficha") and not autoplay:
 		var ag := _agente_da_vez()
 		if ag != null:
 			get_viewport().set_input_as_handled()
 			DossieAgente.abrir(self, ag)
 			return
+	# Cartas pelo teclado (1–5, remapeáveis): o mesmo que clicar, se a carta estiver liberada
+	if not autoplay and not TourGuiado.em_andamento():
+		for i in _mao.get_child_count():
+			var carta := _mao.get_child(i) as CartaAcao
+			if carta != null and Atalhos.pressionou(evento, "carta_%d" % (i + 1)):
+				get_viewport().set_input_as_handled()
+				if not carta.disabled:
+					carta.pressed.emit()
+				return
 	if evento.is_action_pressed("ui_cancel") and not autoplay and not MenuPausa.aberto(self) and not TourGuiado.em_andamento():
 		get_viewport().set_input_as_handled()
 		if _bilhete_tipo != "" or _modo != "":

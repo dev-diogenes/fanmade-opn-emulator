@@ -625,7 +625,7 @@ func _mostrar_relatorio() -> void:
 	for ag in r.agentes:
 		var s := "%s: %s" % [ag.nome, ag.situacao]
 		if ag.has("pp"):
-			s += ", %+d PP, NEX %d%%→%d%%, %s%s" % [int(ag.pp), int(ag.nex_antes), int(ag.nex), ag.patente, " [color=#2f6b3f](promovido!)[/color]" if ag.promovido else ""]
+			s += ", %+d PP, NEX %d%%→%d%%, %s%s" % [int(ag.pp), int(ag.nex_antes), int(ag.nex), ag.patente, " " + Tema.bb("(promovido!)", Tema.cor_sucesso(true)) if ag.promovido else ""]
 		linhas.append(s)
 	var camp: Dictionary = r.get("campanha", {})
 	if not camp.is_empty():
@@ -639,7 +639,7 @@ func _mostrar_relatorio() -> void:
 		for t in camp.get("marcas", []):
 			linhas.append("[color=#7a5a12]Marca: %s[/color]" % t)
 		for nome in camp.get("recrutas", []):
-			linhas.append("[color=#2f6b3f]%s pode ser recrutado na Base.[/color]" % nome)
+			linhas.append(Tema.bb("%s pode ser recrutado na Base." % nome, Tema.cor_sucesso(true)))
 		if camp.get("concluida", false):
 			linhas.append("[b]Epílogo[/b]")
 			linhas.append("[i]%s[/i]" % camp.get("epilogo", ""))

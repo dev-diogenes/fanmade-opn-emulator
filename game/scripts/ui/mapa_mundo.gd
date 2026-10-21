@@ -535,7 +535,7 @@ func _clicar(evento: InputEvent) -> void:
 
 
 func _unhandled_input(evento: InputEvent) -> void:
-	if evento is InputEventKey and evento.pressed and not evento.echo and evento.keycode == KEY_F and not TourGuiado.em_andamento():
+	if Atalhos.pressionou(evento, "ficha") and not TourGuiado.em_andamento():
 		get_viewport().set_input_as_handled()
 		_abrir_ficha(missao.agente_atual())
 		return
@@ -892,7 +892,7 @@ func _atualizar_caso() -> void:
 	for q in c.perguntas:
 		var feitas := mini(int(q.encontradas), int(q.pistas_necessarias))
 		if q.respondida:
-			linhas.append(Tema.bb("✔ %s" % q.texto, Tema.SUCESSO) + "\n   " + Tema.bb(c.resposta(q.id), Tema.OURO_CLARO))
+			linhas.append(Tema.bb("✔ %s" % q.texto, Tema.cor_sucesso()) + "\n   " + Tema.bb(c.resposta(q.id), Tema.OURO_CLARO))
 		else:
 			var marcas := "●".repeat(feitas) + "○".repeat(int(q.pistas_necessarias) - feitas)
 			linhas.append("%s  %s" % [q.texto, Tema.bb(marcas, Tema.OURO)])

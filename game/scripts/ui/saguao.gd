@@ -89,7 +89,7 @@ func _atualizar() -> void:
 		linhas.append("[b]Agentes da carreira do host[/b]")
 		for a in info.agentes:
 			var seu: bool = int(a.get("peer", 1)) == meu
-			linhas.append("  %s (NEX %d%%) — %s%s" % [a.nome, int(a.nex), a.jogador, "  [color=#2f6b3f](seu)[/color]" if seu else ""])
+			linhas.append("  %s (NEX %d%%) — %s%s" % [a.nome, int(a.nex), a.jogador, "  " + Tema.bb("(seu)", Tema.cor_sucesso(true)) if seu else ""])
 	var rel: Dictionary = info.get("relatorio", {})
 	if not rel.is_empty():
 		linhas.append("")

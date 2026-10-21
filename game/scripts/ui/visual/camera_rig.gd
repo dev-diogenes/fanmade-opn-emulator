@@ -68,7 +68,7 @@ func _aplicar() -> void:
 	camera.look_at(_alvo_atual, Vector3.UP)
 
 
-## Troca o modo de câmera (C) e guarda a escolha.
+## Troca o modo de câmera (C, remapeável) e guarda a escolha.
 func proximo_modo() -> String:
 	definir_modo(MODOS[(MODOS.find(modo) + 1) % MODOS.size()])
 	return modo
@@ -147,15 +147,13 @@ func tratar_entrada(evento: InputEvent) -> bool:
 		if evento.button_mask & MOUSE_BUTTON_MASK_MIDDLE:
 			deslizar(-evento.relative.x * 0.05, -evento.relative.y * 0.05)
 			return true
-	if evento is InputEventKey and evento.pressed:
-		match evento.keycode:
-			KEY_C: proximo_modo()
-			KEY_Q: girar(0.15)
-			KEY_E: girar(-0.15)
-			KEY_W, KEY_UP: deslizar(0, 1)
-			KEY_S, KEY_DOWN: deslizar(0, -1)
-			KEY_A, KEY_LEFT: deslizar(-1, 0)
-			KEY_D, KEY_RIGHT: deslizar(1, 0)
-			_: return false
-		return true
-	return false
+	# Teclas remapeáveis (docs/18, A4); segurar gira e desliza sem parar
+	if Atalhos.pressionou(evento, "camera_modo"): proximo_modo()
+	elif Atalhos.pressionou(evento, "camera_girar_esq", true): girar(0.15)
+	elif Atalhos.pressionou(evento, "camera_girar_dir", true): girar(-0.15)
+	elif Atalhos.pressionou(evento, "mover_cima", true): deslizar(0, 1)
+	elif Atalhos.pressionou(evento, "mover_baixo", true): deslizar(0, -1)
+	elif Atalhos.pressionou(evento, "mover_esquerda", true): deslizar(-1, 0)
+	elif Atalhos.pressionou(evento, "mover_direita", true): deslizar(1, 0)
+	else: return false
+	return true

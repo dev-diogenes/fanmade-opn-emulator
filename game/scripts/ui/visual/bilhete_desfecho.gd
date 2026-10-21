@@ -59,7 +59,7 @@ func _montar(titulo: String, texto: String, efeitos: Array, sucesso) -> void:
 	if sucesso != null:
 		var selo := Label.new()
 		selo.text = "SUCESSO" if sucesso else "FALHA"
-		var cor := Color("2f6b3f") if sucesso else Tema.SANGUE
+		var cor := Tema.cor_sucesso(true) if sucesso else Tema.cor_falha(true)
 		selo.add_theme_color_override("font_color", cor)
 		selo.add_theme_stylebox_override("normal", Tema.caixa(Color(0, 0, 0, 0), cor, 2, 3, Vector2(6, 1)))
 		if f != null:
@@ -84,18 +84,19 @@ func _montar(titulo: String, texto: String, efeitos: Array, sucesso) -> void:
 var _corpo: Label
 
 
-## Um selo por efeito: vermelho para perda, verde para ganho, roxo para a Membrana e o mapa.
+## Um selo por efeito: vermelho para perda, verde para ganho (laranja e azul na paleta para
+## daltonismo, docs/18), roxo para a Membrana e o mapa.
 func _selo_efeito(ef: Dictionary) -> Label:
 	var l := Label.new()
 	l.text = String(ef.get("texto", ""))
 	var tipo := String(ef.get("tipo", ""))
 	var cor := Color("5b2a86")
 	if tipo in ["dano", "dano_mental"]:
-		cor = Tema.SANGUE
+		cor = Tema.cor_falha(true)
 	elif tipo in ["cura", "recupera_pe", "recupera_san"]:
-		cor = Color("2f6b3f")
+		cor = Tema.cor_sucesso(true)
 	elif tipo == "membrana":
-		cor = Tema.SANGUE if int(ef.get("valor", 0)) < 0 else Color("2f6b3f")
+		cor = Tema.cor_falha(true) if int(ef.get("valor", 0)) < 0 else Tema.cor_sucesso(true)
 	l.add_theme_color_override("font_color", Color.WHITE)
 	l.add_theme_stylebox_override("normal", Tema.caixa(cor, cor.darkened(0.3), 1, 4, Vector2(8, 2)))
 	return l

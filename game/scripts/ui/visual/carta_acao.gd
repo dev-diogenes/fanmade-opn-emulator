@@ -18,7 +18,8 @@ static func criar(titulo: String, dica: String, atalho: int, semente: int, cor: 
 	var c := CartaAcao.new()
 	c.custom_minimum_size = TAMANHO
 	c.focus_mode = Control.FOCUS_ALL
-	c.tooltip_text = "%s (%d)" % [dica, atalho]
+	var tecla := Atalhos.nome_tecla("carta_%d" % atalho) if Atalhos.ACOES.has("carta_%d" % atalho) else str(atalho)
+	c.tooltip_text = "%s (%s)" % [dica, tecla]
 	c.set_meta("dica", c.tooltip_text)
 	var v := VBoxContainer.new()
 	v.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -52,7 +53,7 @@ static func criar(titulo: String, dica: String, atalho: int, semente: int, cor: 
 	d.add_theme_font_size_override("font_size", 13)
 	v.add_child(d)
 	var n := Label.new()
-	n.text = str(atalho)
+	n.text = tecla   # a tecla escolhida na folha de atalhos (docs/18, A4)
 	n.position = Vector2(8, 4)
 	n.add_theme_color_override("font_color", Color(Tema.TINTA, 0.7))
 	n.add_theme_font_size_override("font_size", 13)

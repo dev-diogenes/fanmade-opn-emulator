@@ -73,6 +73,7 @@ func test_cartao_agente_mostra_vez_e_queda():
 
 func test_tela_de_titulo_carrega():
 	var t = load("res://scenes/titulo.tscn").instantiate()
+	t.avisar_flashes = false
 	add_child_autofree(t)
 	await wait_frames(2)
 	assert_not_null(t._mapa3d)
@@ -209,7 +210,7 @@ func test_preferencias_de_efeitos_e_pausa():
 	assert_false(Preferencias.efeito("grao"))
 	var m := MenuPausa.abrir(self)
 	assert_true(MenuPausa.aberto(self))
-	assert_eq(m._ajustes.get_child_count(), 9, "texto, resultados, escala, volume, câmera e quatro efeitos")
+	assert_eq(m._ajustes.get_child_count(), 12, "texto, resultados, escala, flashes, daltonismo, atalhos, volume, câmera e quatro efeitos")
 	m.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Preferencias.caminho))
 	Preferencias.caminho = antes

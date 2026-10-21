@@ -145,6 +145,6 @@ func _linha_item(item_id: String, qtd: int) -> Control:
 
 
 func _unhandled_input(evento: InputEvent) -> void:
-	if evento.is_action_pressed("ui_cancel") or (evento is InputEventKey and evento.pressed and evento.keycode == KEY_F):
+	if evento.is_action_pressed("ui_cancel") or Atalhos.pressionou(evento, "ficha"):
 		get_viewport().set_input_as_handled()
 		queue_free()
