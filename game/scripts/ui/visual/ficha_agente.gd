@@ -41,6 +41,16 @@ func mostrar(a: Agente, p_usar_item: Callable = Callable()) -> void:
 	current_tab = clampi(atual, 0, get_tab_count() - 1)
 
 
+## Só a página 1 (Agente), sem a pasta: a revisão do dossiê de criação usa (docs/26).
+static func pagina_um(a: Agente) -> Control:
+	var f := FichaAgente.new()
+	f.agente = a
+	var c := f._montar_agente()
+	f.free()
+	c.theme = Tema.tema_papel()
+	return c
+
+
 func _pagina(nome: String, conteudo: Control) -> Control:
 	var papel := PanelContainer.new()
 	papel.name = nome
@@ -351,6 +361,20 @@ func _montar_habilidades() -> Control:
 		String(Pecas.TONS[clampi(agente.tom, 0, Pecas.TONS.size() - 1)][0]).to_lower(),
 		origem.get("nome", "—"), origem.get("poder", {}).get("descricao", "")]
 	texto.add_child(aparencia)
+	# Personalidade, histórico e objetivo (docs/26), quando o jogador escreveu
+	for par in [["Personalidade", agente.personalidade], ["Histórico", agente.historico], ["Objetivo", agente.objetivo]]:
+		if String(par[1]).strip_edges() == "":
+			continue
+		texto.add_child(aba(par[0]))
+		var l := Label.new()
+		l.text = String(par[1])
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size = Vector2(300, 0)
+		l.add_theme_color_override("font_color", Tema.TINTA)
+		var m := Tema.fonte_maquina()
+		if m != null:
+			l.add_theme_font_override("font", m)
+		texto.add_child(l)
 	desc.add_child(texto)
 	esq.add_child(desc)
 

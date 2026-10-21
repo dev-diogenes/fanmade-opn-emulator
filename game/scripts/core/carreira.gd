@@ -65,6 +65,10 @@ func recrutar(nome: String) -> Agente:
 
 ## Agente criado pelo jogador (docs/17, E2). Valida com CriacaoAgente e dá o kit inicial
 ## da classe (o primeiro recruta da mesma classe em recrutas.json). Retorna {agente, erros}.
+## Tamanho máximo dos textos da descrição (caracteres).
+const LIMITE_DESCRICAO := {"personalidade": 140, "historico": 600, "objetivo": 140}
+
+
 func recrutar_ficha(ficha: Dictionary) -> Dictionary:
 	if roster.size() >= MAX_ROSTER:
 		return {"agente": null, "erros": ["O arquivo já tem %d agentes (o máximo)." % MAX_ROSTER]}
@@ -81,6 +85,10 @@ func recrutar_ficha(ficha: Dictionary) -> Dictionary:
 	var a: Agente = res.agente
 	a.aparencia = String(ficha.get("aparencia", ""))   # a foto do dossiê (docs/19)
 	a.tom = int(ficha.get("tom", 0))
+	# Descrição (docs/26): texto livre, aparado para caber na ficha
+	a.personalidade = String(ficha.get("personalidade", "")).strip_edges().left(LIMITE_DESCRICAO.personalidade)
+	a.historico = String(ficha.get("historico", "")).strip_edges().left(LIMITE_DESCRICAO.historico)
+	a.objetivo = String(ficha.get("objetivo", "")).strip_edges().left(LIMITE_DESCRICAO.objetivo)
 	a.id = "ag%d" % _proximo_id
 	_proximo_id += 1
 	var kit: Dictionary = kit_da_classe(String(ficha.get("classe", "")))

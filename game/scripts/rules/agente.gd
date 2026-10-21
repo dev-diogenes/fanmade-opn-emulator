@@ -23,6 +23,10 @@ var sem_poder_origem := false    ## Criança/adolescente que não escolheu o pod
 ## e tom da roupa (índice em Pecas.TONS). As regras não leem.
 var aparencia := ""
 var tom := 0
+## Descrição da ficha oficial (docs/26), texto livre do jogador; as regras não leem.
+var personalidade := ""
+var historico := ""
+var objetivo := ""
 ## Ex-mundano (regra NEX 0%): bônus recebidos ao virar agente, ex.: {"pv": 12, "pe": 1, "san": 4}
 var transicao_mundano: Dictionary = {}
 var pp := 0                      ## Pontos de Prestígio (definem a patente)
@@ -512,6 +516,7 @@ func para_dicionario() -> Dictionary:
 		"poderes_paranormais": poderes_paranormais.duplicate(true), "afinidade": afinidade,
 		"pv": pv, "pe": pe, "san": san, "condicoes": condicoes.keys(),
 		"aparencia": aparencia, "tom": tom,
+		"personalidade": personalidade, "historico": historico, "objetivo": objetivo,
 	}
 
 
@@ -556,6 +561,9 @@ static func de_dicionario(p_ruleset: Ruleset, d: Dictionary) -> Agente:
 	a.afinidade = d.get("afinidade", "")
 	a.aparencia = String(d.get("aparencia", ""))
 	a.tom = int(d.get("tom", 0))
+	a.personalidade = String(d.get("personalidade", ""))
+	a.historico = String(d.get("historico", ""))
+	a.objetivo = String(d.get("objetivo", ""))
 	a.arma_id = d.get("arma", "")
 	for x in d.get("equipamento", []):
 		a.equipamento.append(x)

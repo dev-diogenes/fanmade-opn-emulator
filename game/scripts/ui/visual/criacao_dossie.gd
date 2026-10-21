@@ -17,13 +17,15 @@ var rs: Ruleset
 var ficha := {"nome": "", "origem": "", "classe": "combatente", "nex": 5,
 	"atributos": {"agi": 1, "for": 1, "int": 1, "pre": 1, "vig": 1},
 	"pericias_origem": [], "pericias_classe": [], "pericias_livres": [], "perito": [], "rituais": [],
-	"aparencia": "", "tom": 0}
+	"aparencia": "", "tom": 0, "personalidade": "", "historico": "", "objetivo": ""}
 
 var _abas: TabContainer
 var _paginas: Dictionary = {}     ## nome -> VBoxContainer (reconstruída a cada mudança)
 var _erros: Label
 var _assinar: Button
 var _nome: LineEdit
+## Campos da descrição (docs/26): reaproveitados entre redesenhos, como o nome.
+var _campos_descricao: Dictionary = {}   ## "personalidade" | "historico" | "objetivo" -> LineEdit/TextEdit
 var _foto: FotoAgente
 var _lbl_aparencia: Label
 
@@ -77,7 +79,7 @@ func _montar() -> void:
 	_abas.custom_minimum_size = Vector2(900, 0)   # a pasta não muda de largura entre as abas
 	meio.add_child(_abas)
 	meio.add_child(_coluna_foto())
-	for nome in ["Identidade", "Classe", "Atributos", "Perícias", "Rituais", "Revisão"]:
+	for nome in ["Identidade", "Classe", "Atributos", "Perícias", "Rituais", "Descrição", "Revisão"]:
 		var papel := PanelContainer.new()
 		papel.name = nome
 		papel.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(24, 18)))
@@ -143,8 +145,8 @@ func _redesenhar() -> void:
 	var pagina := _abas.get_tab_title(_abas.current_tab)
 	var v: VBoxContainer = _paginas[pagina]
 	for filho in v.get_children():
-		if filho == _nome:
-			v.remove_child(filho)   # o campo do nome é reaproveitado (mantém o cursor)
+		if filho == _nome or filho in _campos_descricao.values():
+			v.remove_child(filho)   # campos de texto são reaproveitados (mantêm o cursor)
 			continue
 		filho.visible = false
 		filho.queue_free()
@@ -155,6 +157,7 @@ func _redesenhar() -> void:
 		"Atributos": _pagina_atributos(v)
 		"Perícias": _pagina_pericias(v)
 		"Rituais": _pagina_rituais(v)
+		"Descrição": _pagina_descricao(v)
 		"Revisão": _pagina_revisao(v, res, erros)
 
 
@@ -441,24 +444,83 @@ func _pagina_rituais(v: VBoxContainer) -> void:
 		_opcao(g, nome, rid in ficha.rituais, func(): _alternar(ficha.rituais, rid, 3), String(r.get("descricao", "")))
 
 
+## Descrição (docs/26): o quadro "Descrição" da ficha oficial. A aparência fica na foto ao
+## lado; personalidade, histórico e objetivo são texto livre e opcional.
+const CAMPOS_DESCRICAO := [
+	["personalidade", "Personalidade", "Como o agente age sob pressão? Ex.: calado e observador; faz piada quando está com medo.", false],
+	["historico", "Histórico", "De onde veio, o que fazia antes da Ordem e como topou com o paranormal pela primeira vez.", true],
+	["objetivo", "Objetivo", "O que o mantém na Ordem? Ex.: descobrir o que aconteceu com a irmã.", false],
+]
+
+
+func _pagina_descricao(v: VBoxContainer) -> void:
+	_titulo(v, "Descrição")
+	_nota(v, "Opcional. Aparece na ficha do agente (página Habilidades e inventário). A aparência é a da foto, ao lado.")
+	for c in CAMPOS_DESCRICAO:
+		var id: String = c[0]
+		var rotulo := Label.new()
+		rotulo.text = String(c[1]).to_upper()
+		rotulo.add_theme_color_override("font_color", Tema.TINTA)
+		var f := Tema.fonte_titulo()
+		if f != null:
+			rotulo.add_theme_font_override("font", f)
+		v.add_child(rotulo)
+		if not _campos_descricao.has(id):
+			var limite: int = Carreira.LIMITE_DESCRICAO[id]
+			var campo: Control
+			if c[3]:
+				var te := TextEdit.new()
+				te.custom_minimum_size = Vector2(0, 130)
+				te.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+				te.placeholder_text = c[2]
+				te.text_changed.connect(func():
+					if te.text.length() > limite:
+						te.text = te.text.left(limite)
+						te.set_caret_column(te.get_line(te.get_line_count() - 1).length(), false)
+						te.set_caret_line(te.get_line_count() - 1)
+					ficha[id] = te.text)
+				campo = te
+			else:
+				var le := LineEdit.new()
+				le.max_length = limite
+				le.placeholder_text = c[2]
+				le.text_changed.connect(func(t): ficha[id] = t)
+				campo = le
+			campo.tooltip_text = "Até %d caracteres." % limite
+			_campos_descricao[id] = campo
+		v.add_child(_campos_descricao[id])
+
+
+## Revisão (docs/26): a página 1 da ficha nova, como o agente vai ficar — já com o
+## equipamento inicial da classe, para os ataques e a Defesa saírem certos.
 func _pagina_revisao(v: VBoxContainer, res: Dictionary, erros: Array) -> void:
 	_titulo(v, "Revisão da ficha")
 	if res.agente != null:
 		var a: Agente = res.agente
 		a.nome = String(ficha.nome).strip_edges() if String(ficha.nome).strip_edges() != "" else "(sem nome)"
-		var t := RichTextLabel.new()
-		t.bbcode_enabled = true
-		t.fit_content = true
-		t.text = DossieAgente.ficha_bbcode(a)
-		v.add_child(t)
+		a.aparencia = String(ficha.aparencia)
+		a.tom = int(ficha.tom)
 		var kit := carreira.kit_da_classe(ficha.classe)
+		for item in kit.get("equipamento", []):
+			a.equipamento.append(item)
+		a.arma_id = String(kit.get("arma", ""))
+		_revisao = FichaAgente.pagina_um(a)
+		v.add_child(_revisao)
 		_nota(v, "Equipamento inicial: %s." % ", ".join(PackedStringArray((kit.equipamento as Array).map(func(i): return rs.equipamento(i).get("nome", i)))))
+		var desc := PackedStringArray()
+		for c in CAMPOS_DESCRICAO:
+			if String(ficha.get(c[0], "")).strip_edges() != "":
+				desc.append("%s: %s" % [c[1], String(ficha[c[0]]).strip_edges()])
+		_nota(v, "\n".join(desc) if not desc.is_empty() else "Descrição em branco (opcional).")
 	for e in erros:
 		var l := _nota(v, "• " + String(e))
 		l.add_theme_color_override("font_color", Tema.SANGUE)
 
 
 ## Liga/desliga um item numa lista com limite (o mais antigo sai se passar do limite).
+var _revisao: Control   ## a página 1 da ficha na revisão (para os testes)
+
+
 func _alternar(lista: Array, valor: String, limite: int) -> void:
 	if valor in lista:
 		lista.erase(valor)
