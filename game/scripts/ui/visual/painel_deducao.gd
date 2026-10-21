@@ -92,7 +92,7 @@ func _montar() -> void:
 	rodape.add_theme_constant_override("separation", Tema.ESPACO_M)
 	v.add_child(rodape)
 	var regra := Label.new()
-	regra.text = "Cada pista revela um traço do culpado. Duas pistas diferentes deixam um só suspeito. Acusar errado custa %d de Membrana e risca o suspeito." % -Caso.penalidade_palpite()
+	regra.text = "Cada pista revela um traço do culpado. Duas pistas firmes diferentes deixam um só suspeito; um depoimento com ? pode estar errado. Acusar errado custa %d de Membrana e risca o suspeito." % -Caso.penalidade_palpite()
 	regra.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	regra.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	regra.add_theme_color_override("font_color", Color(Tema.TINTA, 0.75))
@@ -128,11 +128,15 @@ func mostrar(pid: String) -> void:
 	linha.add_theme_constant_override("v_separation", Tema.ESPACO_P)
 	_corpo.add_child(linha)
 	var rot := Label.new()
-	rot.text = "Indícios:" if not achados.is_empty() else "Nenhuma pista desta pergunta ainda. Examine os pontos da cena para acusar."
+	var tem_pista: bool = not achados.is_empty() or not caso.indicios_duvidosos(pid).is_empty()
+	rot.text = "Indícios:" if tem_pista else "Nenhuma pista desta pergunta ainda. Examine os pontos da cena para acusar."
 	rot.add_theme_color_override("font_color", Color(Tema.TINTA, 0.8))
 	linha.add_child(rot)
 	for traco in achados:
 		linha.add_child(_chip(traco, true))
+	var duvidosos := caso.indicios_duvidosos(pid)
+	for traco in duvidosos:   # depoimentos incertos (docs/35): podem ser verdade ou não
+		linha.add_child(_chip(traco, false, true))
 	var colunas := 3 if Caso.candidatos(pid).size() > 4 else 2
 	var grade := GridContainer.new()
 	grade.columns = colunas
@@ -142,10 +146,10 @@ func mostrar(pid: String) -> void:
 	var pode: bool = not q.respondida and int(q.encontradas) > 0
 	var culpado := String(caso.verdadeiro(pid).get("id", "")) if q.respondida else ""
 	for c in Caso.candidatos(pid):
-		grade.add_child(_carta(c, achados, q.get("descartados", []), pode, culpado))
+		grade.add_child(_carta(c, achados, q.get("descartados", []), pode, culpado, duvidosos))
 
 
-func _carta(c: Dictionary, achados: Array, descartados: Array, pode: bool, culpado: String) -> Button:
+func _carta(c: Dictionary, achados: Array, descartados: Array, pode: bool, culpado: String, duvidosos: Array = []) -> Button:
 	var b := Button.new()
 	b.theme_type_variation = "BotaoPapel"
 	b.custom_minimum_size = Vector2(250, 90)
@@ -178,7 +182,7 @@ func _carta(c: Dictionary, achados: Array, descartados: Array, pode: bool, culpa
 	chips.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(chips)
 	for t in c.indicios:
-		chips.add_child(_chip(t, t in achados))
+		chips.add_child(_chip(t, t in achados, t in duvidosos))
 	if riscado or (culpado != "" and c.id != culpado):
 		b.modulate = Color(1, 1, 1, 0.45)
 	if riscado:
@@ -191,11 +195,20 @@ func _carta(c: Dictionary, achados: Array, descartados: Array, pode: bool, culpa
 	return b
 
 
-## Um traço como etiqueta: aceso (ouro, com ✔) se já apareceu numa pista.
-func _chip(traco: String, aceso: bool) -> Label:
+## Um traço como etiqueta: aceso (ouro, com ✔) se já apareceu numa pista firme; com "?"
+## (âmbar) se só veio de um depoimento incerto (docs/35).
+func _chip(traco: String, aceso: bool, duvidoso: bool = false) -> Label:
 	var l := Label.new()
-	l.text = ("✔ " if aceso else "") + String(Caso.indicio(traco).get("rotulo", traco)).to_upper()
+	var rotulo := String(Caso.indicio(traco).get("rotulo", traco)).to_upper()
+	l.text = ("✔ " + rotulo) if aceso else (("? " + rotulo) if duvidoso else rotulo)
 	l.tooltip_text = String(Caso.indicio(traco).get("texto", ""))
+	if duvidoso and not aceso:
+		l.tooltip_text = "Só um depoimento incerto aponta isto: pode estar errado.\n" + l.tooltip_text
+		l.mouse_filter = Control.MOUSE_FILTER_PASS
+		l.add_theme_font_size_override("font_size", Tema.FONTE_P - 1)
+		l.add_theme_color_override("font_color", Tema.TINTA)
+		l.add_theme_stylebox_override("normal", Tema.caixa(Color(Tema.AVISO, 0.3), Color(Tema.AVISO, 0.9), 1, 2, Vector2(5, 1)))
+		return l
 	l.mouse_filter = Control.MOUSE_FILTER_PASS
 	l.add_theme_font_size_override("font_size", Tema.FONTE_P - 1)   # 13, o mínimo das cartas (docs/19)
 	l.add_theme_color_override("font_color", Tema.TINTA if aceso else Color(Tema.TINTA, 0.6))

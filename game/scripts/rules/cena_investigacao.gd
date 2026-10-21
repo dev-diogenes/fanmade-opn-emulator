@@ -244,7 +244,10 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 	var resultado := {"teste": teste, "sucesso": teste.sucesso, "pista": ""}
 	_log("%s procura em [b]%s[/b] com %s: %s" % [a.nome, p.nome, ruleset.pericia(pericia).nome, teste.descrever()])
 	if teste.sucesso:
-		resultado.pista = _encontrar_pista(a, ponto_id)
+		# Depoimento passado por pouco (docs/35): a testemunha hesita e pode estar enganada
+		var incerta: bool = p.get("depoimento", false) and teste.total - dt < MARGEM_DEPOIMENTO_FIRME
+		resultado.pista = _encontrar_pista(a, ponto_id, incerta)
+		resultado.incerta = incerta
 		var t: Dictionary = _trilha.get_or_add(a, {"sucessos": 0, "dados": 0})
 		t.sucessos += 1
 	else:
@@ -258,16 +261,26 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 	return resultado
 
 
+## Depoimento firme: passar no teste da testemunha por 5 ou mais (docs/35, design do jogo).
+const MARGEM_DEPOIMENTO_FIRME := 5
+
+
 ## Anota a pista do ponto e tira o ponto da cena. Devolve o texto da pista.
-func _encontrar_pista(a: Agente, ponto_id: String) -> String:
+## `incerta`: depoimento aos tropeços; os dados da cena decidem se a testemunha acertou.
+func _encontrar_pista(a: Agente, ponto_id: String, incerta: bool = false, sorte: int = -1) -> String:
 	var p := ponto(ponto_id)
 	pontos_restantes.erase(ponto_id)
-	var pista := caso.registrar_pista(p.pista, p.responde, cena.id)
+	if sorte < 0:   # a sorte da testemunha: da cena, do ponto e do momento, sem rolar dados
+		sorte = absi(hash("%s|%s|%d|%d" % [cena.id, ponto_id, rodada, caso.pistas.size()]))
+	var pista := caso.registrar_pista(p.pista, p.responde, cena.id, incerta, sorte)
 	var texto := String(pista.texto)
 	pistas_encontradas.append({"ponto": ponto_id, "texto": texto, "responde": p.responde, "agente": a.nome,
-		"indicio": pista.indicio})
+		"indicio": pista.indicio, "duvidosa": incerta})
 	var rotulo := String(Caso.indicio(pista.indicio).get("rotulo", "")) if pista.indicio != "" else ""
-	_log("[color=#6fcf8e]Pista:[/color] %s%s" % [texto, "  [color=#e3c27a][%s][/color]" % rotulo.to_upper() if rotulo != "" else ""])
+	if incerta:
+		_log("[color=#eda64a]Depoimento incerto:[/color] %s%s [i](a testemunha hesita; pode estar enganada)[/i]" % [texto, "  [color=#e3c27a][?%s][/color]" % rotulo.to_upper() if rotulo != "" else ""])
+	else:
+		_log("[color=#6fcf8e]Pista:[/color] %s%s" % [texto, "  [color=#e3c27a][%s][/color]" % rotulo.to_upper() if rotulo != "" else ""])
 	return texto
 
 

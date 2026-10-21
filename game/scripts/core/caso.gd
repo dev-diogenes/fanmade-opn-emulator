@@ -86,12 +86,24 @@ static func indicio(id: String) -> Dictionary:
 	return DadosJogo.ler("casos").get("indicios", {}).get(id, {"rotulo": id, "texto": ""})
 
 
-## Os traços já revelados de uma pergunta, sem repetir, na ordem em que apareceram.
+## Os traços FIRMES de uma pergunta (sem os depoimentos incertos), sem repetir, na ordem
+## em que apareceram.
 func indicios_encontrados(pergunta_id: String) -> Array:
 	var lista: Array = []
 	for p in pistas:
 		var t := String(p.get("indicio", ""))
-		if p.get("responde", "") == pergunta_id and t != "" and not t in lista:
+		if p.get("responde", "") == pergunta_id and t != "" and not p.get("duvidosa", false) and not t in lista:
+			lista.append(t)
+	return lista
+
+
+## Traços que só vieram de depoimentos incertos (docs/35): podem ser verdade ou não.
+func indicios_duvidosos(pergunta_id: String) -> Array:
+	var firmes := indicios_encontrados(pergunta_id)
+	var lista: Array = []
+	for p in pistas:
+		var t := String(p.get("indicio", ""))
+		if p.get("responde", "") == pergunta_id and t != "" and p.get("duvidosa", false) and not t in firmes and not t in lista:
 			lista.append(t)
 	return lista
 
@@ -141,25 +153,49 @@ func pergunta(id: String) -> Dictionary:
 
 ## Anota uma pista: ela revela o próximo traço do culpado verdadeiro (no texto, {indicio}).
 ## A pergunta não se resolve sozinha: o grupo precisa deduzir (docs/32).
-## Devolve a pista anotada: {texto, responde, cena, indicio}.
-func registrar_pista(texto: String, responde: String, cena: String) -> Dictionary:
+## Devolve a pista anotada: {texto, responde, cena, indicio, duvidosa}.
+##
+## `incerta` (docs/35, design do jogo): um depoimento dado aos tropeços. A `sorte` (um inteiro
+## determinístico, igual nas duas máquinas do online, sem gastar a fila dos Dados) decide se a
+## testemunha está certa (ímpar: enganada) e, se enganada, qual traço de outro candidato ela dá.
+## A pista fica marcada como duvidosa e não entra na conta de "duas pistas firmes, um suspeito".
+func registrar_pista(texto: String, responde: String, cena: String, incerta: bool = false, sorte: int = 0) -> Dictionary:
 	var p := pergunta(responde)
 	var traco := ""
 	if not p.is_empty():
 		var ordem: Array = p.get("ordem", [])
 		if ordem.is_empty():
 			ordem = verdadeiro(responde).get("indicios", [])
-		if not ordem.is_empty():
-			traco = String(ordem[int(p.encontradas) % ordem.size()])
+		var enganada := incerta and absi(sorte) % 2 == 1
+		if enganada:
+			var falsos := _tracos_de_outros(responde)
+			if not falsos.is_empty():
+				traco = String(falsos[(absi(sorte) / 2) % falsos.size()])
+		elif not ordem.is_empty():
+			var reveladas := int(p.get("reveladas", p.encontradas))
+			traco = String(ordem[reveladas % ordem.size()])
+			p.reveladas = reveladas + 1
 		p.encontradas += 1
 	var final := formatar(texto)
 	if traco != "":
 		final = final.replace("{indicio}", String(indicio(traco).get("texto", "")))
 	else:
 		final = final.replace(" {indicio}", "").replace("{indicio}", "")
-	var pista := {"texto": final, "responde": responde, "cena": cena, "indicio": traco}
+	var pista := {"texto": final, "responde": responde, "cena": cena, "indicio": traco, "duvidosa": incerta}
 	pistas.append(pista)
 	return pista
+
+
+## Traços dos outros candidatos que o culpado verdadeiro não tem (o que uma testemunha
+## enganada pode dizer).
+func _tracos_de_outros(pergunta_id: String) -> Array:
+	var verdadeiros: Array = verdadeiro(pergunta_id).get("indicios", [])
+	var lista: Array = []
+	for c in candidatos(pergunta_id):
+		for t in c.indicios:
+			if not t in verdadeiros and not t in lista:
+				lista.append(t)
+	return lista
 
 
 func respondidas() -> Array[Dictionary]:

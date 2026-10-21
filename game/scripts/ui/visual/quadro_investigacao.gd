@@ -90,7 +90,11 @@ func _reconstruir() -> void:
 			if p.responde != q.id:
 				continue
 			var rotulo := String(Caso.indicio(p.indicio).get("rotulo", "")).to_upper() if String(p.get("indicio", "")) != "" else ""
-			var foto := _foto(rotulo if rotulo != "" else p.texto, hash(p.texto), rng.randf_range(-5.0, 5.0), p.texto)
+			var duvidosa: bool = p.get("duvidosa", false)   # depoimento incerto (docs/35)
+			if duvidosa and rotulo != "":
+				rotulo = "? " + rotulo
+			var dica := ("Depoimento incerto: a testemunha pode estar enganada.\n" if duvidosa else "") + String(p.texto)
+			var foto := _foto(rotulo if rotulo != "" else p.texto, hash(p.texto), rng.randf_range(-5.0, 5.0), dica)
 			foto.position = _vaga(x, y, k) + Vector2(rng.randf_range(-6, 6), rng.randf_range(-4, 4))
 			_conteudo.add_child(foto)
 			_fios.append([alfinete_nota, _alfinete(foto)])

@@ -37,6 +37,7 @@
 | [32-critica-investigacao-e-escala.md](32-critica-investigacao-e-escala.md) | Crítica de envolvimento: dedução por indícios (pistas, suspeitos, acusação) e escala e design do mundo 3D (casas, árvores, props brasileiros, marcos) |
 | [33-pendencias-e-conteudo.md](33-pendencias-e-conteudo.md) | Pendências (teste intermitente, recrutas com descrição, sala de Transcender por classe, atalho da cerimônia) e conteúdo novo: 5 candidatos, 2 cenas e 4 eventos que dão pista |
 | [34-mapa-escalada-e-afinidade.md](34-mapa-escalada-e-afinidade.md) | Afinidade pelo livro (firma no próximo Transcender), sala de Transcender por elemento, serra escalável com 20 na Agilidade, água rasa e mais miudezas nos hexes |
+| [35-depoimentos-incertos.md](35-depoimentos-incertos.md) | Auditoria da investigação contra o livro (p.79-81) e depoimentos incertos: testemunha que passa por pouco pode se enganar, e a pista aparece com "?" |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

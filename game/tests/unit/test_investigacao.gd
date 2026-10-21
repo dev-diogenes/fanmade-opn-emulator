@@ -379,3 +379,32 @@ func test_vinte_no_movimento_libera_a_serra():
 	m.dados.forcar([19, 5, 5, 5])   # Bianca: AGI 2 + 2 slots extras
 	r = m.rolar_movimento()
 	assert_false(m.pode_escalar, "sem 20, sem escalada")
+
+
+# --- Depoimentos incertos (docs/35) --------------------------------------------------
+
+func test_depoimento_incerto_pode_mentir():
+	var c := m.caso
+	var p := c.registrar_pista("{indicio}", "quem", "t", true, 1)   # sorte ímpar: enganada
+	assert_true(p.duvidosa)
+	assert_false(p.indicio in c.sujeito.indicios, "enganada: um traço de outro candidato")
+	assert_true(c.indicios_encontrados("quem").is_empty(), "o depoimento incerto não conta como firme")
+	assert_eq(c.indicios_duvidosos("quem"), [p.indicio])
+	# As firmes continuam valendo: duas delas ainda deixam um só suspeito
+	c.registrar_pista("{indicio}", "quem", "t")
+	c.registrar_pista("{indicio}", "quem", "t")
+	assert_eq(c.compativeis("quem").size(), 1)
+	assert_eq(c.compativeis("quem")[0].id, c.sujeito.id)
+	var certa := c.registrar_pista("{indicio}", "onde", "t", true, 2)   # par: acertou
+	assert_true(certa.indicio in c.local.indicios)
+	assert_true(certa.duvidosa, "mesmo certa, fica marcada: o jogador não sabe")
+
+
+func test_testemunha_por_pouco_da_depoimento_incerto():
+	var c := _cena()
+	assert_true(c.ponto("vizinha").get("depoimento", false), "a vizinha é testemunha")
+	assert_false(c.ponto("escrivaninha").get("depoimento", false))
+	c._encontrar_pista(mauro, "vizinha", true, 1)   # sorte ímpar: enganada
+	assert_true(c.caso.pistas.back().duvidosa)
+	assert_true(c.pistas_encontradas.back().duvidosa)
+	assert_false(c.caso.pistas.back().indicio in c.caso.acao.indicios, "a vizinha responde o quê; enganada, aponta outro plano")

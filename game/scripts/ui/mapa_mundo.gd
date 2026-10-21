@@ -934,6 +934,8 @@ func _atualizar_caso() -> void:
 			var tracos: Array[String] = []
 			for t in c.indicios_encontrados(q.id):
 				tracos.append(String(Caso.indicio(t).get("rotulo", t)).to_lower())
+			for t in c.indicios_duvidosos(q.id):   # depoimento incerto (docs/35)
+				tracos.append(String(Caso.indicio(t).get("rotulo", t)).to_lower() + "?")
 			if not tracos.is_empty():
 				linhas.append("   " + Tema.bb(" · ".join(tracos), Tema.TEXTO_SUAVE))
 	_btn_deduzir.visible = alguma_aberta
