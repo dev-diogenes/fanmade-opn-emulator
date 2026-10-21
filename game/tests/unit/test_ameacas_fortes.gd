@@ -153,7 +153,7 @@ func test_enxame():
 	assert_true(a.tem(Ser.ENJOADO), "zumbido nauseante")
 	var ratos := _ameaca("enxame_de_ratos")
 	c.dados.forcar([15, 3])
-	c.atacar(a, ratos, rs.arma("desarmado"))
+	c.atacar(a, ratos, rs.arma("desarmado"), 0, {"nao_letal": false})   # golpe letal (−5): o teste é da metade do dano
 	assert_eq(ratos.pv, 15 - 2, "metade do dano de armas")
 
 

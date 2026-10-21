@@ -629,9 +629,14 @@ func _encontro(encontro_id: String) -> Dictionary:
 
 ## Chamado quando o combate termina. Vitória limpa o hex (e vence a missão no covil).
 ## Agentes caídos são socorridos com 1 PV ao fim de uma vitória (simplificação da fatia vertical).
-func concluir_encontro(vencedor: String) -> void:
+## `rendidos` (docs/40): pessoas desacordadas com dano não letal. Na vitória, a Ordem as
+## interroga e o caso ganha uma pista (uma por encontro).
+func concluir_encontro(vencedor: String, rendidos: int = 0) -> void:
 	if encontro_pendente.is_empty():
 		return
+	if vencedor == "agentes" and rendidos > 0 and caso != null:
+		_log("[color=#7fd3c7]Interrogatório: %d rendido(s) acorda(m) algemado(s) e fala(m).[/color]" % rendidos)
+		_aplicar_efeito(agente_atual() if agente_atual() != null else agentes[0], {"tipo": "pista"}, encontro_pendente.hex)
 	var h: Vector2i = encontro_pendente.hex
 	var chefe: bool = encontro_pendente.chefe
 	for a in encontro_pendente.agentes:

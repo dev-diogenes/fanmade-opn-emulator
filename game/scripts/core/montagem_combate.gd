@@ -40,7 +40,8 @@ static func arma_de(ruleset: Ruleset, ser: Ser) -> Dictionary:
 static func _terreno(grade: Grade, dados: Dados, terreno_id: String) -> void:
 	var t: Dictionary = DadosJogo.ler("mapa").terrenos.get(terreno_id, {})
 	var param: Dictionary = t.get("arena", {})
-	var tipos := {Grade.PAREDE: int(param.get("parede", 0)), Grade.COBERTURA: int(param.get("cobertura", 2)), Grade.DIFICIL: int(param.get("dificil", 0))}
+	var tipos := {Grade.PAREDE: int(param.get("parede", 0)), Grade.COBERTURA: int(param.get("cobertura", 2)), Grade.DIFICIL: int(param.get("dificil", 0)),
+		Grade.ELEVADO: int(param.get("elevado", 0)), Grade.CAMUFLAGEM: int(param.get("camuflagem", 0))}   # docs/40
 	for tipo in tipos:
 		for i in tipos[tipo]:
 			var c := Vector2i(2 + dados.rolar(COLUNAS - 4) - 1, dados.rolar(LINHAS) - 1)

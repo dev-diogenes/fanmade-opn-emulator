@@ -6,6 +6,7 @@ var alvo: Ser
 var arma: Dictionary
 var teste: ResultadoTeste
 var acertou := false
+var nao_letal := false   ## dano não letal (p.88, docs/40)
 var critico := false
 var dano := 0           ## Dano efetivamente sofrido (após resistência)
 var dano_bruto := 0     ## Dano rolado, antes da resistência

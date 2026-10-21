@@ -18,13 +18,13 @@
   "terrenos": {
     "campo":    { "nome": "Campo",    "custo": 1, "cor": "4f6b3a", "arena": { "cobertura": 2, "dificil": 0, "parede": 0 } },
     "estrada":  { "nome": "Estrada",  "custo": 1, "cor": "8a7d5c", "arena": { "cobertura": 3, "dificil": 0, "parede": 0 } },
-    "floresta": { "nome": "Mata fechada", "custo": 2, "cor": "24452b", "arena": { "cobertura": 6, "dificil": 6, "parede": 0 } },
-    "pantano":  { "nome": "Pântano",  "custo": 2, "cor": "3b4a3f", "arena": { "cobertura": 1, "dificil": 12, "parede": 0 } },
-    "morro":    { "nome": "Morro",    "custo": 2, "cor": "6d6457", "arena": { "cobertura": 4, "dificil": 4, "parede": 3 } },
+    "floresta": { "nome": "Mata fechada", "custo": 2, "cor": "24452b", "arena": { "cobertura": 6, "dificil": 6, "parede": 0, "camuflagem": 6 } },
+    "pantano":  { "nome": "Pântano",  "custo": 2, "cor": "3b4a3f", "arena": { "cobertura": 1, "dificil": 12, "parede": 0, "camuflagem": 5 } },
+    "morro":    { "nome": "Morro",    "custo": 2, "cor": "6d6457", "arena": { "cobertura": 4, "dificil": 4, "parede": 3, "elevado": 4 } },
     "cidade":   { "nome": "Cidade",   "custo": 1, "cor": "7f8c8d", "arena": { "cobertura": 4, "dificil": 0, "parede": 6 } },
-    "ruina":    { "nome": "Ruínas",   "custo": 1, "cor": "5d4e60", "arena": { "cobertura": 5, "dificil": 2, "parede": 5 } },
+    "ruina":    { "nome": "Ruínas",   "custo": 1, "cor": "5d4e60", "arena": { "cobertura": 5, "dificil": 2, "parede": 5, "elevado": 3, "camuflagem": 2 } },
     "agua":     { "nome": "Água rasa", "custo": 3, "cor": "1f3a5f", "arena": { "cobertura": 1, "dificil": 14, "parede": 0 } },
-    "serra":    { "nome": "Serra",    "custo": -1, "escalavel": true, "custo_escalada": 2, "cor": "4a443d", "arena": { "cobertura": 5, "dificil": 6, "parede": 4 } }
+    "serra":    { "nome": "Serra",    "custo": -1, "escalavel": true, "custo_escalada": 2, "cor": "4a443d", "arena": { "cobertura": 5, "dificil": 6, "parede": 4, "elevado": 6 } }
   },
   "geracao": {
     "encontros": 7,

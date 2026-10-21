@@ -339,7 +339,9 @@ func chance_de_acerto(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: 
 				return -1.0
 			if grade.flanqueando(atacante, alvo):
 				dados_extras += 1
-		else:
+		if grade.elevado(atacante) and not grade.elevado(alvo):
+			dados_extras += 1   # posição elevada (p.89)
+		if not corpo_a_corpo:
 			var faixa := grade.faixa_de_alcance(atacante, alvo, arma.get("alcance", "curto"))
 			var cob := grade.cobertura(atacante, alvo)
 			if faixa == "fora" or cob == "total":
@@ -360,7 +362,10 @@ func chance_de_acerto(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: 
 	if arma.has("teste"):
 		dados_teste = int(arma.teste.dados) - atacante.penalidade_dados_atributo(ruleset.atributo_da_pericia(pericia_id))
 		bonus_teste = int(arma.teste.bonus)
-	return Teste.chance_de_passar(dados_teste, bonus_teste + int(mods.bonus_ataque) + bonus_extra, defesa, dados_extras)
+	var chance := Teste.chance_de_passar(dados_teste, bonus_teste + int(mods.bonus_ataque) + bonus_extra, defesa, dados_extras)
+	if grade != null and grade.camuflado(alvo):
+		chance *= 0.8   # camuflagem leve: 20% de erro (p.89)
+	return chance
 
 
 func agredir(atacante: Ser, alvo: Ser, arma: Dictionary, pe_foco: int = 0, opcoes: Dictionary = {}) -> ResultadoAtaque:
@@ -392,7 +397,11 @@ func mover(ser: Ser, destino: Vector2i) -> bool:
 	if grade == null or ser.tem(Ser.IMOVEL) or ser.tem(Ser.AGARRADO) or ser.esta_fora_de_combate():
 		return false
 	var origem := grade.posicao(ser)
-	if not grade.alcancaveis(ser, ser.deslocamento_quadrados()).has(destino) or grade.ocupante(destino) != null:
+	var arrastando := _agarrados_por_manobra(ser)
+	var limite := ser.deslocamento_quadrados()
+	if not arrastando.is_empty():
+		limite = maxi(1, limite / 2)   # quem agarra anda metade, arrastando a vítima (p.85)
+	if not grade.alcancaveis(ser, limite).has(destino) or grade.ocupante(destino) != null:
 		return false
 	var purg := _purgatorio_de(ser)
 	if not purg.is_empty() and not destino in purg.celulas:
@@ -406,12 +415,13 @@ func mover(ser: Ser, destino: Vector2i) -> bool:
 			return false
 	if not gastar_acao(ser, "movimento"):
 		return false
-	_soltar_agarrados_por_manobra(ser, "para se mover")
 	var vizinhos_antes: Array[Ser] = []
 	for outro in grade.seres():
 		if outro.lado != ser.lado and not outro.esta_fora_de_combate() and Grade.adjacentes(origem, grade.posicao(outro)):
 			vizinhos_antes.append(outro)
-	grade.mover(ser, destino, ser.deslocamento_quadrados())
+	grade.mover(ser, destino, limite)
+	for vitima in arrastando:
+		_arrastar(ser, vitima)
 	for outro in grade.seres():   # Reflexos Guiados por Corda: quem chega ao lado leva um golpe
 		if outro is Ameaca and (outro as Ameaca).tem_hab("reflexos_guiados") and outro.lado != ser.lado and not outro.esta_fora_de_combate():
 			if grade.estao_adjacentes(ser, outro) and not outro in vizinhos_antes and not _usou_na_rodada(outro, "reflexos_guiados"):
@@ -642,6 +652,45 @@ func _arma_de_mao(ser: Ser) -> Dictionary:
 	return {}
 
 
+## Fintar (p.86): ação padrão. Enganação contra Reflexos de um ser em alcance curto. Passando,
+## ele fica desprevenido contra o seu próximo ataque, até o fim do seu próximo turno.
+func fintar(atacante: Ser, alvo: Ser) -> Dictionary:
+	if alvo == null or alvo == atacante or alvo.lado == atacante.lado or alvo.esta_fora_de_combate():
+		return {"ok": false, "erro": "alvo inválido"}
+	if not _perto(atacante, alvo, "curto"):
+		return {"ok": false, "erro": "longe demais para fintar"}
+	if int(acoes_restantes(atacante).get("padrao", 0)) <= 0:
+		return {"ok": false, "erro": "sem ação padrão"}
+	gastar_acao(atacante, "padrao")
+	var venceu := _teste_oposto(atacante, "enganacao", 0, alvo, "reflexos", 0)
+	var texto := "%s finta %s: %s." % [atacante.nome, alvo.nome, "ele baixa a guarda" if venceu else "ele não cai"]
+	if venceu:
+		alvo.mods_cena["fintado_por"] = {"atacante": atacante, "turnos": 1}
+	_log(texto)
+	return {"ok": true, "tipo": "fintar", "venceu": venceu, "textos": [texto]}
+
+
+func _fintado_por(alvo: Ser, atacante: Ser) -> bool:
+	var f: Dictionary = alvo.mods_cena.get("fintado_por", {})
+	return not f.is_empty() and f.atacante == atacante
+
+
+## Fim do turno de quem fintou: a finta vale até o fim do próximo turno dele.
+func _envelhecer_fintas(ser: Ser) -> void:
+	for s in participantes:
+		var f: Dictionary = s.mods_cena.get("fintado_por", {})
+		if not f.is_empty() and f.atacante == ser:
+			f.turnos = int(f.turnos) - 1
+			if int(f.turnos) < 0:
+				s.mods_cena.erase("fintado_por")
+
+
+## Rendidos (docs/40): pessoas (não criaturas) postas para dormir com dano não letal.
+## Depois do combate, a Ordem pode interrogá-las.
+func rendidos() -> Array:
+	return participantes.filter(func(s): return s is Ameaca and not (s as Ameaca).criatura and s.mods_cena.get("rendido", false) and not s.tem(Ser.MORTO))
+
+
 ## A arma de verdade no ataque: quem teve a arma derrubada luta desarmado até pegá-la.
 func arma_em_maos(atacante: Ser, arma: Dictionary) -> Dictionary:
 	var caida := String(atacante.mods_cena.get("arma_caida", ""))
@@ -668,7 +717,32 @@ func pegar_arma(ser: Ser) -> bool:
 	return true
 
 
-## Quem agarra por manobra solta a vítima ao se mover (o arrasto do livro fica de fora).
+## Quem este ser agarra por manobra.
+func _agarrados_por_manobra(ser: Ser) -> Array:
+	return ser.mods_cena.get("agarrando", []).filter(func(s): return s.mods_cena.get("agarrado_manobra", false) and s.tem(Ser.AGARRADO))
+
+
+## Leva a vítima agarrada para a casa livre ao lado de quem agarra, a mais perto de onde ela
+## estava. Sem casa livre, ela escapa.
+func _arrastar(ser: Ser, vitima: Ser) -> void:
+	var antes := grade.posicao(vitima)
+	var centro := grade.posicao(ser)
+	var melhor := Vector2i(-999, -999)
+	for dx in [-1, 0, 1]:
+		for dy in [-1, 0, 1]:
+			var c := centro + Vector2i(dx, dy)
+			if c == centro or not grade.dentro(c) or grade.bloqueada(c) or (grade.ocupante(c) != null and grade.ocupante(c) != vitima):
+				continue
+			if melhor == Vector2i(-999, -999) or Vector2(c - antes).length() < Vector2(melhor - antes).length():
+				melhor = c
+	if melhor == Vector2i(-999, -999):
+		_soltar(vitima)
+		_log("%s escapa no tranco." % vitima.nome)
+		return
+	grade.colocar(vitima, melhor)
+
+
+## Quem agarra por manobra solta a vítima (ex.: quando ela é empurrada para longe).
 func _soltar_agarrados_por_manobra(ser: Ser, motivo: String) -> void:
 	for s in ser.mods_cena.get("agarrando", []).duplicate():
 		if s.mods_cena.get("agarrado_manobra", false):
@@ -1360,6 +1434,7 @@ func _tem_evasao(ser: Ser, resistencia: String) -> bool:
 
 ## Fim do turno: enxames ferem quem está junto deles; a múmia a 0 PV morre se não se recuperou.
 func _fim_de_turno(ser: Ser) -> void:
+	_envelhecer_fintas(ser)
 	if ser is Ameaca and not ser.esta_fora_de_combate():
 		var amea := ser as Ameaca
 		var enx := amea.habilidade("enxame")
@@ -2367,6 +2442,8 @@ func declarar_reducao_dano(ser: Ser) -> bool:
 ##     "alvo_em_corpo_a_corpo": true — ataque à distância contra alvo engajado: −1 dado (p.85)
 func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, opcoes: Dictionary = {}) -> ResultadoAtaque:
 	arma_base = arma_em_maos(atacante, arma_base)
+	if _fintado_por(alvo, atacante):
+		opcoes["fintado"] = true   # Fintar (p.86): desprevenido contra este ataque
 	var res := ResultadoAtaque.new()
 	res.atacante = atacante
 	res.alvo = alvo
@@ -2380,6 +2457,17 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	var eh_corpo_a_corpo := tipo_ataque == "corpo_a_corpo"
 	var dados_extras := pe_foco + int(mods.dados_extras)
 	var bonus_ataque := int(mods.bonus_ataque)
+	# Dano não letal (p.88): o desarmado já é não letal; trocar o padrão da arma custa −5.
+	# Só corpo a corpo.
+	# Design do jogo: criaturas paranormais não desmaiam (golpe sempre letal, sem penalidade);
+	# ataques que carregam um ritual também são letais.
+	var pode_render: bool = eh_corpo_a_corpo and not opcoes.has("dados_dano_ritual") and not (alvo is Ameaca and (alvo as Ameaca).criatura)
+	var padrao_nao_letal: bool = pode_render and String(arma.get("id", "")) == "desarmado"
+	var nao_letal := padrao_nao_letal
+	if pode_render and opcoes.has("nao_letal"):
+		nao_letal = bool(opcoes.nao_letal)
+	if nao_letal != padrao_nao_letal:
+		bonus_ataque -= 5
 	var bonus_dano := int(mods.bonus_dano)
 	var margem_extra := int(mods.margem)
 	var custo := pe_foco
@@ -2407,6 +2495,8 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 			opcoes["alvo_em_corpo_a_corpo"] = grade.em_corpo_a_corpo(alvo)
 	if opcoes.get("flanqueando", false) and eh_corpo_a_corpo:
 		dados_extras += 1
+	if grade != null and grade.elevado(atacante) and not grade.elevado(alvo):
+		dados_extras += 1   # posição elevada (p.89)
 	var mira: Dictionary = _miras.get(atacante, {})
 	var mirando: bool = not mira.is_empty() and mira.alvo == alvo and not eh_corpo_a_corpo
 	if opcoes.get("alvo_em_corpo_a_corpo", false) and not eh_corpo_a_corpo:
@@ -2457,6 +2547,10 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	var reacao: Dictionary = _reacoes_declaradas.get(alvo, {})
 	_reacoes_declaradas.erase(alvo)
 	var defesa := alvo.defesa() + (5 if cobertura_leve else 0)
+	if opcoes.get("fintado", false):
+		alvo.mods_cena.erase("fintado_por")
+		if not (alvo.tem(Ser.DESPREVENIDO) or alvo.tem(Ser.SURPREENDIDO) or alvo.tem(Ser.AGARRADO) or alvo.esta_indefeso()):
+			defesa -= 5   # desprevenido contra este ataque
 	if alvo.tem(Ser.CAIDO):
 		defesa += -5 if eh_corpo_a_corpo else 5   # caído (p.310)
 	var rd_extra := 0
@@ -2518,6 +2612,9 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	if agente != null:
 		agente.sofrer_dano_por_teste(dados, ruleset.atributo_da_pericia(pericia_id))   # Gota, Pulmão Ruim
 	res.acertou = res.teste.sucesso
+	if res.acertou and grade != null and grade.camuflado(alvo) and dados.rolar(10) <= 2:
+		res.acertou = false   # camuflagem leve: 1 ou 2 no d10 (p.89)
+		_log("O golpe de %s se perde: %s está encoberto." % [atacante.nome, alvo.nome])
 	var invisivel_para_ele := false
 	if alvo is Ameaca:
 		var aa_ := alvo as Ameaca
@@ -2585,7 +2682,8 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 		res.dano_bruto = maxi(1, dano)
 		if alvo is Ameaca and (alvo as Ameaca).tem_hab("enxame"):
 			res.dano_bruto = maxi(1, res.dano_bruto / 2)   # enxames sofrem metade do dano de armas
-		res.dano = aplicar_dano(alvo, res.dano_bruto, arma.get("tipo_dano", ""), rd_extra, atacante)
+		res.dano = aplicar_dano(alvo, res.dano_bruto, arma.get("tipo_dano", ""), rd_extra, atacante, nao_letal)
+		res.nao_letal = nao_letal
 		if arma.has("dano_extra") and not alvo.tem(Ser.MORTO):   # "2d8+8 impacto mais 2d12 Morte": cada tipo com sua resistência
 			res.dano += aplicar_dano(alvo, dados.rolar_expressao(String(arma.dano_extra.dados)), String(arma.dano_extra.tipo_dano), 0, atacante)
 		if amea != null:
@@ -2637,7 +2735,7 @@ func _ataque_invalido(atacante: Ser, alvo: Ser, arma: Dictionary) -> ResultadoAt
 ## Aplica dano já rolado (p.98, ordem da p.322): metade por habilidades declaradas,
 ## depois resistência (tipo + `rd_extra`), depois o teste de dano massivo.
 ## Retorna o dano efetivamente sofrido.
-func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 0, atacante: Ser = null) -> int:
+func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 0, atacante: Ser = null, nao_letal: bool = false) -> int:
 	if alvo.tem(Ser.POCA):
 		return _danificar_poca(alvo as Ameaca, dano, tipo_dano)
 	if alvo is Ameaca and (alvo as Ameaca).enigma_pendente() and (alvo as Ameaca).enigma.get("tipo", "") == "acumular_dano" and tipo_dano == (alvo as Ameaca).enigma.get("tipo_dano", ""):
@@ -2687,6 +2785,11 @@ func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 
 	alvo.registrar_atacante(atacante)
 	if atacante != null:
 		_danificados_na_rodada[alvo] = atacante.lado
+	if nao_letal:
+		alvo.sofrer_dano_nao_letal(final)
+		if alvo.tem(Ser.INCONSCIENTE):
+			_log("%s desaba, desacordado." % alvo.nome)
+		return final
 	alvo.sofrer_dano(final)
 	if atacante is Ameaca and (atacante as Ameaca).tem_hab("sadismo"):
 		atacante.mods_cena["sadismo"] = true
@@ -2758,7 +2861,7 @@ func _marcar_uso_rodada(ser: Ser, hab_id: String) -> void:
 func _dados_ataque_furtivo(agente: Agente, alvo: Ser, arma: Dictionary, opcoes: Dictionary) -> int:
 	if agente == null or not agente.tem_habilidade("ataque_furtivo") or _usou_na_rodada(agente, "ataque_furtivo"):
 		return 0
-	var vulneravel: bool = alvo.tem(Ser.DESPREVENIDO) or alvo.tem(Ser.SURPREENDIDO) or alvo.esta_indefeso() or opcoes.get("flanqueando", false)
+	var vulneravel: bool = alvo.tem(Ser.DESPREVENIDO) or alvo.tem(Ser.SURPREENDIDO) or alvo.esta_indefeso() or opcoes.get("flanqueando", false) or opcoes.get("fintado", false)
 	var perto: bool = arma.get("ataque", "corpo_a_corpo") == "corpo_a_corpo" or _perto(agente, alvo, "curto")
 	if not vulneravel or not perto:
 		return 0

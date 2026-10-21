@@ -89,6 +89,9 @@ var _turnos_morrendo := 0
 ## Primeiros Socorros e Acalmar (p.46 e p.44): a DT sobe +5 por vez que o ser já foi
 ## estabilizado (ou acalmado) na cena.
 var estabilizado_na_cena := 0
+## Dano não letal (p.88): soma com o letal para deixar inconsciente, mas não para morrendo.
+## A cura tira primeiro o não letal. Some no fim da cena (design do jogo).
+var dano_nao_letal := 0
 var acalmado_na_cena := 0
 var _turnos_enlouquecendo := 0
 
@@ -263,6 +266,16 @@ func turnos_morrendo() -> int:
 	return _turnos_morrendo
 
 
+## Dano não letal: acumula à parte; quando alcança os PV, o ser desmaia (sem morrendo).
+func sofrer_dano_nao_letal(quantidade: int) -> void:
+	if quantidade <= 0 or tem(MORTO):
+		return
+	dano_nao_letal += quantidade
+	if dano_nao_letal >= pv and pv > 0:
+		condicoes[INCONSCIENTE] = true
+		mods_cena["rendido"] = true
+
+
 func sofrer_dano(quantidade: int) -> void:
 	if quantidade <= 0 or tem(MORTO):
 		return
@@ -293,6 +306,15 @@ func sofrer_dano_mental(quantidade: int) -> void:
 func curar(quantidade: int) -> void:
 	if quantidade <= 0 or tem(MORTO) or tem(SEM_CURA):
 		return
+	if dano_nao_letal > 0:   # a cura tira primeiro o dano não letal (p.88)
+		var tirado := mini(dano_nao_letal, quantidade)
+		dano_nao_letal -= tirado
+		quantidade -= tirado
+		if dano_nao_letal < pv:
+			condicoes.erase(INCONSCIENTE)
+			mods_cena.erase("rendido")
+		if quantidade <= 0:
+			return
 	pv = mini(pv_maximo, pv + quantidade)
 	condicoes.erase(INCONSCIENTE)  # curar 1 PV encerra inconsciente; morrendo exige Medicina
 	_atualizar_pv()
@@ -348,6 +370,7 @@ func encerrar_cena() -> void:
 	_turnos_enlouquecendo = 0
 	estabilizado_na_cena = 0
 	acalmado_na_cena = 0
+	dano_nao_letal = 0
 	mods_cena.clear()
 	defesa_temporaria = 0
 	penalidade_ataque_temporaria = 0

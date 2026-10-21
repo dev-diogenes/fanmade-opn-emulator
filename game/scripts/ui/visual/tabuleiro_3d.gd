@@ -32,6 +32,8 @@ const ESTILO_TERRENO := {
 ## Props por código no combate: a figura aqui tem escala 1 (no mapa, 0,75), então as peças
 ## crescem na mesma proporção que a miniatura (docs/32).
 const ESCALA_PROPS := 1.35
+## Altura do bloco de posição elevada (docs/40)
+const ALTURA_ELEVADO := 0.35
 const COR_MOVER := Color(0.3, 0.6, 1.0, 0.45)
 const COR_AGENTE := Color("3d7bd9")
 const COR_AMEACA := Color("b03a2e")
@@ -90,6 +92,8 @@ func construir(p_grade: Grade, p_terreno: String = "") -> void:
 				Grade.PAREDE: deco = Pecas.parede(1.4, Color(estilo.get("parede", "4a4f5c")).lightened(0.15))
 				Grade.COBERTURA: deco = Pecas.rocha(0.36) if estilo.get("cobertura", "") == "rocha" else Pecas.caixote()
 				Grade.DIFICIL: deco = Pecas.capim(Color(estilo.get("dificil", "2f5a2a")).lightened(0.25))
+				Grade.ELEVADO: deco = _plataforma(Color(estilo.get("parede", "5e574d")))   # docs/40
+				Grade.CAMUFLAGEM: deco = _moita()
 			if deco != null:
 				deco.position = posicao(c)
 				add_child(deco)
@@ -194,6 +198,8 @@ func _atualizar_unidade(s: Ser) -> void:
 		_unidades[s] = no
 		_rotulos[s] = rot
 	var destino := posicao(grade.posicao(s))
+	if grade.terreno.get(grade.posicao(s), "") == Grade.ELEVADO:
+		destino.y += ALTURA_ELEVADO   # em cima do bloco (docs/40)
 	if _posicoes.get(s) != destino:
 		if _posicoes.has(s) and is_inside_tree():
 			var tw := create_tween()
@@ -362,3 +368,34 @@ func animar_ataque(s: Ser, ritual: bool = false) -> void:
 func _voltar_a_ficar_parado(no: Node3D) -> void:
 	if not no.get_meta("caido", false):
 		Pecas.animar(no, "Idle")
+
+
+
+## Posição elevada (docs/40): um bloco baixo de pedra ou escombro em que a figura sobe.
+func _plataforma(cor: Color) -> Node3D:
+	var n := Node3D.new()
+	var m := BoxMesh.new()
+	m.size = Vector3(0.95, ALTURA_ELEVADO, 0.95)
+	var mi := MeshInstance3D.new()
+	mi.mesh = m
+	mi.material_override = Pecas.material(cor.lightened(0.1))
+	mi.position = Vector3(0, ALTURA_ELEVADO / 2.0, 0)
+	n.add_child(mi)
+	return n
+
+
+## Camuflagem leve (docs/40): moitas altas e um véu de neblina baixa.
+func _moita() -> Node3D:
+	var n := Node3D.new()
+	for i in 3:
+		var b := Pecas.arbusto(0.22, Color("2f4f2a"))
+		b.position = Vector3(-0.25 + 0.25 * i, 0, 0.18 * (i % 2) - 0.09)
+		n.add_child(b)
+	var nevoa := MeshInstance3D.new()
+	var plano := PlaneMesh.new()
+	plano.size = Vector2(1.0, 1.0)
+	nevoa.mesh = plano
+	nevoa.material_override = Pecas.material(Color(0.75, 0.8, 0.85, 0.15), true)
+	nevoa.position = Vector3(0, 0.35, 0)
+	n.add_child(nevoa)
+	return n

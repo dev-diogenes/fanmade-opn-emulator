@@ -11,6 +11,12 @@ const ALCANCES := {"curto": 6, "medio": 12, "longo": 24, "extremo": 60}
 const PAREDE := "parede"                  ## bloqueia movimento e visão (cobertura total)
 const COBERTURA := "cobertura"            ## caixote, carro, muro baixo: +5 Defesa contra tiros que passam
 const DIFICIL := "dificil"                ## terreno difícil: custo dobrado
+## Posição elevada (p.89): quem ataca de cima de um alvo que não está no alto ganha +1 dado.
+## Subir custa o dobro, como terreno difícil (design do jogo: barranco, escombros, laje).
+const ELEVADO := "elevado"
+## Camuflagem leve (p.89): folhagem, neblina, penumbra. Ataques contra quem está ali erram
+## com 1 ou 2 num d10 (20%).
+const CAMUFLAGEM := "camuflagem"
 
 var largura := 0
 var altura := 0
@@ -226,9 +232,17 @@ func cobertura(atacante: Ser, alvo: Ser) -> String:
 ## Custo de entrar numa célula vinda de `de`: 1 (ortogonal) ou 2 (diagonal), dobrado em terreno difícil.
 func custo_passo(de: Vector2i, para: Vector2i) -> int:
 	var custo := 2 if de.x != para.x and de.y != para.y else 1
-	if terreno.get(para, "") == DIFICIL or dificil_por_efeito.has(para):
+	if terreno.get(para, "") in [DIFICIL, ELEVADO] or dificil_por_efeito.has(para):
 		custo *= 2
 	return custo
+
+
+func elevado(ser: Ser) -> bool:
+	return tem(ser) and terreno.get(posicao(ser), "") == ELEVADO
+
+
+func camuflado(ser: Ser) -> bool:
+	return tem(ser) and terreno.get(posicao(ser), "") == CAMUFLAGEM
 
 
 func marcar_dificil(celulas: Array, ligar: bool) -> void:

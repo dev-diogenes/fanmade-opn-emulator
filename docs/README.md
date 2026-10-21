@@ -42,6 +42,7 @@
 | [37-conclusao-do-caso.md](37-conclusao-do-caso.md) | Conclusão do Caso pelo livro: a solução (+10 PP) exige a ficha respondendo quem e o quê; morte de inocente (−2 PP) e o evento Pedido de socorro |
 | [38-combate-pelo-livro.md](38-combate-pelo-livro.md) | Auditoria do combate contra o livro (p.82-90) e as ações Primeiros Socorros (Medicina) e Acalmar (Diplomacia ou Religião); pendências: manobras, camuflagem leve, caído |
 | [39-manobras-e-caido.md](39-manobras-e-caido.md) | Manobras de combate pelo livro (agarrar, derrubar, desarmar, empurrar) e a condição caído; botões Manobra, Levantar-se e Pegar a arma |
+| [40-combate-terreno-finta-nao-letal.md](40-combate-terreno-finta-nao-letal.md) | Posição elevada e camuflagem leve na arena, Fintar, dano não letal (rendidos são interrogados e dão pista) e arrastar quem está agarrado |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

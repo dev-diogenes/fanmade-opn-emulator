@@ -20,11 +20,11 @@
 | Camuflagem total: 50% de falha | ✔ |
 | Terreno difícil custa o dobro; deslocamento de 9 m = 6 quadrados | ✔ |
 | Desprevenido −5 na Defesa | ✔ |
-| Camuflagem leve: 20% de falha | ✗ Pendente |
+| Camuflagem leve: 20% de falha | ✔ Desde docs/40 |
 | Caído (−2 dados no corpo a corpo; −5 ou +5 na Defesa) | ✔ Desde docs/39 |
-| Posição elevada (+1 dado) | ✗ Pendente |
+| Posição elevada (+1 dado) | ✔ Desde docs/40 |
 | Manobras de combate para os agentes | ✔ Agarrar, derrubar, desarmar e empurrar (docs/39). Quebrar e atropelar continuam pendentes |
-| Dano não letal (−5 no ataque) | ✗ Pendente |
+| Dano não letal (−5 no ataque) | ✔ Desde docs/40 |
 
 ## Primeiros Socorros (Medicina, p.46)
 

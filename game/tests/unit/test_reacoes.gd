@@ -310,7 +310,71 @@ func test_empurrar_afasta_e_agarrar_prende():
 	assert_true(r.venceu)
 	assert_true(cultista.tem(Ser.AGARRADO))
 	assert_false(c.mover(cultista, Vector2i(4, 2)), "agarrado não anda")
-	# Quem agarra e anda solta
+	# Quem agarra anda arrastando (docs/40)
 	c.acoes[lutador] = {"padrao": 1, "movimento": 1}
 	assert_true(c.mover(lutador, Vector2i(2, 3)))
-	assert_false(cultista.tem(Ser.AGARRADO))
+	assert_true(cultista.tem(Ser.AGARRADO))
+	assert_true(c.grade.estao_adjacentes(lutador, cultista))
+
+
+# --- Fintar, elevado, camuflagem leve, não letal e arrasto (docs/40) -------------------
+
+func test_fintar_deixa_desprevenido_contra_o_proximo_ataque():
+	var a := _arena_manobra()
+	var c: Combate = a[0]
+	var lutador: Agente = a[1]
+	var cultista: Ameaca = a[2]
+	c.dados.forcar([20, 1])   # Enganação (PRE 1: 1 dado) 20; Reflexos (AGI 1) 1
+	var r := c.fintar(lutador, cultista)
+	assert_true(r.ok)
+	assert_true(r.venceu)
+	assert_true(c._fintado_por(cultista, lutador))
+	c.acoes[lutador] = {"padrao": 1, "movimento": 1}
+	c.dados.forcar([10, 10, 10, 1])
+	var ataque := c.atacar(lutador, cultista, rs.arma("desarmado"))
+	assert_eq(ataque.teste.dt, cultista.defesa() - 5, "−5 na Defesa contra este ataque")
+	assert_false(c._fintado_por(cultista, lutador), "vale só para o próximo ataque")
+
+
+func test_posicao_elevada_e_camuflagem():
+	var a := _arena_manobra()
+	var c: Combate = a[0]
+	var lutador: Agente = a[1]
+	var cultista: Ameaca = a[2]
+	var normal := c.chance_de_acerto(lutador, cultista, rs.arma("desarmado"))
+	c.grade.terreno[Vector2i(2, 2)] = Grade.ELEVADO
+	var do_alto := c.chance_de_acerto(lutador, cultista, rs.arma("desarmado"))
+	assert_gt(do_alto, normal, "de cima, +1 dado")
+	c.grade.terreno.erase(Vector2i(2, 2))
+	c.grade.terreno[Vector2i(3, 2)] = Grade.CAMUFLAGEM
+	assert_almost_eq(c.chance_de_acerto(lutador, cultista, rs.arma("desarmado")), normal * 0.8, 0.001, "20% de erro")
+	assert_eq(c.grade.custo_passo(Vector2i(4, 2), Vector2i(4, 3)), 1)
+	c.grade.terreno[Vector2i(4, 3)] = Grade.ELEVADO
+	assert_eq(c.grade.custo_passo(Vector2i(4, 2), Vector2i(4, 3)), 2, "subir custa o dobro")
+
+
+func test_dano_nao_letal_rende_sem_matar():
+	var a := _arena_manobra()
+	var c: Combate = a[0]
+	var cultista: Ameaca = a[2]
+	c.aplicar_dano(cultista, cultista.pv, "impacto", 0, a[1], true)
+	assert_true(cultista.tem(Ser.INCONSCIENTE), "desacordado")
+	assert_false(cultista.tem(Ser.MORRENDO), "não letal não deixa morrendo")
+	assert_eq(cultista.pv, cultista.pv_maximo, "os PV letais não caem")
+	assert_eq(c.rendidos(), [cultista])
+	cultista.curar(cultista.pv_maximo)
+	assert_false(cultista.tem(Ser.INCONSCIENTE), "a cura tira primeiro o não letal")
+	assert_eq(cultista.dano_nao_letal, 0)
+
+
+func test_quem_agarra_arrasta_a_vitima():
+	var a := _arena_manobra()
+	var c: Combate = a[0]
+	var lutador: Agente = a[1]
+	var cultista: Ameaca = a[2]
+	c.dados.forcar([20, 20, 20, 1])
+	assert_true(c.manobra(lutador, cultista, "agarrar").venceu)
+	c.acoes[lutador] = {"padrao": 1, "movimento": 1}
+	assert_true(c.mover(lutador, Vector2i(2, 1)))
+	assert_true(cultista.tem(Ser.AGARRADO), "continua agarrado")
+	assert_true(c.grade.estao_adjacentes(lutador, cultista), "veio junto")

@@ -50,6 +50,7 @@ var _btn_soltar: Button
 var _btn_apagar: Button
 var _btn_socorrer: Button
 var _btn_manobra: MenuButton
+var _chk_nl: Button
 var _btn_levantar: Button
 var _btn_pegar: Button
 var _manobra_sel := ""   ## "agarrar", "derrubar", "desarmar" ou "empurrar" (docs/39)
@@ -346,7 +347,9 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 			else:
 				_registrar("[color=#eda64a]Não dá para usar %s agora.[/color]" % nome_item)
 		"manobra":
-			if res.ok:
+			if res.ok and String(cmd.get("tipo", "")) == "fintar":
+				_registrar(" ".join(PackedStringArray(res.textos)))
+			elif res.ok:
 				_registrar("%s tenta %s: %s" % [ator.nome, String(cmd.get("tipo", "")), " ".join(PackedStringArray(res.textos))])
 			else:
 				_registrar("[color=#eda64a]Não dá: %s.[/color]" % res.get("erro", "?"))
@@ -373,7 +376,7 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 		"sair":
 			var jogo := get_node_or_null("/root/Jogo")
 			if res.ok and jogo != null and not config.is_empty():
-				jogo.voltar_do_combate(res.vencedor)
+				jogo.voltar_do_combate(res.vencedor, combate.rendidos().size())
 			return res
 	_atualizar()
 	return res
@@ -426,6 +429,9 @@ func _clicar_celula(celula: Vector2i) -> void:
 		var opcoes := {}
 		if _chk_ae.button_pressed and agente.classe_id == "combatente":
 			opcoes["ataque_especial"] = {"ataque": 5}
+		if _chk_nl.visible and _chk_nl.button_pressed:
+			opcoes["nao_letal"] = String(agente.arma().get("id", "")) != "desarmado"   # inverte o padrão
+			_chk_nl.button_pressed = false
 		_modo = ""
 		_chk_ae.button_pressed = false
 		_close(alvo, opcoes.has("ataque_especial"))
@@ -710,6 +716,11 @@ func _montar_interface() -> void:
 	# Foco e Ataque Especial mudam a chance mostrada nos alvos (docs/21, C2)
 	_foco.mudou.connect(func(_v): _atualizar_3d())
 	_chk_ae.toggled.connect(func(_v): _atualizar_3d())
+	# Dano não letal (p.88): trocar o padrão da arma custa −5 (docs/40)
+	_chk_nl = Button.new()
+	_chk_nl.toggle_mode = true
+	_chk_nl.tooltip_text = "Desacordar em vez de matar. Pessoas rendidas são interrogadas depois do combate e dão uma pista."
+	extras.add_child(_chk_nl)
 	_btn_enigma = _botao("Decifrar enigma", _decifrar)
 	_btn_soltar = _botao("Soltar-se", _soltar)
 	_btn_apagar = _botao("Apagar chamas", _apagar)
@@ -724,7 +735,7 @@ func _montar_interface() -> void:
 	_btn_manobra.flat = false
 	_btn_manobra.tooltip_text = "Em vez de dano: Luta contra a Luta do alvo. Ação padrão, inimigo ao lado."
 	var menu := _btn_manobra.get_popup()
-	for par in [["Agarrar", "agarrar"], ["Derrubar", "derrubar"], ["Desarmar", "desarmar"], ["Empurrar", "empurrar"]]:
+	for par in [["Agarrar", "agarrar"], ["Derrubar", "derrubar"], ["Desarmar", "desarmar"], ["Empurrar", "empurrar"], ["Fintar (Enganação)", "fintar"]]:
 		menu.add_item(par[0])
 		menu.set_item_metadata(menu.item_count - 1, par[1])
 	menu.index_pressed.connect(func(i: int): _modo_manobra(String(menu.get_item_metadata(i))))
@@ -1097,6 +1108,10 @@ func _atualizar() -> void:
 		_modo = ""
 	_foco.definir(_foco.valor, agente.pe_disponivel_no_turno() if agente != null else 0)
 	_chk_ae.visible = agente != null and agente.classe_id == "combatente"
+	var arma_cac: bool = agente != null and agente.arma().get("ataque", "corpo_a_corpo") == "corpo_a_corpo"
+	_chk_nl.visible = arma_cac
+	if arma_cac:
+		_chk_nl.text = "Golpe letal (−5)" if String(agente.arma().get("id", "")) == "desarmado" else "Golpe não letal (−5)"
 	_barra_membrana.value = membrana.valor
 	Tema.membrana_na_tela(_vista, membrana.valor)
 	if _tab3d != null:

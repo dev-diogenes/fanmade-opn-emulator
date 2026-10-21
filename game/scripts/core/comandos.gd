@@ -214,6 +214,8 @@ static func aplicar_combate(c: Combate, armas: Dictionary, cmd: Dictionary) -> D
 			var alvo_m := ser(c, cmd.get("alvo", -1))
 			if alvo_m == null:
 				return {"ok": false, "erro": "alvo inválido"}
+			if String(cmd.get("tipo", "")) == "fintar":
+				return c.fintar(ator, alvo_m)
 			return c.manobra(ator, alvo_m, String(cmd.get("tipo", "")))
 		"levantar":
 			return {"ok": c.levantar(ator)}
