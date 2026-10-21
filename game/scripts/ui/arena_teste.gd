@@ -57,6 +57,10 @@ var _foco: PassoFoco
 var _chk_ae: Button
 var _mao: Control
 var _cartas: Dictionary = {}
+var _faixa_vez: PanelContainer     ## vez da ameaça (docs/21, C3)
+var _faixa_nome: Label
+var _faixa_intencao: Label
+var _mao_abaixada := false
 var _grupo: HBoxContainer
 var _cartoes: Dictionary = {}
 var _bilhete: PanelContainer
@@ -226,11 +230,13 @@ func _avancar() -> void:
 			sessao.liberar()
 			return
 		if fluxo.decide_jogador(ser):
+			_mostrar_faixa_vez(null)
 			_focar_para_controle()
 			sessao.liberar()
 			return   # vez do jogador
 		if not autoplay and not sessao.atrasado():
-			await get_tree().create_timer(0.6).timeout
+			_mostrar_faixa_vez(ser)
+			await get_tree().create_timer(1.0).timeout   # tempo de ler a faixa (era 0,6)
 			while TourGuiado.em_andamento() and is_inside_tree():
 				await get_tree().create_timer(0.2).timeout   # a IA espera o tutorial fechar
 			if not is_inside_tree():
@@ -602,6 +608,7 @@ func _montar_interface() -> void:
 	teste.offset_top = 16
 	teste.alignment = BoxContainer.ALIGNMENT_BEGIN
 	teste.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	teste.visible = false   # docs/21 (C4): a rolagem central já mostra os dados; o histórico fica no relatório
 	add_child(teste)
 	_titulo_slots = _titulo("Último teste")
 	_titulo_slots.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -630,6 +637,7 @@ func _montar_interface() -> void:
 	_mao.offset_top = -altura_carta - 60   # acima do relatório de campo (não encosta nele)
 	_mao.offset_bottom = -60
 	add_child(_mao)
+	_montar_faixa_vez()
 	# Dicas curtas (docs/19): cabem em duas linhas de 14 px; o detalhe vai no tooltip e no bilhete
 	var defs := [["mover", "Mover", "Até uma célula azul", Tema.INFO, _modo_mover],
 		["atacar", "Atacar", "Um inimigo marcado", Tema.SANGUE_CLARO, _modo_atacar],
@@ -674,6 +682,9 @@ func _montar_interface() -> void:
 	_chk_ae.toggle_mode = true
 	_chk_ae.tooltip_text = "Combatente: +5 no ataque por 2 PE"
 	extras.add_child(_chk_ae)
+	# Foco e Ataque Especial mudam a chance mostrada nos alvos (docs/21, C2)
+	_foco.mudou.connect(func(_v): _atualizar_3d())
+	_chk_ae.toggled.connect(func(_v): _atualizar_3d())
 	_btn_enigma = _botao("Decifrar enigma", _decifrar)
 	_btn_soltar = _botao("Soltar-se", _soltar)
 	_btn_apagar = _botao("Apagar chamas", _apagar)
@@ -1026,6 +1037,79 @@ func _atualizar_grupo() -> void:
 # --- Modo Mestre (Fase 8.3) ------------------------------------------------------
 
 ## A ameaça da vez, quando é esta máquina que decide por ela (o mestre).
+# --- Vez da ameaça (docs/21, C3) --------------------------------------------------------
+
+## Faixa no alto, abaixo da Membrana: quem age e em quem deve agir. Enquanto isso, a mão de
+## cartas desce (cinco cadeados não dizem nada; a faixa diz).
+func _montar_faixa_vez() -> void:
+	_faixa_vez = PanelContainer.new()
+	_faixa_vez.anchor_left = 0.5
+	_faixa_vez.anchor_right = 0.5
+	_faixa_vez.offset_top = 104
+	_faixa_vez.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_faixa_vez.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_faixa_vez.visible = false
+	add_child(_faixa_vez)
+	var v := VBoxContainer.new()
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_theme_constant_override("separation", 0)
+	_faixa_vez.add_child(v)
+	var sub := Label.new()
+	sub.text = "VEZ DA AMEAÇA"
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+	sub.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	v.add_child(sub)
+	_faixa_nome = Label.new()
+	_faixa_nome.theme_type_variation = "Titulo"
+	_faixa_nome.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(_faixa_nome)
+	_faixa_intencao = Label.new()
+	_faixa_intencao.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_faixa_intencao.add_theme_font_size_override("font_size", Tema.FONTE_M)
+	var maquina := Tema.fonte_maquina()
+	if maquina != null:
+		_faixa_intencao.add_theme_font_override("font", maquina)
+	v.add_child(_faixa_intencao)
+
+
+## `ser` = a ameaça que vai agir (a IA); null esconde a faixa e devolve a mão.
+func _mostrar_faixa_vez(ser: Ser) -> void:
+	if _faixa_vez == null:
+		return
+	var mostrar := ser != null and ser is Ameaca
+	if mostrar:
+		var cor: Color = Tema.ELEMENTO.get((ser as Ameaca).elemento, Tema.SANGUE_CLARO)
+		_faixa_vez.add_theme_stylebox_override("panel", Tema.caixa(Color(Tema.FUNDO, 0.92), cor, 2, 6, Vector2(28, 8)))
+		_faixa_nome.text = ser.nome.to_upper()
+		_faixa_nome.add_theme_color_override("font_color", cor.lightened(0.25))
+		var it := IaCombate.intencao(combate, ser, armas)
+		var alvo: Ser = it.alvo
+		_faixa_intencao.text = "" if alvo == null else ("→ vai atacar %s" % alvo.nome if it.acao == "atacar" else "→ avança sobre %s" % alvo.nome)
+		_faixa_intencao.add_theme_color_override("font_color", Tema.PERGAMINHO)
+		if not _faixa_vez.visible:
+			_faixa_vez.visible = true
+			_faixa_vez.modulate.a = 0.0
+			_faixa_vez.create_tween().tween_property(_faixa_vez, "modulate:a", 1.0, 0.15)
+	else:
+		_faixa_vez.visible = false
+	_abaixar_mao(mostrar)
+
+
+func _abaixar_mao(abaixar: bool) -> void:
+	if _mao == null or abaixar == _mao_abaixada:
+		return
+	_mao_abaixada = abaixar
+	var d := 260.0 if abaixar else -260.0   # some inteira atrás do relatório
+	# O Foco e o Ataque Especial também saem: não há o que gastar na vez da ameaça
+	var extras: Control = _foco.get_parent().get_parent() if _foco != null else null
+	if extras != null:
+		extras.visible = not abaixar
+	var tw := _mao.create_tween().set_parallel()
+	tw.tween_property(_mao, "offset_top", _mao.offset_top + d, 0.22).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(_mao, "offset_bottom", _mao.offset_bottom + d, 0.22).set_trans(Tween.TRANS_SINE)
+
+
 func _ameaca_da_vez() -> Ameaca:
 	var s := fluxo.decisor() if fluxo != null else null
 	return s as Ameaca if s is Ameaca and _controles != null and _controles.e_mestre_local() else null
@@ -1081,7 +1165,7 @@ func _ficha(ser: Ser) -> String:
 	var linhas := ["%s — PV %d/%d  Defesa %d" % [ser.nome, ser.pv, ser.pv_maximo, ser.defesa()]]
 	if ser is Agente:
 		var a := ser as Agente
-		linhas[0] = "%s (%s, NEX %d%%) — PV %d/%d  PE %d/%d  SAN %d/%d  Defesa %d" % [a.nome, a.classe_id, a.nex, a.pv, a.pv_maximo, a.pe, a.pe_maximo, a.san, a.san_maximo, a.defesa()]
+		linhas[0] = "%s · %s, NEX %d%% · Defesa %d" % [a.nome, a.ruleset.classe(a.classe_id).nome, a.nex, a.defesa()]   # PV/PE/SAN no retrato
 	linhas.append("Arma: %s (%s)" % [armas[ser].get("nome", "?"), armas[ser].get("dano", "?")])
 	if not ser.condicoes.is_empty():
 		linhas.append("Condições: %s" % ", ".join(PackedStringArray(ser.condicoes.keys())))
@@ -1161,10 +1245,14 @@ func _atualizar_3d() -> void:
 	var alvos: Array = []
 	if agente != null and _modo == "mover" and combate.acoes_restantes(agente).movimento + combate.acoes_restantes(agente).padrao > 0:
 		destinos = grade.destinos(agente, agente.deslocamento_quadrados())
+	var chances := {}
 	if agente != null and _modo == "atacar":
+		var ae := 5 if _chk_ae.button_pressed and agente.classe_id == "combatente" else 0
 		for s in grade.seres():
 			if s.lado != agente.lado and _pode_atacar(agente, s, armas[agente]):
 				alvos.append(s)
+				chances[s] = combate.chance_de_acerto(agente, s, armas[agente], _foco.valor, ae)
+	_tab3d.chances = chances
 	var zonas: Array = []
 	for z in combate.zonas():
 		zonas.append({"celulas": z.celulas, "elemento": ruleset.ritual(z.ritual).elemento})

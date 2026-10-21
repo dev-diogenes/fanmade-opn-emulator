@@ -160,6 +160,8 @@ func _testar_evento(opcao: int = 0) -> void:
 
 
 ## Opções do evento (docs/13): uma linha por perícia, com a DT; "seguir em frente" sem teste.
+## Cada opção mostra os dados e a chance do agente da vez (docs/21, C2); a de maior chance
+## ganha ★. Todas no mesmo estilo de papel: o foco do teclado não parece recomendação.
 func _montar_opcoes_evento() -> void:
 	for filho in _caixa_opcoes.get_children():
 		if filho != _btn_testar:
@@ -168,6 +170,10 @@ func _montar_opcoes_evento() -> void:
 		_btn_testar.get_parent().remove_child(_btn_testar)
 	var a: Agente = missao.evento_pendente.get("agente")
 	var ops := missao.opcoes_do_evento()
+	var previsoes: Array = []
+	for o in ops:
+		previsoes.append({} if o.get("sem_teste", false) or a == null else a.prever_teste(String(o.pericia), int(o.dt), _foco.valor))
+	var melhor := LinhaTeste.melhor(previsoes)
 	for i in ops.size():
 		var o: Dictionary = ops[i]
 		var b: Button = _btn_testar if i == 0 else Button.new()
@@ -181,10 +187,11 @@ func _montar_opcoes_evento() -> void:
 		else:
 			var per := String(o.pericia)
 			var nome := String(missao.ruleset.pericia(per).get("nome", per))
-			var treinado := a != null and a.pericias.has(per)
-			b.text = "%s%s — %s %+d (DT %d)" % [texto if texto != "" else "Testar", "", nome, a.bonus_pericia(per) if a != null else 0, int(o.dt)]
-			b.theme_type_variation = "BotaoPrincipal" if i == 0 else "BotaoPapel"
-			b.tooltip_text = "%s rola %s%s" % [a.nome if a != null else "?", missao.ruleset.atributo_da_pericia(per).to_upper(), "" if treinado else " (destreinado)"]
+			b.text = "%s%s\n   %s" % [texto if texto != "" else "Testar", "  ★" if i == melhor and ops.size() > 1 else "",
+				LinhaTeste.texto(nome, previsoes[i], int(o.dt))]
+			b.theme_type_variation = "BotaoPapel"
+			b.tooltip_text = LinhaTeste.explicar(a, per, previsoes[i]) + ("\n★ a melhor chance de %s." % a.nome if i == melhor and a != null else "")
+		b.disabled = LinhaTeste.bloqueada(previsoes[i])   # perícia que só vale treinada
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.pressed.connect(_testar_evento.bind(i))
@@ -250,8 +257,8 @@ func _abrir_acao() -> void:
 			v.add_child(b)
 	var nota := Label.new()
 	nota.text = "Alcance: você e quem está no mesmo hex."
-	nota.add_theme_color_override("font_color", Color(Tema.TINTA, 0.6))
-	nota.add_theme_font_size_override("font_size", Tema.FONTE_P - 1)
+	nota.add_theme_color_override("font_color", Color(Tema.TINTA, 0.75))   # docs/21: 5,5:1 no papel
+	nota.add_theme_font_size_override("font_size", Tema.FONTE_P)
 	v.add_child(nota)
 
 
@@ -701,6 +708,7 @@ func _montar_interface() -> void:
 	_slots = HBoxContainer.new()
 	_slots.alignment = BoxContainer.ALIGNMENT_END
 	_slots.add_theme_constant_override("separation", 6)
+	_slots.visible = false   # docs/21 (C4): só a rolagem central, como no combate
 	dock.add_child(_slots)
 	_lbl_mov = Label.new()
 	_lbl_mov.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -714,6 +722,9 @@ func _montar_interface() -> void:
 	hb.add_theme_constant_override("separation", Tema.ESPACO_M)
 	botoes.add_child(hb)
 	_foco = PassoFoco.criar()
+	_foco.mudou.connect(func(_v):   # o Foco muda a chance das opções do evento
+		if missao != null and not missao.evento_pendente.is_empty():
+			_montar_opcoes_evento())
 	hb.add_child(_foco)
 	_btn_rolar = _botao("Rolar movimento", _rolar)
 	_btn_rolar.theme_type_variation = "BotaoPrincipal"
@@ -733,7 +744,7 @@ func _montar_interface() -> void:
 	_painel_evento.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_painel_evento.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_painel_evento.grow_vertical = Control.GROW_DIRECTION_BOTH
-	_painel_evento.custom_minimum_size = Vector2(420, 0)
+	_painel_evento.custom_minimum_size = Vector2(500, 0)   # cabe a linha do teste com a chance (docs/21)
 	_painel_evento.rotation_degrees = -1.0
 	_painel_evento.visible = false
 	add_child(_painel_evento)

@@ -339,5 +339,24 @@ static func carregar(caminho: String = ARQUIVO) -> Carreira:
 	return de_dicionario(d)
 
 
+## Uma linha sobre o save, sem carregar a carreira (tela de título, docs/21):
+## "3 agentes · missão em andamento, turno 4". "" sem save legível.
+static func resumo_save(caminho: String = ARQUIVO) -> String:
+	if not FileAccess.file_exists(caminho):
+		return ""
+	var d = JSON.parse_string(FileAccess.get_file_as_string(caminho))
+	if not d is Dictionary:
+		return ""
+	var n: int = (d.get("roster", []) as Array).size()
+	var partes := PackedStringArray(["%d agente%s" % [n, "" if n == 1 else "s"]])
+	var m: Dictionary = d.get("missao", {})
+	if not m.is_empty():
+		partes.append("missão em andamento, turno %d" % int(m.get("turno_mundo", 1)))
+	else:
+		var feitas := int(d.get("missoes_concluidas", 0))
+		partes.append("%d missão concluída" % feitas if feitas == 1 else "%d missões concluídas" % feitas)
+	return " · ".join(partes)
+
+
 static func existe_save(caminho: String = ARQUIVO) -> bool:
 	return FileAccess.file_exists(caminho)

@@ -274,6 +274,7 @@ func _atualizar_agentes(missao: Missao) -> void:
 			var rot := Pecas.rotulo(a.nome, 36)
 			rot.position = Vector3(0, 1.0, 0)
 			ficha.add_child(rot)
+			ficha.set_meta("rotulo", rot)
 			add_child(ficha)
 			_fichas[a] = ficha
 		ficha.set_meta("fora", fora)
@@ -316,6 +317,15 @@ func _visibilidade_das_pecas() -> void:
 		var f: Node3D = _fichas[a]
 		var junto: bool = eu != null and rig.modo == "primeira" and _ultima_posicao.has(a) and 			Vector2(f.position.x - eu.position.x, f.position.z - eu.position.z).length() < 0.8
 		f.visible = not bool(f.get_meta("fora", false)) and not junto
+		# Quem divide o hex com outro só mostra o nome se for o da vez (docs/21): sem pilha de nomes
+		if f.has_meta("rotulo"):
+			var acompanhado := false
+			for b in _fichas:
+				var g: Node3D = _fichas[b]
+				if g != f and not bool(g.get_meta("fora", false)) and Vector2(g.position.x - f.position.x, g.position.z - f.position.z).length() < 0.8:
+					acompanhado = true
+					break
+			(f.get_meta("rotulo") as Label3D).visible = not acompanhado or f == rig.seguir
 
 
 ## Centraliza a câmera no agente da vez.

@@ -157,19 +157,17 @@ func _acao_concluida() -> void:
 ## Procurar Pistas: teste da perícia escolhida contra a DT do ponto de interesse.
 ## `opcoes` é repassado a Agente.testar (habilidades, perito, ecletico…); o contexto
 ## "procurar_pistas" é colocado aqui (ex.: Faro para Pistas). Retorna {} se inválido.
-func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dictionary = {}) -> Dictionary:
-	var a := agente_atual()
-	var p := ponto(ponto_id)
-	if a == null or p.is_empty() or not ponto_id in pontos_restantes or not p.pericias.has(pericia):
-		return {}
+## Opções e DT do Procurar Pistas: bônus de Facilitar e Ajudar, dados da Na Trilha Certa e
+## da Presteza, atributo forçado e Causalidade Fortuita. Usado pelo teste e pela previsão.
+func _preparar_procurar(a: Agente, p: Dictionary, pericia: String, opcoes: Dictionary) -> Dictionary:
 	var op := opcoes.duplicate()
 	op["contexto"] = "procurar_pistas"
 	var bonus := int(_facilitar.get(a, 0)) + int(_ajuda.get(a, 0))
 	var extras := int(_trilha.get(a, {}).get("dados", 0))
-	var usou_presteza := false
+	var presteza := false
 	if _facilitar.has(a) and _presteza_pendente:
 		extras += 1
-		usou_presteza = true
+		presteza = true
 	op["bonus_extra"] = int(op.get("bonus_extra", 0)) + bonus
 	op["dados_extras"] = int(op.get("dados_extras", 0)) + extras
 	if _atributo_forcado != "":
@@ -180,6 +178,60 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 		var achou := pistas_encontradas.any(func(x): return x.get("agente", "") == a.nome)
 		if not achou or not a.efeitos("causalidade_sempre").is_empty():
 			dt -= 5
+	return {"op": op, "dt": dt, "presteza": presteza}
+
+
+## Previsão do Procurar Pistas para a UI (docs/21): {"chance", "dados", "bonus", "dt"}.
+func prever_procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dictionary = {}) -> Dictionary:
+	var a := agente_atual()
+	var p := ponto(ponto_id)
+	if a == null or p.is_empty() or not p.pericias.has(pericia):
+		return {}
+	var prep := _preparar_procurar(a, p, pericia, opcoes)
+	var r := a.prever_teste(pericia, prep.dt, pe_foco, prep.op)
+	r["dt"] = prep.dt
+	return r
+
+
+## Previsão do Facilitar (sem gastar o PE da Presteza Atlética).
+func prever_facilitar(opcao_id: String, pericia: String, pe_foco: int = 0, opcoes: Dictionary = {}) -> Dictionary:
+	var a := agente_atual()
+	var o := opcao_facilitar(opcao_id)
+	if a == null or o.is_empty() or not o.pericias.has(pericia):
+		return {}
+	var op := opcoes.duplicate()
+	if op.get("presteza_atletica", false):
+		op["atributo_base"] = "for" if a.atributo("for") >= a.atributo("agi") else "agi"
+	if a.tem_habilidade("intuicao_paranormal"):
+		op["bonus_extra"] = int(op.get("bonus_extra", 0)) + maxi(a.atributo("int"), a.atributo("pre"))
+	if _atributo_forcado != "":
+		op["atributo_base"] = _atributo_forcado
+	var dt := int(o.pericias[pericia])
+	var r := a.prever_teste(pericia, dt, pe_foco, op)
+	r["dt"] = dt
+	return r
+
+
+## Previsão do Ajudar (DT fixa da cena).
+func prever_ajudar(pericia: String) -> Dictionary:
+	var a := agente_atual()
+	if a == null:
+		return {}
+	var dt := int(_cfg.ajuda.dt)
+	var r := a.prever_teste(pericia, dt)
+	r["dt"] = dt
+	return r
+
+
+func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dictionary = {}) -> Dictionary:
+	var a := agente_atual()
+	var p := ponto(ponto_id)
+	if a == null or p.is_empty() or not ponto_id in pontos_restantes or not p.pericias.has(pericia):
+		return {}
+	var prep := _preparar_procurar(a, p, pericia, opcoes)
+	var op: Dictionary = prep.op
+	var dt: int = prep.dt
+	var usou_presteza: bool = prep.presteza
 	var teste := a.testar(dados, pericia, dt, pe_foco, op)
 	if teste == null:
 		return {}

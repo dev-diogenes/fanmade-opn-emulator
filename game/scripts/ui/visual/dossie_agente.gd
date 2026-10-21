@@ -23,11 +23,11 @@ static func ficha_bbcode(a: Agente) -> String:
 	var pers := PackedStringArray()
 	for p in a.pericias:
 		pers.append("%s %+d" % [rs.pericia(p).nome, a.bonus_pericia(p)])
-	linhas.append("[color=#6b5a48]Perícias:[/color] " + ", ".join(pers))
+	linhas.append("[color=#4e4034]Perícias:[/color] " + ", ".join(pers))
 	var habs := PackedStringArray()
 	for h in a.habilidades():
-		habs.append(h.nome + ("" if h.get("implementado", false) else "*"))
-	linhas.append("[color=#6b5a48]Habilidades:[/color] " + ", ".join(habs))
+		habs.append(h.nome if h.get("implementado", false) else _sem_efeito(h.nome))
+	linhas.append("[color=#4e4034]Habilidades:[/color] " + ", ".join(habs))
 	if not a.poderes_paranormais.is_empty():
 		var pps := PackedStringArray()
 		for e in a.poderes_paranormais:
@@ -36,14 +36,20 @@ static func ficha_bbcode(a: Agente) -> String:
 	if not a.rituais.is_empty():
 		var rits := PackedStringArray()
 		for rid in a.rituais:
-			rits.append(rs.ritual(rid).get("nome", rid) + ("" if rs.ritual(rid).get("implementado", false) else "*"))
+			var nome_r: String = rs.ritual(rid).get("nome", rid)
+			rits.append(nome_r if rs.ritual(rid).get("implementado", false) else _sem_efeito(nome_r))
 		linhas.append("[color=#5b2a86]Rituais:[/color] " + ", ".join(rits))
 	if not a.lesoes.is_empty():
 		linhas.append("[color=#9a4a10]Lesões:[/color] " + ", ".join(PackedStringArray(a.lesoes)))
 	if not a.condicoes.is_empty():
 		linhas.append("[color=#a51c1c]Condições:[/color] " + ", ".join(PackedStringArray(a.condicoes.keys())))
-	linhas.append("[color=#6b5a48]* ainda sem efeito no motor[/color]")
 	return "\n".join(linhas)
+
+
+## Nome em itálico com dica ao passar o mouse, no lugar do asterisco e da nota de rodapé
+## de desenvolvimento (docs/21, C4).
+static func _sem_efeito(nome: String) -> String:
+	return "[i][hint=Ainda sem efeito nas regras deste jogo]%s[/hint][/i]" % nome
 
 
 static func abrir(pai: Node, p_agente: Agente, usar_item: Callable = Callable()) -> DossieAgente:

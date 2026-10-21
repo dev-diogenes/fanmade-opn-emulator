@@ -48,11 +48,16 @@ func _montar(saidas: Array) -> void:
 	t.theme_type_variation = "Titulo"
 	_pasta.add_child(t)
 	var continuar := _item("Continuar", queue_free)
-	_item("Ajustes", func(): _ajustes.visible = not _ajustes.visible)
+	var ajustes := _item("Ajustes ▾", func(): pass)
+	ajustes.pressed.connect(func():
+		_ajustes.visible = not _ajustes.visible
+		ajustes.text = "Ajustes ▴" if _ajustes.visible else "Ajustes ▾")
 	_ajustes = VBoxContainer.new()
 	_ajustes.visible = false
 	_pasta.add_child(_ajustes)
+	_secao("Leitura e acessibilidade")   # docs/21: seções no lugar de uma lista corrida
 	montar_leitura(_ajustes)
+	_secao("Imagem e som")
 	var linha_vol := HBoxContainer.new()
 	linha_vol.add_theme_constant_override("separation", Tema.ESPACO_M)
 	_ajustes.add_child(linha_vol)
@@ -168,6 +173,13 @@ static func montar_leitura(caixa: Control) -> void:
 	atalhos.text = Atalhos.com_tecla("Atalhos de teclado", "folha_atalhos")
 	atalhos.pressed.connect(func(): FolhaAtalhos.abrir(caixa))
 	caixa.add_child(atalhos)
+
+
+func _secao(texto: String) -> void:
+	var l := Label.new()
+	l.text = texto
+	l.theme_type_variation = "Subtitulo"
+	_ajustes.add_child(l)
 
 
 func _item(texto: String, acao: Callable) -> Button:

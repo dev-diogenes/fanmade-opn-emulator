@@ -57,8 +57,8 @@ func _linha(chave: String) -> Control:
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var l := Label.new()
 	l.text = chave.to_upper()
-	l.custom_minimum_size = Vector2(30, 0)
-	l.add_theme_font_size_override("font_size", Tema.FONTE_P - 1)
+	l.custom_minimum_size = Vector2(32, 0)
+	l.add_theme_font_size_override("font_size", Tema.FONTE_P)
 	l.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
 	h.add_child(l)
 	var b := ProgressBar.new()
@@ -71,9 +71,9 @@ func _linha(chave: String) -> Control:
 	b.add_theme_stylebox_override("background", Tema.caixa(Color("0b0a0e"), Tema.OURO_ESCURO, 1, 3, Vector2.ZERO))
 	h.add_child(b)
 	var n := Label.new()
-	n.custom_minimum_size = Vector2(42, 0)
+	n.custom_minimum_size = Vector2(44, 0)
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	n.add_theme_font_size_override("font_size", Tema.FONTE_P - 1)
+	n.add_theme_font_size_override("font_size", Tema.FONTE_P)
 	h.add_child(n)
 	_barras[chave] = {"barra": b, "numero": n, "titulo": l}
 	return h

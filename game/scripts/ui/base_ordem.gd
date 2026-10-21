@@ -9,8 +9,7 @@ var _selecionado: Agente
 
 var _lista: ItemList
 var _abas: TabContainer
-var _sigilo_agente: Sigilo
-var _legenda_foto: Label
+var _foto_agente: FotoAgente
 var _opt_recruta: OptionButton
 var _ficha: RichTextLabel
 var _caixa_pendencia: VBoxContainer
@@ -153,35 +152,10 @@ func _montar_interface() -> void:
 	vdoc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vdoc.add_theme_constant_override("separation", Tema.ESPACO_M)
 	hdoc.add_child(vdoc)
-	# Foto do agente presa na ficha (sigilo da classe, como uma polaroide)
-	var foto := PanelContainer.new()
-	var estilo := Tema.caixa(Color("f3efe6"), Color(0, 0, 0, 0.25), 1, 1, Vector2(8, 8))
-	estilo.shadow_color = Color(0, 0, 0, 0.35)
-	estilo.shadow_size = 5
-	foto.add_theme_stylebox_override("panel", estilo)
-	foto.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	foto.rotation_degrees = 3
-	foto.custom_minimum_size = Vector2(170, 0)
-	hdoc.add_child(foto)
-	var vf := VBoxContainer.new()
-	foto.add_child(vf)
-	var fundo_foto := ColorRect.new()
-	fundo_foto.color = Color("17141a")
-	fundo_foto.custom_minimum_size = Vector2(154, 150)
-	vf.add_child(fundo_foto)
-	_sigilo_agente = Sigilo.new()
-	_sigilo_agente.cor = Color(Tema.OURO_CLARO, 0.9)
-	_sigilo_agente.espessura = 2.4
-	_sigilo_agente.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_sigilo_agente.offset_left = 16
-	_sigilo_agente.offset_right = -16
-	_sigilo_agente.offset_top = 12
-	_sigilo_agente.offset_bottom = -12
-	fundo_foto.add_child(_sigilo_agente)
-	_legenda_foto = Label.new()
-	_legenda_foto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_legenda_foto.add_theme_color_override("font_color", Tema.TINTA)
-	vf.add_child(_legenda_foto)
+	# A mesma foto 3x4 da criação e da ficha (docs/19 e docs/21), presa no canto da folha
+	_foto_agente = FotoAgente.new()
+	_foto_agente.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	hdoc.add_child(_foto_agente)
 	_ficha = RichTextLabel.new()
 	_ficha.bbcode_enabled = true
 	_ficha.fit_content = true
@@ -248,18 +222,21 @@ func _montar_interface() -> void:
 	_opt_missao.clip_text = true
 	_opt_missao.item_selected.connect(func(_i): _mostrar_missao())
 	c3.add_child(_opt_missao)
-	c3.add_child(_titulo("Opções da run"))
+	c3.add_child(_titulo("Regras opcionais"))
 	_opt_modo = OptionButton.new()
 	_opt_modo.add_item("Normal (2 Reforços da Ordem)")
 	_opt_modo.add_item("Hardcore (morte permanente)")
+	_opt_modo.tooltip_text = "Normal: quem cai pode ser salvo por um Reforço da Ordem.\nHardcore: quem morre, morre."
 	_opt_modo.item_selected.connect(func(i): carreira.opcoes.modo_morte = "normal" if i == 0 else "hardcore")
 	c3.add_child(_opt_modo)
 	_chk_lesoes = CheckBox.new()
-	_chk_lesoes.text = "Lesões (p.184)"
+	_chk_lesoes.text = "Lesões"
+	_chk_lesoes.tooltip_text = "Quem fica morrendo por dois turnos testa Vigor; se falhar, perde um ponto de atributo para sempre."
 	_chk_lesoes.toggled.connect(func(v): carreira.opcoes.lesoes = v)
 	c3.add_child(_chk_lesoes)
 	_chk_inspiracao = CheckBox.new()
-	_chk_inspiracao.text = "Inspiração Resoluta (p.184)"
+	_chk_inspiracao.text = "Inspiração Resoluta"
+	_chk_inspiracao.tooltip_text = "Quem morre em combate ainda inspira o grupo: a cada rodada, um aliado recebe um efeito sorteado."
 	_chk_inspiracao.toggled.connect(func(v): carreira.opcoes.inspiracao_resoluta = v)
 	c3.add_child(_chk_inspiracao)
 	c3.add_child(_botao("Editor de missões", _abrir_editor))
@@ -342,6 +319,7 @@ func _montar_interface() -> void:
 	leitura.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	cj.add_child(leitura)
 	MenuPausa.montar_leitura(leitura)   # os mesmos ajustes da pausa (docs/16, A1 e A3)
+	cj.add_child(_titulo("Zona de perigo"))   # ação destrutiva separada das preferências (docs/21)
 	var apagar := _botao("Nova carreira (apaga o save)", func():
 		DialogoPapel.perguntar(self, "Nova carreira", "Isso apaga o save atual: agentes, memorial e a missão em andamento. Não dá para desfazer.", "Apagar e começar", _nova_carreira))
 	apagar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -515,17 +493,17 @@ func _atualizar_agente() -> void:
 	if a == null:
 		_ficha.text = "Nenhum agente."
 		return
-	var rs := carreira.ruleset
-	if _sigilo_agente != null:
-		var cores := {"combatente": Tema.SANGUE_CLARO, "especialista": Tema.OURO_CLARO, "ocultista": Tema.ELEMENTO.energia, "mundano": Tema.PERGAMINHO}
-		_sigilo_agente.semente = hash(a.id + a.nome)
-		_sigilo_agente.cor = cores.get(a.classe_id, Tema.PERGAMINHO)
-		_legenda_foto.text = "%s · %s" % [a.nome, rs.classe(a.classe_id).nome]
+	if _foto_agente != null:
+		_foto_agente.mostrar(a.classe_id, a.aparencia, a.tom)
+		_foto_agente.legenda = a.nome
 	_ficha.text = DossieAgente.ficha_bbcode(a)
 	for item_id in _checks_itens:
 		_checks_itens[item_id].set_pressed_no_signal(item_id in a.equipamento)
 	_atualizar_armas_requisicao()
-	_lbl_requisicao.text = "Patente %s: categoria I até %d, II até %d, III até %d." % [a.patente().get("nome", "?"), int(a.patente().itens_por_categoria["1"]), int(a.patente().itens_por_categoria["2"]), int(a.patente().itens_por_categoria["3"])]
+	# Para quem se está requisitando (docs/20): o limite em palavras, não em siglas
+	var lim: Dictionary = a.patente().itens_por_categoria
+	_lbl_requisicao.text = "Equipando %s (%s): até %d %s de categoria I, %d de II e %d de III." % [a.nome, a.patente().get("nome", "?"),
+		int(lim["1"]), "item" if int(lim["1"]) == 1 else "itens", int(lim["2"]), int(lim["3"])]
 	_montar_pendencia(a)
 
 

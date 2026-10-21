@@ -56,7 +56,7 @@ func _reconstruir() -> void:
 	titulo.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	titulo.position = Vector2(20, 14)
 	_conteudo.add_child(titulo)
-	var objetivo := _bilhete(caso.objetivo, Vector2(size.x - 40, 0), 0.0, Tema.FONTE_P - 1)
+	var objetivo := _bilhete(caso.objetivo, Vector2(size.x - 40, 0), 0.0, Tema.FONTE_P)
 	objetivo.position = Vector2(20, 40)
 	_conteudo.add_child(objetivo)
 
@@ -159,7 +159,7 @@ func _foto(legenda: String, semente: int, graus: float) -> Control:
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	l.max_lines_visible = 2
 	l.theme_type_variation = "TextoPapel"
-	l.add_theme_font_size_override("font_size", 11)
+	l.add_theme_font_size_override("font_size", Tema.FONTE_P)   # era 11 (docs/21)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(l)
 	return moldura
@@ -180,7 +180,7 @@ func _carimbo(nota: Control, resposta: String) -> void:
 	c.text = "RESOLVIDO\n" + (resposta.to_upper() if resposta.length() <= 20 else resposta.substr(0, 19).to_upper() + "…")
 	c.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	c.add_theme_color_override("font_color", Color(Tema.SANGUE_CLARO, 0.9))
-	c.add_theme_font_size_override("font_size", 13)
+	c.add_theme_font_size_override("font_size", Tema.FONTE_P)
 	var titulo := Tema.fonte_titulo()
 	if titulo != null:
 		c.add_theme_font_override("font", titulo)

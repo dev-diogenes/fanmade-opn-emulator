@@ -191,6 +191,16 @@ func _montar_menu() -> void:
 	coluna.add_child(_menu)
 	var tem_save := Carreira.existe_save()
 	var principal := _botao("Continuar carreira" if tem_save else "Começar", _continuar)
+	if tem_save:
+		principal.tooltip_text = Carreira.resumo_save()
+		var resumo := Label.new()   # o que "continuar" continua (docs/21, C4)
+		resumo.text = Carreira.resumo_save()
+		resumo.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+		resumo.add_theme_font_size_override("font_size", Tema.FONTE_P)
+		resumo.position = Vector2(2, 44)
+		resumo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		principal.add_child(resumo)
+		principal.custom_minimum_size.y = 66
 	_botao("Nova carreira", _pedir_nova_carreira)
 	_botao("Editor de missões", _editor)
 	_botao("Sair", func(): get_tree().quit())

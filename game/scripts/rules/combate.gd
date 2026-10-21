@@ -318,6 +318,44 @@ func gastar_acao(ser: Ser, tipo: String) -> bool:
 
 
 ## Ação Agredir: gasta a ação padrão e ataca.
+## Chance (0..1) de um ataque acertar, para a UI (docs/21, C2). Segue `atacar` no que é
+## previsível: modificadores do atacante, alcance, flanco, cobertura, alvo em corpo a corpo,
+## mira, Foco e Ataque Especial. Não conta a reação que o alvo ainda pode declarar.
+## −1 quando o ataque não é possível daqui.
+func chance_de_acerto(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, bonus_extra: int = 0) -> float:
+	var arma: Dictionary = (atacante as Agente).arma_efetiva(arma_base) if atacante is Agente else arma_base
+	var mods := atacante.modificar_ataque(arma, alvo)
+	var corpo_a_corpo: bool = arma.get("ataque", "corpo_a_corpo") == "corpo_a_corpo"
+	var dados_extras := pe_foco + int(mods.dados_extras)
+	var defesa := alvo.defesa()
+	if grade != null and grade.tem(atacante) and grade.tem(alvo):
+		if corpo_a_corpo:
+			if not grade.estao_adjacentes(atacante, alvo):
+				return -1.0
+			if grade.flanqueando(atacante, alvo):
+				dados_extras += 1
+		else:
+			var faixa := grade.faixa_de_alcance(atacante, alvo, arma.get("alcance", "curto"))
+			var cob := grade.cobertura(atacante, alvo)
+			if faixa == "fora" or cob == "total":
+				return -1.0
+			if faixa == "longe":
+				dados_extras -= 1
+			if cob == "leve":
+				defesa += 5
+			var mira: Dictionary = _miras.get(atacante, {})
+			var mirando: bool = not mira.is_empty() and mira.alvo == alvo
+			if grade.em_corpo_a_corpo(alvo) and not mirando and not (atacante is Agente and (atacante as Agente).tem_habilidade("tiro_certeiro")):
+				dados_extras -= 1
+	var pericia_id: String = arma.get("pericia", "luta")
+	var dados_teste := atacante.dados_da_pericia(pericia_id)
+	var bonus_teste := atacante.bonus_pericia(pericia_id)
+	if arma.has("teste"):
+		dados_teste = int(arma.teste.dados) - atacante.penalidade_dados_atributo(ruleset.atributo_da_pericia(pericia_id))
+		bonus_teste = int(arma.teste.bonus)
+	return Teste.chance_de_passar(dados_teste, bonus_teste + int(mods.bonus_ataque) + bonus_extra, defesa, dados_extras)
+
+
 func agredir(atacante: Ser, alvo: Ser, arma: Dictionary, pe_foco: int = 0, opcoes: Dictionary = {}) -> ResultadoAtaque:
 	if atacante.mods_cena.has("prendendo") or not gastar_acao(atacante, "padrao"):
 		return _ataque_invalido(atacante, alvo, arma)

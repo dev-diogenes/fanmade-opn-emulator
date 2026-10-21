@@ -723,6 +723,23 @@ func testar(dados: Dados, pericia_id: String, dt: int, pe_foco: int = 0, opcoes:
 	return r
 
 
+## Previsão de um teste de perícia, com as contas de `testar` mas sem gastar PE nem rolar
+## (docs/21, C2): {"chance": 0..1, "dados": reserva de d20, "bonus": total}. O dado do Perito
+## e as rerrolagens ficam de fora: a chance é um piso. Sem poder usar a perícia, chance 0.
+func prever_teste(pericia_id: String, dt: int, pe_foco: int = 0, opcoes: Dictionary = {}) -> Dictionary:
+	if not pode_usar_pericia(pericia_id):
+		return {"chance": 0.0, "dados": 0, "bonus": 0, "exige_treino": true}
+	var plano := _planejar_teste(pericia_id, pe_foco, opcoes)
+	if plano.is_empty():
+		return {"chance": 0.0, "dados": 0, "bonus": 0}
+	var bonus: int = bonus_pericia(pericia_id, plano.grau) + int(plano.bonus)
+	var reserva := dados_da_pericia(pericia_id)
+	if plano.atributo_base != "":
+		reserva = atributo(plano.atributo_base)
+	var extras := int(opcoes.get("dados_extras", 0)) + pe_foco
+	return {"chance": Teste.chance_de_passar(reserva, bonus, dt, extras), "dados": reserva + extras, "bonus": bonus}
+
+
 ## Gota / Pulmão Ruim: dano ao testar certos atributos (ou ao se esquivar).
 func sofrer_dano_por_teste(dados: Dados, atributo_id: String, eh_esquiva: bool = false) -> void:
 	for e in efeitos("dano_ao_testar"):

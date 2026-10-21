@@ -39,6 +39,21 @@ static func jogar(c: Combate, ser: Ser, armas: Dictionary) -> void:
 		c.agredir(ser, alvo, arma)
 
 
+## O que a IA provavelmente fará na vez deste ser (docs/21, C3), para a faixa da vez:
+## {"alvo": Ser ou null, "acao": "atacar" | "aproximar" | ""}. Mesma escolha de alvo de `jogar`;
+## habilidades usadas antes do ataque podem mudar o plano (é uma intenção, não uma promessa).
+static func intencao(c: Combate, ser: Ser, armas: Dictionary) -> Dictionary:
+	if c.grade == null or not c.grade.tem(ser):
+		return {"alvo": null, "acao": ""}
+	var alvo := IaAmeaca.alvo_preferido(c, ser, inimigo_mais_proximo(c, ser))
+	if alvo == null:
+		return {"alvo": null, "acao": ""}
+	var arma: Dictionary = armas.get(ser, c.ruleset.arma("desarmado"))
+	if IaAmeaca.so_se_move(ser):
+		return {"alvo": alvo, "acao": "aproximar"}
+	return {"alvo": alvo, "acao": "atacar" if pode_atacar(c, ser, alvo, arma) else "aproximar"}
+
+
 ## Agentes no automático gastam a ação com o Enigma de Medo enquanto houver uma criatura
 ## protegida por ele (sem isso, um combate contra a Sombra Sussurrante nunca termina).
 static func _tentar_enigma(c: Combate, ag: Agente) -> bool:

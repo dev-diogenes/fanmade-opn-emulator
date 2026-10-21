@@ -17,6 +17,8 @@ var rig: CameraRig
 var grade: Grade
 var _unidades: Dictionary = {}    ## Ser -> Node3D
 var _rotulos: Dictionary = {}     ## Ser -> Label3D
+## Chance de acerto por alvo marcado (docs/21, C2): aparece embaixo do nome e dos PV.
+var chances: Dictionary = {}
 var _posicoes: Dictionary = {}    ## Ser -> Vector3
 var _pv: Dictionary = {}          ## Ser -> PV na última atualização (para a animação de dano)
 var _destaques: Node3D
@@ -187,6 +189,8 @@ func _atualizar_unidade(s: Ser) -> void:
 	else:
 		no.rotation.z = 0.0
 		rot.text = "%s  %d/%d" % [s.nome, s.pv, s.pv_maximo]
+		if chances.has(s):
+			rot.text += "\nacerto " + LinhaTeste.chance(float(chances[s]))
 		rot.modulate = Color("ecf0f1") if float(s.pv) / s.pv_maximo > 0.5 else Color("f5b041")
 
 

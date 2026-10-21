@@ -361,7 +361,7 @@ func _texto_bilhete(texto: String, suave: bool = false) -> Label:
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.add_theme_font_size_override("font_size", Tema.FONTE_P)
 	if suave:
-		l.add_theme_color_override("font_color", Color(Tema.TINTA, 0.6))
+		l.add_theme_color_override("font_color", Color(Tema.TINTA, 0.75))   # docs/21: 5,5:1 no papel
 	_caixa_bilhete.add_child(l)
 	return l
 
@@ -444,11 +444,20 @@ func _opcoes_procurar(a: Agente) -> void:
 		_texto_bilhete("Sem treino nas perícias deste ponto: só procurando, com teste.", true)
 	if not _pericia in pt.pericias:
 		_pericia = String(pt.pericias.keys()[0])
+	# Chance de cada perícia (docs/21, C2); ★ na melhor para o agente da vez
+	var previsoes: Array = []
 	for per in pt.pericias:
-		var bonus := a.bonus_pericia(per)
-		var texto := "%s  ·  DT %d  ·  %dd20%+d%s" % [missao.ruleset.pericia(per).nome, int(pt.pericias[per]), maxi(1, a.dados_da_pericia(per)), bonus,
-			"" if a.pode_usar_pericia(per) else "  (exige treino)"]
-		_botao_papel(_caixa_bilhete, texto, per == _pericia, func(): _pericia = per; _montar_opcoes())
+		previsoes.append(cena.prever_procurar(_ponto, per, _foco, _opcoes_selos(a, per)))
+	var melhor := LinhaTeste.melhor(previsoes)
+	var i := 0
+	for per in pt.pericias:
+		var prev: Dictionary = previsoes[i]
+		var texto := LinhaTeste.texto(missao.ruleset.pericia(per).nome, prev, int(prev.get("dt", pt.pericias[per]))) + \
+			("  ★" if i == melhor and pt.pericias.size() > 1 else "")
+		var b := _botao_papel(_caixa_bilhete, texto, per == _pericia, func(): _pericia = per; _montar_opcoes())
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		b.tooltip_text = LinhaTeste.explicar(a, per, prev)
+		i += 1
 	_linha_foco(a)
 	var selos := HFlowContainer.new()
 	_caixa_bilhete.add_child(selos)
@@ -469,18 +478,32 @@ func _opcoes_procurar(a: Agente) -> void:
 func _opcoes_facilitar(a: Agente) -> void:
 	_titulo_bilhete("Facilitar a investigação")
 	_texto_bilhete("+2 nos próximos testes e a cena fica mais clara.", true)
+	# Uma linha por ação, com a perícia em selos e a chance de cada uma (docs/21, C2).
+	# Sem escolha, fica marcada a de maior chance.
+	var acoes: Array = cena.cena.get("facilitar", [])
 	var opcoes: Array = []
-	for o in cena.cena.get("facilitar", []):
+	for o in acoes:
 		for per in o.pericias:
-			opcoes.append([o.id, per, "%s  ·  %s  ·  DT %d" % [o.texto, missao.ruleset.pericia(per).nome, int(o.pericias[per])]])
+			opcoes.append([o.id, per, cena.prever_facilitar(o.id, per, _foco)])
 	if opcoes.is_empty():
 		_texto_bilhete("Nada a facilitar nesta cena.", true)
 		return
 	if _opcao_facilitar.is_empty() or not opcoes.any(func(o): return o[0] == _opcao_facilitar[0] and o[1] == _opcao_facilitar[1]):
-		_opcao_facilitar = [opcoes[0][0], opcoes[0][1]]
-	for o in opcoes:
-		_botao_papel(_caixa_bilhete, o[2], o[0] == _opcao_facilitar[0] and o[1] == _opcao_facilitar[1],
-			func(): _opcao_facilitar = [o[0], o[1]]; _montar_opcoes()).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var m: Array = opcoes[LinhaTeste.melhor(opcoes.map(func(o): return o[2]))]
+		_opcao_facilitar = [m[0], m[1]]
+	for acao in acoes:
+		var titulo := _texto_bilhete(String(acao.texto))
+		titulo.add_theme_font_size_override("font_size", Tema.FONTE_P + 1)
+		var selos := HFlowContainer.new()
+		selos.add_theme_constant_override("h_separation", 6)
+		_caixa_bilhete.add_child(selos)
+		for o in opcoes.filter(func(x): return x[0] == acao.id):
+			var nome: String = missao.ruleset.pericia(o[1]).nome
+			var prev: Dictionary = o[2]
+			var b := _botao_papel(selos, "%s · %s" % [nome, LinhaTeste.resumo(prev)],
+				o[0] == _opcao_facilitar[0] and o[1] == _opcao_facilitar[1], func(): _opcao_facilitar = [o[0], o[1]]; _montar_opcoes())
+			b.disabled = LinhaTeste.bloqueada(prev)
+			b.tooltip_text = LinhaTeste.texto(nome, prev, int(prev.get("dt", 0))) + "\n" + LinhaTeste.explicar(a, o[1], prev)
 	_linha_foco(a)
 	if a.tem_habilidade("presteza_atletica"):
 		var selos := HFlowContainer.new()
@@ -507,7 +530,11 @@ func _opcoes_ajudar(a: Agente) -> void:
 	var pericias := HFlowContainer.new()
 	_caixa_bilhete.add_child(pericias)
 	for per in a.pericias:
-		_botao_papel(pericias, missao.ruleset.pericia(per).nome, per == _pericia_ajuda, func(): _pericia_ajuda = per; _montar_opcoes())
+		var prev := cena.prever_ajudar(per)
+		var nome: String = missao.ruleset.pericia(per).nome
+		var b := _botao_papel(pericias, "%s · %s" % [nome, LinhaTeste.resumo(prev)], per == _pericia_ajuda,
+			func(): _pericia_ajuda = per; _montar_opcoes())
+		b.tooltip_text = LinhaTeste.texto(nome, prev, int(prev.get("dt", 10))) + "\n" + LinhaTeste.explicar(a, per, prev)
 	_confirmar("Ajudar %s" % _aliado.nome, _ajudar)
 
 
@@ -678,16 +705,22 @@ func _procurar() -> void:
 	var a := cena.agente_atual()
 	if a == null or _pericia == "" or _ponto == "":
 		return
-	var op := {}
-	if _selos.get("faro", false) and a.tem_habilidade("faro_para_pistas"):
-		op["habilidades"] = ["faro_para_pistas"]
-	if _selos.get("perito", false) and _pericia in a.perito:
-		op["perito"] = true
-	if _selos.get("ecletico", false) and a.classe_id == "especialista":
-		op["ecletico"] = true
+	var op := _opcoes_selos(a, _pericia)
 	var foco := _foco
 	_foco = 0
 	_enviar("procurar", {"ponto": _ponto, "pericia": _pericia, "foco": foco, "opcoes": op})
+
+
+## Opções pagas marcadas nos selos (Faro, Perito, Eclético), para o teste e para a chance.
+func _opcoes_selos(a: Agente, pericia: String) -> Dictionary:
+	var op := {}
+	if _selos.get("faro", false) and a.tem_habilidade("faro_para_pistas"):
+		op["habilidades"] = ["faro_para_pistas"]
+	if _selos.get("perito", false) and pericia in a.perito:
+		op["perito"] = true
+	if _selos.get("ecletico", false) and a.classe_id == "especialista":
+		op["ecletico"] = true
+	return op
 
 
 func _examinar(pericia: String) -> void:
