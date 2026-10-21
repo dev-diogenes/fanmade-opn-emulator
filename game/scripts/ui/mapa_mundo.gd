@@ -35,6 +35,7 @@ var _btn_testar: Button
 var _btn_acao: Button
 var _caso: PanelContainer
 var _lbl_caso: RichTextLabel
+var _btn_deduzir: Button
 var _caixa_opcoes: VBoxContainer
 var _bilhete_acao: PanelContainer
 var _log: RelatorioCampo
@@ -300,6 +301,9 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 				_cursor_ativo = true   # depois de rolar, o direcional já move o cursor
 				_cursor = missao.posicao(a)
 				_mapa3d.mostrar_cursor(_cursor, true)
+		"deduzir":
+			if res.ok:
+				Som.tocar("pista" if res.deducao.acertou else "erro")
 		"mover":
 			if res.ok:
 				_cursor_ativo = false
@@ -518,6 +522,15 @@ func _ao_encerrar(venceu: bool) -> void:
 	_painel_fim.mostrar("CASO ENCERRADO" if venceu else "MISSÃO FRACASSADA", linhas, venceu)
 
 
+## Ficha de suspeitos (docs/32): acusar vira o comando `deduzir` (lockstep no online).
+func abrir_deducao(pergunta_id: String = "") -> PainelDeducao:
+	if missao.caso == null or PainelDeducao.aberto(self):
+		return null
+	var pid := pergunta_id if pergunta_id != "" else PainelDeducao.pergunta_sugerida(missao.caso)
+	return PainelDeducao.abrir(self, missao.caso, pid, func(q: String, c: String):
+		_enviar("deduzir", {"pergunta": q, "candidato": c}))
+
+
 func _nova_missao() -> void:
 	if _jogo != null:
 		_jogo.voltar_para_base()
@@ -634,7 +647,7 @@ func _montar_interface() -> void:
 	_caso.position = Vector2(16, 120)
 	_caso.custom_minimum_size = Vector2(250, 0)
 	_caso.mouse_filter = Control.MOUSE_FILTER_PASS
-	_caso.tooltip_text = "O caso: cada pergunta precisa de 2 pistas (eventos e investigações)."
+	_caso.tooltip_text = "O caso: cada pista revela um traço do culpado. Com elas, acuse na ficha de suspeitos."
 	add_child(_caso)
 	var vc := VBoxContainer.new()
 	vc.add_theme_constant_override("separation", 2)
@@ -651,6 +664,11 @@ func _montar_interface() -> void:
 	_lbl_caso.add_theme_font_size_override("normal_font_size", Tema.FONTE_P)
 	_lbl_caso.add_theme_font_size_override("bold_font_size", Tema.FONTE_P)
 	vc.add_child(_lbl_caso)
+	_btn_deduzir = Button.new()
+	_btn_deduzir.text = "Deduzir…"
+	_btn_deduzir.tooltip_text = "Abrir a ficha de suspeitos e acusar (docs/32)"
+	_btn_deduzir.pressed.connect(abrir_deducao)
+	vc.add_child(_btn_deduzir)
 
 	# Topo central: a Membrana, com sigilo e estado
 	var membrana := PanelContainer.new()
@@ -901,13 +919,25 @@ func _atualizar_caso() -> void:
 	if c == null:
 		return
 	var linhas: Array[String] = []
+	var alguma_aberta := false
+	var alguma_com_pista := false
 	for q in c.perguntas:
 		var feitas := mini(int(q.encontradas), int(q.pistas_necessarias))
 		if q.respondida:
 			linhas.append(Tema.bb("✔ %s" % q.texto, Tema.cor_sucesso()) + "\n   " + Tema.bb(c.resposta(q.id), Tema.OURO_CLARO))
 		else:
+			alguma_aberta = true
+			alguma_com_pista = alguma_com_pista or int(q.encontradas) > 0
 			var marcas := "●".repeat(feitas) + "○".repeat(int(q.pistas_necessarias) - feitas)
 			linhas.append("%s  %s" % [q.texto, Tema.bb(marcas, Tema.OURO)])
+			# Os traços já revelados (docs/32): o jogador cruza na ficha de suspeitos
+			var tracos: Array[String] = []
+			for t in c.indicios_encontrados(q.id):
+				tracos.append(String(Caso.indicio(t).get("rotulo", t)).to_lower())
+			if not tracos.is_empty():
+				linhas.append("   " + Tema.bb(" · ".join(tracos), Tema.TEXTO_SUAVE))
+	_btn_deduzir.visible = alguma_aberta
+	_btn_deduzir.disabled = not alguma_com_pista
 	var obj := missao.mapa.encontrar("objetivo")
 	var covil_visto := missao.mapa.tem(obj) and missao.mapa.revelado(obj)
 	linhas.append(Tema.bb("Covil: " + ("localizado no mapa" if covil_visto else "desconhecido"), Tema.PERIGO if covil_visto else Tema.TEXTO_SUAVE))

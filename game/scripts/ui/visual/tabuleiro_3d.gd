@@ -17,9 +17,9 @@ const ESTILO_TERRENO := {
 	"estrada": {"chao": ["342d24", "2e2820"], "dificil": "2c3d22", "parede": "5a4d3a", "cobertura": "caixote",
 		"borda": ["tree_single_A", "rock_single_A", "", ""]},
 	"cidade": {"chao": ["2c2b30", "27262b"], "dificil": "30302a", "parede": "4f4a52", "cobertura": "caixote",
-		"borda": ["casa", "casa", "barrel", "crate_A_big", ""]},
+		"borda": ["casa", "casa", "casa", "poste", "carro", "carro", "orelhao", ""]},
 	"ruina": {"chao": ["2e2a2c", "282426"], "dificil": "2a3326", "parede": "5a5260", "cobertura": "rocha",
-		"borda": ["rock_single_C", "rock_single_E", "pilar", ""]},
+		"borda": ["rock_single_C", "parede", "parede", "cruz", ""]},
 	"morro": {"chao": ["2f2c28", "2a2723"], "dificil": "333a28", "parede": "5e574d", "cobertura": "rocha",
 		"borda": ["hill_single_A", "rock_single_C", "mountain_A_grass_trees", ""]},
 	"pantano": {"chao": ["1e2621", "1a211d"], "dificil": "1f3328", "parede": "33352d", "cobertura": "rocha",
@@ -27,6 +27,9 @@ const ESTILO_TERRENO := {
 	"agua": {"chao": ["1c2329", "182026"], "dificil": "1f3328", "parede": "33352d", "cobertura": "rocha",
 		"borda": ["waterplant_A", "waterlily_A", "", ""]},
 }
+## Props por código no combate: a figura aqui tem escala 1 (no mapa, 0,75), então as peças
+## crescem na mesma proporção que a miniatura (docs/32).
+const ESCALA_PROPS := 1.35
 const COR_MOVER := Color(0.3, 0.6, 1.0, 0.45)
 const COR_AGENTE := Color("3d7bd9")
 const COR_AMEACA := Color("b03a2e")
@@ -275,7 +278,7 @@ func _cercar(estilo: Dictionary) -> void:
 					continue
 				"casa":
 					peca = Pecas.casa_br(rng.randi())
-					peca.scale = Vector3.ONE * 2.6
+					peca.scale = Vector3.ONE * ESCALA_PROPS
 					if peca.get_meta("acesa", false):
 						acesas += 1
 						if acesas % 3 == 1:
@@ -283,13 +286,21 @@ func _cercar(estilo: Dictionary) -> void:
 							luz.light_color = Color("ffa040")
 							luz.light_energy = 0.9
 							luz.omni_range = 2.6
-							luz.position = Vector3(0, 0.25, 0)
+							luz.position = Vector3(0, 0.4, 0.35)   # na frente da porta
 							Qualidade.luz_extra(luz)
 							peca.add_child(luz)
-				"pilar":
-					var p := Node3D.new()
-					p.add_child(Pecas.pilar_quebrado(rng.randf_range(0.6, 1.4)))
-					peca = p
+				"poste", "carro", "orelhao", "parede", "cruz":
+					# Props brasileiros (docs/32), na escala da miniatura do combate
+					match nome:
+						"poste": peca = Pecas.poste(rng.randf() < 0.6)
+						"carro": peca = Pecas.carro(Pecas.PAREDES_BR[rng.randi() % Pecas.PAREDES_BR.size()].darkened(0.35))
+						"orelhao": peca = Pecas.orelhao()
+						"parede": peca = Pecas.parede_quebrada(rng.randf_range(0.4, 0.75), rng.randf_range(0.35, 0.55))
+						_: peca = Pecas.cruz(0.6, rng.randf() < 0.5)
+					var suporte := Node3D.new()   # a cruz caída já vem girada: a escala vai num nó acima
+					suporte.add_child(peca)
+					suporte.scale = Vector3.ONE * ESCALA_PROPS
+					peca = suporte
 				_:
 					peca = Pecas.modelo(Pecas.DIR_HEX + nome + ".gltf")
 					if peca == null and (nome.begins_with("rock") or nome.begins_with("hill")):

@@ -152,22 +152,23 @@ func hex_em(pos_tela: Vector2) -> Vector2i:
 func _decorar(raiz: Node3D, h: Vector2i, terreno: String, altura: float) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(h)
+	# O centro do hex fica livre para as figuras (docs/13): tudo vai para o anel de fora
 	var pontos := func(qtd: int) -> Array:
 		var lista: Array = []
 		for i in qtd:
 			var ang := rng.randf() * TAU
-			var r := rng.randf_range(0.15, 0.6)
+			var r := rng.randf_range(0.45, 0.7)
 			lista.append(Vector3(cos(ang) * r, altura, sin(ang) * r))
 		return lista
 	match terreno:
 		"floresta":
 			for p in pontos.call(4):
-				var a := Pecas.arvore(rng.randf_range(0.5, 0.8))
+				var a := Pecas.arvore(rng.randf_range(0.9, 1.3))
 				a.position = p
 				raiz.add_child(a)
 		"campo":
 			if rng.randf() < 0.35:
-				var a := Pecas.arvore(rng.randf_range(0.35, 0.5), Color("3f6b33"))
+				var a := Pecas.arvore(rng.randf_range(0.8, 1.05), Color("3f6b33"))
 				a.position = pontos.call(1)[0]
 				raiz.add_child(a)
 		"morro":
@@ -176,14 +177,31 @@ func _decorar(raiz: Node3D, h: Vector2i, terreno: String, altura: float) -> void
 				r.position = p
 				raiz.add_child(r)
 		"cidade":
+			# Escala da miniatura (docs/32): uma ou duas casas de alvenaria na borda, de porta
+			# para o centro (a rua), um poste e, às vezes, um orelhão ou um carro largado
 			var acesas := 0
-			for p in pontos.call(3):
-				var c := Pecas.casa_br(hash(p) + hash(h))
-				c.position = p
-				c.rotation.y = rng.randf() * TAU
+			var base := PI / 3.0 * rng.randi_range(0, 5) + PI / 6.0
+			var casas := 2 if rng.randf() < 0.55 else 1
+			for i in casas:
+				var ang := base + TAU / 3.0 * i
+				var c := Pecas.casa_br(hash(h) + i * 7919)
+				c.position = Vector3(cos(ang), 0, sin(ang)) * 0.58 + Vector3(0, altura, 0)
+				c.rotation.y = atan2(-cos(ang), -sin(ang))   # a porta (+Z) olha para o centro
 				raiz.add_child(c)
 				if c.get_meta("acesa", false):
 					acesas += 1
+			var ang_poste := base + TAU / 3.0 * 2.0
+			var poste := Pecas.poste(rng.randf() < 0.7)
+			poste.position = Vector3(cos(ang_poste), 0, sin(ang_poste)) * 0.62 + Vector3(0, altura, 0)
+			poste.rotation.y = -ang_poste
+			raiz.add_child(poste)
+			var extra := rng.randf()
+			if extra < 0.3 or (casas == 1 and extra < 0.6):
+				var ang_extra := base + TAU / 3.0 * (1.0 if casas == 1 else 2.5)
+				var peca: Node3D = Pecas.orelhao() if extra < 0.15 else Pecas.carro(Pecas.PAREDES_BR[rng.randi() % Pecas.PAREDES_BR.size()].darkened(0.35))
+				peca.position = Vector3(cos(ang_extra), 0, sin(ang_extra)) * 0.6 + Vector3(0, altura, 0)
+				peca.rotation.y = -ang_extra + rng.randf_range(-0.3, 0.3)
+				raiz.add_child(peca)
 			if acesas > 0:   # a luz das janelas no chão da rua (docs/22)
 				var luz := OmniLight3D.new()
 				luz.light_color = Color("ffa040")
@@ -193,10 +211,18 @@ func _decorar(raiz: Node3D, h: Vector2i, terreno: String, altura: float) -> void
 				Qualidade.luz_extra(luz)   # janelas da cidade: clima, não informação
 				raiz.add_child(luz)
 		"ruina":
-			for p in pontos.call(3):
-				var c := Pecas.pilar_quebrado(rng.randf_range(0.15, 0.45))
+			# Paredes de tijolo que sobraram e uma cruz de madeira (docs/32)
+			for p in pontos.call(2):
+				var c := Pecas.parede_quebrada(rng.randf_range(0.45, 0.8), rng.randf_range(0.35, 0.5))
 				c.position = p
+				c.rotation.y = -atan2(p.z, p.x) + PI / 2.0
 				raiz.add_child(c)
+			var cruz_pos: Vector3 = pontos.call(1)[0]
+			var cruz := Node3D.new()
+			cruz.add_child(Pecas.cruz(0.7, rng.randf() < 0.5))
+			cruz.position = cruz_pos
+			cruz.rotation.y = rng.randf() * TAU
+			raiz.add_child(cruz)
 		"pantano":
 			for p in pontos.call(2):
 				var c := Pecas.capim(Color("3c5a3f"))

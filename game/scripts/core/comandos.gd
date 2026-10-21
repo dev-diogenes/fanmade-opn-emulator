@@ -6,8 +6,8 @@ extends RefCounted
 ## `participantes`; agentes da investigação, pelo índice na cena; hexes e células, como [x, y].
 ## Números chegam da rede como float: tudo passa por int() aqui.
 
-const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar"]
-const ACOES_INVESTIGACAO := ["examinar", "procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair"]
+const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar", "deduzir"]
+const ACOES_INVESTIGACAO := ["examinar", "procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair", "deduzir"]
 const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair"]
 ## Modo Mestre (Fase 8.3): valem em qualquer tela, só do peer do mestre
 const ACOES_MESTRE := ["narrar", "membrana", "revelar", "encontro", "evento", "limpar", "curar", "ferir", "sanidade"]
@@ -54,6 +54,9 @@ static func aplicar_mapa(m: Missao, cmd: Dictionary) -> Dictionary:
 			var alvo := _agente_da_missao(m, cmd.get("alvo", ""))
 			var r := m.conjurar_no_mapa(String(cmd.get("ritual", "")), String(cmd.get("forma", "")), alvo) if alvo != null else {}
 			return {"ok": not r.is_empty(), "resultado": r}
+		"deduzir":
+			var r := m.deduzir(String(cmd.get("pergunta", "")), String(cmd.get("candidato", "")))
+			return {"ok": r.get("ok", false), "deducao": r}
 	return {"ok": false, "erro": "ação de mapa desconhecida: %s" % cmd.get("acao", "")}
 
 
@@ -94,6 +97,9 @@ static func aplicar_investigacao(cena: CenaInvestigacao, cmd: Dictionary) -> Dic
 		"trilha_certa":
 			var a := _agente_da_cena(cena, cmd.get("agente", -1))
 			return {"ok": a != null and cena.pagar_na_trilha_certa(a)}
+		"deduzir":
+			var r := cena.deduzir(String(cmd.get("pergunta", "")), String(cmd.get("candidato", "")))
+			return {"ok": r.get("ok", false), "deducao": r}
 		"sair":
 			if not cena.encerrada:
 				return {"ok": false, "erro": "a cena ainda não acabou"}

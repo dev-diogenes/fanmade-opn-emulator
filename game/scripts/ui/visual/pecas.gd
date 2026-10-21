@@ -23,7 +23,7 @@ const DECORACAO_POR_TERRENO := {
 	"morro": ["hills_A_trees", "hills_B", "mountain_A_grass_trees", "hill_single_A"],
 	"pantano": ["waterlily_A", "waterplant_A", "waterplant_B"],
 	"campo": ["tree_single_A", "tree_single_B", "rock_single_A", "", "", ""],
-	"cidade": ["barrel", "crate_A_big", "sack", "tent"],
+	"cidade": [],   # docs/32: casas, postes e orelhões por código; nada de feira medieval
 	"ruina": ["rock_single_C", "rock_single_E"],
 }
 
@@ -64,6 +64,12 @@ static func tile_terreno(terreno: String, raio: float, altura: float, semente: i
 			# Morros e matas ficam menores e num dos cantos; as peças soltas, menores ainda.
 			var solta := terreno in ["campo", "cidade", "ruina", "pantano"]
 			deco.scale = Vector3.ONE * s * (0.45 if solta else 0.6)
+			# Escala de miniatura (docs/32): árvore mais alta que o agente (0,82). Só a altura cresce,
+			# para a copa não invadir o centro do hex.
+			if terreno == "floresta":
+				deco.scale.y = s * 1.1
+			elif nome.begins_with("tree"):
+				deco.scale.y = s * 1.0
 			deco.rotation.y = PI / 3.0 * rng.randi_range(0, 5)
 			deco.position = Vector3(0, altura - (0.2 * 0.5 if terreno == "pantano" else 0.0), 0)
 			var ang := PI / 3.0 * rng.randi_range(0, 5) + PI / 6.0
@@ -240,27 +246,205 @@ static func casa_br(semente: int) -> Node3D:
 	rng.seed = semente
 	var parede: Color = PAREDES_BR[rng.randi() % PAREDES_BR.size()]
 	var telhado := Color("9a4a2c").darkened(rng.randf() * 0.2)
-	return casa(parede, telhado, rng.randf() < 0.65)   # de noite, nem toda casa tem alguém acordado
+	var acesa := rng.randf() < 0.65   # de noite, nem toda casa tem alguém acordado
+	return casa(parede, telhado, acesa, rng.randf() < 0.5)
 
 
-## Casa simples. `acesa`: janelas quentes que brilham na noite (docs/22); apagada, janelas pretas.
-static func casa(cor_parede: Color = Color("b8a88a"), cor_telhado: Color = Color("7b3f2e"), acesa: bool = true) -> Node3D:
+## Casa de alvenaria do interior (docs/32): reboco com barrado escuro, telha de barro, porta
+## de frente (+Z) e, às vezes, a caixa d'água azul no telhado. Tem ~0,88 de altura, um pouco
+## mais que o agente no mapa (0,82). `acesa`: janelas quentes na noite (docs/22).
+const ALTURA_CASA := 0.88
+
+static func casa(cor_parede: Color = Color("b8a88a"), cor_telhado: Color = Color("7b3f2e"), acesa: bool = true,
+		caixa_dagua: bool = false) -> Node3D:
 	var n := Node3D.new()
 	var corpo := BoxMesh.new()
-	corpo.size = Vector3(0.32, 0.22, 0.26)
-	n.add_child(_malha(corpo, material(cor_parede), Vector3(0, 0.11, 0)))
+	corpo.size = Vector3(0.5, 0.6, 0.42)
+	n.add_child(_malha(corpo, material(cor_parede), Vector3(0, 0.3, 0)))
+	var barrado := BoxMesh.new()   # a faixa de baixo, encardida de barro
+	barrado.size = Vector3(0.508, 0.09, 0.428)
+	n.add_child(_malha(barrado, material(cor_parede.darkened(0.45)), Vector3(0, 0.045, 0)))
 	var telhado := PrismMesh.new()
-	telhado.size = Vector3(0.36, 0.14, 0.3)
-	n.add_child(_malha(telhado, material(cor_telhado), Vector3(0, 0.29, 0)))
+	telhado.size = Vector3(0.58, 0.28, 0.5)
+	n.add_child(_malha(telhado, material(cor_telhado), Vector3(0, 0.74, 0)))
+	var porta := BoxMesh.new()
+	porta.size = Vector3(0.11, 0.24, 0.008)
+	n.add_child(_malha(porta, material(Color("3b2a1e")), Vector3(-0.12, 0.12, 0.212)))
 	var vidro := material(Color("ffb04a"), false, 2.6) if acesa else material(Color("0b0a0e"))
-	for lado in [-1.0, 1.0]:
-		for x in [-0.08, 0.08]:
-			var janela := BoxMesh.new()
-			janela.size = Vector3(0.05, 0.06, 0.006)
-			var mi := _malha(janela, vidro, Vector3(x, 0.13, 0.131 * lado))
-			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			n.add_child(mi)
+	for janela_pos in [Vector3(0.1, 0.32, 0.212), Vector3(-0.12, 0.36, -0.212), Vector3(0.12, 0.36, -0.212)]:
+		var janela := BoxMesh.new()
+		janela.size = Vector3(0.1, 0.11, 0.008)
+		var mi := _malha(janela, vidro, janela_pos)
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		n.add_child(mi)
+	if caixa_dagua:
+		var caixa := CylinderMesh.new()
+		caixa.top_radius = 0.07
+		caixa.bottom_radius = 0.06
+		caixa.height = 0.08
+		caixa.radial_segments = 8
+		n.add_child(_malha(caixa, material(Color("2f5f8f")), Vector3(0.12, 0.8, 0)))
 	n.set_meta("acesa", acesa)
+	return n
+
+
+## Poste de concreto com cruzeta, fios e uma lâmpada de rua (emissiva se `acesa`). ~1,0 de altura.
+static func poste(acesa: bool = true) -> Node3D:
+	var n := Node3D.new()
+	var haste := CylinderMesh.new()
+	haste.top_radius = 0.016
+	haste.bottom_radius = 0.026
+	haste.height = 1.0
+	haste.radial_segments = 6
+	n.add_child(_malha(haste, material(Color("8a8780")), Vector3(0, 0.5, 0)))
+	var cruzeta := BoxMesh.new()
+	cruzeta.size = Vector3(0.24, 0.02, 0.02)
+	n.add_child(_malha(cruzeta, material(Color("5a5048")), Vector3(0, 0.92, 0)))
+	var braco := BoxMesh.new()
+	braco.size = Vector3(0.012, 0.012, 0.16)
+	n.add_child(_malha(braco, material(Color("5a5048")), Vector3(0, 0.84, 0.08)))
+	var lampada := SphereMesh.new()
+	lampada.radius = 0.025
+	lampada.height = 0.04
+	var cor := Color("ffcf7a")
+	n.add_child(_malha(lampada, material(cor, false, 3.0) if acesa else material(Color("2a2a2a")), Vector3(0, 0.82, 0.16)))
+	# Fios caídos para os lados (dois segmentos inclinados por lado)
+	for lado in [-1.0, 1.0]:
+		var fio := BoxMesh.new()
+		fio.size = Vector3(0.36, 0.004, 0.004)
+		var f := _malha(fio, material(Color("15130f")), Vector3(0.28 * lado, 0.89, 0))
+		f.rotation.z = 0.16 * lado
+		f.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		n.add_child(f)
+	n.set_meta("acesa", acesa)
+	return n
+
+
+## Orelhão (telefone público): haste e a concha laranja. ~0,5 de altura.
+static func orelhao() -> Node3D:
+	var n := Node3D.new()
+	var haste := CylinderMesh.new()
+	haste.top_radius = 0.012
+	haste.bottom_radius = 0.016
+	haste.height = 0.38
+	haste.radial_segments = 6
+	n.add_child(_malha(haste, material(Color("6f6a64")), Vector3(0, 0.19, 0)))
+	var concha := SphereMesh.new()
+	concha.radius = 0.09
+	concha.height = 0.2
+	concha.is_hemisphere = true
+	concha.radial_segments = 10
+	concha.rings = 4
+	var c := _malha(concha, material(Color("d8742a")), Vector3(0, 0.36, 0.04))
+	c.rotation.x = deg_to_rad(-80)
+	n.add_child(c)
+	var aparelho := BoxMesh.new()
+	aparelho.size = Vector3(0.05, 0.08, 0.03)
+	n.add_child(_malha(aparelho, material(Color("3f4048")), Vector3(0, 0.36, 0.05)))
+	return n
+
+
+## Carro popular largado (fusca/chevette): carroceria, cabine e rodas. ~0,36 de altura, 0,72 de comprimento.
+static func carro(cor: Color = Color("6d7a6a")) -> Node3D:
+	var n := Node3D.new()
+	var corpo := BoxMesh.new()
+	corpo.size = Vector3(0.34, 0.14, 0.72)
+	n.add_child(_malha(corpo, material(cor), Vector3(0, 0.13, 0)))
+	var cabine := BoxMesh.new()
+	cabine.size = Vector3(0.3, 0.13, 0.36)
+	n.add_child(_malha(cabine, material(cor.darkened(0.1)), Vector3(0, 0.26, -0.04)))
+	var vidro := BoxMesh.new()
+	vidro.size = Vector3(0.28, 0.09, 0.006)
+	n.add_child(_malha(vidro, material(Color("12161c")), Vector3(0, 0.27, 0.141)))
+	var roda := CylinderMesh.new()
+	roda.top_radius = 0.06
+	roda.bottom_radius = 0.06
+	roda.height = 0.05
+	roda.radial_segments = 8
+	for x in [-0.17, 0.17]:
+		for z in [-0.22, 0.22]:
+			var r := _malha(roda, material(Color("141414")), Vector3(x, 0.06, z))
+			r.rotation.z = PI / 2.0
+			n.add_child(r)
+	return n
+
+
+## Pedaço de parede de tijolo que sobrou (ruínas): altura irregular, reboco caído.
+static func parede_quebrada(altura: float, largura: float = 0.4) -> Node3D:
+	var n := Node3D.new()
+	var base := BoxMesh.new()
+	base.size = Vector3(largura, altura * 0.6, 0.07)
+	n.add_child(_malha(base, material(Color("8c5a44")), Vector3(0, altura * 0.3, 0)))
+	var topo := BoxMesh.new()   # o lado que ainda está de pé
+	topo.size = Vector3(largura * 0.45, altura * 0.4, 0.07)
+	n.add_child(_malha(topo, material(Color("8c5a44")), Vector3(-largura * 0.275, altura * 0.8, 0)))
+	var reboco := BoxMesh.new()
+	reboco.size = Vector3(largura * 0.5, altura * 0.35, 0.074)
+	n.add_child(_malha(reboco, material(Color("7d7466")), Vector3(largura * 0.15, altura * 0.22, 0)))
+	return n
+
+
+## Cruz de madeira (capelas de beira de estrada, túmulos). `caida` a deita torta no chão.
+static func cruz(altura: float = 0.6, caida: bool = false) -> Node3D:
+	var n := Node3D.new()
+	var madeira := material(Color("4a3426"))
+	var haste := BoxMesh.new()
+	haste.size = Vector3(0.05, altura, 0.05)
+	n.add_child(_malha(haste, madeira, Vector3(0, altura / 2.0, 0)))
+	var travessa := BoxMesh.new()
+	travessa.size = Vector3(altura * 0.55, 0.045, 0.045)
+	n.add_child(_malha(travessa, madeira, Vector3(0, altura * 0.72, 0)))
+	if caida:
+		n.rotation.x = deg_to_rad(-78)
+		n.position.y = 0.03
+	return n
+
+
+## Fita de isolamento amarela em estacas, num círculo de `raio` (cena de investigação, docs/32).
+## As figuras ficam dentro do círculo.
+static func fita_isolamento(raio: float = 0.5, estacas: int = 5) -> Node3D:
+	var n := Node3D.new()
+	var amarelo := material(Color("e8c33a"), false, 0.25)
+	var cantos: Array[Vector3] = []
+	for i in estacas:
+		var ang := TAU * i / estacas + 0.3
+		cantos.append(Vector3(cos(ang), 0, sin(ang)) * raio)
+	for i in estacas:
+		var estaca := CylinderMesh.new()
+		estaca.top_radius = 0.012
+		estaca.bottom_radius = 0.012
+		estaca.height = 0.24
+		estaca.radial_segments = 5
+		n.add_child(_malha(estaca, material(Color("3a3530")), cantos[i] + Vector3(0, 0.12, 0)))
+		var a := cantos[i]
+		var b := cantos[(i + 1) % estacas]
+		if i == estacas - 1:
+			continue   # um lado aberto: a fita foi arrebentada (ou é a entrada)
+		var fita := BoxMesh.new()
+		fita.size = Vector3(a.distance_to(b), 0.035, 0.004)
+		var f := _malha(fita, amarelo, (a + b) / 2.0 + Vector3(0, 0.2, 0))
+		f.rotation.y = -atan2(b.z - a.z, b.x - a.x)
+		f.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		n.add_child(f)
+	# A plaquinha amarela de evidência, perto da borda
+	var placa := PrismMesh.new()
+	placa.size = Vector3(0.09, 0.08, 0.06)
+	n.add_child(_malha(placa, amarelo, Vector3(raio * 0.55, 0.04, -raio * 0.3)))
+	return n
+
+
+## Placa de estrada torta, sem nada escrito (evento no mapa, docs/32).
+static func placa_estrada() -> Node3D:
+	var n := Node3D.new()
+	var haste := BoxMesh.new()
+	haste.size = Vector3(0.03, 0.5, 0.03)
+	n.add_child(_malha(haste, material(Color("6f6a64")), Vector3(0, 0.25, 0)))
+	var chapa := BoxMesh.new()
+	chapa.size = Vector3(0.2, 0.2, 0.012)
+	var c := _malha(chapa, material(Color("c9a43a")), Vector3(0, 0.46, 0.02))
+	c.rotation.z = PI / 4.0   # losango de advertência
+	n.add_child(c)
+	n.rotation.z = deg_to_rad(9)
 	return n
 
 
@@ -361,6 +545,8 @@ static func anel(raio: float, cor: Color) -> MeshInstance3D:
 ## Marco de OP no mapa (docs/09): sigilo no chão na cor do tipo e uma peça flutuante
 ## (cultista em miniatura no encontro, obelisco no covil, "?" no evento, foto na investigação).
 ## Devolve um Node3D com meta "peca" (o que flutua) e "cor".
+## Marcos diegéticos (docs/32): a investigação ganha fita de isolamento em volta do centro e o
+## evento, uma placa de estrada na borda. O símbolo flutua menor, acima da cabeça das figuras.
 const COR_MARCO := {"encontro": Color("c0392b"), "evento": Color("e3c27a"), "objetivo": Color("8e1b22"),
 	"investigacao": Color("7fd3c7"), "vila": Color("f2c6a0"), "inicio": Color("5dade2")}
 
@@ -371,7 +557,7 @@ static func marco(tipo: String) -> Node3D:
 	var peca: Node3D
 	match tipo:
 		"encontro":
-			var cult := cultista_miniatura(0.55)
+			var cult := cultista_miniatura(0.7)   # a mesma escala de miniatura do agente (0,75)
 			peca = cult if cult != null else _peca_do_marcador(tipo)
 		"objetivo":
 			peca = Node3D.new()
@@ -384,14 +570,22 @@ static func marco(tipo: String) -> Node3D:
 			peca.add_child(_malha(nucleo, material(cor.lightened(0.3), false, 3.0), Vector3(0, 0.78, 0)))
 		"evento", "investigacao", "vila", "inicio":
 			var simbolo: String = {"evento": "?", "investigacao": "◎", "vila": "⌂", "inicio": "✦"}[tipo]
-			var l := rotulo(simbolo, 120, cor)
-			l.position = Vector3(0, 0.55, 0)
+			var l := rotulo(simbolo, 90, cor)
+			l.position = Vector3(0, 0.95, 0)
 			l.outline_size = 18
 			var fonte := Tema.fonte_titulo()
 			if fonte != null and tipo == "evento":
 				l.font = fonte
 			peca = Node3D.new()
 			peca.add_child(l)
+			match tipo:
+				"investigacao":
+					n.add_child(fita_isolamento(0.5))
+				"evento":
+					var placa := placa_estrada()
+					placa.position = Vector3(0.5, 0, -0.3)
+					placa.rotation.y = 0.6
+					n.add_child(placa)
 		_:
 			peca = _peca_do_marcador(tipo)
 	n.add_child(peca)

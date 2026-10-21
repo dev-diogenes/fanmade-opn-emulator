@@ -261,15 +261,32 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 ## Anota a pista do ponto e tira o ponto da cena. Devolve o texto da pista.
 func _encontrar_pista(a: Agente, ponto_id: String) -> String:
 	var p := ponto(ponto_id)
-	var texto := caso.formatar(p.pista)
 	pontos_restantes.erase(ponto_id)
-	pistas_encontradas.append({"ponto": ponto_id, "texto": texto, "responde": p.responde, "agente": a.nome})
-	var resp := caso.registrar_pista(p.pista, p.responde, cena.id)
-	_log("[color=#6fcf8e]Pista:[/color] %s" % texto)
-	if not resp.is_empty():
-		perguntas_respondidas.append(resp)
-		_log("[color=#e3c27a][b]Pergunta respondida:[/b] %s → %s[/color]" % [resp.texto, caso.resposta(resp.id)])
+	var pista := caso.registrar_pista(p.pista, p.responde, cena.id)
+	var texto := String(pista.texto)
+	pistas_encontradas.append({"ponto": ponto_id, "texto": texto, "responde": p.responde, "agente": a.nome,
+		"indicio": pista.indicio})
+	var rotulo := String(Caso.indicio(pista.indicio).get("rotulo", "")) if pista.indicio != "" else ""
+	_log("[color=#6fcf8e]Pista:[/color] %s%s" % [texto, "  [color=#e3c27a][%s][/color]" % rotulo.to_upper() if rotulo != "" else ""])
 	return texto
+
+
+## O grupo acusa um candidato no quadro (docs/32). Não gasta a ação de ninguém.
+## O efeito da pergunta vale ao sair da cena (Missao.concluir_investigacao); o erro
+## custa Membrana na hora.
+func deduzir(pergunta_id: String, candidato_id: String) -> Dictionary:
+	var r := caso.deduzir(pergunta_id, candidato_id)
+	if not r.ok:
+		return r
+	if r.acertou:
+		perguntas_respondidas.append(r.pergunta)
+		_log("[color=#e3c27a][b]Dedução certa:[/b] %s → %s[/color]" % [r.pergunta.texto, r.candidato.nome])
+	else:
+		var custo := Caso.penalidade_palpite()
+		if membrana != null:
+			membrana.alterar(custo, "palpite_errado")
+		_log("[color=#e0574a][b]Acusação errada:[/b] %s não bate com tudo. A Membrana cai %d.[/color]" % [r.candidato.nome, -custo])
+	return r
 
 
 # --- Pista central (docs/14, inspirado no GUMSHOE de The Esoterrorists) ---------

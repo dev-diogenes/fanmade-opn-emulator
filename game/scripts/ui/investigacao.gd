@@ -191,6 +191,7 @@ func _montar_quadro() -> void:
 	_quadro.offset_top = 70
 	_quadro.offset_bottom = -232
 	_posicionar_quadro(true)
+	_quadro.deduzir_pedido.connect(abrir_deducao)
 	add_child(_quadro)
 	_btn_quadro = Button.new()
 	_btn_quadro.text = Atalhos.com_tecla("Quadro", "quadro")
@@ -223,6 +224,15 @@ func _alternar_quadro() -> void:
 	_posicionar_quadro()
 	if _quadro_aberto:
 		_btn_quadro.text = Atalhos.com_tecla("Quadro", "quadro")   # a pista nova já foi vista
+
+
+## Ficha de suspeitos (docs/32): acusar vira o comando `deduzir` (lockstep no online).
+func abrir_deducao(pergunta_id: String = "") -> PainelDeducao:
+	if PainelDeducao.aberto(self):
+		return null
+	var pid := pergunta_id if pergunta_id != "" else PainelDeducao.pergunta_sugerida(missao.caso)
+	return PainelDeducao.abrir(self, missao.caso, pid, func(q: String, c: String):
+		_enviar("deduzir", {"pergunta": q, "candidato": c}))
 
 
 ## Pista nova com o quadro fechado (docs/23, C6): o botão pulsa e avisa; o quadro abre sozinho
@@ -833,6 +843,14 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 		"ajudar":
 			if not res.ok:
 				_log.append_text(Tema.bb("Não dá para ajudar agora.", Tema.AVISO) + "\n")
+		"deduzir":
+			if res.ok and res.deducao.acertou:
+				Tema.pulso_vhs(_vista, 0.6, 0.7)
+				Som.tocar("pista")
+				if not _quadro_aberto:
+					_alternar_quadro()
+			elif res.ok:
+				Tema.pulso_vhs(_vista, 1.0, 0.5)   # a pista falsa custa: a fita treme forte
 		"sair":
 			if res.ok and _jogo != null:
 				_jogo.voltar_da_investigacao(res.resultado)

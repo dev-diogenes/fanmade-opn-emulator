@@ -1,32 +1,269 @@
 {
-  "nota": "Gerador de casos (conteúdo original). A estrutura Sujeito + Ação + Local segue a ideia do Gerador de Missões do livro (p.165), com tabelas próprias. As pistas usam {sujeito}, {acao} e {local}.",
+  "nota": "Gerador de casos (conteúdo original). A estrutura Sujeito + Ação + Local segue a ideia do Gerador de Missões do livro (p.165), com tabelas próprias. Dedução por indícios (docs/32): cada candidato tem 3 traços; dois candidatos da mesma pergunta nunca dividem mais de um, então duas pistas diferentes sempre apontam um só. As pistas usam {indicio} (o traço sorteado do culpado verdadeiro).",
   "sujeitos": [
-    { "id": "seita", "nome": "uma seita de mascarados", "chefe_titulo": "o Sacerdote Carmesim" },
-    { "id": "medico", "nome": "um médico aposentado", "chefe_titulo": "o Doutor" },
-    { "id": "herdeira", "nome": "a herdeira de uma família antiga", "chefe_titulo": "a Herdeira" },
-    { "id": "ex_agente", "nome": "um ex-agente desaparecido", "chefe_titulo": "o Desertor" },
-    { "id": "radialista", "nome": "um radialista da madrugada", "chefe_titulo": "a Voz" }
+    {
+      "id": "seita",
+      "nome": "uma seita de mascarados",
+      "chefe_titulo": "o Sacerdote Carmesim",
+      "indicios": [
+        "grupo",
+        "fe",
+        "mascara"
+      ]
+    },
+    {
+      "id": "medico",
+      "nome": "um médico aposentado",
+      "chefe_titulo": "o Doutor",
+      "indicios": [
+        "ciencia",
+        "dinheiro",
+        "idoso"
+      ]
+    },
+    {
+      "id": "herdeira",
+      "nome": "a herdeira de uma família antiga",
+      "chefe_titulo": "a Herdeira",
+      "indicios": [
+        "grupo",
+        "dinheiro",
+        "familia"
+      ]
+    },
+    {
+      "id": "ex_agente",
+      "nome": "um ex-agente desaparecido",
+      "chefe_titulo": "o Desertor",
+      "indicios": [
+        "mascara",
+        "ciencia",
+        "treino"
+      ]
+    },
+    {
+      "id": "radialista",
+      "nome": "um radialista da madrugada",
+      "chefe_titulo": "a Voz",
+      "indicios": [
+        "fe",
+        "idoso",
+        "voz"
+      ]
+    }
   ],
   "acoes": [
-    { "id": "invocar", "texto": "tenta trazer algo de Sangue para este lado" },
-    { "id": "sequestros", "texto": "sequestra moradores para um ritual" },
-    { "id": "item", "texto": "usa um objeto amaldiçoado para enriquecer" },
-    { "id": "vinganca", "texto": "quer vingança contra a cidade" }
+    {
+      "id": "invocar",
+      "texto": "tenta trazer algo de Sangue para este lado",
+      "indicios": [
+        "chamado",
+        "data",
+        "sangue"
+      ]
+    },
+    {
+      "id": "sequestros",
+      "texto": "sequestra moradores para um ritual",
+      "indicios": [
+        "lista",
+        "data",
+        "cativeiro"
+      ]
+    },
+    {
+      "id": "item",
+      "texto": "usa um objeto amaldiçoado para enriquecer",
+      "indicios": [
+        "objeto",
+        "lucro",
+        "sangue"
+      ]
+    },
+    {
+      "id": "vinganca",
+      "texto": "quer vingança contra a cidade",
+      "indicios": [
+        "lista",
+        "rancor",
+        "chamado"
+      ]
+    }
   ],
   "locais": [
-    { "id": "frigorifico", "nome": "um frigorífico desativado" },
-    { "id": "igreja", "nome": "uma igreja interditada" },
-    { "id": "fazenda", "nome": "uma fazenda de porcos abandonada" },
-    { "id": "hospital", "nome": "a ala fechada do hospital" }
+    {
+      "id": "frigorifico",
+      "nome": "um frigorífico desativado",
+      "indicios": [
+        "frio",
+        "eco",
+        "longe"
+      ]
+    },
+    {
+      "id": "igreja",
+      "nome": "uma igreja interditada",
+      "indicios": [
+        "vitral",
+        "centro",
+        "eco"
+      ]
+    },
+    {
+      "id": "fazenda",
+      "nome": "uma fazenda de porcos abandonada",
+      "indicios": [
+        "bichos",
+        "longe",
+        "terra"
+      ]
+    },
+    {
+      "id": "hospital",
+      "nome": "a ala fechada do hospital",
+      "indicios": [
+        "frio",
+        "centro",
+        "azulejo"
+      ]
+    }
   ],
   "resumo": "Desaparecimentos e marcas de sangue seco na região. A Ordem suspeita de atividade paranormal ligada a Sangue.",
   "objetivo": "Descobrir quem está por trás, o que pretende e onde fica o covil; então, encerrar a ameaça.",
   "perguntas": [
-    { "id": "quem", "texto": "Quem está por trás dos acontecimentos?", "pistas_necessarias": 2,
-      "efeito": { "tipo": "chefe_enfraquecido", "texto": "Conhecendo o inimigo, os agentes sabem onde ferir: o chefe começa com 20% menos PV." } },
-    { "id": "oque", "texto": "O que essa pessoa pretende?", "pistas_necessarias": 2,
-      "efeito": { "tipo": "membrana", "valor": 10, "texto": "Sabendo o que o ritual precisa, os agentes atrapalham os preparativos: a Membrana se fortalece." } },
-    { "id": "onde", "texto": "Onde fica o covil?", "pistas_necessarias": 2,
-      "efeito": { "tipo": "revelar_objetivo", "texto": "O covil foi localizado e aparece no mapa." } }
-  ]
+    {
+      "id": "quem",
+      "texto": "Quem está por trás dos acontecimentos?",
+      "pistas_necessarias": 2,
+      "efeito": {
+        "tipo": "chefe_enfraquecido",
+        "texto": "Conhecendo o inimigo, os agentes sabem onde ferir: o chefe começa com 20% menos PV."
+      }
+    },
+    {
+      "id": "oque",
+      "texto": "O que essa pessoa pretende?",
+      "pistas_necessarias": 2,
+      "efeito": {
+        "tipo": "membrana",
+        "valor": 10,
+        "texto": "Sabendo o que o ritual precisa, os agentes atrapalham os preparativos: a Membrana se fortalece."
+      }
+    },
+    {
+      "id": "onde",
+      "texto": "Onde fica o covil?",
+      "pistas_necessarias": 2,
+      "efeito": {
+        "tipo": "revelar_objetivo",
+        "texto": "O covil foi localizado e aparece no mapa."
+      }
+    }
+  ],
+  "indicios": {
+    "grupo": {
+      "rotulo": "Age em grupo",
+      "texto": "Marcas de muita gente: pegadas sobrepostas e cadeiras arrastadas em roda."
+    },
+    "fe": {
+      "rotulo": "Linguagem de fé",
+      "texto": "Orações copiadas à mão, com palavras trocadas por outras mais escuras."
+    },
+    "mascara": {
+      "rotulo": "Esconde o rosto",
+      "texto": "Um pano preto recortado na altura dos olhos, como um capuz feito em casa."
+    },
+    "ciencia": {
+      "rotulo": "Mão treinada",
+      "texto": "Cortes precisos e material esterilizado: quem fez isso sabe usar um bisturi."
+    },
+    "dinheiro": {
+      "rotulo": "Dinheiro sobrando",
+      "texto": "Notas fiscais de compras caras, todas pagas em dinheiro vivo."
+    },
+    "idoso": {
+      "rotulo": "Idade avançada",
+      "texto": "Caixas de remédio para pressão e uma letra trêmula nas anotações."
+    },
+    "familia": {
+      "rotulo": "Nome de família",
+      "texto": "Um brasão antigo carimbado em lacre vermelho, de uma família tradicional da região."
+    },
+    "treino": {
+      "rotulo": "Treino de campo",
+      "texto": "Um perímetro montado com técnica: alarmes de linha e rotas de fuga marcadas. Parece treino da Ordem."
+    },
+    "voz": {
+      "rotulo": "Fala no ar",
+      "texto": "Uma fita com a mesma frase repetida, gravada em estúdio, com o chiado de uma transmissão."
+    },
+    "chamado": {
+      "rotulo": "Um chamado",
+      "texto": "O mesmo círculo desenhado várias vezes, sempre aberto para um lado, como uma porta."
+    },
+    "data": {
+      "rotulo": "Data marcada",
+      "texto": "Um calendário com uma noite circulada e uma contagem regressiva riscada dia a dia."
+    },
+    "sangue": {
+      "rotulo": "Sangue coletado",
+      "texto": "Frascos rotulados com sangue de pessoas diferentes, guardados no frio."
+    },
+    "lista": {
+      "rotulo": "Lista de nomes",
+      "texto": "Uma lista de moradores, com endereços e horários em que ficam sozinhos."
+    },
+    "cativeiro": {
+      "rotulo": "Cativeiro",
+      "texto": "Correntes novas, cadeados e comida para várias pessoas por vários dias."
+    },
+    "objeto": {
+      "rotulo": "Um objeto",
+      "texto": "Uma caixa forrada de chumbo, vazia, do tamanho exato de algo que foi retirado dali."
+    },
+    "lucro": {
+      "rotulo": "Lucro",
+      "texto": "Extratos com depósitos altos e repentinos, logo depois de cada desaparecimento."
+    },
+    "rancor": {
+      "rotulo": "Rancor antigo",
+      "texto": "Recortes de jornal de vinte anos atrás sobre uma tragédia na cidade, com rostos riscados."
+    },
+    "frio": {
+      "rotulo": "Frio",
+      "texto": "A roupa da vítima tinha cristais de gelo, mesmo numa noite quente."
+    },
+    "eco": {
+      "rotulo": "Salão vazio",
+      "texto": "No áudio gravado, cada passo ecoa como num salão enorme e vazio."
+    },
+    "longe": {
+      "rotulo": "Longe da cidade",
+      "texto": "A nota de um posto de beira de estrada, a quilômetros do centro."
+    },
+    "centro": {
+      "rotulo": "Perto do centro",
+      "texto": "Um bilhete de ônibus da linha que só passa pelo centro da cidade."
+    },
+    "vitral": {
+      "rotulo": "Vitral",
+      "texto": "Pó de vidro colorido e uma lasca de chumbo de vitral presa na sola."
+    },
+    "azulejo": {
+      "rotulo": "Azulejo",
+      "texto": "Um caco de azulejo branco, com rejunte encardido e cheiro de desinfetante."
+    },
+    "bichos": {
+      "rotulo": "Cheiro de bicho",
+      "texto": "Pelos grossos e um cheiro forte de chiqueiro impregnado no tecido."
+    },
+    "terra": {
+      "rotulo": "Terra arada",
+      "texto": "Lama vermelha de terra revirada, misturada com restos de ração."
+    }
+  },
+  "penalidade_palpite": {
+    "membrana": -5,
+    "texto": "Acusação errada: a Ordem perde tempo com a pista falsa."
+  }
 }

@@ -1,5 +1,5 @@
 {
-  "nota": "Cenas de investigação (conteúdo original), na estrutura do livro (p.89-91): pista básica, pontos de interesse com pistas complementares, opções de Facilitar e urgência. Cada ponto aceita perícias diferentes com DTs diferentes (15 simples, 20 complexa, 25 muito complexa).",
+  "nota": "Cenas de investigação (conteúdo original), na estrutura do livro (p.89-91): pista básica, pontos de interesse com pistas complementares (cada pista traz um indício, docs/32), opções de Facilitar e urgência. Cada ponto aceita perícias diferentes com DTs diferentes (15 simples, 20 complexa, 25 muito complexa).",
   "penalidades_urgencia": [
     { "tipo": "membrana", "valor": -10, "texto": "Vocês demoram demais: algo do outro lado percebe a movimentação." },
     { "tipo": "chefe_fortalecido", "texto": "O ritual avança enquanto vocês procuram: o chefe terá 20% mais PV." },
@@ -10,13 +10,13 @@
       "pista_basica": "A porta está arrombada por dentro. Na sala, móveis virados formam um círculo em volta de uma mancha escura no assoalho.",
       "pontos": [
         { "id": "escrivaninha", "nome": "Escrivaninha", "pericias": { "investigacao": 15, "percepcao": 20 }, "responde": "quem",
-          "pista": "Cartas com o mesmo remetente: {sujeito}. Uma delas fala em 'pagar a dívida com sangue'." },
+          "pista": "Cartas sem remetente, guardadas com cuidado numa gaveta com fundo falso. {indicio}" },
         { "id": "computador", "nome": "Computador velho", "pericias": { "tecnologia": 15, "investigacao": 20 }, "responde": "onde",
-          "pista": "O histórico de buscas repete o mesmo endereço: {local}." },
+          "pista": "O histórico de buscas foi apagado às pressas, mas sobrou o cache de um mapa. {indicio}" },
         { "id": "vizinha", "nome": "Vizinha na janela", "pericias": { "diplomacia": 15, "intimidacao": 20, "intuicao": 20 }, "responde": "oque",
-          "pista": "A vizinha jura que ouviu cânticos e que o morador {acao}." },
+          "pista": "A vizinha fala baixo, olhando para a janela: viu e ouviu coisas nas últimas noites. {indicio}" },
         { "id": "porao", "nome": "Porão trancado", "pericias": { "atletismo": 15, "crime": 15, "percepcao": 25 }, "responde": "quem",
-          "pista": "Velas pretas e uma máscara rachada. O símbolo na máscara aponta para {sujeito}." }
+          "pista": "Velas pretas derretidas no chão do porão e, entre elas, algo esquecido. {indicio}" }
       ],
       "facilitar": [
         { "id": "janelas", "texto": "Arrancar as tábuas das janelas para entrar luz", "pericias": { "atletismo": 15, "luta": 15 } },
@@ -26,13 +26,13 @@
       "pista_basica": "O altar foi raspado até a pedra. Alguém pintou por cima um sigilo que ainda brilha um pouco no escuro.",
       "pontos": [
         { "id": "altar", "nome": "Altar raspado", "pericias": { "ocultismo": 15, "religiao": 15 }, "responde": "oque",
-          "pista": "O sigilo é de Sangue e serve para chamar algo. Quem o pintou {acao}." },
+          "pista": "O sigilo de Sangue no altar ainda está úmido. Quem o pintou deixou um rastro de intenção. {indicio}" },
         { "id": "inscricoes", "nome": "Inscrições na parede", "pericias": { "ocultismo": 20, "ciencias": 20, "atualidades": 25 }, "responde": "quem",
-          "pista": "As inscrições assinam um nome em código. Cruzando com os arquivos, aponta para {sujeito}." },
+          "pista": "As inscrições nas paredes assinam sempre com o mesmo traço. Cruzando com os arquivos da Ordem: {indicio}" },
         { "id": "registro", "nome": "Livro de registros", "pericias": { "investigacao": 15, "atualidades": 20 }, "responde": "onde",
-          "pista": "A última anotação reserva '{local}' para uma 'cerimônia de lua cheia'." },
+          "pista": "A última página do livro de registros foi arrancada, mas a caneta marcou a de baixo. {indicio}" },
         { "id": "zelador", "nome": "Zelador assustado", "pericias": { "diplomacia": 20, "intuicao": 15, "intimidacao": 15 }, "responde": "onde",
-          "pista": "O zelador conta que viu caminhonetes indo para {local} toda noite." }
+          "pista": "O zelador conta o que viu, e se lembra de um detalhe que o incomodou. {indicio}" }
       ],
       "facilitar": [
         { "id": "lanternas", "texto": "Acender lanternas e velas em volta", "pericias": { "sobrevivencia": 15, "percepcao": 15 } },
@@ -42,13 +42,13 @@
       "pista_basica": "Barracas rasgadas e uma fogueira ainda morna. As pegadas em volta não parecem humanas.",
       "pontos": [
         { "id": "fogueira", "nome": "Fogueira", "pericias": { "sobrevivencia": 15, "investigacao": 20 }, "responde": "oque",
-          "pista": "Restos de um ritual: ossos queimados na ordem certa. Quem fez isso {acao}." },
+          "pista": "Restos de um ritual: ossos queimados na ordem certa, e um padrão no que foi usado. {indicio}" },
         { "id": "barraca", "nome": "Barraca rasgada", "pericias": { "investigacao": 15, "percepcao": 15 }, "responde": "quem",
-          "pista": "Um crachá esquecido, ligado a {sujeito}." },
+          "pista": "Dentro da barraca, um saco de dormir ainda quente e objetos pessoais. {indicio}" },
         { "id": "rastros", "nome": "Rastros", "pericias": { "sobrevivencia": 15, "percepcao": 20, "adestramento": 15 }, "responde": "onde",
-          "pista": "Os rastros seguem para {local}." },
+          "pista": "Os rastros saem da mata e somem na estrada; no barro, um vestígio de onde vieram. {indicio}" },
         { "id": "radio", "nome": "Rádio de pilha", "pericias": { "tecnologia": 15, "atualidades": 20 }, "responde": "onde",
-          "pista": "Na frequência gravada, uma voz repete as coordenadas de {local}." }
+          "pista": "Na frequência gravada, uma voz repete instruções. Ao fundo, um som revela o lugar. {indicio}" }
       ],
       "facilitar": [
         { "id": "fogo", "texto": "Reacender a fogueira para iluminar a clareira", "pericias": { "sobrevivencia": 15 } },

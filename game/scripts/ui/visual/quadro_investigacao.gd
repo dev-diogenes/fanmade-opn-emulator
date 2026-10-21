@@ -3,6 +3,10 @@ extends Control
 ## Quadro de cortiça do caso (docs/09, 5.2): um bilhete por pergunta, uma foto instantânea
 ## por pista, e o fio vermelho ligando cada foto à pergunta que ela responde.
 ## Só apresenta o Caso; quem anota pistas é a CenaInvestigacao.
+## Dedução (docs/32): cada foto traz o rótulo do indício, e o botão "Deduzir" de cada
+## bilhete pede a ficha de suspeitos (sinal `deduzir_pedido`; quem abre é a tela).
+
+signal deduzir_pedido(pergunta_id: String)
 
 const LARGURA_BILHETE := 132.0
 const FOTO := Vector2(96, 108)
@@ -62,7 +66,7 @@ func _reconstruir() -> void:
 
 	var colunas := maxi(1, caso.perguntas.size())
 	var largura := (size.x - 40) / colunas
-	var topo := 40.0 + 70.0
+	var topo := 40.0 + 90.0   # espaço para o "Deduzir" entre o objetivo e os bilhetes (docs/32)
 	var novas := caso.pistas.size() > _pistas_vistas
 	for i in caso.perguntas.size():
 		var q: Dictionary = caso.perguntas[i]
@@ -76,6 +80,8 @@ func _reconstruir() -> void:
 		var resp := caso.resposta(q.id)
 		if resp != "":
 			_carimbo(nota, resp)
+		else:
+			_botao_deduzir(nota, q)
 		# Fotos das pistas que respondem a esta pergunta, empilhadas abaixo
 		var y := topo + 96.0
 		var k := 0
@@ -83,7 +89,8 @@ func _reconstruir() -> void:
 			var p: Dictionary = caso.pistas[j]
 			if p.responde != q.id:
 				continue
-			var foto := _foto(p.texto, hash(p.texto), rng.randf_range(-5.0, 5.0))
+			var rotulo := String(Caso.indicio(p.indicio).get("rotulo", "")).to_upper() if String(p.get("indicio", "")) != "" else ""
+			var foto := _foto(rotulo if rotulo != "" else p.texto, hash(p.texto), rng.randf_range(-5.0, 5.0), p.texto)
 			foto.position = _vaga(x, y, k) + Vector2(rng.randf_range(-6, 6), rng.randf_range(-4, 4))
 			_conteudo.add_child(foto)
 			_fios.append([alfinete_nota, _alfinete(foto)])
@@ -122,7 +129,7 @@ func _bilhete(texto: String, tamanho: Vector2, graus: float, fonte: int) -> Pane
 	return p
 
 
-func _foto(legenda: String, semente: int, graus: float) -> Control:
+func _foto(legenda: String, semente: int, graus: float, dica: String = "") -> Control:
 	var moldura := PanelContainer.new()
 	var estilo := Tema.caixa(Color("f3efe6"), Color(0, 0, 0, 0.25), 1, 1, Vector2(6, 6))
 	estilo.content_margin_bottom = 4
@@ -134,7 +141,7 @@ func _foto(legenda: String, semente: int, graus: float) -> Control:
 	moldura.size = FOTO
 	moldura.pivot_offset = FOTO / 2.0
 	moldura.rotation_degrees = graus
-	moldura.tooltip_text = legenda
+	moldura.tooltip_text = dica if dica != "" else legenda
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 2)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -172,6 +179,23 @@ func _alfinete(papel: Control) -> Control:
 	a.position = papel.position + Vector2(papel.custom_minimum_size.x / 2.0 - 6, -10)
 	_conteudo.add_child(a)
 	return a
+
+
+## "Deduzir" ao lado do bilhete: abre a ficha de suspeitos. Sem pista, fica apagado.
+func _botao_deduzir(nota: Control, q: Dictionary) -> void:
+	var b := Button.new()
+	b.text = "Deduzir"
+	b.theme_type_variation = "BotaoPapel"
+	b.theme = Tema.tema_papel()
+	b.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	b.disabled = int(q.encontradas) < 1
+	b.tooltip_text = "Abrir a ficha de suspeitos e acusar" if not b.disabled else "Ache uma pista desta pergunta para poder acusar"
+	b.position = nota.position + Vector2(LARGURA_BILHETE / 2.0 + 8, -30)   # à direita do alfinete
+	b.z_index = 3
+	var pid := String(q.id)
+	b.pressed.connect(func(): deduzir_pedido.emit(pid))
+	b.name = "Deduzir_" + pid
+	_conteudo.add_child(b)
 
 
 func _carimbo(nota: Control, resposta: String) -> void:

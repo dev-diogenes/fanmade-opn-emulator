@@ -26,11 +26,98 @@ func test_caso_gerado_e_perguntas():
 	var c := m.caso
 	assert_eq(c.perguntas.size(), 3)
 	assert_false(c.formatar("{sujeito} em {local}").contains("{"))
-	assert_true(c.registrar_pista("x", "onde", "teste").is_empty(), "1 de 2 pistas")
-	var resp := c.registrar_pista("y", "onde", "teste")
-	assert_eq(resp.id, "onde")
-	assert_eq(c.resposta("onde"), c.local.nome)
-	assert_eq(c.resposta("quem"), "", "ainda sem resposta")
+	var p1 := c.registrar_pista("Achado: {indicio}", "onde", "teste")
+	assert_true(p1.indicio in c.local.indicios, "a pista revela um traço do local verdadeiro")
+	assert_false(String(p1.texto).contains("{"), "o traço entra no texto")
+	assert_false(String(p1.texto).contains(c.local.nome), "a pista não entrega a resposta")
+	var p2 := c.registrar_pista("y {indicio}", "onde", "teste")
+	assert_ne(p2.indicio, p1.indicio, "a segunda pista revela outro traço")
+	assert_false(c.pergunta("onde").respondida, "a pergunta não se resolve sozinha (docs/32)")
+	assert_eq(c.resposta("onde"), "")
+
+
+# --- Dedução por indícios (docs/32) ---------------------------------------------------
+
+func test_dois_candidatos_nunca_dividem_mais_de_um_traco():
+	var d := DadosJogo.ler("casos")
+	for pid in Caso.PERGUNTA_GRUPO:
+		var cands := Caso.candidatos(pid)
+		assert_gt(cands.size(), 2, pid)
+		for i in cands.size():
+			assert_eq(cands[i].indicios.size(), 3, "%s: 3 traços" % cands[i].id)
+			for t in cands[i].indicios:
+				assert_true(d.indicios.has(t), "traço %s descrito" % t)
+			for j in range(i + 1, cands.size()):
+				var comuns: Array = cands[i].indicios.filter(func(t): return t in cands[j].indicios)
+				assert_lte(comuns.size(), 1, "%s e %s" % [cands[i].id, cands[j].id])
+
+
+func test_duas_pistas_deixam_um_so_suspeito():
+	for semente in 12:
+		var c := Caso.gerar(Dados.new(semente))
+		for pid in ["quem", "oque", "onde"]:
+			c.registrar_pista("{indicio}", pid, "t")
+			assert_true(c.compativeis(pid).size() >= 1)
+			c.registrar_pista("{indicio}", pid, "t")
+			var restam := c.compativeis(pid)
+			assert_eq(restam.size(), 1, "semente %d, %s" % [semente, pid])
+			assert_eq(restam[0].id, c.verdadeiro(pid).id)
+
+
+func test_deduzir_certo_e_errado():
+	var c := m.caso
+	assert_false(c.deduzir("quem", c.sujeito.id).ok, "sem pista não dá para acusar")
+	c.registrar_pista("{indicio}", "quem", "t")
+	var errado := ""
+	for cand in Caso.candidatos("quem"):
+		if cand.id != c.sujeito.id:
+			errado = cand.id
+	var r := c.deduzir("quem", errado)
+	assert_true(r.ok)
+	assert_false(r.acertou)
+	assert_true(errado in c.pergunta("quem").descartados, "o suspeito fica riscado")
+	assert_false(c.deduzir("quem", errado).ok, "não se acusa o mesmo duas vezes")
+	r = c.deduzir("quem", c.sujeito.id)
+	assert_true(r.acertou)
+	assert_eq(c.resposta("quem"), c.sujeito.nome)
+	assert_false(c.deduzir("quem", c.sujeito.id).ok, "já resolvida")
+
+
+func test_deduzir_no_mapa_aplica_efeito_e_penalidade():
+	var antes := m.membrana.valor
+	m.caso.registrar_pista("{indicio}", "onde", "t")
+	var errado := ""
+	for cand in Caso.candidatos("onde"):
+		if cand.id != m.caso.local.id:
+			errado = cand.id
+	var r := Comandos.aplicar_mapa(m, Comandos.novo("mapa", "deduzir", {"pergunta": "onde", "candidato": errado}))
+	assert_true(r.ok)
+	assert_eq(m.membrana.valor, antes + Caso.penalidade_palpite(), "acusação errada custa Membrana")
+	r = Comandos.aplicar_mapa(m, Comandos.novo("mapa", "deduzir", {"pergunta": "onde", "candidato": m.caso.local.id}))
+	assert_true(r.deducao.acertou)
+	assert_true(m.mapa.revelado(m.mapa.encontrar("objetivo")), "acertar o onde revela o covil")
+
+
+func test_deduzir_na_cena_vale_ao_sair():
+	var membrana := m.membrana
+	var c := _cena([], "medio", membrana)
+	c.caso.registrar_pista("{indicio}", "quem", "t")
+	var r := Comandos.aplicar_investigacao(c, Comandos.novo("investigacao", "deduzir", {"pergunta": "quem", "candidato": m.caso.sujeito.id}))
+	assert_true(r.ok and r.deducao.acertou)
+	assert_eq(c.resultado().perguntas.size(), 1, "o efeito vai com o resultado da cena")
+	assert_eq(c.agente_atual(), mauro, "deduzir não gasta a vez")
+
+
+func test_save_antigo_sem_tracos_ganha_ordem():
+	var d: Dictionary = JSON.parse_string(JSON.stringify(m.caso.para_dicionario()))   # cópia: o caso aponta para os dados em cache
+	d.sujeito.erase("indicios")
+	for q in d.perguntas:
+		q.erase("ordem")
+		q.erase("descartados")
+	var c := Caso.de_dicionario(d)
+	assert_eq(c.sujeito.indicios.size(), 3)
+	assert_eq(c.pergunta("quem").ordem.size(), 3)
+	assert_true(c.registrar_pista("{indicio}", "quem", "t").indicio in c.sujeito.indicios)
 
 
 func test_caso_ida_e_volta():

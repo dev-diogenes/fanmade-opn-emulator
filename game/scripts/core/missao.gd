@@ -703,16 +703,7 @@ func concluir_investigacao(resultado: Dictionary) -> void:
 	mapa.limpar_conteudo(h)
 	pistas += resultado.get("pistas", []).size()
 	for p in resultado.get("perguntas", []):
-		var ef: Dictionary = p.get("efeito", {})
-		_log("[color=#e3c27a]%s[/color]" % ef.get("texto", ""))
-		match ef.get("tipo", ""):
-			"chefe_enfraquecido":
-				modificador_chefe -= 0.2
-			"membrana":
-				membrana.alterar(int(ef.get("valor", 0)), "investigacao")
-			"revelar_objetivo":
-				var obj := mapa.encontrar("objetivo")
-				mapa.revelar(obj, 1)
+		_aplicar_efeito_pergunta(p)
 	var pen: Dictionary = resultado.get("penalidade", {})
 	match pen.get("tipo", ""):
 		"chefe_fortalecido":
@@ -722,6 +713,39 @@ func concluir_investigacao(resultado: Dictionary) -> void:
 	# "membrana" já foi aplicada pela própria cena (urgência estourada)
 	_iniciar_turno_do_agente_sem_reset()
 	_verificar_derrota()
+
+
+## O efeito de uma pergunta resolvida (casos.json): chefe mais fraco, Membrana, covil no mapa.
+func _aplicar_efeito_pergunta(p: Dictionary) -> void:
+	var ef: Dictionary = p.get("efeito", {})
+	_log("[color=#e3c27a]%s[/color]" % ef.get("texto", ""))
+	match ef.get("tipo", ""):
+		"chefe_enfraquecido":
+			modificador_chefe -= 0.2
+		"membrana":
+			membrana.alterar(int(ef.get("valor", 0)), "investigacao")
+		"revelar_objetivo":
+			var obj := mapa.encontrar("objetivo")
+			mapa.revelar(obj, 1)
+
+
+## O grupo acusa um candidato fora da cena, pelo painel do caso (docs/32). O acerto aplica o
+## efeito na hora; o erro custa Membrana e risca o candidato. Não gasta movimento nem ação.
+func deduzir(pergunta_id: String, candidato_id: String) -> Dictionary:
+	if caso == null:
+		return {"ok": false}
+	var r := caso.deduzir(pergunta_id, candidato_id)
+	if not r.ok:
+		return r
+	if r.acertou:
+		_log("[color=#e3c27a][b]Dedução certa:[/b] %s → %s[/color]" % [r.pergunta.texto, r.candidato.nome])
+		_aplicar_efeito_pergunta(r.pergunta)
+	else:
+		var custo := Caso.penalidade_palpite()
+		membrana.alterar(custo, "palpite_errado")
+		_log("[color=#e0574a][b]Acusação errada:[/b] %s não bate com tudo. A Membrana cai %d.[/color]" % [r.candidato.nome, -custo])
+		_verificar_derrota()
+	return r
 
 
 ## Volta ao mesmo agente depois da cena, sem zerar o movimento que ele tinha.

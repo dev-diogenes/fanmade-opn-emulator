@@ -97,12 +97,47 @@ func test_quadro_mostra_fotos_e_carimbo():
 	var q := QuadroInvestigacao.new()
 	q.size = Vector2(470, 420)
 	add_child_autofree(q)
-	caso.registrar_pista("Pista um", "quem", "teste")
-	caso.registrar_pista("Pista dois", "quem", "teste")
+	caso.registrar_pista("Pista um {indicio}", "quem", "teste")
+	caso.registrar_pista("Pista dois {indicio}", "quem", "teste")
 	q.atualizar(caso)
 	assert_eq(q._fios.size(), 2, "um fio por pista")
 	var textos: Array = q.find_children("*", "Label", true, false).map(func(l): return l.text)
-	assert_true(textos.any(func(t): return t.begins_with("RESOLVIDO")), "pergunta respondida recebe o carimbo")
+	var rotulo := String(Caso.indicio(caso.pistas[0].indicio).rotulo).to_upper()
+	assert_true(rotulo in textos, "a foto mostra o rótulo do indício")
+	assert_false(textos.any(func(t): return t.begins_with("RESOLVIDO")), "sem acusação, sem carimbo (docs/32)")
+	var pedidos := []
+	q.deduzir_pedido.connect(func(pid): pedidos.append(pid))
+	var botao: Button = q.find_child("Deduzir_quem", true, false)
+	assert_not_null(botao)
+	assert_false(botao.disabled, "com pista, dá para deduzir")
+	botao.pressed.emit()
+	assert_eq(pedidos, ["quem"])
+	assert_true((q.find_child("Deduzir_onde", true, false) as Button).disabled, "sem pista, apagado")
+	caso.deduzir("quem", caso.sujeito.id)
+	q.atualizar(caso)
+	await wait_frames(1)
+	textos = q.find_children("*", "Label", true, false).filter(func(l): return l.is_visible_in_tree() and not l.is_queued_for_deletion()).map(func(l): return l.text)
+	assert_true(textos.any(func(t): return t.begins_with("RESOLVIDO")), "acusação certa recebe o carimbo")
+
+
+func test_ficha_de_suspeitos_acusa():
+	var caso := Caso.gerar(Dados.new(3))
+	caso.registrar_pista("{indicio}", "quem", "t")
+	var enviados := []
+	var f := PainelDeducao.abrir(self, caso, "quem", func(q, c): enviados.append([q, c]))
+	assert_eq(f._cartas.size(), Caso.candidatos("quem").size(), "uma carta por candidato")
+	assert_false((f._cartas[caso.sujeito.id] as Button).disabled)
+	var acesos := f.find_children("*", "Label", true, false).filter(func(l): return l.text.begins_with("✔ "))
+	assert_gt(acesos.size(), 1, "o traço achado acende (na lista e nas cartas)")
+	f.mostrar("onde")
+	await wait_frames(1)
+	for id in f._cartas:
+		assert_true((f._cartas[id] as Button).disabled, "sem pista de onde, não se acusa")
+	f.mostrar("quem")
+	f.acusar(caso.sujeito.id)
+	assert_eq(enviados, [["quem", caso.sujeito.id]])
+	await wait_frames(1)
+	assert_false(is_instance_valid(f), "a ficha fecha depois da acusação")
 
 
 func test_investigacao_sem_formularios():

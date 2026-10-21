@@ -34,6 +34,7 @@
 | [29-sala-online-por-codigo.md](29-sala-online-por-codigo.md) | Sala online por código (endereço e porta em 10 símbolos, rede rotulada, avançado escondido) e saguão animado com o que conferir |
 | [30-cameras-retrato-e-criacao-na-ficha.md](30-cameras-retrato-e-criacao-na-ficha.md) | 2ª pessoa por cima do ombro, 1ª nos olhos do agente, retrato da vez maior e a criação preenchendo a própria ficha |
 | [31-transcender.md](31-transcender.md) | Subir de NEX como ritual: a sala do agente, WASD até o sigilo, ajoelhar e as escolhas; e a suíte de testes isolada do save real |
+| [32-critica-investigacao-e-escala.md](32-critica-investigacao-e-escala.md) | Crítica de envolvimento: dedução por indícios (pistas, suspeitos, acusação) e escala e design do mundo 3D (casas, árvores, props brasileiros, marcos) |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.
