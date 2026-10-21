@@ -7,6 +7,8 @@ extends CanvasLayer
 ##   if CerimoniaNex.tem_o_que_mostrar(carreira.ultimo_relatorio): CerimoniaNex.abrir(self, carreira)
 
 signal fechada
+## "Transcender agora" no cartão de quem subiu (docs/32): a Base abre a sala desse agente.
+signal transcender(agente: Agente)
 
 var _papel: PanelContainer
 var _carimbos: Array[Label] = []
@@ -118,6 +120,16 @@ func _cartao(ag: Dictionary, agente: Agente) -> Control:
 		p.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		p.add_theme_color_override("font_color", Tema.cor_sucesso(true))
 		c.add_child(p)
+		if agente != null:
+			var ir := Button.new()
+			ir.text = "✦ Transcender agora"
+			ir.theme_type_variation = "BotaoPapel"
+			ir.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			ir.tooltip_text = "Ir à sala de %s e fazer as escolhas do novo NEX" % agente.nome
+			ir.pressed.connect(func():
+				transcender.emit(agente)
+				fechar())
+			c.add_child(ir)
 	if ag.get("promovido", false):
 		var carimbo := Label.new()
 		carimbo.text = "PROMOVIDO"

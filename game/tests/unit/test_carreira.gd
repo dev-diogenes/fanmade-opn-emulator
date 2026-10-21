@@ -38,6 +38,21 @@ func test_carreira_nova_tem_tres_recrutas_equipados():
 	assert_eq(c.recrutas_disponiveis().size(), 3)
 
 
+func test_recrutas_prontos_tem_descricao():
+	var c := _carreira()
+	for a in c.roster:
+		assert_ne(a.conceito, "", a.nome)
+		assert_ne(a.historico, "", a.nome)
+		assert_gt(a.idade_anos, 0, a.nome)
+	# Save antigo: o recruta sem descrição ganha a dele ao carregar
+	var d := c.para_dicionario()
+	for ad in d.roster:
+		ad.conceito = ""
+		ad.historico = ""
+	var c2 := Carreira.de_dicionario(d)
+	assert_ne(c2.roster[0].historico, "")
+
+
 func test_limite_de_itens_pela_patente():
 	var a := _por_nome(_carreira(), "Mauro")
 	assert_false(a.validar_equipamento(["machado", "protecao_leve", "cicatrizante"]).is_empty(), "recruta: 2 itens de categoria I")

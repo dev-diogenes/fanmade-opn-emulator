@@ -243,7 +243,10 @@ func test_investigacao_age_por_comandos():
 	var tela = load("res://scenes/investigacao.tscn").instantiate()
 	add_child_autofree(tela)
 	var a = tela.cena.agente_atual()
+	# Relativo ao registro de antes: se um teste anterior deixou uma investigação pendente no
+	# Jogo, a tela usa a sessão dele, que já traz comandos (era a falha intermitente, docs/30)
+	var antes: int = tela.sessao.registro.size()
 	tela._passar()
-	assert_eq(tela.sessao.registro.size(), 1)
-	assert_eq(tela.sessao.registro[0].acao, "passar")
+	assert_eq(tela.sessao.registro.size(), antes + 1)
+	assert_eq(tela.sessao.registro.back().acao, "passar")
 	assert_ne(tela.cena.agente_atual(), a, "a vez passou")

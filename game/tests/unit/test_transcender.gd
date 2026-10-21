@@ -65,3 +65,16 @@ func test_escolhas_de_nex_no_ritual():
 	var textos: Array = t._caixa.find_children("*", "Button", true, false).filter(func(b): return b.is_visible_in_tree()).map(func(b): return b.text)
 	assert_true(textos.has("Levantar e voltar à Base"), "feitas as escolhas, o ritual termina")
 	t.fechar()
+
+
+func test_sala_de_cada_classe():
+	var c := Carreira.nova()
+	var esperado := {"combatente": "SacoDePancada", "especialista": "TelaComputador"}
+	for a in c.roster:
+		var sala := SalaTranscender.new()
+		add_child_autofree(sala)
+		sala.construir(a)
+		assert_eq(sala.tipo_sala, a.classe_id, a.nome)
+		if esperado.has(a.classe_id):
+			assert_not_null(sala.find_child(esperado[a.classe_id], false, false), "%s: a sala tem a cara da classe" % a.nome)
+		assert_not_null(sala.sigilo, "o sigilo é o mesmo em toda sala")

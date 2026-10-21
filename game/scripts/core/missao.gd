@@ -467,6 +467,24 @@ func _aplicar_efeito(a: Agente, ef: Dictionary, h: Vector2i) -> Dictionary:
 			mapa.revelar(obj, 1)
 			_log("O objetivo foi revelado no mapa.")
 			return {"tipo": "revelar_objetivo", "valor": 1, "texto": "Covil revelado"}
+		"pista":
+			# Um traço para o caso (docs/32): na pergunta pedida ou na aberta com menos pistas
+			if caso == null:
+				return {}
+			var pid := String(ef.get("pergunta", ""))
+			if pid == "" or caso.pergunta(pid).get("respondida", true):
+				pid = ""
+				var menos := 1 << 20
+				for q in caso.perguntas:
+					if not q.respondida and int(q.encontradas) < menos:
+						menos = int(q.encontradas)
+						pid = String(q.id)
+			if pid == "":
+				return {}
+			var pista := caso.registrar_pista(String(ef.get("texto", "{indicio}")), pid, "evento")
+			var rotulo := String(Caso.indicio(pista.indicio).get("rotulo", "")) if pista.indicio != "" else ""
+			_log("[color=#6fcf8e]Pista:[/color] %s" % pista.texto)
+			return {"tipo": "pista", "valor": 1, "texto": "Pista: %s" % rotulo.to_lower() if rotulo != "" else "Pista"}
 	return {}
 
 

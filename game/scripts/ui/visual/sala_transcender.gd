@@ -9,6 +9,19 @@ const RAIO_SIGILO := 0.55          ## pisou aqui, começa o ritual
 const PORTA := Vector3(0, 0, 2.6)  ## onde o agente entra
 const COR_RITUAL := Color("f2b24a")
 
+## A sala de cada classe (docs/32): a do ocultista é a da referência (livros, atril, crânio);
+## o combatente treina num porão com saco de pancada e armas; o especialista trabalha num
+## escritório com computador, arquivo e um quadro de cortiça. O sigilo no meio é o mesmo.
+const SALA_POR_CLASSE := {"combatente": "combatente", "especialista": "especialista", "ocultista": "ocultista"}
+const PAREDES := {"ocultista": [Color("4a0f16"), Color("3e0c12")], "combatente": [Color("3a1a12"), Color("30150f")],
+	"especialista": [Color("2c1f30"), Color("251a29")]}
+
+## Luz de cada sala: [ambiente, banho nas paredes]. O ocultista é vermelho (a referência);
+## o porão do combatente, lâmpada laranja; o escritório do especialista, fluorescente fria.
+const LUZES := {"ocultista": [Color("6a2a32"), Color("c0303a")], "combatente": [Color("5a3a26"), Color("d07a36")],
+	"especialista": [Color("3a3a52"), Color("7f95c8")]}
+
+var tipo_sala := "ocultista"
 var rig: CameraRig
 var figura: Node3D
 var sigilo: MeshInstance3D
@@ -18,6 +31,7 @@ var _env: Environment
 
 
 func construir(agente: Agente) -> void:
+	tipo_sala = SALA_POR_CLASSE.get(agente.classe_id, "ocultista")
 	_ambiente()
 	_quarto()
 	_sigilo_central()
@@ -45,7 +59,7 @@ func _ambiente() -> void:
 	_env.background_mode = Environment.BG_COLOR
 	_env.background_color = Color("050307")
 	_env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	_env.ambient_light_color = Color("6a2a32")
+	_env.ambient_light_color = LUZES[tipo_sala][0]
 	_env.ambient_light_energy = 0.9
 	_env.glow_enabled = true
 	_env.glow_intensity = 1.0
@@ -68,7 +82,7 @@ func _ambiente() -> void:
 	Qualidade.sombra(lampada)
 	add_child(lampada)
 	var parede := OmniLight3D.new()
-	parede.light_color = Color("c0303a")
+	parede.light_color = LUZES[tipo_sala][1]
 	parede.light_energy = 1.0
 	parede.omni_range = 5.0
 	parede.position = Vector3(0, 2.2, -2.6)
@@ -90,9 +104,109 @@ func _quarto() -> void:
 	# Chão de tábuas (faixas alternadas) e três paredes; a quarta fica aberta para a câmera
 	for i in 9:
 		_caixa(Vector3(7.2, 0.1, 0.78), Vector3(0, -0.05, -3.2 + i * 0.8), Color("2a1a14") if i % 2 == 0 else Color("24160f"))
-	_caixa(Vector3(7.2, 3.2, 0.2), Vector3(0, 1.6, -3.6), Color("4a0f16"))
-	_caixa(Vector3(0.2, 3.2, 7.2), Vector3(-3.6, 1.6, 0), Color("3e0c12"))
-	_caixa(Vector3(0.2, 3.2, 7.2), Vector3(3.6, 1.6, 0), Color("3e0c12"))
+	var paredes: Array = PAREDES[tipo_sala]
+	_caixa(Vector3(7.2, 3.2, 0.2), Vector3(0, 1.6, -3.6), paredes[0])
+	_caixa(Vector3(0.2, 3.2, 7.2), Vector3(-3.6, 1.6, 0), paredes[1])
+	_caixa(Vector3(0.2, 3.2, 7.2), Vector3(3.6, 1.6, 0), paredes[1])
+	for i in 5:   # as velas em volta do sigilo, em toda sala
+		var ang := TAU * i / 5.0
+		var pos := Vector3(cos(ang), 0, sin(ang)) * 1.15
+		_vela(pos, 0.18 + 0.06 * (i % 2))
+	match tipo_sala:
+		"combatente": _sala_combatente()
+		"especialista": _sala_especialista()
+		_: _sala_ocultista()
+
+
+## Porão de treino: saco de pancada, suporte de armas, mesa com munição e um alvo na parede.
+func _sala_combatente() -> void:
+	var corrente := _caixa(Vector3(0.03, 0.9, 0.03), Vector3(-2.3, 2.75, -2.2), Color("4a4a4a"))
+	corrente.name = "Corrente"
+	var saco := MeshInstance3D.new()
+	var cil := CylinderMesh.new()
+	cil.top_radius = 0.26
+	cil.bottom_radius = 0.24
+	cil.height = 1.1
+	cil.radial_segments = 10
+	saco.mesh = cil
+	saco.material_override = Pecas.material(Color("5a2a1c"))
+	saco.position = Vector3(-2.3, 1.75, -2.2)
+	saco.name = "SacoDePancada"
+	add_child(saco)
+	# Suporte de armas na parede do fundo: tábua, ganchos e três silhuetas de arma
+	_caixa(Vector3(1.6, 0.9, 0.08), Vector3(1.4, 1.6, -3.45), Color("2b1d14"))
+	for k in 3:
+		_caixa(Vector3(0.08, 0.75, 0.06), Vector3(0.9 + k * 0.5, 1.6, -3.38), Color("23252a"))
+		_caixa(Vector3(0.22, 0.08, 0.06), Vector3(0.9 + k * 0.5, 1.4, -3.36), Color("3a2a1c"))
+	# Mesa com caixas de munição e uma lanterna acesa
+	_caixa(Vector3(1.2, 0.08, 0.7), Vector3(2.5, 0.8, 0.6), Color("2b2b2b"))
+	for x in [-0.5, 0.5]:
+		for z in [-0.28, 0.28]:
+			_caixa(Vector3(0.08, 0.8, 0.08), Vector3(2.5 + x, 0.4, 0.6 + z), Color("1d1d1d"))
+	_caixa(Vector3(0.3, 0.18, 0.2), Vector3(2.3, 0.93, 0.6), Color("4a5236"))
+	_caixa(Vector3(0.3, 0.18, 0.2), Vector3(2.65, 0.93, 0.7), Color("4a5236"))
+	_vela(Vector3(2.75, 0.84, 0.35), 0.2)
+	# Alvo de papel na parede esquerda
+	var alvo := MeshInstance3D.new()
+	var disco := CylinderMesh.new()
+	disco.top_radius = 0.4
+	disco.bottom_radius = 0.4
+	disco.height = 0.02
+	alvo.mesh = disco
+	alvo.material_override = Pecas.material(Color("d8cfb8"))
+	alvo.position = Vector3(-3.48, 1.7, 0.6)
+	alvo.rotation.z = PI / 2.0
+	add_child(alvo)
+	var miolo := MeshInstance3D.new()
+	var m2 := CylinderMesh.new()
+	m2.top_radius = 0.12
+	m2.bottom_radius = 0.12
+	m2.height = 0.03
+	miolo.mesh = m2
+	miolo.material_override = Pecas.material(Color("8e1b22"))
+	miolo.position = Vector3(-3.47, 1.7, 0.6)
+	miolo.rotation.z = PI / 2.0
+	add_child(miolo)
+
+
+## Escritório: mesa com computador (a tela acesa), arquivo de aço, caixas de processo e o
+## quadro de cortiça com fios vermelhos.
+func _sala_especialista() -> void:
+	_caixa(Vector3(1.6, 0.08, 0.8), Vector3(-2.3, 0.8, -2.4), Color("3b2a1c"))
+	for x in [-0.7, 0.7]:
+		for z in [-0.32, 0.32]:
+			_caixa(Vector3(0.08, 0.8, 0.08), Vector3(-2.3 + x, 0.4, -2.4 + z), Color("2b1d14"))
+	_caixa(Vector3(0.5, 0.36, 0.06), Vector3(-2.3, 1.1, -2.6), Color("1a1c20"))
+	var tela := _caixa(Vector3(0.44, 0.3, 0.01), Vector3(-2.3, 1.1, -2.565), Color("6fb4d8"), 1.6)
+	tela.name = "TelaComputador"
+	_caixa(Vector3(0.4, 0.03, 0.15), Vector3(-2.3, 0.86, -2.25), Color("2a2c30"))
+	var luz_tela := OmniLight3D.new()
+	luz_tela.light_color = Color("6fb4d8")
+	luz_tela.light_energy = 0.7
+	luz_tela.omni_range = 1.8
+	luz_tela.position = Vector3(-2.3, 1.2, -2.2)
+	Qualidade.luz_extra(luz_tela)
+	add_child(luz_tela)
+	# Arquivo de aço e caixas de processo
+	_caixa(Vector3(0.6, 1.3, 0.5), Vector3(-3.1, 0.65, -0.6), Color("5a6066"))
+	for k in 3:
+		_caixa(Vector3(0.62, 0.02, 0.02), Vector3(-3.1, 0.3 + k * 0.4, -0.34), Color("2a2c30"))
+	for k in 3:
+		_caixa(Vector3(0.45, 0.3, 0.35), Vector3(2.6 - k * 0.12, 0.15 + k * 0.3, 1.2), Color("a08a5a").darkened(0.1 * k))
+	# Quadro de cortiça na parede do fundo, com fotos e fios
+	_caixa(Vector3(1.8, 1.1, 0.06), Vector3(1.3, 1.7, -3.47), Color("8a5a36"))
+	for i in 5:
+		var px := 0.6 + (i % 3) * 0.6
+		var py := 1.45 + (i / 3) * 0.5
+		_caixa(Vector3(0.22, 0.26, 0.01), Vector3(px, py, -3.43), Color("e8dcc0"))
+	for i in 3:
+		var fio := _caixa(Vector3(0.7, 0.012, 0.005), Vector3(0.9 + i * 0.4, 1.7 + 0.1 * (i % 2), -3.42), Color("b3121c"))
+		fio.rotation.z = 0.35 - 0.3 * i
+
+
+## A sala da referência (ocultista): estante, atril com livro e luz roxa, mesa com crânio,
+## gaiola e ervas penduradas.
+func _sala_ocultista() -> void:
 	# Estante com livros (esquerda, ao fundo)
 	_caixa(Vector3(1.6, 2.0, 0.4), Vector3(-2.4, 1.0, -3.3), Color("2b1d14"))
 	var cores := [Color("6b2a1e"), Color("2f3a4a"), Color("4a3b1c"), Color("3b2a40"), Color("1f3a2a")]
@@ -123,10 +237,6 @@ func _quarto() -> void:
 	mc.material_override = Pecas.material(Color("d9cfb6"))
 	mc.position = Vector3(2.3, 0.97, 0.6)
 	add_child(mc)
-	for i in 5:
-		var ang := TAU * i / 5.0
-		var pos := Vector3(cos(ang), 0, sin(ang)) * 1.15
-		_vela(pos, 0.18 + 0.06 * (i % 2))
 	_vela(Vector3(2.75, 0.84, 0.45), 0.2)
 	# Gaiola pendurada (direita, ao fundo) e ervas no teto
 	var gaiola := Node3D.new()

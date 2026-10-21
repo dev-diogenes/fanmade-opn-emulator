@@ -148,7 +148,7 @@ func mostrar(pid: String) -> void:
 func _carta(c: Dictionary, achados: Array, descartados: Array, pode: bool, culpado: String) -> Button:
 	var b := Button.new()
 	b.theme_type_variation = "BotaoPapel"
-	b.custom_minimum_size = Vector2(250, 104)
+	b.custom_minimum_size = Vector2(250, 90)
 	b.clip_contents = true
 	var riscado: bool = c.id in descartados
 	b.disabled = not pode or riscado
@@ -214,7 +214,7 @@ func _selo(b: Control, texto: String, cor: Color) -> void:
 		s.add_theme_font_override("font", ft)
 	s.add_theme_stylebox_override("normal", Tema.caixa(Color(0, 0, 0, 0), Color(cor, 0.85), 2, 3, Vector2(6, 1)))
 	s.rotation_degrees = -8
-	s.position = Vector2(140, 66)
+	s.position = Vector2(140, 54)
 	s.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(s)
 

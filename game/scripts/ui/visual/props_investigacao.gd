@@ -7,15 +7,16 @@ extends RefCounted
 
 const PALAVRAS := [
 	["tela", ["computador", "radio", "rádio", "camera", "câmera", "painel"]],
-	["pessoa", ["vizinha", "zelador", "operario", "operário", "ferido", "testemunha", "morador"]],
-	["alcapao", ["porao", "porão", "jazigo", "cofre", "armario", "armário", "alçapão", "alcapao"]],
+	["pessoa", ["vizinha", "zelador", "operario", "operário", "ferido", "testemunha", "morador", "merendeira", "caminhoneiro"]],
+	["alcapao", ["porao", "porão", "jazigo", "cofre", "armario", "armário", "alçapão", "alcapao", "banheiro", "ralo"]],
+	["lousa", ["quadro_negro", "quadro-negro", "lousa"]],
 	["altar", ["altar", "oratorio", "oratório"]],
 	["lapides", ["covas", "inscric", "inscriç", "parede", "tumulo", "túmulo"]],
 	["fogueira", ["fogueira"]],
 	["barraca", ["barraca", "tenda"]],
 	["rastros", ["rastro", "pegada", "marca"]],
 	["mesa", ["escrivaninha", "mesa", "livro", "registro", "diario", "diário", "relatorio", "relatório",
-		"bilhete", "foto", "planta", "escala", "obito", "óbito"]],
+		"bilhete", "foto", "planta", "escala", "obito", "óbito", "cantina", "caixa"]],
 ]
 
 
@@ -39,7 +40,21 @@ static func criar(ponto_id: String, nome: String) -> Node3D:
 		"fogueira": return fogueira()
 		"barraca": return barraca()
 		"rastros": return rastros()
+		"lousa": return lousa()
 	return null
+
+
+## Quadro-negro de escola num cavalete, com a frase repetida em giz (docs/32).
+static func lousa() -> Node3D:
+	var n := Node3D.new()
+	var madeira := Color("4a3626")
+	for x in [-0.45, 0.45]:
+		var perna := _caixa(n, Vector3(0.05, 1.3, 0.05), Vector3(x, 0.65, 0), madeira)
+		perna.rotation.x = -0.12
+	_caixa(n, Vector3(1.0, 0.7, 0.04), Vector3(0, 0.95, 0.06), Color("23362c"))
+	for i in 5:
+		_caixa(n, Vector3(0.8 - 0.1 * (i % 2), 0.02, 0.005), Vector3(0, 1.2 - i * 0.11, 0.085), Color("d8d4c8"))
+	return n
 
 
 static func _caixa(pai: Node3D, tamanho: Vector3, pos: Vector3, cor: Color, emissao: float = 0.0) -> MeshInstance3D:

@@ -50,6 +50,26 @@
         "idoso",
         "voz"
       ]
+    },
+    {
+      "id": "delegado",
+      "nome": "o delegado da cidade",
+      "chefe_titulo": "o Delegado",
+      "indicios": [
+        "treino",
+        "familia",
+        "autoridade"
+      ]
+    },
+    {
+      "id": "professora",
+      "nome": "uma professora aposentada",
+      "chefe_titulo": "a Professora",
+      "indicios": [
+        "idoso",
+        "autoridade",
+        "criancas"
+      ]
     }
   ],
   "acoes": [
@@ -88,6 +108,15 @@
         "rancor",
         "chamado"
       ]
+    },
+    {
+      "id": "imortalidade",
+      "texto": "quer escapar da morte a qualquer preço",
+      "indicios": [
+        "sangue",
+        "cativeiro",
+        "juventude"
+      ]
     }
   ],
   "locais": [
@@ -125,6 +154,24 @@
         "frio",
         "centro",
         "azulejo"
+      ]
+    },
+    {
+      "id": "escola",
+      "nome": "a escola rural fechada",
+      "indicios": [
+        "longe",
+        "azulejo",
+        "giz"
+      ]
+    },
+    {
+      "id": "cemiterio",
+      "nome": "o cemitério municipal",
+      "indicios": [
+        "centro",
+        "terra",
+        "flores"
       ]
     }
   ],
@@ -260,6 +307,26 @@
     "terra": {
       "rotulo": "Terra arada",
       "texto": "Lama vermelha de terra revirada, misturada com restos de ração."
+    },
+    "autoridade": {
+      "rotulo": "Autoridade",
+      "texto": "Um carimbo oficial e papéis assinados por alguém que ninguém na cidade questiona."
+    },
+    "criancas": {
+      "rotulo": "Perto de crianças",
+      "texto": "Desenhos infantis guardados com cuidado, todos com a mesma figura alta ao fundo."
+    },
+    "juventude": {
+      "rotulo": "Não envelhece",
+      "texto": "Fotos de décadas diferentes mostram a mesma pessoa, com o mesmo rosto."
+    },
+    "giz": {
+      "rotulo": "Pó de giz",
+      "texto": "Pó de giz na roupa e um cheiro de merenda velha."
+    },
+    "flores": {
+      "rotulo": "Flores de velório",
+      "texto": "Pétalas de crisântemo e cera de vela presas no tecido."
     }
   },
   "penalidade_palpite": {

@@ -56,6 +56,7 @@ func recrutar(nome: String) -> Agente:
 				push_error("Recruta inválido %s: %s" % [nome, res.erros])
 				return null
 			var a: Agente = res.agente
+			_copiar_descricao(a, r)
 			a.id = "ag%d" % _proximo_id
 			_proximo_id += 1
 			for item in r.get("equipamento", []):
@@ -89,14 +90,7 @@ func recrutar_ficha(ficha: Dictionary) -> Dictionary:
 	var a: Agente = res.agente
 	a.aparencia = String(ficha.get("aparencia", ""))   # a foto do dossiê (docs/19)
 	a.tom = int(ficha.get("tom", 0))
-	# Descrição (docs/26): texto livre, aparado para caber na ficha
-	a.personalidade = String(ficha.get("personalidade", "")).strip_edges().left(LIMITE_DESCRICAO.personalidade)
-	a.historico = String(ficha.get("historico", "")).strip_edges().left(LIMITE_DESCRICAO.historico)
-	a.objetivo = String(ficha.get("objetivo", "")).strip_edges().left(LIMITE_DESCRICAO.objetivo)
-	a.conceito = String(ficha.get("conceito", "")).strip_edges().left(LIMITE_DESCRICAO.conceito)
-	a.genero = String(ficha.get("genero", "")).strip_edges().left(LIMITE_DESCRICAO.genero)
-	a.idade_anos = int(ficha.get("idade_anos", 0))
-	a.aparencia_texto = String(ficha.get("aparencia_texto", "")).strip_edges().left(LIMITE_DESCRICAO.aparencia_texto)
+	_copiar_descricao(a, ficha)
 	a.id = "ag%d" % _proximo_id
 	_proximo_id += 1
 	var kit: Dictionary = kit_da_classe(String(ficha.get("classe", "")))
@@ -105,6 +99,29 @@ func recrutar_ficha(ficha: Dictionary) -> Dictionary:
 	a.arma_id = kit.get("arma", "")
 	roster.append(a)
 	return {"agente": a, "erros": [] as Array[String]}
+
+
+## Descrição (docs/26): texto livre, aparado para caber na ficha. Vale para a criação e
+## para os recrutas prontos, que trazem a deles em recrutas.json (docs/32).
+static func _copiar_descricao(a: Agente, ficha: Dictionary) -> void:
+	a.personalidade = String(ficha.get("personalidade", "")).strip_edges().left(LIMITE_DESCRICAO.personalidade)
+	a.historico = String(ficha.get("historico", "")).strip_edges().left(LIMITE_DESCRICAO.historico)
+	a.objetivo = String(ficha.get("objetivo", "")).strip_edges().left(LIMITE_DESCRICAO.objetivo)
+	a.conceito = String(ficha.get("conceito", "")).strip_edges().left(LIMITE_DESCRICAO.conceito)
+	a.genero = String(ficha.get("genero", "")).strip_edges().left(LIMITE_DESCRICAO.genero)
+	a.idade_anos = int(ficha.get("idade_anos", 0))
+	a.aparencia_texto = String(ficha.get("aparencia_texto", "")).strip_edges().left(LIMITE_DESCRICAO.aparencia_texto)
+
+
+## Save de antes das descrições dos recrutas (docs/32): o recruta pronto sem conceito nem
+## histórico ganha o de recrutas.json, se a classe e a origem ainda são as dele.
+static func _descricao_do_recruta(a: Agente) -> void:
+	if a.conceito != "" or a.historico != "":
+		return
+	for r in DadosJogo.ler("recrutas").recrutas:
+		if r.nome == a.nome and r.classe == a.classe_id and r.get("origem", "") == a.origem_id:
+			_copiar_descricao(a, r)
+			return
 
 
 ## Equipamento inicial de uma classe: o do primeiro recruta pronto daquela classe.
@@ -319,6 +336,7 @@ static func de_dicionario(d: Dictionary, ruleset_: Ruleset = null) -> Carreira:
 	var por_id: Dictionary = {}
 	for ad in d.get("roster", []):
 		var a := Agente.de_dicionario(c.ruleset, ad)
+		_descricao_do_recruta(a)
 		c.roster.append(a)
 		por_id[a.id] = a
 	for ad in d.get("extras", []):

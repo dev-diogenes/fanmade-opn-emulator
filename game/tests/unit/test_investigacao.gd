@@ -108,6 +108,28 @@ func test_deduzir_na_cena_vale_ao_sair():
 	assert_eq(c.agente_atual(), mauro, "deduzir não gasta a vez")
 
 
+func test_cenas_novas_tem_ponto_para_cada_pergunta():
+	var d := DadosJogo.ler("cenas_investigacao")
+	for c in d.cenas:
+		var perguntas := {}
+		for p in c.pontos:
+			perguntas[p.responde] = true
+			assert_true(String(p.pista).contains("{indicio}"), "%s/%s: a pista traz um indício" % [c.id, p.id])
+		assert_eq(perguntas.size(), 3, "%s responde quem, o quê e onde" % c.id)
+
+
+func test_evento_com_pista_revela_um_traco():
+	var h := m.posicao(mauro)
+	var antes := m.caso.pistas.size()
+	var feito := m._aplicar_efeito(mauro, {"tipo": "pista", "pergunta": "onde"}, h)
+	assert_eq(feito.tipo, "pista")
+	assert_eq(m.caso.pistas.size(), antes + 1)
+	assert_true(m.caso.pistas.back().indicio in m.caso.local.indicios)
+	# Sem pergunta: vai para a aberta com menos pistas
+	feito = m._aplicar_efeito(mauro, {"tipo": "pista"}, h)
+	assert_ne(m.caso.pistas.back().responde, "onde")
+
+
 func test_save_antigo_sem_tracos_ganha_ordem():
 	var d: Dictionary = JSON.parse_string(JSON.stringify(m.caso.para_dicionario()))   # cópia: o caso aponta para os dados em cache
 	d.sujeito.erase("indicios")

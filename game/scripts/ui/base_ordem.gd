@@ -69,7 +69,8 @@ func _ready() -> void:
 			_jogo.aviso_rede = ""
 	# Cerimônia de NEX e patente (docs/23, C7), uma vez por missão
 	if CerimoniaNex.tem_o_que_mostrar(carreira.ultimo_relatorio):
-		CerimoniaNex.abrir(self, carreira)
+		var cerimonia := CerimoniaNex.abrir(self, carreira)
+		cerimonia.transcender.connect(func(a: Agente): Transcender.abrir(self, a))
 		_salvar()
 	# Tutorial (docs/07-tutorial.md): convite ao abrir o jogo e o "?" desta tela
 	Tutorial.botao_ajuda(self, "base", _alvos_do_tutorial)

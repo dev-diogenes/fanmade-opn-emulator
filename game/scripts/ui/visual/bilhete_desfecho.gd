@@ -97,6 +97,8 @@ func _selo_efeito(ef: Dictionary) -> Label:
 		cor = Tema.cor_sucesso(true)
 	elif tipo == "membrana":
 		cor = Tema.cor_falha(true) if int(ef.get("valor", 0)) < 0 else Tema.cor_sucesso(true)
+	elif tipo == "pista":
+		cor = Color("7a5a1e")   # o ouro escuro das pistas do quadro (docs/32)
 	l.add_theme_color_override("font_color", Color.WHITE)
 	l.add_theme_stylebox_override("normal", Tema.caixa(cor, cor.darkened(0.3), 1, 4, Vector2(8, 2)))
 	return l
