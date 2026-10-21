@@ -456,3 +456,25 @@ func test_caso_ampliado_vai_e_volta_no_save():
 	assert_eq(c2.perguntas.size(), 4)
 	assert_eq(c2.ampliacao_verdade, c.ampliacao_verdade)
 	assert_eq(c2.candidatos(c2.perguntas[3].id).size(), c.candidatos(c.perguntas[3].id).size())
+
+
+
+# --- Conclusão do caso (docs/37) -------------------------------------------------------
+
+func test_evento_de_inocente_morto():
+	var feito := m._aplicar_efeito(mauro, {"tipo": "inocente_morto"}, m.posicao(mauro))
+	assert_eq(feito.tipo, "inocente_morto")
+	assert_eq(m.inocentes_mortos, 1)
+	var por_id := {}
+	for a in m.agentes_iniciais:
+		por_id[a.id] = a
+	var m2 := Missao.de_dicionario(m.ruleset, m.para_dicionario(), por_id)
+	assert_eq(m2.inocentes_mortos, 1, "vai no save")
+
+
+func test_caso_solucionado_exige_quem_e_o_que():
+	assert_false(m.caso.solucionado())
+	m.caso.pergunta("quem").respondida = true
+	assert_eq(m.caso.faltam_para_solucao(), [m.caso.pergunta("oque").texto] as Array[String])
+	m.caso.pergunta("oque").respondida = true
+	assert_true(m.caso.solucionado(), "onde não é exigido: chegar ao covil já o encontra")

@@ -123,6 +123,8 @@ func test_vitoria_da_pp_nex_e_promocao():
 	var grupo := c.roster.duplicate()
 	var m := c.iniciar_missao(grupo, 7)
 	m.pistas = 5
+	for pid in ["quem", "oque"]:   # a ficha responde o objetivo (p.79): o caso foi solucionado
+		m.caso.pergunta(pid).respondida = true
 	m._preparar_encontro(m.mapa.encontrar("objetivo"), "covil", true)
 	m.concluir_encontro("agentes")
 	var r := c.encerrar_missao()
@@ -268,3 +270,19 @@ func test_criar_agente_pela_ficha():
 	var ruim := c.recrutar_ficha({"nome": "X", "classe": "combatente", "origem": "academico", "nex": 5, "atributos": {"agi": 3, "for": 3, "int": 3, "pre": 3, "vig": 3}})
 	assert_null(ruim.agente)
 	assert_false(ruim.erros.is_empty(), "atributos acima dos pontos dão erro")
+
+
+
+func test_sem_ficha_respondida_o_caso_fica_em_aberto():
+	var c := _carreira()
+	var m := c.iniciar_missao(c.roster.duplicate(), 7)
+	m.caso.pergunta("quem").respondida = true
+	m.inocentes_mortos = 1
+	m._preparar_encontro(m.mapa.encontrar("objetivo"), "covil", true)
+	m.concluir_encontro("agentes")
+	assert_true(m.vitoria)
+	assert_false(m.caso_solucionado(), "falta o quê na ficha")
+	var r := c.encerrar_missao()
+	assert_false(r.solucionado)
+	assert_eq(r.pp, -2, "sem solução do caso; −2 pelo inocente (Tabela 3.2)")
+	assert_true(r.detalhes_pp.any(func(l): return l.begins_with("Caso em aberto")))

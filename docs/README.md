@@ -39,6 +39,7 @@
 | [34-mapa-escalada-e-afinidade.md](34-mapa-escalada-e-afinidade.md) | Afinidade pelo livro (firma no próximo Transcender), sala de Transcender por elemento, serra escalável com 20 na Agilidade, água rasa e mais miudezas nos hexes |
 | [35-depoimentos-incertos.md](35-depoimentos-incertos.md) | Auditoria da investigação contra o livro (p.79-81) e depoimentos incertos: testemunha que passa por pouco pode se enganar, e a pista aparece com "?" |
 | [36-investigacao-ampliada.md](36-investigacao-ampliada.md) | Investigação ampliada (p.79): a primeira acusação certa revela uma reviravolta (cúmplice, objeto ou quando) e uma pergunta nova na ficha |
+| [37-conclusao-do-caso.md](37-conclusao-do-caso.md) | Conclusão do Caso pelo livro: a solução (+10 PP) exige a ficha respondendo quem e o quê; morte de inocente (−2 PP) e o evento Pedido de socorro |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

@@ -134,6 +134,25 @@ func candidatos(pergunta_id: String) -> Array[Dictionary]:
 	return lista
 
 
+## Caso solucionado (p.79, docs/37): a ficha responde as perguntas que o objetivo exige
+## (casos.json, "solucao": quem e o quê). Só vale o que está na ficha.
+func solucionado() -> bool:
+	for pid in DadosJogo.ler("casos").get("solucao", {}).get("exige", ["quem", "oque"]):
+		if not pergunta(String(pid)).get("respondida", false):
+			return false
+	return true
+
+
+## As perguntas que faltam para solucionar o caso (textos).
+func faltam_para_solucao() -> Array[String]:
+	var lista: Array[String] = []
+	for pid in DadosJogo.ler("casos").get("solucao", {}).get("exige", ["quem", "oque"]):
+		var q := pergunta(String(pid))
+		if not q.is_empty() and not q.respondida:
+			lista.append(String(q.texto))
+	return lista
+
+
 ## Quanto a Membrana cai numa acusação errada (negativo).
 static func penalidade_palpite() -> int:
 	return int(DadosJogo.ler("casos").get("penalidade_palpite", {}).get("membrana", -5))

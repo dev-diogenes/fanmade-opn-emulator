@@ -42,6 +42,7 @@ var agentes_iniciais: Array[Agente] = []
 var reforcos := 0                        ## Reforços da Ordem restantes (modo Normal)
 var pistas := 0                          ## Eventos resolvidos com sucesso (pistas adicionais, p.63)
 var mortos: Array[Agente] = []
+var inocentes_mortos := 0               ## Civis que morreram na missão (p.53: −2 PP cada)
 var resgatados: Array[Agente] = []
 
 ## Todas as linhas do registro (a cena do mapa é recriada após cada combate)
@@ -478,6 +479,11 @@ func _aplicar_efeito(a: Agente, ef: Dictionary, h: Vector2i) -> Dictionary:
 			mapa.revelar(obj, 1)
 			_log("O objetivo foi revelado no mapa.")
 			return {"tipo": "revelar_objetivo", "valor": 1, "texto": "Covil revelado"}
+		"inocente_morto":
+			var n := int(ef.get("valor", 1))
+			inocentes_mortos += n
+			_log("[color=#e0574a]Um inocente morreu. A Ordem vai cobrar por isso.[/color]")
+			return {"tipo": "inocente_morto", "valor": n, "texto": "Inocente morto"}
 		"pista":
 			# Um traço para o caso (docs/32): na pergunta pedida ou na aberta com menos pistas
 			if caso == null:
@@ -744,6 +750,12 @@ func concluir_investigacao(resultado: Dictionary) -> void:
 	_verificar_derrota()
 
 
+## Solução do caso (p.53 e p.79, docs/37): a ameaça caiu e a ficha responde o objetivo.
+## Missão sem caso (da comunidade, antiga): basta a vitória.
+func caso_solucionado() -> bool:
+	return vitoria and (caso == null or caso.solucionado())
+
+
 ## O efeito de uma pergunta resolvida (casos.json): chefe mais fraco, Membrana, covil no mapa.
 func _aplicar_efeito_pergunta(p: Dictionary) -> void:
 	var ef: Dictionary = p.get("efeito", {})
@@ -882,6 +894,7 @@ func para_dicionario() -> Dictionary:
 		"opcoes": opcoes.duplicate(), "agentes": agentes.map(func(a): return a.id),
 		"agentes_iniciais": agentes_iniciais.map(func(a): return a.id),
 		"mortos": mortos.map(func(a): return a.id), "resgatados": resgatados.map(func(a): return a.id),
+		"inocentes_mortos": inocentes_mortos,
 		"posicoes": pos, "turno_mundo": turno_mundo, "indice": indice,
 		"movimento_restante": movimento_restante, "movimento_rolado": movimento_rolado, "acao_usada": acao_usada,
 		"pode_escalar": pode_escalar,
@@ -915,6 +928,7 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	for i in d.get("agentes_iniciais", []):
 		if por_id.has(i):
 			m.agentes_iniciais.append(por_id[i])
+	m.inocentes_mortos = int(d.get("inocentes_mortos", 0))
 	for i in d.get("mortos", []):
 		if por_id.has(i):
 			m.mortos.append(por_id[i])

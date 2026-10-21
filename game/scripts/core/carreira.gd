@@ -231,12 +231,17 @@ func encerrar_missao() -> Dictionary:
 	var m := missao
 	var pp_base := 0
 	var linhas_pp: Array[String] = []
-	if m.vitoria:
+	if m.caso_solucionado():
 		pp_base += ruleset.pp_por_evento("solucao_do_caso")
 		linhas_pp.append("Solução do caso: %+d" % ruleset.pp_por_evento("solucao_do_caso"))
+	elif m.vitoria:   # só vale o que está na ficha (p.79)
+		linhas_pp.append("Caso em aberto: a ficha não responde o objetivo (+0)")
 	if m.pistas > 0:
 		pp_base += ruleset.pp_por_evento("pista_adicional") * m.pistas
 		linhas_pp.append("Pistas adicionais (%d): %+d" % [m.pistas, ruleset.pp_por_evento("pista_adicional") * m.pistas])
+	if m.inocentes_mortos > 0:
+		pp_base += ruleset.pp_por_evento("morte_de_inocente") * m.inocentes_mortos
+		linhas_pp.append("Inocentes mortos (%d): %+d" % [m.inocentes_mortos, ruleset.pp_por_evento("morte_de_inocente") * m.inocentes_mortos])
 	if not m.mortos.is_empty():
 		pp_base += ruleset.pp_por_evento("morte_de_membro_do_grupo") * m.mortos.size()
 		linhas_pp.append("Membros mortos (%d): %+d" % [m.mortos.size(), ruleset.pp_por_evento("morte_de_membro_do_grupo") * m.mortos.size()])
@@ -266,7 +271,7 @@ func encerrar_missao() -> Dictionary:
 			_restaurar(a)
 		agentes_rel.append(linha)
 	missoes_concluidas += 1
-	ultimo_relatorio = {"vitoria": m.vitoria, "pp": pp_base, "detalhes_pp": linhas_pp, "agentes": agentes_rel,
+	ultimo_relatorio = {"vitoria": m.vitoria, "solucionado": m.caso_solucionado(), "pp": pp_base, "detalhes_pp": linhas_pp, "agentes": agentes_rel,
 		"turnos": m.turno_mundo, "membrana": m.membrana.valor, "missao": missoes_concluidas}
 	if m.extras.has("campanha"):
 		ultimo_relatorio["campanha"] = _avancar_campanha(m)

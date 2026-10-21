@@ -513,15 +513,26 @@ func _ao_investigar(_config: Dictionary) -> void:
 		_jogo.ir_para_investigacao()
 
 
+## Conclusão do Caso (p.79, docs/37): a ficha do grupo é o que vale. O carimbo diz se o caso
+## foi solucionado (ameaça vencida e a ficha responde o objetivo) ou só contido.
 func _ao_encerrar(venceu: bool) -> void:
-	var linhas := ["Operação encerrada no turno %d do mundo." % missao.turno_mundo,
-		"Membrana: %d (%s)." % [missao.membrana.valor, missao.membrana.estado().get("nome", "")],
-		"Pistas reunidas: %d." % missao.pistas]
+	var linhas := ["CONCLUSÃO DO CASO — o que a ficha do grupo responde:"]
 	if missao.caso != null:
 		for q in missao.caso.perguntas:
 			linhas.append("%s %s%s" % ["[x]" if q.respondida else "[ ]", q.texto,
 				"  — " + missao.caso.resposta(q.id) if q.respondida else ""])
-	_painel_fim.mostrar("CASO ENCERRADO" if venceu else "MISSÃO FRACASSADA", linhas, venceu)
+	linhas.append("")
+	var solucionado := missao.caso_solucionado()
+	if solucionado:
+		linhas.append("Caso solucionado: a ameaça caiu e a ficha responde o objetivo.")
+	elif venceu:
+		linhas.append("Ameaça contida, caso em aberto: falta na ficha %s" % ", ".join(PackedStringArray(missao.caso.faltam_para_solucao())).to_lower())
+	linhas.append("Turno %d do mundo · Membrana %d (%s) · pistas reunidas: %d." % [missao.turno_mundo, missao.membrana.valor,
+		missao.membrana.estado().get("nome", ""), missao.pistas])
+	if missao.inocentes_mortos > 0:
+		linhas.append("Inocentes mortos: %d." % missao.inocentes_mortos)
+	var carimbo := "CASO SOLUCIONADO" if solucionado else ("AMEAÇA CONTIDA" if venceu else "MISSÃO FRACASSADA")
+	_painel_fim.mostrar(carimbo, linhas, venceu, Color("a5651a") if venceu and not solucionado else Color(0, 0, 0, 0))
 
 
 ## Ficha de suspeitos (docs/32): acusar vira o comando `deduzir` (lockstep no online).

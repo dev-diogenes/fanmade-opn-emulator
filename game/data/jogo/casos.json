@@ -585,5 +585,13 @@
         }
       ]
     }
-  ]
+  ],
+  "solucao": {
+    "ref": "p.79 e p.53",
+    "exige": [
+      "quem",
+      "oque"
+    ],
+    "nota": "Só vale o que está na ficha (p.79): o caso é solucionado quando a ameaça cai e a ficha responde quem está por trás e o que pretende (o objetivo do caso). Sem isso, a Ordem não paga a solução do caso (Tabela 3.2)."
+  }
 }
