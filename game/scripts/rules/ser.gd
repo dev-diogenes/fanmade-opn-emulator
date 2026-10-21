@@ -26,6 +26,9 @@ const ABALADO := "abalado"
 const APAVORADO := "apavorado"
 const ENJOADO := "enjoado"
 const AGARRADO := "agarrado"
+## Caído (p.310): −2 dados no corpo a corpo, deslocamento 1,5 m, −5 na Defesa contra corpo a
+## corpo e +5 contra ataques à distância. Levantar-se é uma ação de movimento (p.84).
+const CAIDO := "caido"
 const EXAUSTO := "exausto"
 const FRACO := "fraco"
 const DEBILITADO := "debilitado"
@@ -120,6 +123,8 @@ func deslocamento_m() -> float:
 
 ## Deslocamento em quadrados de 1,5 m (9 m = 6 quadrados).
 func deslocamento_quadrados() -> int:
+	if tem(CAIDO):
+		return mini(1, int(deslocamento_m() / 1.5))   # caído: 1,5 m (p.310)
 	return int(deslocamento_m() / 1.5)
 
 
@@ -206,6 +211,8 @@ func modificar_ataque(arma: Dictionary, alvo: Ser) -> Dictionary:
 	mods.dados_dano_extra += efeito_ritual("dados_dano_extra")   # Ordens (comandante mercenário)
 	if tem(AGARRADO):
 		mods.dados_extras -= 1
+	if tem(CAIDO) and arma.get("ataque", "corpo_a_corpo") == "corpo_a_corpo":
+		mods.dados_extras -= 2   # caído: −OO no corpo a corpo (p.310)
 	if tem(OFUSCADO):
 		mods.dados_extras -= 1
 	mods.bonus_ataque += efeito_ritual("pericias")   # Coincidência Forçada vale para testes de ataque
@@ -344,7 +351,7 @@ func encerrar_cena() -> void:
 	mods_cena.clear()
 	defesa_temporaria = 0
 	penalidade_ataque_temporaria = 0
-	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL, FATIGADO, ATORDOADO, PASMO, ABALADO, APAVORADO, ENJOADO, AGARRADO, OFUSCADO, SEM_CURA, SANGRANDO, EM_CHAMAS, CONFUSO, ASFIXIADO]:
+	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL, FATIGADO, ATORDOADO, PASMO, ABALADO, APAVORADO, ENJOADO, AGARRADO, CAIDO, OFUSCADO, SEM_CURA, SANGRANDO, EM_CHAMAS, CONFUSO, ASFIXIADO]:
 		condicoes.erase(c)   # condições terminam no fim da cena (p.321)
 	duracoes.clear()
 	rituais_ativos.clear()

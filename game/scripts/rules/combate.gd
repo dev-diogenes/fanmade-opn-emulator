@@ -229,6 +229,10 @@ func proximo_turno() -> Ser:
 
 
 func _ao_iniciar_turno(ser: Ser) -> void:
+	if ser.tem(Ser.AGARRADO) and ser.mods_cena.get("agarrado_manobra", false):
+		var quem = ser.mods_cena.get("agarrado_por")
+		if quem == null or (quem as Ser).esta_fora_de_combate():
+			_soltar(ser)
 	_usos_rodada.erase(ser)
 	_ataques_no_turno[ser] = 0
 	_ultimo_ataque.erase(ser)
@@ -323,6 +327,7 @@ func gastar_acao(ser: Ser, tipo: String) -> bool:
 ## mira, Foco e Ataque Especial. Não conta a reação que o alvo ainda pode declarar.
 ## −1 quando o ataque não é possível daqui.
 func chance_de_acerto(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, bonus_extra: int = 0) -> float:
+	arma_base = arma_em_maos(atacante, arma_base)
 	var arma: Dictionary = (atacante as Agente).arma_efetiva(arma_base) if atacante is Agente else arma_base
 	var mods := atacante.modificar_ataque(arma, alvo)
 	var corpo_a_corpo: bool = arma.get("ataque", "corpo_a_corpo") == "corpo_a_corpo"
@@ -347,6 +352,8 @@ func chance_de_acerto(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: 
 			var mirando: bool = not mira.is_empty() and mira.alvo == alvo
 			if grade.em_corpo_a_corpo(alvo) and not mirando and not (atacante is Agente and (atacante as Agente).tem_habilidade("tiro_certeiro")):
 				dados_extras -= 1
+	if alvo.tem(Ser.CAIDO):
+		defesa += -5 if corpo_a_corpo else 5   # caído (p.310)
 	var pericia_id: String = arma.get("pericia", "luta")
 	var dados_teste := atacante.dados_da_pericia(pericia_id)
 	var bonus_teste := atacante.bonus_pericia(pericia_id)
@@ -399,6 +406,7 @@ func mover(ser: Ser, destino: Vector2i) -> bool:
 			return false
 	if not gastar_acao(ser, "movimento"):
 		return false
+	_soltar_agarrados_por_manobra(ser, "para se mover")
 	var vizinhos_antes: Array[Ser] = []
 	for outro in grade.seres():
 		if outro.lado != ser.lado and not outro.esta_fora_de_combate() and Grade.adjacentes(origem, grade.posicao(outro)):
@@ -495,6 +503,177 @@ func acalmar(agente: Agente, alvo: Ser, pericia: String = "diplomacia") -> Resul
 		alvo.condicoes.erase(Ser.ENLOUQUECENDO)
 		alvo.acalmado_na_cena += 1
 	return t
+
+
+# --- Manobras de combate (p.85-86) ------------------------------------------------
+
+## Agarrar, derrubar, desarmar e empurrar: um ataque corpo a corpo que, em vez de dano, faz
+## outra coisa. Teste de manobra (ataque corpo a corpo, Luta) oposto pela Luta do alvo; empate,
+## de novo. Gasta a ação padrão. Agarrar quem você já agarra esmaga (dano desarmado).
+const MANOBRAS := ["agarrar", "derrubar", "desarmar", "empurrar"]
+
+
+## "" se a manobra pode ser feita agora, ou o motivo.
+func pode_manobrar(atacante: Ser, alvo: Ser, tipo: String) -> String:
+	if not tipo in MANOBRAS:
+		return "manobra desconhecida"
+	if alvo == null or alvo == atacante or alvo.lado == atacante.lado or alvo.esta_fora_de_combate():
+		return "alvo inválido"
+	if atacante.tem(Ser.AGARRADO) and tipo != "agarrar":
+		return "quem está agarrado só se solta ou ataca com arma leve"
+	if grade != null and grade.tem(atacante) and grade.tem(alvo) and not grade.estao_adjacentes(atacante, alvo):
+		return "a manobra é corpo a corpo: precisa estar ao lado"
+	if int(acoes_restantes(atacante).get("padrao", 0)) <= 0:
+		return "sem ação padrão"
+	match tipo:
+		"agarrar":
+			if alvo.imune_a_condicao(Ser.AGARRADO):
+				return "%s não pode ser agarrado" % alvo.nome
+			if alvo.tem(Ser.AGARRADO) and alvo.mods_cena.get("agarrado_por") != atacante:
+				return "%s já está agarrado" % alvo.nome
+		"derrubar":
+			if alvo.imune_a_condicao(Ser.CAIDO):
+				return "%s não pode ser derrubado" % alvo.nome
+			if alvo.tem(Ser.CAIDO):
+				return "%s já está no chão" % alvo.nome
+		"desarmar":
+			if _arma_de_mao(alvo).is_empty():
+				return "%s não segura nenhuma arma" % alvo.nome
+	return ""
+
+
+## Faz a manobra. {ok, erro?, tipo, venceu, diferenca, textos}
+func manobra(atacante: Ser, alvo: Ser, tipo: String) -> Dictionary:
+	var motivo := pode_manobrar(atacante, alvo, tipo)
+	if motivo != "":
+		return {"ok": false, "erro": motivo}
+	gastar_acao(atacante, "padrao")
+	var dif := _teste_de_manobra(atacante, alvo)
+	var res := {"ok": true, "tipo": tipo, "venceu": dif > 0, "diferenca": dif, "textos": []}
+	if dif <= 0:
+		res.textos.append("%s resiste." % alvo.nome)
+		return res
+	match tipo:
+		"agarrar":
+			if alvo.tem(Ser.AGARRADO) and alvo.mods_cena.get("agarrado_por") == atacante:
+				var desarmado := ruleset.arma("desarmado")
+				var golpe := dados.rolar_expressao(String(desarmado.get("dano", "1d3"))) + atacante.atributo("for")
+				var real := aplicar_dano(alvo, maxi(1, golpe), "impacto", 0, atacante)
+				res.textos.append("%s esmaga %s: %d de dano." % [atacante.nome, alvo.nome, real])
+			else:
+				alvo.aplicar_condicao(Ser.AGARRADO)
+				alvo.mods_cena["agarrado_por"] = atacante
+				alvo.mods_cena["agarrado_manobra"] = true
+				var lista: Array = atacante.mods_cena.get("agarrando", [])
+				lista.append(alvo)
+				atacante.mods_cena["agarrando"] = lista
+				res.textos.append("%s agarra %s." % [atacante.nome, alvo.nome])
+		"derrubar":
+			alvo.aplicar_condicao(Ser.CAIDO)
+			res.textos.append("%s vai ao chão." % alvo.nome)
+			if dif >= 5 and _empurrar(atacante, alvo, 1) > 0:   # com folga, também empurra 1 quadrado
+				res.textos.append("O golpe ainda o arrasta 1,5 m.")
+		"desarmar":
+			var arma := _arma_de_mao(alvo)
+			alvo.mods_cena["arma_caida"] = String(arma.get("id", ""))
+			res.textos.append("%s derruba %s de %s." % [atacante.nome, String(arma.get("nome", "a arma")).to_lower(), alvo.nome])
+		"empurrar":
+			var andou := _empurrar(atacante, alvo, 1 + dif / 5)
+			res.textos.append("%s empurra %s %s." % [atacante.nome, alvo.nome, ("%s m" % str(andou * 1.5).replace(".", ",")) if andou > 0 else "contra o obstáculo"])
+	for t in res.textos:
+		_log(t)
+	return res
+
+
+## Teste de manobra (p.85): Luta do atacante, com os modificadores de ataque corpo a corpo
+## (flanquear, caído, agarrado…), contra a Luta do alvo. Devolve a diferença (>0: o atacante vence).
+func _teste_de_manobra(atacante: Ser, alvo: Ser) -> int:
+	var arma := ruleset.arma("desarmado")
+	var mods_a := atacante.modificar_ataque(arma, alvo)
+	var mods_b := alvo.modificar_ataque(arma, atacante)
+	var extra_a := int(mods_a.dados_extras)
+	if grade != null and grade.tem(atacante) and grade.tem(alvo) and grade.flanqueando(atacante, alvo):
+		extra_a += 1
+	for _i in 10:
+		var ra := Teste.rolar(dados, atacante.dados_da_pericia("luta"), atacante.bonus_pericia("luta") + int(mods_a.bonus_ataque), 0, extra_a)
+		var rb := Teste.rolar(dados, alvo.dados_da_pericia("luta"), alvo.bonus_pericia("luta"), 0, int(mods_b.dados_extras))
+		if ra.total != rb.total:
+			_log("Manobra: %s %d contra %s %d." % [atacante.nome, ra.total, alvo.nome, rb.total])
+			return ra.total - rb.total
+	return 0
+
+
+## Empurra o alvo para longe do atacante, quadrado a quadrado, até `quadrados` ou um obstáculo.
+## Devolve quantos quadrados andou.
+func _empurrar(atacante: Ser, alvo: Ser, quadrados: int) -> int:
+	if grade == null or not grade.tem(atacante) or not grade.tem(alvo):
+		return 0
+	var dir := grade.posicao(alvo) - grade.posicao(atacante)
+	dir = Vector2i(signi(dir.x), signi(dir.y))
+	if dir == Vector2i.ZERO:
+		return 0
+	var andou := 0
+	for _i in quadrados:
+		var prox := grade.posicao(alvo) + dir
+		if not grade.dentro(prox) or grade.bloqueada(prox) or grade.ocupante(prox) != null:
+			break
+		grade.colocar(alvo, prox)
+		andou += 1
+	if andou > 0:
+		_soltar_agarrados_por_manobra(alvo, "ao ser empurrado")
+		if alvo.tem(Ser.AGARRADO) and alvo.mods_cena.get("agarrado_manobra", false):
+			_soltar(alvo)
+	return andou
+
+
+## A arma que o ser segura e que pode ser derrubada ({} se nenhuma ou já caída).
+## Agentes: a arma equipada (não o desarmado). Ameaças: um ataque que seja arma da tabela.
+func _arma_de_mao(ser: Ser) -> Dictionary:
+	if ser.mods_cena.has("arma_caida"):
+		return {}
+	if ser is Agente:
+		var a := (ser as Agente).arma()
+		return a if String(a.get("id", "desarmado")) != "desarmado" else {}
+	if ser is Ameaca:
+		for at in (ser as Ameaca).ataques:
+			var id := String(at.get("id", ""))
+			if id != "" and id != "desarmado" and ruleset.tem_arma(id):
+				return at
+	return {}
+
+
+## A arma de verdade no ataque: quem teve a arma derrubada luta desarmado até pegá-la.
+func arma_em_maos(atacante: Ser, arma: Dictionary) -> Dictionary:
+	var caida := String(atacante.mods_cena.get("arma_caida", ""))
+	if caida != "" and String(arma.get("id", "")) == caida:
+		return ruleset.arma("desarmado")
+	return arma
+
+
+## Levantar-se do chão: ação de movimento (p.84).
+func levantar(ser: Ser) -> bool:
+	if not ser.tem(Ser.CAIDO) or not gastar_acao(ser, "movimento"):
+		return false
+	ser.condicoes.erase(Ser.CAIDO)
+	_log("%s se levanta." % ser.nome)
+	return true
+
+
+## Pegar a arma derrubada (ela cai no espaço de quem a segurava): ação de movimento (p.84).
+func pegar_arma(ser: Ser) -> bool:
+	if not ser.mods_cena.has("arma_caida") or not gastar_acao(ser, "movimento"):
+		return false
+	ser.mods_cena.erase("arma_caida")
+	_log("%s pega a arma de volta." % ser.nome)
+	return true
+
+
+## Quem agarra por manobra solta a vítima ao se mover (o arrasto do livro fica de fora).
+func _soltar_agarrados_por_manobra(ser: Ser, motivo: String) -> void:
+	for s in ser.mods_cena.get("agarrando", []).duplicate():
+		if s.mods_cena.get("agarrado_manobra", false):
+			_soltar(s)
+			_log("%s solta %s %s." % [ser.nome, s.nome, motivo])
 
 
 ## Sem grade, tudo está "perto". Com grade, verifica a categoria de alcance.
@@ -960,6 +1139,16 @@ func escapar(ser: Ser) -> bool:
 			_soltar(ser)
 			return true
 		return false
+	if ser.mods_cena.get("agarrado_manobra", false):
+		if acoes.has(ser) and not gastar_acao(ser, "padrao"):
+			return false
+		var quem: Ser = ser.mods_cena.get("agarrado_por")
+		if quem == null or _teste_de_manobra(ser, quem) > 0:
+			_log("%s se solta." % ser.nome)
+			_soltar(ser)
+			return true
+		_log("%s não consegue se soltar." % ser.nome)
+		return false
 	if ser.mods_cena.has("agarrado_por"):
 		if acoes.has(ser) and not gastar_acao(ser, "padrao"):
 			return false
@@ -1213,6 +1402,7 @@ func _fim_de_turno(ser: Ser) -> void:
 
 func _soltar(ser: Ser) -> void:
 	ser.condicoes.erase(Ser.AGARRADO)
+	ser.mods_cena.erase("agarrado_manobra")
 	var quem = ser.mods_cena.get("agarrado_por")
 	if quem != null:
 		var lista: Array = quem.mods_cena.get("agarrando", [])
@@ -2176,6 +2366,7 @@ func declarar_reducao_dano(ser: Ser) -> bool:
 ##     "flanqueando": true          — +1 dado em corpo a corpo (p.89)
 ##     "alvo_em_corpo_a_corpo": true — ataque à distância contra alvo engajado: −1 dado (p.85)
 func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, opcoes: Dictionary = {}) -> ResultadoAtaque:
+	arma_base = arma_em_maos(atacante, arma_base)
 	var res := ResultadoAtaque.new()
 	res.atacante = atacante
 	res.alvo = alvo
@@ -2266,6 +2457,8 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	var reacao: Dictionary = _reacoes_declaradas.get(alvo, {})
 	_reacoes_declaradas.erase(alvo)
 	var defesa := alvo.defesa() + (5 if cobertura_leve else 0)
+	if alvo.tem(Ser.CAIDO):
+		defesa += -5 if eh_corpo_a_corpo else 5   # caído (p.310)
 	var rd_extra := 0
 	if not reacao.is_empty():
 		match reacao.tipo:

@@ -6,6 +6,11 @@ extends RefCounted
 
 
 static func jogar(c: Combate, ser: Ser, armas: Dictionary) -> void:
+	# Caído levanta; desarmado pega a arma, se ainda tiver ação de movimento (p.84)
+	if ser.tem(Ser.CAIDO):
+		c.levantar(ser)
+	if ser.mods_cena.has("arma_caida") and int(c.acoes_restantes(ser).get("movimento", 0)) > 0:
+		c.pegar_arma(ser)
 	var alvo := IaAmeaca.alvo_preferido(c, ser, inimigo_mais_proximo(c, ser))
 	if alvo == null:
 		return

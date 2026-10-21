@@ -49,6 +49,10 @@ var _btn_enigma: Button
 var _btn_soltar: Button
 var _btn_apagar: Button
 var _btn_socorrer: Button
+var _btn_manobra: MenuButton
+var _btn_levantar: Button
+var _btn_pegar: Button
+var _manobra_sel := ""   ## "agarrar", "derrubar", "desarmar" ou "empurrar" (docs/39)
 var _btn_acalmar: Button
 var _btn_item_combate: Button
 var _lbl_vez: Label
@@ -341,6 +345,14 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 				_registrar("%s usa %s em %s: +%d PV." % [ator.nome, nome_item, res.alvo.nome, int(res.cura)])
 			else:
 				_registrar("[color=#eda64a]Não dá para usar %s agora.[/color]" % nome_item)
+		"manobra":
+			if res.ok:
+				_registrar("%s tenta %s: %s" % [ator.nome, String(cmd.get("tipo", "")), " ".join(PackedStringArray(res.textos))])
+			else:
+				_registrar("[color=#eda64a]Não dá: %s.[/color]" % res.get("erro", "?"))
+		"levantar", "pegar_arma":
+			if not res.ok:
+				_registrar("[color=#eda64a]Sem ação de movimento.[/color]")
 		"socorrer", "acalmar":
 			if res.ok:
 				_ultimo_teste = res.teste
@@ -407,6 +419,9 @@ func _clicar_celula(celula: Vector2i) -> void:
 			opcoes["alvos"] = _alvos_do_lado(agente, alvo, e)
 		_conjurar(agente, escolha[0], escolha[1], alvo, opcoes)
 		return
+	elif _modo == "manobra" and agente != null and alvo != null and alvo.lado != agente.lado:
+		_modo = ""
+		_enviar("manobra", {"alvo": Comandos.ref(combate, alvo), "tipo": _manobra_sel})
 	elif _modo == "atacar" and agente != null and alvo != null and alvo.lado != agente.lado:
 		var opcoes := {}
 		if _chk_ae.button_pressed and agente.classe_id == "combatente":
@@ -703,7 +718,22 @@ func _montar_interface() -> void:
 	_btn_socorrer.tooltip_text = "Medicina DT 20 (+5 por vez na cena): o aliado ao lado sai de morrendo com 1 PV. Ação padrão."
 	_btn_acalmar = _botao("Acalmar", _acalmar)
 	_btn_acalmar.tooltip_text = "Diplomacia ou Religião treinada, DT 20 (+5 por vez na cena): o aliado ao lado sai de enlouquecendo com 1 SAN. Ação padrão."
-	for b in [_btn_enigma, _btn_soltar, _btn_apagar, _btn_socorrer, _btn_acalmar]:
+	# Manobras de combate (p.85-86): escolhe a manobra e depois o inimigo ao lado
+	_btn_manobra = MenuButton.new()
+	_btn_manobra.text = "Manobra ▾"
+	_btn_manobra.flat = false
+	_btn_manobra.tooltip_text = "Em vez de dano: Luta contra a Luta do alvo. Ação padrão, inimigo ao lado."
+	var menu := _btn_manobra.get_popup()
+	for par in [["Agarrar", "agarrar"], ["Derrubar", "derrubar"], ["Desarmar", "desarmar"], ["Empurrar", "empurrar"]]:
+		menu.add_item(par[0])
+		menu.set_item_metadata(menu.item_count - 1, par[1])
+	menu.index_pressed.connect(func(i: int): _modo_manobra(String(menu.get_item_metadata(i))))
+	extras.add_child(_btn_manobra)
+	_btn_levantar = _botao("Levantar-se", func(): _enviar("levantar"))
+	_btn_levantar.tooltip_text = "Caído: −2 dados no corpo a corpo e só 1,5 m de deslocamento. Levantar é ação de movimento."
+	_btn_pegar = _botao("Pegar a arma", func(): _enviar("pegar_arma"))
+	_btn_pegar.tooltip_text = "A arma caiu aos seus pés. Pegar é ação de movimento."
+	for b in [_btn_enigma, _btn_soltar, _btn_apagar, _btn_socorrer, _btn_acalmar, _btn_levantar, _btn_pegar]:
 		b.theme_type_variation = "BotaoPrincipal"
 		extras.add_child(b)
 
@@ -855,6 +885,13 @@ func _close(alvo: Ser, forte: bool = false) -> void:
 
 func _modo_mover() -> void:
 	_modo = "mover"
+	_atualizar()
+
+
+func _modo_manobra(tipo: String) -> void:
+	_manobra_sel = tipo
+	_modo = "manobra"
+	_registrar("Escolha o inimigo ao lado para %s." % tipo)
 	_atualizar()
 
 
@@ -1047,13 +1084,16 @@ func _atualizar() -> void:
 	_btn_enigma.disabled = agente == null
 	_btn_soltar.visible = agente != null and agente.tem(Ser.AGARRADO)
 	_btn_apagar.visible = agente != null and agente.tem(Ser.EM_CHAMAS)
+	_btn_manobra.disabled = agente == null or sem_padrao
+	_btn_levantar.visible = agente != null and agente.tem(Ser.CAIDO)
+	_btn_pegar.visible = agente != null and agente.mods_cena.has("arma_caida")
 	_btn_socorrer.visible = agente != null and _aliado_ao_lado(agente, Ser.MORRENDO) != null
 	_btn_socorrer.disabled = sem_padrao
 	_btn_acalmar.visible = agente != null and _pericia_para_acalmar(agente) != "" and _aliado_ao_lado(agente, Ser.ENLOUQUECENDO) != null
 	_btn_acalmar.disabled = sem_padrao
 	_btn_item.disabled = agente == null or sem_padrao or (not agente.tem_item("cicatrizante") and _itens_de_combate(agente).is_empty())
 	_motivos_cartas(agente, sem_padrao)
-	if sem_padrao and _modo in ["atacar", "ritual", "ritual_area", "granada", "contra"]:
+	if sem_padrao and _modo in ["atacar", "manobra", "ritual", "ritual_area", "granada", "contra"]:
 		_modo = ""
 	_foco.definir(_foco.valor, agente.pe_disponivel_no_turno() if agente != null else 0)
 	_chk_ae.visible = agente != null and agente.classe_id == "combatente"

@@ -221,3 +221,96 @@ func test_acalmar_exige_treino_e_tira_de_enlouquecendo():
 	assert_false(surtando.tem(Ser.ENLOUQUECENDO))
 	assert_eq(surtando.san, 1)
 	assert_eq(surtando.acalmado_na_cena, 1)
+
+
+# --- Manobras de combate e caído (p.85-86, p.310) ---------------------------------------
+
+func _lutador() -> Agente:
+	var a := Agente.criar(rs, "Lutador", "combatente",
+		{"agi": 2, "for": 3, "int": 1, "pre": 1, "vig": 2},
+		{"luta": "treinado", "fortitude": "treinado"})
+	return a
+
+
+func _arena_manobra() -> Array:
+	var c := Combate.new(rs, Dados.new(1))
+	c.grade = Grade.new(8, 5)
+	var lutador := _lutador()
+	var cultista := Ameaca.criar(rs, "Cultista", FICHA_CULTISTA)
+	cultista.lado = "ameacas"
+	c.adicionar(lutador)
+	c.adicionar(cultista)
+	c.grade.colocar(lutador, Vector2i(2, 2))
+	c.grade.colocar(cultista, Vector2i(3, 2))
+	c.acoes[lutador] = {"padrao": 1, "movimento": 1}
+	c.acoes[cultista] = {"padrao": 1, "movimento": 1}
+	return [c, lutador, cultista]
+
+
+func test_derrubar_deixa_caido_e_caido_pesa():
+	var a := _arena_manobra()
+	var c: Combate = a[0]
+	var lutador: Agente = a[1]
+	var cultista: Ameaca = a[2]
+	var defesa_antes := cultista.defesa()
+	c.dados.forcar([20, 20, 20, 1])   # o lutador (FOR 3: 3 dados) tira 20; o cultista, 1
+	var r := c.manobra(lutador, cultista, "derrubar")
+	assert_true(r.ok)
+	assert_true(r.venceu)
+	assert_true(cultista.tem(Ser.CAIDO))
+	assert_eq(int(c.acoes_restantes(lutador).padrao), 0, "gasta a ação padrão")
+	assert_eq(cultista.deslocamento_quadrados(), 1, "caído anda 1,5 m")
+	var mods := cultista.modificar_ataque(cultista.ataques[0], lutador)
+	assert_eq(int(mods.dados_extras), -2, "−2 dados no corpo a corpo")
+	assert_eq(cultista.defesa(), defesa_antes, "a Defesa base não muda; o ajuste é por tipo de ataque")
+	assert_true(c.levantar(cultista))
+	assert_false(cultista.tem(Ser.CAIDO))
+	assert_false(c.levantar(cultista), "sem caído (e sem movimento), não levanta de novo")
+
+
+func test_desarmar_e_pegar_a_arma():
+	var a := _arena_manobra()
+	var c: Combate = a[0]
+	var lutador: Agente = a[1]
+	var cultista: Ameaca = a[2]
+	# A adaga da ficha de teste não é arma da tabela: são garras, por assim dizer
+	assert_false(c.manobra(lutador, cultista, "desarmar").ok, "sem arma da tabela, não há o que desarmar")
+	var ficha: Dictionary = FICHA_CULTISTA.duplicate(true)
+	ficha.ataques[0].id = "faca"
+	var armado := Ameaca.criar(rs, "Cultista armado", ficha)
+	armado.lado = "ameacas"
+	c.adicionar(armado)
+	c.grade.colocar(armado, Vector2i(2, 3))
+	c.acoes[armado] = {"padrao": 1, "movimento": 1}
+	cultista = armado
+	c.dados.forcar([20, 20, 20, 1])
+	var r := c.manobra(lutador, cultista, "desarmar")
+	assert_true(r.venceu)
+	assert_eq(c.arma_em_maos(cultista, cultista.ataques[0]).id, "desarmado", "luta desarmado até pegar")
+	assert_true(c.pegar_arma(cultista))
+	assert_eq(c.arma_em_maos(cultista, cultista.ataques[0]).id, cultista.ataques[0].id)
+
+
+func test_empurrar_afasta_e_agarrar_prende():
+	var a := _arena_manobra()
+	var c: Combate = a[0]
+	var lutador: Agente = a[1]
+	var cultista: Ameaca = a[2]
+	c.dados.forcar([20, 20, 20, 1])
+	var r := c.manobra(lutador, cultista, "empurrar")
+	assert_true(r.venceu)
+	assert_gt(c.grade.posicao(cultista).x, 3, "empurrado para longe")
+	assert_eq(c.grade.posicao(cultista).y, 2)
+	# Agarrar exige estar ao lado
+	c.acoes[lutador] = {"padrao": 1, "movimento": 1}
+	assert_false(c.manobra(lutador, cultista, "agarrar").ok, "longe demais")
+	c.grade.colocar(cultista, Vector2i(3, 2))
+	c.dados.forcar([20, 20, 20, 1])
+	r = c.manobra(lutador, cultista, "agarrar")
+	assert_true(r.venceu)
+	assert_true(cultista.tem(Ser.AGARRADO))
+	assert_false(c.mover(cultista, Vector2i(4, 2)), "agarrado não anda")
+	# Quem agarra e anda solta
+	c.acoes[lutador] = {"padrao": 1, "movimento": 1}
+	assert_true(c.mover(lutador, Vector2i(2, 3)))
+	assert_false(cultista.tem(Ser.AGARRADO))

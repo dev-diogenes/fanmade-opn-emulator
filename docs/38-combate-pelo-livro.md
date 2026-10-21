@@ -21,8 +21,9 @@
 | Terreno difícil custa o dobro; deslocamento de 9 m = 6 quadrados | ✔ |
 | Desprevenido −5 na Defesa | ✔ |
 | Camuflagem leve: 20% de falha | ✗ Pendente |
-| Posição elevada (+1 dado) e caído (−2 dados no ataque; −5 ou +5 na Defesa) | ✗ Pendente: o jogo não tem quem derrube ou fique em posição elevada |
-| Manobras de combate (agarrar, derrubar, desarmar, empurrar, quebrar, atropelar) para os agentes | ✗ Pendente: só as ameaças têm algumas, pela ficha |
+| Caído (−2 dados no corpo a corpo; −5 ou +5 na Defesa) | ✔ Desde docs/39 |
+| Posição elevada (+1 dado) | ✗ Pendente |
+| Manobras de combate para os agentes | ✔ Agarrar, derrubar, desarmar e empurrar (docs/39). Quebrar e atropelar continuam pendentes |
 | Dano não letal (−5 no ataque) | ✗ Pendente |
 
 ## Primeiros Socorros (Medicina, p.46)

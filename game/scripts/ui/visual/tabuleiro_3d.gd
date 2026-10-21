@@ -230,6 +230,10 @@ func _atualizar_unidade(s: Ser) -> void:
 		no.rotation.z = PI / 2.5
 		rot.text = "%s — caído" % s.nome
 		rot.modulate = Color("e67e22")
+	elif s.tem(Ser.CAIDO):   # derrubado, mas consciente (docs/39)
+		no.rotation.z = PI / 3.0
+		rot.text = "%s — no chão  %d/%d" % [s.nome, s.pv, s.pv_maximo]
+		rot.modulate = Color("f5b041")
 	else:
 		no.rotation.z = 0.0
 		rot.text = "%s  %d/%d" % [s.nome, s.pv, s.pv_maximo]
