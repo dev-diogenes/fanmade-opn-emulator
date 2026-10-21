@@ -10,6 +10,8 @@ var _selecionado: Agente
 var _lista: ItemList
 var _abas: TabContainer
 var _foto_agente: FotoAgente
+var _pentagono: PentagonoAtributos
+var _cabecalho_ficha: VBoxContainer
 var _opt_recruta: OptionButton
 var _ficha: RichTextLabel
 var _caixa_pendencia: VBoxContainer
@@ -38,6 +40,11 @@ var _btn_continuar: Button
 var _relatorio: RichTextLabel
 
 
+## Semente da próxima missão procedural: o briefing mostra a região que ela gera e o
+## "Iniciar missão" usa a mesma (docs/23, C7).
+var semente_proxima := randi() % 1000000
+
+
 func _ready() -> void:
 	_jogo = get_node_or_null("/root/Jogo")
 	carreira = _jogo.carregar_ou_criar() if _jogo != null else Carreira.nova()
@@ -59,6 +66,10 @@ func _ready() -> void:
 		if _jogo.aviso_rede != "":
 			_lbl_erros.text = _jogo.aviso_rede
 			_jogo.aviso_rede = ""
+	# Cerimônia de NEX e patente (docs/23, C7), uma vez por missão
+	if CerimoniaNex.tem_o_que_mostrar(carreira.ultimo_relatorio):
+		CerimoniaNex.abrir(self, carreira)
+		_salvar()
 	# Tutorial (docs/07-tutorial.md): convite ao abrir o jogo e o "?" desta tela
 	Tutorial.botao_ajuda(self, "base", _alvos_do_tutorial)
 	if Tutorial.convidar(self, func(): Tutorial.abrir("base", self, _alvos_do_tutorial())) == null:
@@ -136,10 +147,12 @@ func _montar_interface() -> void:
 	_opt_recruta = OptionButton.new()
 	_opt_recruta.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	linha_rec.add_child(_opt_recruta)
-	linha_rec.add_child(_botao("Recrutar", _recrutar))
+	var recrutar := _botao("Recrutar pronto", _recrutar)
+	recrutar.tooltip_text = "Traz um agente com a ficha já feita. Para montar a ficha você mesmo, use \"Criar ficha de agente\"."
+	linha_rec.add_child(recrutar)
 	c1.add_child(linha_rec)
 	# E2 (docs/17): criar o próprio agente, ficha por ficha
-	var novo := _botao("+ Novo agente (criar ficha)", _criar_agente)
+	var novo := _botao("+ Criar ficha de agente", _criar_agente)
 	novo.theme_type_variation = "BotaoPrincipal"
 	c1.add_child(novo)
 	var doc := _papel(true)
@@ -156,6 +169,17 @@ func _montar_interface() -> void:
 	_foto_agente = FotoAgente.new()
 	_foto_agente.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	hdoc.add_child(_foto_agente)
+	# Ficha em blocos (docs/23, C5): cabeçalho, barras e números ao lado do pentágono;
+	# perícias em duas colunas, habilidades e rituais embaixo
+	var blocos := HBoxContainer.new()
+	blocos.add_theme_constant_override("separation", Tema.ESPACO_GG)
+	vdoc.add_child(blocos)
+	_pentagono = PentagonoAtributos.new()
+	blocos.add_child(_pentagono)
+	_cabecalho_ficha = VBoxContainer.new()
+	_cabecalho_ficha.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_cabecalho_ficha.add_theme_constant_override("separation", 6)
+	blocos.add_child(_cabecalho_ficha)
 	_ficha = RichTextLabel.new()
 	_ficha.bbcode_enabled = true
 	_ficha.fit_content = true
@@ -331,11 +355,13 @@ func _montar_interface() -> void:
 func _etiqueta_item(item: Dictionary) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
-	b.custom_minimum_size = Vector2(232, 64)
-	b.clip_text = true
+	b.custom_minimum_size = Vector2(372, 76)   # três por linha, nome inteiro em até duas linhas (docs/23)
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var amaldicoado := item.has("maldicoes")
 	var papel := Tema.caixa_papel(Vector2(12, 8))
+	papel.content_margin_left = 58   # espaço do ícone
 	var marcado := Tema.caixa_papel(Vector2(12, 8))
+	marcado.content_margin_left = 58
 	marcado.modulate_color = Color(1.0, 0.93, 0.85)
 	for estado in ["normal", "hover", "focus", "disabled"]:
 		b.add_theme_stylebox_override(estado, papel)
@@ -353,10 +379,13 @@ func _etiqueta_item(item: Dictionary) -> Button:
 	var cat: String = ["0", "I", "II", "III", "IV", "V"][mini(5, int(item.get("categoria", 0)))]
 	b.text = "%s%s
 cat. %s · %d esp." % ["☠ " if amaldicoado else "", item.nome, cat, int(item.get("espacos", 1))]
+	var efeito := IconeItem.efeito(item, carreira.ruleset)
 	if amaldicoado:
-		b.tooltip_text = "Maldições: %s" % ", ".join(PackedStringArray(item.maldicoes.map(func(m): return "%s (%s) — %s" % [m.nome, m.elemento, m.descricao])))
+		b.tooltip_text = "%s\nMaldições: %s" % [efeito, ", ".join(PackedStringArray(item.maldicoes.map(func(m): return "%s (%s) — %s" % [m.nome, m.elemento, m.descricao])))]
 	else:
-		b.tooltip_text = "%s — categoria %s, %d espaço(s)" % [item.nome, cat, int(item.get("espacos", 1))]
+		b.tooltip_text = "%s — categoria %s, %d espaço(s)\n%s" % [item.nome, cat, int(item.get("espacos", 1)), efeito]
+	var icone := IconeItem.tipo(item)
+	b.set_meta("icone", icone)
 	# Carimbo "REQUISITADO" quando marcado
 	var carimbo := Label.new()
 	carimbo.text = "REQUISITADO"
@@ -366,7 +395,7 @@ cat. %s · %d esp." % ["☠ " if amaldicoado else "", item.nome, cat, int(item.g
 	var titulo := Tema.fonte_titulo()
 	if titulo != null:
 		carimbo.add_theme_font_override("font", titulo)
-	carimbo.position = Vector2(128, 30)
+	carimbo.position = Vector2(250, 40)
 	carimbo.rotation_degrees = -8
 	carimbo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	carimbo.visible = false
@@ -374,6 +403,8 @@ cat. %s · %d esp." % ["☠ " if amaldicoado else "", item.nome, cat, int(item.g
 	# No draw (e não no toggled): a Base marca as etiquetas com set_pressed_no_signal
 	b.draw.connect(func():
 		carimbo.visible = b.button_pressed
+		IconeItem.desenhar(b, icone, Vector2(30, b.size.y / 2.0), 17.0, Tema.SANGUE if amaldicoado else Color(Tema.TINTA, 0.85))
+		b.draw_line(Vector2(54, 10), Vector2(54, b.size.y - 10), Color(Tema.TINTA, 0.25), 1.0)
 		if amaldicoado:
 			b.draw_rect(Rect2(Vector2(1, 1), b.size - Vector2(2, 2)), Color(Tema.SANGUE_CLARO, 0.8), false, 2.0))
 	return b
@@ -496,7 +527,9 @@ func _atualizar_agente() -> void:
 	if _foto_agente != null:
 		_foto_agente.mostrar(a.classe_id, a.aparencia, a.tom)
 		_foto_agente.legenda = a.nome
-	_ficha.text = DossieAgente.ficha_bbcode(a)
+	_pentagono.agente = a
+	_montar_cabecalho_ficha(a)
+	_ficha.text = DossieAgente.ficha_bbcode(a, false)
 	for item_id in _checks_itens:
 		_checks_itens[item_id].set_pressed_no_signal(item_id in a.equipamento)
 	_atualizar_armas_requisicao()
@@ -505,6 +538,52 @@ func _atualizar_agente() -> void:
 	_lbl_requisicao.text = "Equipando %s (%s): até %d %s de categoria I, %d de II e %d de III." % [a.nome, a.patente().get("nome", "?"),
 		int(lim["1"]), "item" if int(lim["1"]) == 1 else "itens", int(lim["2"]), int(lim["3"])]
 	_montar_pendencia(a)
+
+
+## Nome, classe e patente em destaque, e PV/PE/SAN em barras de tinta (docs/23, C5).
+func _montar_cabecalho_ficha(a: Agente) -> void:
+	for f in _cabecalho_ficha.get_children():
+		f.queue_free()
+	var rs := carreira.ruleset
+	var nome := Label.new()
+	nome.text = a.nome.to_upper()
+	nome.add_theme_color_override("font_color", Tema.TINTA)
+	nome.add_theme_font_size_override("font_size", Tema.FONTE_G + 6)
+	var ft := Tema.fonte_titulo()
+	if ft != null:
+		nome.add_theme_font_override("font", ft)
+	_cabecalho_ficha.add_child(nome)
+	var sub := Label.new()
+	sub.text = "%s · %s · origem %s" % [rs.classe(a.classe_id).nome, rs.trilha(a.classe_id, a.trilha_id).get("nome", a.trilha_id) if a.trilha_id != "" else "sem trilha",
+		rs.origem(a.origem_id).nome if a.origem_id != "" else "—"]
+	sub.add_theme_color_override("font_color", Tema.TINTA)
+	_cabecalho_ficha.add_child(sub)
+	var nex := Label.new()
+	nex.text = "NEX %d%%  ·  %s (%d PP)  ·  Defesa %d  ·  Desloc. %d m" % [a.nex, a.patente().get("nome", "?"), a.pp, a.defesa(), int(a.deslocamento_m())]
+	nex.add_theme_color_override("font_color", Tema.TINTA)
+	_cabecalho_ficha.add_child(nex)
+	for par in [["PV", a.pv, a.pv_maximo, Tema.SANGUE], ["PE", a.pe, a.pe_maximo, Tema.ELEMENTO.energia.darkened(0.3)], ["SAN", a.san, a.san_maximo, Color("2f6f7a")]]:
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		var l := Label.new()
+		l.text = par[0]
+		l.custom_minimum_size = Vector2(36, 0)
+		l.add_theme_color_override("font_color", Tema.TINTA)
+		h.add_child(l)
+		var barra := ProgressBar.new()
+		barra.max_value = maxi(1, int(par[2]))
+		barra.value = int(par[1])
+		barra.show_percentage = false
+		barra.custom_minimum_size = Vector2(220, 14)
+		barra.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		barra.add_theme_stylebox_override("background", Tema.caixa(Color(Tema.TINTA, 0.08), Color(Tema.TINTA, 0.45), 1, 2, Vector2.ZERO))
+		barra.add_theme_stylebox_override("fill", Tema.caixa(par[3], (par[3] as Color).darkened(0.3), 1, 2, Vector2.ZERO))
+		h.add_child(barra)
+		var n := Label.new()
+		n.text = "%d / %d" % [int(par[1]), int(par[2])]
+		n.add_theme_color_override("font_color", Tema.TINTA)
+		h.add_child(n)
+		_cabecalho_ficha.add_child(h)
 
 
 func _atualizar_armas_requisicao() -> void:
@@ -856,7 +935,7 @@ func _iniciar() -> void:
 		"comunidade":
 			_jogo.iniciar_missao_comunidade(grupo, op.definicao)
 		_:
-			_jogo.iniciar_missao(grupo)
+			_jogo.iniciar_missao(grupo, semente_proxima)   # a mesma região do briefing
 
 
 # --- Lista de missões: procedural, campanha (Fase 7) e comunidade (Fase 6) ---------
@@ -893,7 +972,7 @@ func _mostrar_missao() -> void:
 	var texto := ""
 	match String(op.tipo):
 		"procedural":
-			texto = "Um mapa novo a cada missão, com encontros, eventos e investigações sorteados."
+			texto = briefing_procedural(Missao.previa(semente_proxima), _grupo())
 		"campanha":
 			texto = _texto_da_campanha(d)
 		"comunidade":
@@ -903,6 +982,31 @@ func _mostrar_missao() -> void:
 	if not op.erros.is_empty():
 		texto += "\n[color=#a51c1c]Erros: %s[/color]" % "; ".join(PackedStringArray(op.erros))
 	_txt_missao.text = texto
+
+
+## Arquivo do caso da missão procedural (docs/23, C7), em BBCode: número, região, o que se
+## sabe e o grupo designado. Estático para os testes.
+static func briefing_procedural(p: Dictionary, grupo: Array) -> String:
+	var linhas := PackedStringArray()
+	linhas.append("[b]ARQUIVO Nº %04d · OPERAÇÃO EM CAMPO[/b]" % int(p.numero))
+	linhas.append("[color=#8e1b22]CONFIDENCIAL[/color]")
+	linhas.append("")
+	linhas.append("[b]Região:[/b] %s, %d áreas no mapa." % [" e ".join(PackedStringArray(p.terrenos)), int(p.celulas)])
+	var ocupacao := PackedStringArray()
+	if int(p.cidades) > 0:
+		ocupacao.append("%d trecho%s de cidade" % [int(p.cidades), "" if int(p.cidades) == 1 else "s"])
+	if int(p.vilas) > 0:
+		ocupacao.append("%d vila%s onde descansar" % [int(p.vilas), "" if int(p.vilas) == 1 else "s"])
+	if not ocupacao.is_empty():
+		linhas.append("[b]Gente:[/b] %s." % ", ".join(ocupacao))
+	linhas.append("[b]Locais a investigar:[/b] %d. [b]Ocorrências relatadas:[/b] %d." % [int(p.investigacoes), int(p.eventos)])
+	linhas.append("")
+	linhas.append("[b]Sinais:[/b] %s" % p.sinais)
+	linhas.append("[b]Objetivo:[/b] %s" % p.objetivo)
+	if not grupo.is_empty():
+		linhas.append("")
+		linhas.append("[b]Agentes designados:[/b] %s." % ", ".join(PackedStringArray(grupo.map(func(a): return "%s (%s, NEX %d%%)" % [a.nome, a.classe_id, a.nex]))))
+	return "\n".join(linhas)
 
 
 ## Ponto em que a campanha está: prólogo (na primeira missão), título, NEX e o texto de abertura.

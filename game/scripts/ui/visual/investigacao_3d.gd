@@ -12,6 +12,11 @@ var _marcas: Dictionary = {}      ## ponto_id -> Node3D (marcador flutuante)
 var _luz: OmniLight3D
 var _ambiente: Environment
 var _anel_sel: MeshInstance3D
+var _rotulos_pontos: Dictionary = {}   ## ponto_id -> Label3D (docs/23: só perto e fora do HUD)
+## Distância até onde o nome de um ponto aparece (o alcance para investigar é 1,5).
+const ALCANCE_ROTULO := 2.8
+## Faixa de baixo da tela ocupada pelo HUD (retratos, bilhete, cartas): rótulo ali some.
+const FAIXA_HUD := 0.7
 var _nivel_luz := 0
 var _figuras: Dictionary = {}     ## Agente -> Node3D (andam com WASD, docs/13)
 const ALCANCE_PONTO := 1.5        ## distância para investigar um ponto
@@ -62,7 +67,10 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 		var p: Dictionary = pontos[i]
 		var ang := TAU * i / pontos.size() + 0.4
 		var pos := Vector3(cos(ang) * RAIO_PONTOS, 0, sin(ang) * RAIO_PONTOS)
-		var prop := _prop_para(String(cena.get("visual", cena.id)), i)
+		# Peça pelo tipo do ponto (docs/23, C6); sem palavra conhecida, a peça antiga da cena
+		var prop := PropsInvestigacao.criar(String(p.id), String(p.nome))
+		if prop == null:
+			prop = _prop_para(String(cena.get("visual", cena.id)), i)
 		prop.position = pos
 		prop.rotation.y = -ang
 		add_child(prop)
@@ -75,6 +83,7 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 		var rot := Pecas.rotulo(p.nome, 34, Tema.PERGAMINHO)
 		rot.position = pos + Vector3(0, 1.45, 0)
 		add_child(rot)
+		_rotulos_pontos[p.id] = rot
 	var cores := Tema.CORES_JOGADORES
 	for i in agentes.size():
 		var f := Pecas.do_agente(agentes[i], cores[i % cores.size()], 0.9)
@@ -184,6 +193,21 @@ func mover_agente(a: Agente, dir: Vector3, delta: float) -> void:
 
 
 ## Ponto de interesse ao alcance do agente ("" se nenhum).
+## Nomes dos pontos só perto do agente da vez (ou o escolhido) e nunca atrás do HUD
+## (docs/23, C6). Chamado a cada quadro pela cena.
+func atualizar_rotulos(a: Agente, escolhido: String) -> void:
+	var f: Node3D = _figuras.get(a)
+	var cam := rig.camera if rig != null else null
+	var altura_tela := cam.get_viewport().get_visible_rect().size.y if cam != null else 0.0
+	for pid in _rotulos_pontos:
+		var rot: Label3D = _rotulos_pontos[pid]
+		var perto: bool = f != null and Vector2(rot.position.x - f.position.x, rot.position.z - f.position.z).length() < ALCANCE_ROTULO
+		var ver: bool = perto or pid == escolhido
+		if ver and cam != null and altura_tela > 0.0 and not cam.is_position_behind(rot.global_position):
+			ver = cam.unproject_position(rot.global_position).y < altura_tela * FAIXA_HUD
+		rot.visible = ver
+
+
 func ponto_proximo(a: Agente, restantes: Array) -> String:
 	var f: Node3D = _figuras.get(a)
 	if f == null:

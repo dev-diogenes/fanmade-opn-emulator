@@ -25,6 +25,7 @@
 | [20-critica-pos-acessibilidade.md](20-critica-pos-acessibilidade.md) | Nova crítica de todas as telas: o que mudou desde a 15, chance nas escolhas, clima do mundo 3D, contraste e fontes medidos, opções C1–C8 |
 | [21-chance-vez-e-limpeza.md](21-chance-vez-e-limpeza.md) | Chance nas escolhas (evento, investigação, ataque), faixa da vez da ameaça e a limpeza das pendências das críticas 15 e 20 |
 | [22-clima-de-terror-3d.md](22-clima-de-terror-3d.md) | Noite no mapa e no título, Membrana pesando no clima, casas acesas e combate no terreno do encontro (clareira ao luar) |
+| [23-arquivo-investigacao-progressao.md](23-arquivo-investigacao-progressao.md) | Arsenal com ícones e efeitos, ficha da Base com pentágono, investigação mais limpa, briefing procedural e cerimônia de NEX |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

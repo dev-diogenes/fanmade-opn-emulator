@@ -10,20 +10,31 @@ var _usar_item: Callable
 
 
 ## Texto da ficha em BBCode, com cores legíveis sobre papel (a Base usa o mesmo).
-static func ficha_bbcode(a: Agente) -> String:
+## `completa` = false omite o cabeçalho, os números e os atributos (a ficha em blocos da Base
+## mostra isso em barras e no pentágono, docs/23) e põe as perícias em duas colunas.
+static func ficha_bbcode(a: Agente, completa: bool = true) -> String:
 	var rs := a.ruleset
 	var linhas: Array[String] = []
-	linhas.append("[b]%s[/b] — %s (%s), origem %s" % [a.nome, rs.classe(a.classe_id).nome, a.trilha_id if a.trilha_id != "" else "sem trilha", rs.origem(a.origem_id).nome if a.origem_id != "" else "—"])
-	linhas.append("NEX %d%%   %s (%d PP)" % [a.nex, a.patente().get("nome", "?"), a.pp])
-	linhas.append("PV %d/%d   PE %d/%d   SAN %d/%d   Defesa %d   Desloc. %d m" % [a.pv, a.pv_maximo, a.pe, a.pe_maximo, a.san, a.san_maximo, a.defesa(), int(a.deslocamento_m())])
-	var attrs := PackedStringArray()
-	for k in ["agi", "for", "int", "pre", "vig"]:
-		attrs.append("%s %d" % [k.to_upper(), a.atributo(k)])
-	linhas.append("  ".join(attrs))
+	if completa:
+		linhas.append("[b]%s[/b] — %s (%s), origem %s" % [a.nome, rs.classe(a.classe_id).nome, a.trilha_id if a.trilha_id != "" else "sem trilha", rs.origem(a.origem_id).nome if a.origem_id != "" else "—"])
+		linhas.append("NEX %d%%   %s (%d PP)" % [a.nex, a.patente().get("nome", "?"), a.pp])
+		linhas.append("PV %d/%d   PE %d/%d   SAN %d/%d   Defesa %d   Desloc. %d m" % [a.pv, a.pv_maximo, a.pe, a.pe_maximo, a.san, a.san_maximo, a.defesa(), int(a.deslocamento_m())])
+		var attrs := PackedStringArray()
+		for k in ["agi", "for", "int", "pre", "vig"]:
+			attrs.append("%s %d" % [k.to_upper(), a.atributo(k)])
+		linhas.append("  ".join(attrs))
 	var pers := PackedStringArray()
 	for p in a.pericias:
 		pers.append("%s %+d" % [rs.pericia(p).nome, a.bonus_pericia(p)])
-	linhas.append("[color=#4e4034]Perícias:[/color] " + ", ".join(pers))
+	if completa:
+		linhas.append("[color=#4e4034]Perícias:[/color] " + ", ".join(pers))
+	else:
+		var tabela := "[table=2]"
+		for p in pers:
+			tabela += "[cell]%s     [/cell]" % p
+		if pers.size() % 2 == 1:
+			tabela += "[cell][/cell]"
+		linhas.append("[b]Perícias[/b]\n" + tabela + "[/table]")
 	var habs := PackedStringArray()
 	for h in a.habilidades():
 		habs.append(h.nome if h.get("implementado", false) else _sem_efeito(h.nome))

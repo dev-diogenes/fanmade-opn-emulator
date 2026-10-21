@@ -54,6 +54,32 @@ var _descansou: Dictionary = {}          ## Agente -> hex onde já descansou nes
 var _turnos_sem_surgimento := 0
 
 
+const NOMES_TERRENO := {"campo": "campos abertos", "estrada": "estradas de terra", "floresta": "mata fechada",
+	"pantano": "brejo", "morro": "morros", "cidade": "cidade", "ruina": "ruínas", "agua": "água parada"}
+
+## O que a Ordem sabe antes de mandar o grupo (docs/23, C7), sem estragar o caso: a região do
+## mapa que esta semente vai gerar (terrenos que mais aparecem, vilas, cidades, locais a
+## investigar e eventos relatados) e os sinais do caso. Quem, o quê e onde ficam para o jogo.
+static func previa(semente_: int) -> Dictionary:
+	var mapa_ := GeradorMapa.gerar(semente_)
+	var terrenos := {}
+	var tipos := {}
+	for h in mapa_.celulas:
+		var t := mapa_.terreno(h)
+		terrenos[t] = int(terrenos.get(t, 0)) + 1
+		var tipo := String(mapa_.conteudo(h).get("tipo", ""))
+		if tipo != "":
+			tipos[tipo] = int(tipos.get(tipo, 0)) + 1
+	var ordem: Array = terrenos.keys()
+	ordem.sort_custom(func(a, b): return int(terrenos[a]) > int(terrenos[b]))
+	var principais: Array = ordem.slice(0, 2).map(func(t): return String(NOMES_TERRENO.get(t, t)))
+	var casos := DadosJogo.ler("casos")
+	return {"numero": semente_ % 10000, "terrenos": principais, "cidades": int(terrenos.get("cidade", 0)),
+		"vilas": int(tipos.get("vila", 0)), "investigacoes": int(tipos.get("investigacao", 0)),
+		"eventos": int(tipos.get("evento", 0)), "celulas": mapa_.celulas.size(),
+		"sinais": String(casos.resumo), "objetivo": String(casos.objetivo)}
+
+
 ## Nova missão. `grupo`: agentes da carreira (vazio = grupo padrão de demonstração).
 static func nova(semente_: int, ruleset_: Ruleset = null, grupo: Array = [], opcoes_: Dictionary = {}) -> Missao:
 	var m := Missao.new()

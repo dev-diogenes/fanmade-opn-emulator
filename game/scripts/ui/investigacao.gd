@@ -20,7 +20,7 @@ var _fita: Control
 var _lbl_vez: Label
 var _rec: Label
 var _quadro: QuadroInvestigacao
-var _quadro_aberto := true
+var _quadro_aberto := false   ## docs/23 (C6): a cena 3D primeiro; o quadro abre com Tab ou na pista nova
 var _btn_quadro: Button
 var _grupo: HBoxContainer
 var _cartoes: Dictionary = {}
@@ -90,6 +90,8 @@ func _alvos_do_tutorial() -> Dictionary:
 func _process(delta: float) -> void:
 	_tempo += delta
 	_andar(delta)
+	if _visao != null and cena != null:
+		_visao.atualizar_rotulos(cena.agente_atual(), _ponto)
 	if _rec != null:
 		var s := int(_tempo)
 		_rec.text = "%s REC   00:%02d:%02d" % ["●" if int(_tempo * 2.0) % 2 == 0 else "  ", s / 60, s % 60]
@@ -219,6 +221,19 @@ func _posicionar_quadro(imediato: bool = false) -> void:
 func _alternar_quadro() -> void:
 	_quadro_aberto = not _quadro_aberto
 	_posicionar_quadro()
+	if _quadro_aberto:
+		_btn_quadro.text = Atalhos.com_tecla("Quadro", "quadro")   # a pista nova já foi vista
+
+
+## Pista nova com o quadro fechado (docs/23, C6): o botão pulsa e avisa; o quadro abre sozinho
+## para mostrar a foto sendo presa.
+func _avisar_pista() -> void:
+	if not _quadro_aberto:
+		_alternar_quadro()
+	var tw := _btn_quadro.create_tween()
+	for i in 3:
+		tw.tween_property(_btn_quadro, "modulate", Color(1.6, 1.3, 0.8), 0.18)
+		tw.tween_property(_btn_quadro, "modulate", Color.WHITE, 0.22)
 
 
 func _montar_grupo() -> void:
@@ -449,12 +464,17 @@ func _opcoes_procurar(a: Agente) -> void:
 	for per in pt.pericias:
 		previsoes.append(cena.prever_procurar(_ponto, per, _foco, _opcoes_selos(a, per)))
 	var melhor := LinhaTeste.melhor(previsoes)
+	# Perícia que só vale treinada não fica escolhida: começa pela de maior chance (docs/23)
+	var chaves: Array = pt.pericias.keys()
+	if LinhaTeste.bloqueada(previsoes[chaves.find(_pericia)]) and melhor >= 0:
+		_pericia = String(chaves[melhor])
 	var i := 0
 	for per in pt.pericias:
 		var prev: Dictionary = previsoes[i]
 		var texto := LinhaTeste.texto(missao.ruleset.pericia(per).nome, prev, int(prev.get("dt", pt.pericias[per]))) + \
 			("  ★" if i == melhor and pt.pericias.size() > 1 else "")
 		var b := _botao_papel(_caixa_bilhete, texto, per == _pericia, func(): _pericia = per; _montar_opcoes())
+		b.disabled = LinhaTeste.bloqueada(prev)
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.tooltip_text = LinhaTeste.explicar(a, per, prev)
 		i += 1
@@ -793,8 +813,7 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 					"Sem dados: o treino em %s basta%s" % [missao.ruleset.pericia(per).get("nome", per), "" if int(ex.custo) == 0 else " (%d PE)" % int(ex.custo)], [], true)
 				Tema.pulso_vhs(_vista, 0.8, 0.6)
 				Som.tocar("pista")
-				if not _quadro_aberto:
-					_alternar_quadro()
+				_avisar_pista()
 			else:
 				_log.append_text(Tema.bb("Não dá para examinar: falta treino ou PE.", Tema.AVISO) + "\n")
 		"procurar":
@@ -803,8 +822,7 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 			elif String(res.teste.get("pista", "")) != "":
 				Tema.pulso_vhs(_vista, 0.8, 0.6)   # o paranormal "aparece" na fita
 				Som.tocar("pista")
-				if not _quadro_aberto:
-					_alternar_quadro()
+				_avisar_pista()
 			elif not res.teste.get("sucesso", true):
 				Tema.pulso_vhs(_vista, 0.35, 0.3)
 		"facilitar":
