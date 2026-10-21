@@ -22,6 +22,7 @@
 | [17-criacao-e-sanidade.md](17-criacao-e-sanidade.md) | Criação de agente em dossiê (E2) e sanidade com consequência visual: vultos, sussurros, imagem que respira (E6) |
 | [18-atalhos-flashes-daltonismo.md](18-atalhos-flashes-daltonismo.md) | Atalhos remapeáveis e folha de atalhos (A4), modo suave de flashes e aviso (A5), paleta azul e laranja para daltonismo (A6) |
 | [19-pendencias-visuais.md](19-pendencias-visuais.md) | 1ª pessoa no mapa (olho acima da névoa, virada para o território), cartas com texto maior, foto 3x4 e aparência do agente |
+| [20-critica-pos-acessibilidade.md](20-critica-pos-acessibilidade.md) | Nova crítica de todas as telas: o que mudou desde a 15, chance nas escolhas, clima do mundo 3D, contraste e fontes medidos, opções C1–C8 |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.
