@@ -122,7 +122,10 @@ func test_vitoria_da_pp_nex_e_promocao():
 	var c := _carreira()
 	var grupo := c.roster.duplicate()
 	var m := c.iniciar_missao(grupo, 7)
-	m.pistas = 5
+	# 4 + 4 + 3 pistas para perguntas que pedem 2: são 5 adicionais (Tabela 3.2, docs/43)
+	for par in [["quem", 4], ["oque", 4], ["onde", 3]]:
+		for i in par[1]:
+			m.caso.registrar_pista("{indicio}", par[0], "t")
 	for pid in ["quem", "oque"]:   # a ficha responde o objetivo (p.79): o caso foi solucionado
 		m.caso.pergunta(pid).respondida = true
 	m._preparar_encontro(m.mapa.encontrar("objetivo"), "covil", true)
@@ -286,3 +289,19 @@ func test_sem_ficha_respondida_o_caso_fica_em_aberto():
 	assert_false(r.solucionado)
 	assert_eq(r.pp, -2, "sem solução do caso; −2 pelo inocente (Tabela 3.2)")
 	assert_true(r.detalhes_pp.any(func(l): return l.begins_with("Caso em aberto")))
+
+
+
+func test_so_pistas_alem_das_necessarias_dao_pp():
+	var c := _carreira()
+	var m := c.iniciar_missao(c.roster.duplicate(), 7)
+	for pid in ["quem", "oque"]:
+		m.caso.registrar_pista("{indicio}", pid, "t")
+		m.caso.registrar_pista("{indicio}", pid, "t")
+		m.caso.pergunta(pid).respondida = true
+	m.pistas = 9   # eventos e cenas contados no mapa: não viram PP por si
+	assert_eq(m.caso.pistas_adicionais(), 0, "duas pistas por pergunta é o necessário")
+	m._preparar_encontro(m.mapa.encontrar("objetivo"), "covil", true)
+	m.concluir_encontro("agentes")
+	var r := c.encerrar_missao()
+	assert_eq(r.pp, 10, "só a solução do caso")

@@ -45,6 +45,7 @@
 | [40-combate-terreno-finta-nao-letal.md](40-combate-terreno-finta-nao-letal.md) | Posição elevada e camuflagem leve na arena, Fintar, dano não letal (rendidos são interrogados e dão pista) e arrastar quem está agarrado |
 | [41-playtest-notas.md](41-playtest-notas.md) | Playtest de 20 missões (investigador × pressa): missões curtas, grupo separado sem aviso, dedução fácil, PP por pista, serra sem motivo; prioridades |
 | [42-missoes-mais-longas-e-grupo.md](42-missoes-mais-longas-e-grupo.md) | Covil selado até descobrir onde (abre à força com a Membrana rompida), mapa 20×12, aviso de grupo separado e o piloto que investiga; missões de 8 a 13 turnos |
+| [43-pp-por-pista-adicional.md](43-pp-por-pista-adicional.md) | PP por pista adicional como na Tabela 3.2: só as pistas além das necessárias; cerca de 12 PP por missão |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

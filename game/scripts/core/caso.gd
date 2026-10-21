@@ -143,6 +143,15 @@ func solucionado() -> bool:
 	return true
 
 
+## Pistas adicionais (Tabela 3.2, docs/43): as que passam do que cada pergunta precisava.
+## As necessárias já são pagas pela solução do caso; cada uma a mais vale PP.
+func pistas_adicionais() -> int:
+	var n := 0
+	for q in perguntas:
+		n += maxi(0, int(q.encontradas) - int(q.pistas_necessarias))
+	return n
+
+
 ## As perguntas que faltam para solucionar o caso (textos).
 func faltam_para_solucao() -> Array[String]:
 	var lista: Array[String] = []

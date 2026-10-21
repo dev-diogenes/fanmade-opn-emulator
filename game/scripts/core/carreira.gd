@@ -236,9 +236,12 @@ func encerrar_missao() -> Dictionary:
 		linhas_pp.append("Solução do caso: %+d" % ruleset.pp_por_evento("solucao_do_caso"))
 	elif m.vitoria:   # só vale o que está na ficha (p.79)
 		linhas_pp.append("Caso em aberto: a ficha não responde o objetivo (+0)")
-	if m.pistas > 0:
-		pp_base += ruleset.pp_por_evento("pista_adicional") * m.pistas
-		linhas_pp.append("Pistas adicionais (%d): %+d" % [m.pistas, ruleset.pp_por_evento("pista_adicional") * m.pistas])
+	# Pista adicional (Tabela 3.2): a que passa do que a ficha precisava (docs/43). Sem caso
+	# (missões antigas), valem as pistas reunidas, como antes.
+	var adicionais := m.caso.pistas_adicionais() if m.caso != null else m.pistas
+	if adicionais > 0:
+		pp_base += ruleset.pp_por_evento("pista_adicional") * adicionais
+		linhas_pp.append("Pistas adicionais (%d): %+d" % [adicionais, ruleset.pp_por_evento("pista_adicional") * adicionais])
 	if m.inocentes_mortos > 0:
 		pp_base += ruleset.pp_por_evento("morte_de_inocente") * m.inocentes_mortos
 		linhas_pp.append("Inocentes mortos (%d): %+d" % [m.inocentes_mortos, ruleset.pp_por_evento("morte_de_inocente") * m.inocentes_mortos])
