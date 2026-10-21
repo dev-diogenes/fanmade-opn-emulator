@@ -850,10 +850,14 @@ func _mostrar_dica(pos: Vector2) -> void:
 		var t: Dictionary = _terrenos.get(missao.mapa.terreno(h), {})
 		var custo := int(t.get("custo", 1))
 		linhas.append(String(t.get("nome", missao.mapa.terreno(h))))
-		linhas.append("Intransponível" if custo < 0 else "Custo de movimento: %d" % custo)
+		if custo < 0 and t.get("escalavel", false):
+			linhas.append("Escalável: só com um 20 nos dados de movimento (custo %d)" % int(t.get("custo_escalada", 2)))
+		else:
+			linhas.append("Intransponível" if custo < 0 else "Custo de movimento: %d" % custo)
 		var tipo := String(missao.mapa.conteudo(h).get("tipo", ""))
 		var nomes := {"encontro": "⚔ Encontro", "evento": "? Evento", "vila": "⌂ Vila (descanso)", "investigacao": "◎ Investigação",
-			"objetivo": "✝ Covil", "inicio": "Ponto de partida"}
+			"objetivo": "✝ Covil", "inicio": "Ponto de partida",
+			"mirante": "▲ Mirante: algo espera lá em cima"}
 		if nomes.has(tipo):
 			linhas.append(nomes[tipo])
 		if tipo == "objetivo" and not missao.covil_aberto():

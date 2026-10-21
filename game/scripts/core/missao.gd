@@ -226,6 +226,8 @@ func _entrar(a: Agente, h: Vector2i) -> void:
 			_preparar_investigacao(h, c.cena)
 		"vila", "inicio":
 			_log("%s chega a %s. Dá para descansar aqui." % [a.nome, c.get("nome", "uma cidade")])
+		"mirante":
+			_achar_no_alto(a, h, String(c.get("achado", "")))
 
 
 func pode_descansar() -> bool:
@@ -560,6 +562,20 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool, semente_s
 	if semente_salva < 0:
 		_log("[color=#e0574a][b]Encontro: %s![/b][/color] (%d agente(s) entram no combate)" % [info.nome, participantes.size()])
 	encontro_iniciado.emit(encontro_pendente)
+
+
+## O achado do alto da serra (docs/45): aplica os efeitos e o mirante se esgota.
+func _achar_no_alto(a: Agente, h: Vector2i, achado_id: String) -> void:
+	var achado: Dictionary = {}
+	for x in _cfg.get("achados_da_serra", []):
+		if x.id == achado_id:
+			achado = x
+	mapa.limpar_conteudo(h)
+	if achado.is_empty():
+		return
+	_log("[color=#e3c27a][b]%s.[/b] %s[/color]" % [achado.titulo, achado.texto])
+	for ef in achado.get("efeitos", []):
+		_aplicar_efeito(a, ef, h)
 
 
 ## O covil abre? (docs/42) Localizado, sem selo, ou à força com a Membrana rompida.

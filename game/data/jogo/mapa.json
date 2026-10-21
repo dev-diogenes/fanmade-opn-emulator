@@ -28,6 +28,58 @@
     "agua":     { "nome": "Água rasa", "custo": 3, "cor": "1f3a5f", "arena": { "cobertura": 1, "dificil": 14, "parede": 0 } },
     "serra":    { "nome": "Serra",    "custo": -1, "escalavel": true, "custo_escalada": 2, "cor": "4a443d", "arena": { "cobertura": 5, "dificil": 6, "parede": 4, "elevado": 6 } }
   },
+  "achados_da_serra_nota": "docs/45: cada serra guarda um achado, sorteado na geração. Só quem sobe (um 20 nos dados de movimento) o encontra.",
+  "achados_da_serra": [
+    {
+      "id": "vista_covil",
+      "titulo": "Fumaça entre as árvores",
+      "texto": "Lá de cima, uma coluna fina de fumaça sobe de um ponto que ninguém vê da estrada. É ali.",
+      "efeitos": [
+        {
+          "tipo": "revelar_objetivo"
+        }
+      ]
+    },
+    {
+      "id": "movimento",
+      "titulo": "Movimento no vale",
+      "texto": "Do alto, dá para ver lanternas, um carro sem farol e um padrão no vai e vem. Alguém anota.",
+      "efeitos": [
+        {
+          "tipo": "pista"
+        }
+      ]
+    },
+    {
+      "id": "folego",
+      "titulo": "Vento frio",
+      "texto": "O vento lá em cima limpa a cabeça. Por um momento, o Outro Lado parece longe.",
+      "efeitos": [
+        {
+          "tipo": "recupera_san",
+          "valor": "1d6"
+        },
+        {
+          "tipo": "recupera_pe",
+          "valor": 2
+        }
+      ]
+    },
+    {
+      "id": "esconderijo",
+      "titulo": "Esconderijo da Ordem",
+      "texto": "Entre as pedras, um esconderijo antigo de outro agente: um kit de primeiros socorros e um caderno de anotações.",
+      "efeitos": [
+        {
+          "tipo": "cura",
+          "valor": "2d6"
+        },
+        {
+          "tipo": "pista"
+        }
+      ]
+    }
+  ],
   "geracao": {
     "encontros": 9,
     "eventos": 8,

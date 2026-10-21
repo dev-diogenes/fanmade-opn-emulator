@@ -56,6 +56,11 @@ static func _tentar(semente: int, cfg: Dictionary, forcar: bool = false) -> Mapa
 		if Hex.distancia(h, inicio) <= 2 or Hex.distancia(h, objetivo) <= 1:
 			continue
 		mapa.celulas[h].terreno = "serra"
+		# Mirante (docs/45): um achado lá em cima, escolhido pela posição (sem gastar o rng)
+		var achados: Array = cfg.get("achados_da_serra", [])
+		if not achados.is_empty():
+			var achado: Dictionary = achados[absi(hash(h) + semente) % achados.size()]
+			mapa.definir_conteudo(h, {"tipo": "mirante", "achado": String(achado.id)})
 		serras += 1
 	for h in Hex.area(inicio, 1):
 		if mapa.tem(h) and not mapa.passavel(h):

@@ -525,3 +525,31 @@ func test_aliados_perto_conta_quem_entraria_na_luta():
 			longe = h
 			break
 	assert_eq(m.aliados_perto(mauro, longe), 0, "longe de todos")
+
+
+# --- Mirante no alto da serra (docs/45) ---------------------------------------------------
+
+func test_cada_serra_guarda_um_achado():
+	var serras := 0
+	for h in m.mapa.celulas:
+		if m.mapa.terreno(h) == "serra":
+			serras += 1
+			assert_eq(m.mapa.conteudo(h).get("tipo", ""), "mirante", "a serra %s tem mirante" % h)
+	assert_gt(serras, 0)
+
+
+func test_subir_ao_mirante_da_o_achado_e_esgota():
+	var serra := Vector2i(-999, -999)
+	for h in m.mapa.celulas:
+		if m.mapa.conteudo(h).get("tipo", "") == "mirante":
+			serra = h
+			break
+	m.mapa.definir_conteudo(serra, {"tipo": "mirante", "achado": "movimento"})
+	var antes := m.caso.pistas.size()
+	m._entrar(mauro, serra)
+	assert_eq(m.caso.pistas.size(), antes + 1, "o movimento no vale vira pista")
+	assert_true(m.mapa.conteudo(serra).is_empty(), "o mirante se esgota")
+	m.mapa.definir_conteudo(serra, {"tipo": "mirante", "achado": "vista_covil"})
+	assert_false(m.covil_aberto())
+	m._entrar(mauro, serra)
+	assert_true(m.covil_aberto(), "ver o covil lá de cima o localiza")

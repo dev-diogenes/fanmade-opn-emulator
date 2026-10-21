@@ -672,7 +672,7 @@ static func anel(raio: float, cor: Color) -> MeshInstance3D:
 ## Marcos diegéticos (docs/32): a investigação ganha fita de isolamento em volta do centro e o
 ## evento, uma placa de estrada na borda. O símbolo flutua menor, acima da cabeça das figuras.
 const COR_MARCO := {"encontro": Color("c0392b"), "evento": Color("e3c27a"), "objetivo": Color("8e1b22"),
-	"investigacao": Color("7fd3c7"), "vila": Color("f2c6a0"), "inicio": Color("5dade2")}
+	"investigacao": Color("7fd3c7"), "vila": Color("f2c6a0"), "inicio": Color("5dade2"), "mirante": Color("f0d27a")}
 
 static func marco(tipo: String) -> Node3D:
 	var cor: Color = COR_MARCO.get(tipo, Color.WHITE)
@@ -692,8 +692,8 @@ static func marco(tipo: String) -> Node3D:
 			nucleo.radius = 0.07
 			nucleo.height = 0.14
 			peca.add_child(_malha(nucleo, material(cor.lightened(0.3), false, 3.0), Vector3(0, 0.78, 0)))
-		"evento", "investigacao", "vila", "inicio":
-			var simbolo: String = {"evento": "?", "investigacao": "◎", "vila": "⌂", "inicio": "✦"}[tipo]
+		"evento", "investigacao", "vila", "inicio", "mirante":
+			var simbolo: String = {"evento": "?", "investigacao": "◎", "vila": "⌂", "inicio": "✦", "mirante": "▲"}[tipo]
 			var l := rotulo(simbolo, 90, cor)
 			l.position = Vector3(0, 0.95, 0)
 			l.outline_size = 18

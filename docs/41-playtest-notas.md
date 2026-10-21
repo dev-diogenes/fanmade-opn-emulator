@@ -84,5 +84,5 @@
 2. ✔ Aviso de grupo separado (docs/42).
 3. ✔ Dedução mais difícil: pistas espalhadas por pergunta e mais testemunhas (docs/44).
 4. ✔ PP por pista adicional como no livro (docs/43).
-5. Recompensa no alto da serra.
+5. ✔ Recompensa no alto da serra (docs/45).
 6. IA dos agentes usando Primeiros Socorros e o golpe não letal.
