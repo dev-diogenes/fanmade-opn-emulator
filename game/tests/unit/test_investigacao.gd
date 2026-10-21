@@ -478,3 +478,34 @@ func test_caso_solucionado_exige_quem_e_o_que():
 	assert_eq(m.caso.faltam_para_solucao(), [m.caso.pergunta("oque").texto] as Array[String])
 	m.caso.pergunta("oque").respondida = true
 	assert_true(m.caso.solucionado(), "onde não é exigido: chegar ao covil já o encontra")
+
+
+# --- Covil selado e grupo separado (docs/42) --------------------------------------------
+
+func test_covil_selado_ate_saber_onde():
+	assert_false(m.covil_aberto(), "a missão procedural começa com o covil selado")
+	var obj := m.mapa.encontrar("objetivo")
+	m._entrar(mauro, obj)
+	assert_true(m.encontro_pendente.is_empty(), "sem saber onde, não há entrada nem luta")
+	m.caso.registrar_pista("{indicio}", "onde", "t")
+	assert_true(m.deduzir("onde", m.caso.local.id).acertou)
+	assert_true(m.covil_aberto(), "acertar o onde abre o covil")
+	m._entrar(mauro, obj)
+	assert_false(m.encontro_pendente.is_empty(), "agora o confronto começa")
+
+
+func test_membrana_rompida_abre_o_covil():
+	m.membrana.alterar(-1000, "teste")
+	assert_true(m.membrana.rompida())
+	assert_true(m.covil_aberto(), "confronto final, preparado ou não")
+
+
+func test_aliados_perto_conta_quem_entraria_na_luta():
+	var aqui := m.posicao(mauro)
+	assert_eq(m.aliados_perto(mauro, aqui), 2, "todos começam juntos")
+	var longe := aqui
+	for h in m.mapa.celulas:
+		if Hex.distancia(h, aqui) > 4:
+			longe = h
+			break
+	assert_eq(m.aliados_perto(mauro, longe), 0, "longe de todos")

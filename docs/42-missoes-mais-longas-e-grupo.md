@@ -72,8 +72,11 @@ A Membrana agora pesa: quem demora a deduzir chega ao fim perto de rompê-la.
 
 ## Testes
 
-Total: **535**.
+Total: **538**.
+- **Covil selado:** sem saber onde, entrar no covil não começa luta; acertar o onde abre o covil, e o confronto começa.
+- **Membrana rompida:** abre o covil.
+- **Aliados perto:** conta quem entraria na luta (2 juntos no início; 0 longe de todos).
 - **Ajustados:**
   - a missão do teste de rede começa com o covil localizado, porque o teste é da rede e não do selo;
   - a campanha do piloto automático continua terminando, agora investigando.
-- **Cobertura:** o replay das missões do piloto e as 10 seeds do piloto (de 8 a 13 turnos) cobrem o selo.
+- **Cobertura:** o replay das missões do piloto e as 10 seeds do piloto (de 8 a 13 turnos) também passam pelo selo.
