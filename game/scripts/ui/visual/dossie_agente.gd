@@ -1,7 +1,7 @@
 class_name DossieAgente
 extends CanvasLayer
-## Ficha e inventário do agente durante o jogo (docs/13): uma pasta em papel com a ficha
-## (atributos, perícias, habilidades, rituais) e o inventário (itens, espaços, uso).
+## Ficha do agente durante o jogo (docs/13; formato da ficha oficial desde o docs/25): as
+## páginas Agente, Habilidades e inventário (com "Usar" no mapa) e Rituais.
 ## Abre clicando no retrato do agente ou com F (o agente da vez). Esc ou clique fora fecha.
 ##   DossieAgente.abrir(self, agente, usar_item)   # usar_item(item_id) = null fora do mapa
 
@@ -87,88 +87,15 @@ func _montar() -> void:
 	centro.set_anchors_preset(Control.PRESET_FULL_RECT)
 	centro.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(centro)
-	var pasta := TabContainer.new()
-	pasta.custom_minimum_size = Vector2(760, 470)
-	centro.add_child(pasta)
-
-	var ficha := PanelContainer.new()
-	ficha.name = "Ficha"
-	ficha.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(24, 18)))
-	ficha.theme = Tema.tema_papel()
-	pasta.add_child(ficha)
-	var linha := HBoxContainer.new()
-	linha.add_theme_constant_override("separation", Tema.ESPACO_M)
-	ficha.add_child(linha)
-	var texto := RichTextLabel.new()
-	texto.bbcode_enabled = true
-	texto.text = ficha_bbcode(agente)
-	texto.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	texto.add_theme_color_override("default_color", Tema.TINTA)
-	linha.add_child(texto)
-	# A foto 3x4 do arquivo (docs/19), presa no canto da ficha
-	var foto := FotoAgente.new()
-	foto.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	foto.mostrar(agente.classe_id, agente.aparencia, agente.tom)
-	foto.legenda = agente.nome
-	linha.add_child(foto)
-
-	var inv := PanelContainer.new()
-	inv.name = "Inventário"
-	inv.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(24, 18)))
-	inv.theme = Tema.tema_papel()
-	pasta.add_child(inv)
-	var rolagem := ScrollContainer.new()
-	rolagem.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	inv.add_child(rolagem)
-	var lista := VBoxContainer.new()
-	lista.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lista.add_theme_constant_override("separation", 6)
-	rolagem.add_child(lista)
-	var cab := Label.new()
-	cab.text = "Carga: %d / %d espaços%s" % [agente.espacos_usados(), agente.capacidade_carga(), "  —  SOBRECARREGADO" if agente.sobrecarregado() else ""]
-	lista.add_child(cab)
-	var contagem := {}
-	for item_id in agente.equipamento:
-		contagem[item_id] = contagem.get(item_id, 0) + 1
-	if contagem.is_empty():
-		var vazio := Label.new()
-		vazio.text = "Nada no inventário."
-		lista.add_child(vazio)
-	for item_id in contagem:
-		lista.add_child(_linha_item(item_id, contagem[item_id]))
+	var ficha := FichaAgente.new()
+	ficha.custom_minimum_size = Vector2(1180, 660)
+	centro.add_child(ficha)
+	ficha.mostrar(agente, _usar_item)
+	ficha.item_usado.connect(func(_id): queue_free())   # usou: volta ao mapa
+	_ficha = ficha
 
 
-func _linha_item(item_id: String, qtd: int) -> Control:
-	var info := agente.ruleset.equipamento(item_id)
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", Tema.ESPACO_M)
-	var nome := Label.new()
-	var detalhes := PackedStringArray()
-	detalhes.append("cat. %s" % ["0", "I", "II", "III", "IV", "V"][mini(5, int(info.get("categoria", 0)))])
-	detalhes.append("%d esp." % int(info.get("espacos", 1)))
-	if info.has("dano"):
-		detalhes.append("dano %s" % info.dano)
-	if info.get("uso", {}).has("cura"):
-		detalhes.append("cura %s" % info.uso.cura)
-	if item_id == agente.arma_id:
-		detalhes.append("empunhada")
-	nome.text = "%s%s  ·  %s" % [info.get("nome", item_id), " ×%d" % qtd if qtd > 1 else "", "  ·  ".join(detalhes)]
-	nome.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	nome.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	if info.has("maldicoes"):
-		nome.add_theme_color_override("font_color", Tema.SANGUE)
-		nome.tooltip_text = "Maldições: %s" % ", ".join(PackedStringArray(info.maldicoes.map(func(m): return m.nome)))
-		nome.mouse_filter = Control.MOUSE_FILTER_PASS
-	h.add_child(nome)
-	if _usar_item.is_valid() and info.get("uso", {}).has("cura"):
-		var usar := Button.new()
-		usar.text = "Usar"
-		usar.theme_type_variation = "BotaoPapel"
-		usar.pressed.connect(func():
-			_usar_item.call(item_id)
-			queue_free())
-		h.add_child(usar)
-	return h
+var _ficha: FichaAgente
 
 
 func _unhandled_input(evento: InputEvent) -> void:

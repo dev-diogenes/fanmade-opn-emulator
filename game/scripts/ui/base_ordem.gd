@@ -9,11 +9,9 @@ var _selecionado: Agente
 
 var _lista: ItemList
 var _abas: TabContainer
-var _foto_agente: FotoAgente
-var _pentagono: PentagonoAtributos
-var _cabecalho_ficha: VBoxContainer
+var _ficha_agente: FichaAgente   ## a ficha no formato da oficial (docs/25)
+var _papel_pendencia: PanelContainer
 var _opt_recruta: OptionButton
-var _ficha: RichTextLabel
 var _caixa_pendencia: VBoxContainer
 var _caixa_requisicao: HFlowContainer
 var _checks_itens: Dictionary = {}     ## item_id -> Button (etiqueta que liga e desliga)
@@ -77,7 +75,7 @@ func _ready() -> void:
 
 
 func _alvos_do_tutorial() -> Dictionary:
-	return {"agentes": _lista, "ficha": _ficha, "requisicao": _caixa_requisicao.get_parent(), "grupo": _caixa_grupo,
+	return {"agentes": _lista, "ficha": _ficha_agente, "requisicao": _caixa_requisicao.get_parent(), "grupo": _caixa_grupo,
 		"jogadores": _caixa_jogadores, "missao": _opt_missao, "iniciar": _btn_iniciar}
 
 
@@ -155,39 +153,21 @@ func _montar_interface() -> void:
 	var novo := _botao("+ Criar ficha de agente", _criar_agente)
 	novo.theme_type_variation = "BotaoPrincipal"
 	c1.add_child(novo)
-	var doc := _papel(true)
+	var doc := VBoxContainer.new()
 	doc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	doc.add_theme_constant_override("separation", Tema.ESPACO_M)
 	agentes.add_child(doc)
-	var hdoc := HBoxContainer.new()
-	hdoc.add_theme_constant_override("separation", Tema.ESPACO_GG)
-	doc.add_child(hdoc)
-	var vdoc := VBoxContainer.new()
-	vdoc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vdoc.add_theme_constant_override("separation", Tema.ESPACO_M)
-	hdoc.add_child(vdoc)
-	# A mesma foto 3x4 da criação e da ficha (docs/19 e docs/21), presa no canto da folha
-	_foto_agente = FotoAgente.new()
-	_foto_agente.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	hdoc.add_child(_foto_agente)
-	# Ficha em blocos (docs/23, C5): cabeçalho, barras e números ao lado do pentágono;
-	# perícias em duas colunas, habilidades e rituais embaixo
-	var blocos := HBoxContainer.new()
-	blocos.add_theme_constant_override("separation", Tema.ESPACO_GG)
-	vdoc.add_child(blocos)
-	_pentagono = PentagonoAtributos.new()
-	blocos.add_child(_pentagono)
-	_cabecalho_ficha = VBoxContainer.new()
-	_cabecalho_ficha.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_cabecalho_ficha.add_theme_constant_override("separation", 6)
-	blocos.add_child(_cabecalho_ficha)
-	_ficha = RichTextLabel.new()
-	_ficha.bbcode_enabled = true
-	_ficha.fit_content = true
-	_ficha.add_theme_color_override("default_color", Tema.TINTA)
-	vdoc.add_child(_ficha)
+	# Ficha no formato da ficha oficial (docs/25): Agente, Habilidades e inventário, Rituais
+	_ficha_agente = FichaAgente.new()
+	_ficha_agente.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	doc.add_child(_ficha_agente)
+	# Escolhas de NEX pendentes: um bilhete abaixo da ficha, só quando há o que escolher
+	_papel_pendencia = _papel(false)
+	_papel_pendencia.visible = false
+	doc.add_child(_papel_pendencia)
 	_caixa_pendencia = VBoxContainer.new()
-	_caixa_pendencia.theme = Tema.tema_papel()   # as escolhas de NEX ficam escritas na ficha
-	vdoc.add_child(_caixa_pendencia)
+	_caixa_pendencia.theme = Tema.tema_papel()
+	_papel_pendencia.add_child(_caixa_pendencia)
 
 	# --- Aba Arsenal: a gaveta de requisição
 	var arsenal := VBoxContainer.new()
@@ -522,14 +502,9 @@ func _atualizar_tudo() -> void:
 func _atualizar_agente() -> void:
 	var a := _selecionado
 	if a == null:
-		_ficha.text = "Nenhum agente."
+		_ficha_agente.mostrar(null)
 		return
-	if _foto_agente != null:
-		_foto_agente.mostrar(a.classe_id, a.aparencia, a.tom)
-		_foto_agente.legenda = a.nome
-	_pentagono.agente = a
-	_montar_cabecalho_ficha(a)
-	_ficha.text = DossieAgente.ficha_bbcode(a, false)
+	_ficha_agente.mostrar(a)
 	for item_id in _checks_itens:
 		_checks_itens[item_id].set_pressed_no_signal(item_id in a.equipamento)
 	_atualizar_armas_requisicao()
@@ -538,52 +513,6 @@ func _atualizar_agente() -> void:
 	_lbl_requisicao.text = "Equipando %s (%s): até %d %s de categoria I, %d de II e %d de III." % [a.nome, a.patente().get("nome", "?"),
 		int(lim["1"]), "item" if int(lim["1"]) == 1 else "itens", int(lim["2"]), int(lim["3"])]
 	_montar_pendencia(a)
-
-
-## Nome, classe e patente em destaque, e PV/PE/SAN em barras de tinta (docs/23, C5).
-func _montar_cabecalho_ficha(a: Agente) -> void:
-	for f in _cabecalho_ficha.get_children():
-		f.queue_free()
-	var rs := carreira.ruleset
-	var nome := Label.new()
-	nome.text = a.nome.to_upper()
-	nome.add_theme_color_override("font_color", Tema.TINTA)
-	nome.add_theme_font_size_override("font_size", Tema.FONTE_G + 6)
-	var ft := Tema.fonte_titulo()
-	if ft != null:
-		nome.add_theme_font_override("font", ft)
-	_cabecalho_ficha.add_child(nome)
-	var sub := Label.new()
-	sub.text = "%s · %s · origem %s" % [rs.classe(a.classe_id).nome, rs.trilha(a.classe_id, a.trilha_id).get("nome", a.trilha_id) if a.trilha_id != "" else "sem trilha",
-		rs.origem(a.origem_id).nome if a.origem_id != "" else "—"]
-	sub.add_theme_color_override("font_color", Tema.TINTA)
-	_cabecalho_ficha.add_child(sub)
-	var nex := Label.new()
-	nex.text = "NEX %d%%  ·  %s (%d PP)  ·  Defesa %d  ·  Desloc. %d m" % [a.nex, a.patente().get("nome", "?"), a.pp, a.defesa(), int(a.deslocamento_m())]
-	nex.add_theme_color_override("font_color", Tema.TINTA)
-	_cabecalho_ficha.add_child(nex)
-	for par in [["PV", a.pv, a.pv_maximo, Tema.SANGUE], ["PE", a.pe, a.pe_maximo, Tema.ELEMENTO.energia.darkened(0.3)], ["SAN", a.san, a.san_maximo, Color("2f6f7a")]]:
-		var h := HBoxContainer.new()
-		h.add_theme_constant_override("separation", 8)
-		var l := Label.new()
-		l.text = par[0]
-		l.custom_minimum_size = Vector2(36, 0)
-		l.add_theme_color_override("font_color", Tema.TINTA)
-		h.add_child(l)
-		var barra := ProgressBar.new()
-		barra.max_value = maxi(1, int(par[2]))
-		barra.value = int(par[1])
-		barra.show_percentage = false
-		barra.custom_minimum_size = Vector2(220, 14)
-		barra.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		barra.add_theme_stylebox_override("background", Tema.caixa(Color(Tema.TINTA, 0.08), Color(Tema.TINTA, 0.45), 1, 2, Vector2.ZERO))
-		barra.add_theme_stylebox_override("fill", Tema.caixa(par[3], (par[3] as Color).darkened(0.3), 1, 2, Vector2.ZERO))
-		h.add_child(barra)
-		var n := Label.new()
-		n.text = "%d / %d" % [int(par[1]), int(par[2])]
-		n.add_theme_color_override("font_color", Tema.TINTA)
-		h.add_child(n)
-		_cabecalho_ficha.add_child(h)
 
 
 func _atualizar_armas_requisicao() -> void:
@@ -603,6 +532,7 @@ func _montar_pendencia(a: Agente) -> void:
 	for filho in _caixa_pendencia.get_children():
 		filho.queue_free()
 	var pend := Progressao.pendencias(a)
+	_papel_pendencia.visible = not pend.is_empty()
 	if pend.is_empty():
 		return
 	var p: Dictionary = pend[0]

@@ -37,10 +37,10 @@ func test_ficha_da_base_em_blocos():
 	var base = load("res://scenes/base_ordem.tscn").instantiate()
 	add_child_autofree(base)
 	await wait_frames(2)
-	assert_not_null(base._pentagono.agente, "o pentágono mostra o agente escolhido")
-	assert_gt(base._cabecalho_ficha.get_child_count(), 3, "nome, classe, NEX e as barras")
-	assert_false(base._ficha.text.contains("PV "), "os números saem do texto: estão nas barras")
-	assert_true(base._ficha.text.contains("[table=2]"), "perícias em duas colunas")
+	# Desde o docs/25, a Base usa a ficha no formato da oficial (FichaAgente)
+	assert_not_null(base._ficha_agente.agente, "a ficha mostra o agente escolhido")
+	assert_eq(base._ficha_agente.get_tab_count(), 3)
+	assert_gt(base._ficha_agente.pagina_agente.find_children("*", "PentagonoAtributos", true, false).size(), 0, "o pentágono continua na página 1")
 	assert_eq(base._checks_itens.values()[0].custom_minimum_size.x, 372.0, "etiquetas largas, três por linha")
 
 

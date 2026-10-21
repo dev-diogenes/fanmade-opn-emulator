@@ -27,6 +27,7 @@
 | [22-clima-de-terror-3d.md](22-clima-de-terror-3d.md) | Noite no mapa e no título, Membrana pesando no clima, casas acesas e combate no terreno do encontro (clareira ao luar) |
 | [23-arquivo-investigacao-progressao.md](23-arquivo-investigacao-progressao.md) | Arsenal com ícones e efeitos, ficha da Base com pentágono, investigação mais limpa, briefing procedural e cerimônia de NEX |
 | [24-qualidade-grafica.md](24-qualidade-grafica.md) | Qualidade gráfica alta/média/baixa (SSAO, desfoque, glow, névoa rasteira, sombras, luzes de clima, MSAA, escala 3D), com FPS medido |
+| [25-ficha-no-formato-oficial.md](25-ficha-no-formato-oficial.md) | Ficha do agente no formato da ficha oficial (Agente; Habilidades e inventário) e a página de rituais otimizada |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.
