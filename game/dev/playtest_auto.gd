@@ -123,7 +123,9 @@ func _jogar(perfil: String, semente: int) -> Dictionary:
 ## Primeiro investigações e eventos; com o caso respondido (quem e o quê) ou sem mais nada, o covil.
 func _alvo(m: Missao, perfil: String, r: Dictionary) -> Vector2i:
 	var objetivo := m.mapa.encontrar("objetivo")
-	if perfil == "pressa" or m.caso.solucionado() or m.turno_mundo > 30:
+	r.covil_aberto_no_turno = r.get("covil_aberto_no_turno", -1) if r.get("covil_aberto_no_turno", -1) >= 0 or not m.covil_aberto() else m.turno_mundo
+	# Com o covil selado (docs/42), até quem tem pressa precisa achar onde ele fica
+	if m.covil_aberto() and (perfil == "pressa" or m.caso.solucionado() or m.turno_mundo > 30):
 		return objetivo
 	var a := m.agente_atual()
 	var melhor := Vector2i(-999, -999)
@@ -132,6 +134,8 @@ func _alvo(m: Missao, perfil: String, r: Dictionary) -> Vector2i:
 		if tipo in ["investigacao", "evento"]:
 			if melhor == Vector2i(-999, -999) or Hex.distancia(h, m.posicao(a)) < Hex.distancia(melhor, m.posicao(a)):
 				melhor = h
+	if melhor == Vector2i(-999, -999):
+		_deduzir(m, r, true)   # nada mais a investigar: arrisca
 	return melhor if melhor != Vector2i(-999, -999) else objetivo
 
 

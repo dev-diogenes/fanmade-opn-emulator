@@ -23,7 +23,10 @@ var turno_mundo := 1
 var indice := 0
 var movimento_restante := 0
 var movimento_rolado := false
-var pode_escalar := false               ## Tirou 20 nos dados de movimento: sobe a serra neste turno (docs/34)
+var pode_escalar := false
+## Covil selado (docs/42): só abre quando o grupo sabe onde ele fica ("onde" respondida ou um
+## evento que o revele), ou à força, com a Membrana rompida.
+var covil_localizado := false               ## Tirou 20 nos dados de movimento: sobe a serra neste turno (docs/34)
 ## Ação do turno no mapa (docs/13): usar um item ou conjurar um ritual que não seja de ataque.
 var acao_usada := false
 var ultimo_movimento: Dictionary = {}   ## {"slots": [...], "dt": int, "sucessos": int, "total": int}
@@ -95,6 +98,7 @@ static func nova(semente_: int, ruleset_: Ruleset = null, grupo: Array = [], opc
 		m.opcoes[k] = opcoes_[k]
 	m.reforcos = 2 if m.opcoes.get("modo_morte", "normal") == "normal" else 0
 	m.caso = Caso.gerar(m.dados)
+	m.covil_localizado = not bool(DadosJogo.ler("mapa").get("covil_selado", true))
 	var inicio := m.mapa.encontrar("inicio")
 	if grupo.is_empty():
 		for ficha in DadosJogo.ler("grupo_inicial").agentes:
@@ -208,6 +212,10 @@ func _entrar(a: Agente, h: Vector2i) -> void:
 		"encontro":
 			_preparar_encontro(h, c.encontro, false)
 		"objetivo":
+			if not covil_aberto():
+				mapa.revelar(h, 0)
+				_log("[color=#c9a0ff]%s chega às ruínas do covil, mas não acha a entrada. Sem saber [b]onde[/b] procurar, é só pedra fria. (Responda \"Onde fica o covil?\" na ficha.)[/color]" % a.nome)
+				return
 			_preparar_encontro(h, c.encontro, true)
 		"evento":
 			var ev := _evento(c.evento)
@@ -477,6 +485,7 @@ func _aplicar_efeito(a: Agente, ef: Dictionary, h: Vector2i) -> Dictionary:
 		"revelar_objetivo":
 			var obj := mapa.encontrar("objetivo")
 			mapa.revelar(obj, 1)
+			covil_localizado = true
 			_log("O objetivo foi revelado no mapa.")
 			return {"tipo": "revelar_objetivo", "valor": 1, "texto": "Covil revelado"}
 		"inocente_morto":
@@ -551,6 +560,22 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool, semente_s
 	if semente_salva < 0:
 		_log("[color=#e0574a][b]Encontro: %s![/b][/color] (%d agente(s) entram no combate)" % [info.nome, participantes.size()])
 	encontro_iniciado.emit(encontro_pendente)
+
+
+## O covil abre? (docs/42) Localizado, sem selo, ou à força com a Membrana rompida.
+func covil_aberto() -> bool:
+	return covil_localizado or membrana.rompida()
+
+
+## Quantos aliados (fora o próprio agente) estariam a até `aliados_entram_no_combate_ate`
+## de `h` e entrariam numa luta ali (docs/42).
+func aliados_perto(a: Agente, h: Vector2i) -> int:
+	var alcance := int(_cfg.aliados_entram_no_combate_ate)
+	var n := 0
+	for outro in agentes:
+		if outro != a and not outro.esta_fora_de_combate() and Hex.distancia(posicao(outro), h) <= alcance:
+			n += 1
+	return n
 
 
 ## O covil muda com o grupo: o de maior "nex_minimo" que a soma do NEX alcança.
@@ -773,6 +798,7 @@ func _aplicar_efeito_pergunta(p: Dictionary) -> void:
 		"revelar_objetivo":
 			var obj := mapa.encontrar("objetivo")
 			mapa.revelar(obj, 1)
+			covil_localizado = true
 
 
 ## O grupo acusa um candidato fora da cena, pelo painel do caso (docs/32). O acerto aplica o
@@ -809,6 +835,10 @@ func _turno_do_mundo() -> void:
 	turno_mundo += 1
 	membrana.registrar("turno_mapa")
 	_log("[color=#a69b88]— Turno %d do mundo — Membrana %d (%s)[/color]" % [turno_mundo, membrana.valor, membrana.estado().get("nome", "")])
+	if membrana.rompida() and not covil_localizado:
+		covil_localizado = true   # confronto final, preparado ou não (membrana.json)
+		mapa.revelar(mapa.encontrar("objetivo"), 1)
+		_log("[color=#e0574a][b]A Membrana se rompe.[/b] O covil se abre sozinho e chama os agentes.[/color]")
 	_turnos_sem_surgimento += 1
 	if _turnos_sem_surgimento >= int(_cfg.mundo.surgimento_a_cada_turnos) and membrana.nivel_ameaca() >= 1:
 		_turnos_sem_surgimento = 0
@@ -902,7 +932,7 @@ func para_dicionario() -> Dictionary:
 		"inocentes_mortos": inocentes_mortos,
 		"posicoes": pos, "turno_mundo": turno_mundo, "indice": indice,
 		"movimento_restante": movimento_restante, "movimento_rolado": movimento_rolado, "acao_usada": acao_usada,
-		"pode_escalar": pode_escalar,
+		"pode_escalar": pode_escalar, "covil_localizado": covil_localizado,
 		"evento_pendente": ev, "encontro_pendente": enc, "reforcos": reforcos, "pistas": pistas,
 		"caso": caso.para_dicionario() if caso != null else {}, "modificador_chefe": modificador_chefe,
 		"investigacao_pendente": {"hex": [investigacao_pendente.hex.x, investigacao_pendente.hex.y], "cena": investigacao_pendente.cena,
@@ -949,6 +979,7 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.movimento_restante = int(d.get("movimento_restante", 0))
 	m.movimento_rolado = d.get("movimento_rolado", false)
 	m.pode_escalar = d.get("pode_escalar", false)
+	m.covil_localizado = bool(d.get("covil_localizado", true))   # save antigo: covil como antes
 	m.acao_usada = d.get("acao_usada", false)
 	m.reforcos = int(d.get("reforcos", 0))
 	m.pistas = int(d.get("pistas", 0))

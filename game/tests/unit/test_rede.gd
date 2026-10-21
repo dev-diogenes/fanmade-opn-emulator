@@ -206,6 +206,7 @@ func test_host_e_cliente_jogam_a_mesma_missao_por_enet():
 	var peer_cli: int = entradas[0][0]
 	# Host: carreira com um agente do cliente; o estado vai para ele
 	var ch := _carreira(12)
+	ch.missao.covil_localizado = true   # o teste é da rede, não do selo do covil (docs/42)
 	var donos := ControleLocal.padrao()
 	donos.definir_dono(ch.missao.agentes[1], donos.adicionar_jogador_rede(peer_cli, "Ana"))
 	host.sessao.marcar_checkpoint(ch.para_dicionario())

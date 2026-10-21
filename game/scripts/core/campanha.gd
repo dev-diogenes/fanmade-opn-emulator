@@ -158,6 +158,7 @@ static func aplicar_marcas(m: Missao, etapa: Dictionary, marcas: Array) -> int:
 				m.modificador_chefe -= float(ef.get("valor", 0.2))
 			"revelar_objetivo":
 				m.mapa.revelar(m.mapa.encontrar("objetivo"), 1)
+				m.covil_localizado = true
 	return aplicados
 
 

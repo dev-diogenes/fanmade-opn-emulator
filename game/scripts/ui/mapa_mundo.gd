@@ -307,6 +307,8 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 				if not res.deducao.get("ampliacao", {}).is_empty():
 					Som.tocar("carimbo")   # a ficha ganha uma pergunta (docs/36)
 		"mover":
+			if res.ok and a != null and missao.agentes.size() > 1 and missao.aliados_perto(a, missao.posicao(a)) == 0:
+				missao._log("[color=#eda64a]⚠ %s está longe do grupo: numa luta, ninguém chega a tempo.[/color]" % a.nome)
 			if res.ok:
 				_cursor_ativo = false
 				_mapa3d.focar_agente(missao)
@@ -854,8 +856,16 @@ func _mostrar_dica(pos: Vector2) -> void:
 			"objetivo": "✝ Covil", "inicio": "Ponto de partida"}
 		if nomes.has(tipo):
 			linhas.append(nomes[tipo])
+		if tipo == "objetivo" and not missao.covil_aberto():
+			linhas.append("Entrada escondida: responda \"Onde fica o covil?\"")
+		var a := missao.agente_atual()
+		if tipo in ["encontro", "objetivo"] and a != null:
+			linhas.append("Entrariam na luta: %d agente(s)" % (1 + missao.aliados_perto(a, h)))
 		if h in missao.destinos():
 			linhas.append("Clique para ir")
+			# Grupo separado (docs/42): longe de todos, a luta seria sozinho
+			if a != null and missao.agentes.size() > 1 and missao.aliados_perto(a, h) == 0:
+				linhas.append("⚠ Longe do grupo: se houver luta, %s luta sozinho" % a.nome)
 	_dica.text = "\n".join(linhas)
 	_dica.reset_size()
 	_dica.position = pos + Vector2(18, 14)
@@ -890,7 +900,7 @@ func _atualizar() -> void:
 	_btn_acao.disabled = not missao.pode_agir_no_mapa() or (missao.itens_fora_de_combate(a).is_empty() and missao.rituais_fora_de_combate(a).is_empty())
 	_btn_encerrar.disabled = ocupado
 	_foco.definir(_foco.valor, a.pe_disponivel_no_turno() if a != null else 0)
-	_lbl_mov.text = ("Movimento restante: %d · clique num hex azul" % missao.movimento_restante) if missao.movimento_rolado else "Role o movimento para andar."
+	_lbl_mov.text = ("Movimento restante: %d · clique num hex azul (âmbar: longe do grupo)" % missao.movimento_restante) if missao.movimento_rolado else "Role o movimento para andar."
 	_desenhar_slots()
 	var ev := missao.evento_pendente
 	var abriu := not ev.is_empty() and not _painel_evento.visible
@@ -955,7 +965,8 @@ func _atualizar_caso() -> void:
 	_btn_deduzir.disabled = not alguma_com_pista
 	var obj := missao.mapa.encontrar("objetivo")
 	var covil_visto := missao.mapa.tem(obj) and missao.mapa.revelado(obj)
-	linhas.append(Tema.bb("Covil: " + ("localizado no mapa" if covil_visto else "desconhecido"), Tema.PERIGO if covil_visto else Tema.TEXTO_SUAVE))
+	var estado_covil := "aberto: o confronto espera" if missao.covil_aberto() else ("avistado, entrada escondida" if covil_visto else "desconhecido")
+	linhas.append(Tema.bb("Covil: " + estado_covil, Tema.PERIGO if missao.covil_aberto() else Tema.TEXTO_SUAVE))
 	_lbl_caso.text = "\n".join(linhas)
 
 

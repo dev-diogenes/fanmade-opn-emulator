@@ -94,6 +94,7 @@ static func jogar(m: Missao, limite_turnos_mundo: int = 150, registro = null) ->
 		if not m.investigacao_pendente.is_empty():
 			m.concluir_investigacao(resolver_investigacao(m))
 			rel.investigacoes += 1
+			deduzir(m, false, registro)
 			continue
 		var a := m.agente_atual()
 		if a == null:
@@ -110,6 +111,8 @@ static func jogar(m: Missao, limite_turnos_mundo: int = 150, registro = null) ->
 		if destinos.is_empty():
 			_cmd(m, {"acao": "encerrar_turno"}, registro)
 			continue
+		# Covil fechado e nada mais a investigar: arrisca as acusações (docs/42)
+		deduzir(m, not m.covil_aberto() and not _tem_pista_no_mapa(m), registro)
 		var destino := _escolher_destino(m, a, destinos, objetivo)
 		var pos_antes := m.posicao(a)
 		if not _cmd(m, {"acao": "mover", "hex": Comandos.vetor(destino)}, registro).ok or m.posicao(a) == pos_antes:
@@ -135,9 +138,44 @@ static func _cmd(m: Missao, args: Dictionary, registro) -> Dictionary:
 	return Comandos.aplicar_mapa(m, cmd)
 
 
+## Acusa quando as pistas firmes deixam um só suspeito (docs/42). `arriscar`: com o covil
+## fechado e nada mais a investigar, acusa os compatíveis em ordem até acertar.
+static func deduzir(m: Missao, arriscar: bool, registro = null) -> void:
+	if m.caso == null:
+		return
+	for q in m.caso.perguntas.duplicate():
+		if q.respondida or int(q.encontradas) < 1:
+			continue
+		var comp := m.caso.compativeis(q.id)
+		if comp.size() != 1 and not arriscar:
+			continue
+		for cand in comp:
+			var res := _cmd(m, {"acao": "deduzir", "pergunta": q.id, "candidato": cand.id}, registro)
+			if res.get("deducao", {}).get("acertou", false) or not arriscar:
+				break
+
+
+## Próximo lugar com o que investigar (investigação ou evento) mais perto do agente, ou o covil.
+static func _proxima_pista(m: Missao, a: Agente, objetivo: Vector2i) -> Vector2i:
+	var melhor := Vector2i(-999, -999)
+	for h in m.mapa.celulas:
+		if String(m.mapa.conteudo(h).get("tipo", "")) in ["investigacao", "evento"]:
+			if melhor == Vector2i(-999, -999) or Hex.distancia(h, m.posicao(a)) < Hex.distancia(melhor, m.posicao(a)):
+				melhor = h
+	return melhor if melhor != Vector2i(-999, -999) else objetivo
+
+
+static func _tem_pista_no_mapa(m: Missao) -> bool:
+	for h in m.mapa.celulas:
+		if String(m.mapa.conteudo(h).get("tipo", "")) in ["investigacao", "evento"]:
+			return true
+	return false
+
+
 ## Vai para o hex alcançável mais perto do objetivo (machucado e com uma vila perto, vai para a vila).
+## Com o covil selado (docs/42), antes vai atrás de pistas.
 static func _escolher_destino(m: Missao, a: Agente, destinos: Dictionary, objetivo: Vector2i) -> Vector2i:
-	var alvo := objetivo
+	var alvo := objetivo if m.covil_aberto() else _proxima_pista(m, a, objetivo)
 	if a.pv * 2 < a.pv_maximo:
 		var melhor_vila := Vector2i(-999, -999)
 		for h in destinos:

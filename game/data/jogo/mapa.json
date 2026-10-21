@@ -1,6 +1,6 @@
 {
   "nota": "Design do jogo (o livro não tem regras de viagem). Mapa-múndi em hexágonos, estilo For The King.",
-  "tamanho": { "colunas": 16, "linhas": 11 },
+  "tamanho": { "colunas": 20, "linhas": 12 },
   "movimento": {
     "descricao": "No início do turno no mapa, o agente rola 1 d20 por ponto de Agilidade (mínimo 1), mais os slots extras e 1 por PE de Foco. Cada slot com resultado igual ou maior que a DT vale 1 ponto de movimento, somado à base. Revisado em 20/10/2026 (docs/13): com base 1 e só a Agilidade, um agente comum andava 1 ou 2 hexes; agora anda 3 ou 4, perto do For The King.",
     "base": 2,
@@ -12,6 +12,8 @@
   "visao_da_serra": 2,
   "escalada": "Revisado em 21/10/2026 (docs/34): a água rasa se atravessa (custo 3); a serra é o único bloqueio e só se sobe no turno em que algum dado de Agilidade do movimento dá 20 (custo 2). Do alto, a visão cresce.",
   "aliados_entram_no_combate_ate": 2,
+  "covil_selado": true,
+  "covil_nota": "Revisado em 21/10/2026 (docs/42): o covil só abre quando o grupo sabe onde ele fica (a pergunta 'onde' respondida, ou um evento que o revele). Com a Membrana rompida, ele se abre à força: é o confronto final, preparado ou não. Mapa 20×12, com mais encontros, eventos, investigações e vilas.",
   "dificuldade_encontro": 1.0,
   "dificuldade_covil": 1.5,
   "dificuldade_nota": "Orçamento de VD dos encontros = soma do NEX de quem entra × dificuldade (p.187: 0,5 fácil, 1 equilibrado, 1,5 difícil).",
@@ -27,10 +29,10 @@
     "serra":    { "nome": "Serra",    "custo": -1, "escalavel": true, "custo_escalada": 2, "cor": "4a443d", "arena": { "cobertura": 5, "dificil": 6, "parede": 4, "elevado": 6 } }
   },
   "geracao": {
-    "encontros": 7,
-    "eventos": 6,
-    "investigacoes": 3,
-    "vilas": 1,
+    "encontros": 9,
+    "eventos": 8,
+    "investigacoes": 4,
+    "vilas": 2,
     "distancia_minima_do_inicio": 3,
     "limiares_ruido": [
       { "ate": -0.5,  "terreno": "agua" },
@@ -39,8 +41,8 @@
       { "ate": 0.5,   "terreno": "floresta" },
       { "ate": 1.0,   "terreno": "morro" }
     ],
-    "ruinas_por_mapa": 4,
-    "serras_por_mapa": 4
+    "ruinas_por_mapa": 5,
+    "serras_por_mapa": 5
   },
   "mundo": {
     "descricao": "Depois que todos os agentes jogam, o mundo age: a Membrana enfraquece e, conforme o estado dela, novas ameaças surgem perto do grupo.",

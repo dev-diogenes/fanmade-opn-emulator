@@ -305,4 +305,6 @@ static func criar_missao(d: Dictionary, ruleset: Ruleset, grupo: Array, opcoes: 
 	m._log("[b]%s[/b]%s" % [d.get("titulo", "Missão da comunidade"), "" if String(d.get("autor", "")) == "" else " — por %s" % d.autor])
 	if String(d.get("briefing", "")) != "":
 		m._log(String(d.briefing))
+	# Covil selado só se a missão pedir (docs/42): o conteúdo autoral pode não ter como responder "onde"
+	m.covil_localizado = not bool(d.get("covil_selado", false))
 	return m

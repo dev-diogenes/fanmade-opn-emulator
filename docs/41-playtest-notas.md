@@ -80,8 +80,8 @@
 
 ## Prioridade sugerida
 
-1. Missões mais longas: covil com selo, mapa ou distância maiores, mais encontros no caminho.
-2. Aviso de grupo separado.
+1. ✔ Missões mais longas: covil com selo, mapa maior e mais encontros (docs/42).
+2. ✔ Aviso de grupo separado (docs/42).
 3. Dedução mais difícil: pistas espalhadas por pergunta e mais testemunhas.
 4. PP por pista adicional como no livro.
 5. Recompensa no alto da serra.

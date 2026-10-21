@@ -9,6 +9,7 @@ const ALTURAS := {"agua": 0.08, "pantano": 0.12, "campo": 0.2, "estrada": 0.2, "
 	"ruina": 0.22, "floresta": 0.24, "morro": 0.5, "serra": 0.85}   # serra: o platô alto (docs/34)
 const COR_NEVOA := Color("1c1b24")
 const COR_DESTAQUE := Color(0.35, 0.65, 1.0, 0.45)
+const COR_LONGE_DO_GRUPO := Color(0.95, 0.6, 0.2, 0.45)   ## destino em que o agente fica sozinho (docs/42)
 const CORES_AGENTES := Tema.CORES_JOGADORES
 
 var rig: CameraRig
@@ -320,9 +321,14 @@ func atualizar(missao: Missao, destinos: Dictionary) -> void:
 		_atualizar_marcador(h, mapa.conteudo(h).get("tipo", "") if revelado else "")
 	for filho in _destaques.get_children():
 		filho.queue_free()
+	var a := missao.agente_atual()
+	var sozinho_em := func(h: Vector2i) -> bool:
+		return a != null and missao.agentes.size() > 1 and missao.aliados_perto(a, h) == 0
 	for h in destinos:
-		var d := Pecas.prisma_hex(RAIO * 0.9, 0.04, COR_DESTAQUE)
-		d.material_override = Pecas.material(COR_DESTAQUE, true)
+		# Longe do grupo (docs/42): âmbar em vez de azul
+		var cor := COR_LONGE_DO_GRUPO if sozinho_em.call(h) else COR_DESTAQUE
+		var d := Pecas.prisma_hex(RAIO * 0.9, 0.04, cor)
+		d.material_override = Pecas.material(cor, true)
 		d.position = posicao_hex(h) + Vector3(0, 0.01, 0)
 		_destaques.add_child(d)
 	_atualizar_agentes(missao)
