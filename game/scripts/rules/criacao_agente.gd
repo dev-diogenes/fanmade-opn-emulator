@@ -266,6 +266,10 @@ static func criar(ruleset: Ruleset, ficha: Dictionary) -> Dictionary:
 	for h in a.habilidades():
 		if h.has("escolha") and not a.escolhas.has(h.id):
 			erros.append("%s exige uma escolha (%s)" % [h.nome, h.escolha])
+		elif h.get("escolha", "") == "elemento" and not String(a.escolhas[h.id]) in ELEMENTOS:
+			erros.append("%s: elemento inválido (%s)" % [h.nome, a.escolhas[h.id]])
+		elif h.get("escolha", "") == "ritual" and not String(a.escolhas[h.id]) in a.rituais:
+			erros.append("%s: escolha um ritual que o agente conhece" % h.nome)
 
 	if not erros.is_empty():
 		return {"agente": null, "erros": erros}
@@ -306,6 +310,9 @@ static func _validar_rituais(ruleset: Ruleset, a: Agente, lista: Array) -> Array
 		if int(r.circulo) > a.circulo_maximo():
 			erros.append("%s é de %dº círculo; o NEX permite até o %dº" % [r.nome, int(r.circulo), a.circulo_maximo()])
 	return erros
+
+
+const ELEMENTOS := ["conhecimento", "energia", "morte", "sangue", "medo"]
 
 
 static func _checar_pre(pre: Dictionary, a: Agente, nome: String) -> Array[String]:

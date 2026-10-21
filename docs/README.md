@@ -30,6 +30,7 @@
 | [25-ficha-no-formato-oficial.md](25-ficha-no-formato-oficial.md) | Ficha do agente no formato da ficha oficial (Agente; Habilidades e inventário) e a página de rituais otimizada |
 | [26-descricao-e-revisao.md](26-descricao-e-revisao.md) | Personalidade, histórico e objetivo do agente (aba Descrição no dossiê) e a revisão com a página 1 da ficha nova |
 | [27-criacao-pelo-livro.md](27-criacao-pelo-livro.md) | Criação na ordem do livro (conceito, atributos, origem, classe, perícias, rituais, descrição, revisão), idade variada no dossiê e editar a descrição na Base |
+| [28-poderes-no-dossie.md](28-poderes-no-dossie.md) | Poderes de classe no dossiê: só os de pré-requisito cumprido, e as escolhas de Treinamento em Perícia, Especialista em Elemento e Ritual Predileto |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

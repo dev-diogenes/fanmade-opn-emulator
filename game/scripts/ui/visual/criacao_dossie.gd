@@ -22,7 +22,8 @@ var ficha := {"nome": "", "origem": "", "classe": "combatente", "nex": 5,
 	"pericias_origem": [], "pericias_classe": [], "pericias_livres": [], "perito": [], "rituais": [],
 	"aparencia": "", "tom": 0, "personalidade": "", "historico": "", "objetivo": "",
 	"conceito": "", "genero": "", "idade_anos": 0, "aparencia_texto": "",
-	"idade": "", "desvantagens_idade": [], "beneficios_origem": [], "trilha": "", "poderes": []}
+	"idade": "", "desvantagens_idade": [], "beneficios_origem": [], "trilha": "", "poderes": [],
+	"treinamentos": [], "escolhas": {}}
 ## Regra opcional Idade Variada (p.182): a faixa sai da idade em anos.
 var idade_variada := false
 
@@ -478,16 +479,62 @@ func _pagina_classe(v: VBoxContainer) -> void:
 			ficha.perito = []
 			ficha.rituais = []
 			ficha.trilha = ""
-			ficha.poderes = [])
+			ficha.poderes = []
+			ficha.treinamentos = []
+			ficha.escolhas = {})
 		b.custom_minimum_size = Vector2(0, 58)
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_bloco_trilha_e_poderes(v)
 
 
 ## Trilha (NEX 10%) e poderes de classe, quando a idade variada faz o agente começar com
-## mais experiência (adulto: um poder a mais; maduro e idoso: NEX maior). Poderes que pedem
-## escolhas extras ficam para a Base, depois de assinar.
+## mais experiência (adulto: um poder a mais; maduro e idoso: NEX maior). Só aparecem os
+## poderes cujos pré-requisitos a ficha cumpre agora; os que pedem escolha extra (docs/28)
+## abrem a escolha logo abaixo.
 const PODERES_COM_ESCOLHA := ["treinamento_em_pericia", "especialista_em_elemento", "ritual_predileto"]
+const ELEMENTOS := ["conhecimento", "energia", "morte", "sangue", "medo"]
+
+
+## Perícias treinadas pela ficha como está: origem (ou os benefícios escolhidos), classe,
+## livres e as do Treinamento em Perícia.
+func pericias_treinadas() -> Array:
+	var lista: Array = []
+	var origem := rs.origem(String(ficha.origem))
+	var da_origem: Array = (origem.get("pericias", []) as Array).duplicate()
+	if int(origem.get("pericias_escolha", 0)) > 0:
+		da_origem = (ficha.pericias_origem as Array).duplicate()
+	if String(ficha.idade) != "" and rs.faixa_idade(String(ficha.idade)).has("beneficios_de_origem"):
+		da_origem = (ficha.beneficios_origem as Array).filter(func(b): return b != "poder").map(func(b): return String(b).trim_prefix("pericia:"))
+	var classe := rs.classe(String(ficha.classe))
+	for p in da_origem + (classe.get("pericias_fixas", []) as Array) + (ficha.pericias_classe as Array) + (ficha.pericias_livres as Array):
+		if not p in lista:
+			lista.append(p)
+	for par in ficha.treinamentos:
+		for p in par:
+			if not p in lista:
+				lista.append(p)
+	return lista
+
+
+## O pré-requisito de um poder ou trilha, conferido na ficha em construção (o mesmo que
+## CriacaoAgente._checar_pre confere no agente pronto). Devolve o que falta ("" = cumpre).
+func falta_pre(pre: Dictionary) -> String:
+	var faltas := PackedStringArray()
+	for attr in pre.get("atributos", {}):
+		if int(ficha.atributos.get(attr, 0)) < int(pre.atributos[attr]):
+			faltas.append("%s %d" % [String(attr).to_upper(), int(pre.atributos[attr])])
+	var treinadas := pericias_treinadas()
+	for p in pre.get("treinado", []):
+		if not p in treinadas:
+			faltas.append("treino em " + _nome_pericia(p))
+	var algum: Array = pre.get("treinado_algum", [])
+	if not algum.is_empty() and not algum.any(func(p): return p in treinadas):
+		faltas.append("treino em " + " ou ".join(PackedStringArray(algum.map(func(p): return _nome_pericia(p)))))
+	if int(ficha.nex) < int(pre.get("nex", 0)):
+		faltas.append("NEX %d%%" % int(pre.nex))
+	if pre.has("poder") and not pre.poder in ficha.poderes:
+		faltas.append("o poder " + String(rs.poder(String(ficha.classe), String(pre.poder)).get("nome", pre.poder)))
+	return ", ".join(faltas)
 
 
 func _bloco_trilha_e_poderes(v: VBoxContainer) -> void:
@@ -496,19 +543,80 @@ func _bloco_trilha_e_poderes(v: VBoxContainer) -> void:
 		_rotulo(v, "Trilha (NEX 10%)")
 		var gt := _grade(v, 3)
 		for t in rs.dados.trilhas.trilhas.get(String(ficha.classe), []):
+			var falta := falta_pre(t.get("pre", {}))
+			if falta != "":
+				if ficha.trilha == t.id:
+					ficha.trilha = ""
+				continue
 			_opcao(gt, String(t.nome), ficha.trilha == t.id, func(): ficha.trilha = String(t.id), String(t.get("descricao", "")))
 	var n := poderes_esperados()
 	if n <= 0:
 		return
 	var motivo := "a Vivência do adulto" if nex < 15 else "o NEX %d%%" % nex
 	_rotulo(v, "Poderes de classe: %d (%s) — %d/%d" % [n, motivo, (ficha.poderes as Array).size(), n])
+	# Poderes escolhidos que deixaram de cumprir o pré-requisito (ex.: mudou um atributo) saem
+	for pid in (ficha.poderes as Array).duplicate():
+		if falta_pre(rs.poder(String(ficha.classe), String(pid)).get("pre", {})) != "":
+			_tirar_poder(String(pid))
 	var gp := _grade(v, 3)
+	var escondidos := 0
 	for p in rs.dados.poderes_classe.poderes.get(String(ficha.classe), []):
-		if String(p.id) in PODERES_COM_ESCOLHA:
+		if falta_pre(p.get("pre", {})) != "":
+			escondidos += 1
 			continue
-		var pre := "" if (p.get("pre", {}) as Dictionary).is_empty() else "\nTem pré-requisito: o rodapé avisa se a ficha não cumprir."
-		_opcao(gp, String(p.nome), String(p.id) in ficha.poderes, func(): _alternar(ficha.poderes, String(p.id), n),
-			String(p.get("descricao", "")) + pre)
+		_opcao(gp, String(p.nome), String(p.id) in ficha.poderes, func():
+			if String(p.id) in ficha.poderes:
+				_tirar_poder(String(p.id))
+			else:
+				_alternar(ficha.poderes, String(p.id), n)
+				for tirado in PODERES_COM_ESCOLHA:   # quem saiu pelo limite leva a escolha junto
+					if not tirado in ficha.poderes:
+						_limpar_escolha(tirado), String(p.get("descricao", "")))
+	if escondidos > 0:
+		_nota(v, "%d poder%s com pré-requisito que a ficha ainda não cumpre (atributo, treino, NEX ou outro poder) não aparece%s." % [escondidos, "" if escondidos == 1 else "es", "" if escondidos == 1 else "m"])
+	_escolhas_dos_poderes(v)
+
+
+func _tirar_poder(pid: String) -> void:
+	(ficha.poderes as Array).erase(pid)
+	_limpar_escolha(pid)
+
+
+func _limpar_escolha(pid: String) -> void:
+	match pid:
+		"treinamento_em_pericia": ficha.treinamentos = []
+		"especialista_em_elemento", "ritual_predileto": (ficha.escolhas as Dictionary).erase(pid)
+
+
+## As escolhas extras (docs/28): duas perícias para o Treinamento em Perícia, o elemento do
+## Especialista em Elemento e o ritual do Ritual Predileto (entre os escolhidos na aba Rituais).
+func _escolhas_dos_poderes(v: VBoxContainer) -> void:
+	if "treinamento_em_pericia" in ficha.poderes:
+		if (ficha.treinamentos as Array).is_empty():
+			ficha.treinamentos = [[]]
+		var par: Array = ficha.treinamentos[0]
+		_rotulo(v, "Treinamento em Perícia: duas perícias novas (%d/2)" % par.size())
+		var ja := pericias_treinadas().filter(func(p): return not p in par)
+		var g := _grade(v, 4)
+		for p in rs.dados.pericias.pericias:
+			var pid := String(p.id)
+			if pid in ja:
+				continue   # em NEX abaixo de 35%, o treinamento só treina perícias novas
+			_opcao(g, String(p.nome), pid in par, func(): _alternar(par, pid, 2))
+	if "especialista_em_elemento" in ficha.poderes:
+		_rotulo(v, "Especialista em Elemento: escolha o elemento")
+		var g := _grade(v, 3)   # 5 colunas de 200 px estouravam a pasta
+		for el in ELEMENTOS:
+			_opcao(g, String(el).capitalize(), ficha.escolhas.get("especialista_em_elemento", "") == el,
+				func(): ficha.escolhas["especialista_em_elemento"] = el)
+	if "ritual_predileto" in ficha.poderes:
+		_rotulo(v, "Ritual Predileto: um dos rituais escolhidos")
+		if (ficha.rituais as Array).is_empty():
+			_nota(v, "Escolha os rituais na aba Rituais primeiro.")
+		var g := _grade(v, 3)
+		for rid in ficha.rituais:
+			_opcao(g, String(rs.ritual(rid).get("nome", rid)), ficha.escolhas.get("ritual_predileto", "") == rid,
+				func(): ficha.escolhas["ritual_predileto"] = rid)
 
 
 func _pagina_atributos(v: VBoxContainer) -> void:
@@ -622,7 +730,10 @@ func _pagina_rituais(v: VBoxContainer) -> void:
 			continue
 		var rid: String = r.id
 		var nome := "%s (%s%s)%s" % [r.nome, r.elemento, "" if int(r.circulo) == 1 else ", %dº" % int(r.circulo), "" if r.get("implementado", false) else " *"]
-		_opcao(g, nome, rid in ficha.rituais, func(): _alternar(ficha.rituais, rid, qtd), String(r.get("descricao", "")))
+		_opcao(g, nome, rid in ficha.rituais, func():
+			_alternar(ficha.rituais, rid, qtd)
+			if not ficha.escolhas.get("ritual_predileto", "") in ficha.rituais:
+				(ficha.escolhas as Dictionary).erase("ritual_predileto"), String(r.get("descricao", "")))
 
 
 ## Ocultista: 3 rituais iniciais, mais 1 por NEX acima de 5% (p.42).
