@@ -88,12 +88,28 @@ static func tingir(raiz: Node, tinta: Color) -> void:
 			mi.set_surface_override_material(i, _materiais[chave])
 
 
+## Aparências escolhidas na foto do dossiê (docs/19): modelo da KayKit e tom da roupa.
+const APARENCIAS := {"Knight": "Armadura", "Rogue_Hooded": "Capuz", "Mage": "Chapéu", "Barbarian": "Rústico"}
+const TONS := [["Original", Color.WHITE], ["Sépia", Color("d9c39c")], ["Noite", Color("8d9bbb")], ["Luto", Color("77707c")]]
+
+
+## Modelo de um agente: o escolhido na foto ou, sem escolha, o da classe.
+static func modelo_do_agente(classe_id: String, aparencia: String = "") -> String:
+	return aparencia if APARENCIAS.has(aparencia) else String(PERSONAGEM_POR_CLASSE.get(classe_id, "Knight"))
+
+
 ## Figura de um agente: personagem animado da KayKit sobre uma base na cor do jogador
 ## (como uma peça de tabuleiro). Sem o modelo, cai no peão de `figura`.
-static func agente(classe_id: String, cor: Color, escala: float = 1.0) -> Node3D:
-	var nome: String = PERSONAGEM_POR_CLASSE.get(classe_id, "Knight")
-	var n := personagem(DIR_PERSONAGENS + nome + ".glb", nome.split("_")[0] + "_", cor, escala)
+static func agente(classe_id: String, cor: Color, escala: float = 1.0, aparencia: String = "", tom: int = 0) -> Node3D:
+	var nome := modelo_do_agente(classe_id, aparencia)
+	var tinta: Color = TONS[clampi(tom, 0, TONS.size() - 1)][1]
+	var n := personagem(DIR_PERSONAGENS + nome + ".glb", nome.split("_")[0] + "_", cor, escala, tinta)
 	return n if n != null else figura(cor, escala)
+
+
+## A figura com a aparência escolhida pelo jogador.
+static func do_agente(a: Agente, cor: Color, escala: float = 1.0) -> Node3D:
+	return agente(a.classe_id, cor, escala, a.aparencia, a.tom)
 
 
 ## Figura de uma ameaça (docs/09): criaturas viram esqueletos tingidos pela cor do elemento;

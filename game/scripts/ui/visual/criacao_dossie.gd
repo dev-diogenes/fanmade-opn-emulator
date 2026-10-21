@@ -2,7 +2,8 @@ class_name CriacaoDossie
 extends CanvasLayer
 ## Criação de agente como um dossiê (docs/17, E2): identidade e origem, classe, atributos,
 ## perícias, rituais e a revisão, numa pasta de papel. A ficha é validada a cada mudança
-## por CriacaoAgente; "Assinar e arquivar" só fica liberado sem erros.
+## por CriacaoAgente; "Assinar e arquivar" só fica liberado sem erros. Ao lado das abas, a
+## foto 3x4 presa com clipe (docs/19): aparência e tom da roupa, que valem para a miniatura.
 ##   CriacaoDossie.abrir(self, carreira, func(agente): ...)
 
 signal criado(agente: Agente)
@@ -15,13 +16,16 @@ var carreira: Carreira
 var rs: Ruleset
 var ficha := {"nome": "", "origem": "", "classe": "combatente", "nex": 5,
 	"atributos": {"agi": 1, "for": 1, "int": 1, "pre": 1, "vig": 1},
-	"pericias_origem": [], "pericias_classe": [], "pericias_livres": [], "perito": [], "rituais": []}
+	"pericias_origem": [], "pericias_classe": [], "pericias_livres": [], "perito": [], "rituais": [],
+	"aparencia": "", "tom": 0}
 
 var _abas: TabContainer
 var _paginas: Dictionary = {}     ## nome -> VBoxContainer (reconstruída a cada mudança)
 var _erros: Label
 var _assinar: Button
 var _nome: LineEdit
+var _foto: FotoAgente
+var _lbl_aparencia: Label
 
 
 static func abrir(pai: Node, p_carreira: Carreira, ao_criar: Callable = Callable()) -> CriacaoDossie:
@@ -63,9 +67,16 @@ func _montar() -> void:
 	fechar.text = "Fechar"
 	fechar.pressed.connect(queue_free)
 	cab.add_child(fechar)
+	var meio := HBoxContainer.new()
+	meio.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	meio.add_theme_constant_override("separation", Tema.ESPACO_M)
+	pasta.add_child(meio)
 	_abas = TabContainer.new()
 	_abas.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pasta.add_child(_abas)
+	_abas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_abas.custom_minimum_size = Vector2(900, 0)   # a pasta não muda de largura entre as abas
+	meio.add_child(_abas)
+	meio.add_child(_coluna_foto())
 	for nome in ["Identidade", "Classe", "Atributos", "Perícias", "Rituais", "Revisão"]:
 		var papel := PanelContainer.new()
 		papel.name = nome
@@ -81,6 +92,7 @@ func _montar() -> void:
 		rolagem.add_child(v)
 		_paginas[nome] = v
 	_abas.tab_changed.connect(func(_i): _redesenhar())
+	_atualizar_foto()
 	var rodape := HBoxContainer.new()
 	rodape.add_theme_constant_override("separation", Tema.ESPACO_M)
 	pasta.add_child(rodape)
@@ -136,6 +148,7 @@ func _redesenhar() -> void:
 			continue
 		filho.visible = false
 		filho.queue_free()
+	_atualizar_foto()
 	match pagina:
 		"Identidade": _pagina_identidade(v)
 		"Classe": _pagina_classe(v)
@@ -143,6 +156,83 @@ func _redesenhar() -> void:
 		"Perícias": _pagina_pericias(v)
 		"Rituais": _pagina_rituais(v)
 		"Revisão": _pagina_revisao(v, res, erros)
+
+
+# --- Foto 3x4 (docs/19) --------------------------------------------------------------
+
+func _coluna_foto() -> Control:
+	var caixa := VBoxContainer.new()
+	var vao := Control.new()
+	vao.custom_minimum_size = Vector2(0, 38)   # alinha com o papel, abaixo das abas
+	caixa.add_child(vao)
+	var painel := PanelContainer.new()
+	painel.theme_type_variation = "PainelLateral"
+	painel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	caixa.add_child(painel)
+	var col := VBoxContainer.new()
+	col.custom_minimum_size = Vector2(176, 0)
+	col.add_theme_constant_override("separation", 6)
+	painel.add_child(col)
+	var topo := Control.new()
+	topo.custom_minimum_size = Vector2(0, 8)   # espaço para o clipe
+	col.add_child(topo)
+	_foto = FotoAgente.new()
+	_foto.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(_foto)
+	_lbl_aparencia = Label.new()
+	_lbl_aparencia.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_lbl_aparencia.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+	col.add_child(_lbl_aparencia)
+	var linha := HBoxContainer.new()
+	linha.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_child(linha)
+	for par in [["◂", -1], ["▸", 1]]:
+		var b := Button.new()
+		b.text = par[0]
+		b.tooltip_text = "Outra aparência (vale para a miniatura no mapa e no combate)"
+		b.pressed.connect(_trocar_aparencia.bind(par[1]))
+		linha.add_child(b)
+		if par[1] < 0:
+			var l := Label.new()
+			l.text = "Aparência"
+			linha.add_child(l)
+	var tom := Button.new()
+	tom.text = "Tom da roupa"
+	tom.tooltip_text = "Original, sépia, noite ou luto"
+	tom.pressed.connect(_trocar_tom.bind(1))
+	col.add_child(tom)
+	var nota := Label.new()
+	nota.text = "A foto vale para a miniatura no mapa, no combate e na investigação."
+	nota.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	nota.custom_minimum_size = Vector2(176, 0)
+	nota.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+	nota.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	col.add_child(nota)
+	return caixa
+
+
+func _trocar_aparencia(passo: int) -> void:
+	var lista: Array = Pecas.APARENCIAS.keys()
+	var atual := Pecas.modelo_do_agente(String(ficha.classe), String(ficha.aparencia))
+	ficha.aparencia = lista[posmod(lista.find(atual) + passo, lista.size())]
+	Som.tocar("papel")
+	_atualizar_foto()
+
+
+func _trocar_tom(passo: int) -> void:
+	ficha.tom = posmod(int(ficha.tom) + passo, Pecas.TONS.size())
+	_atualizar_foto()
+
+
+## Sem escolha, a foto acompanha a classe; o texto diz o que está valendo.
+func _atualizar_foto() -> void:
+	if _foto == null:
+		return
+	_foto.mostrar(String(ficha.classe), String(ficha.aparencia), int(ficha.tom))
+	_foto.legenda = String(ficha.nome).strip_edges()
+	var modelo := Pecas.modelo_do_agente(String(ficha.classe), String(ficha.aparencia))
+	_lbl_aparencia.text = "%s · %s%s" % [Pecas.APARENCIAS.get(modelo, modelo), Pecas.TONS[int(ficha.tom)][0],
+		"" if String(ficha.aparencia) != "" else " (da classe)"]
 
 
 # --- Peças das páginas ------------------------------------------------------------
@@ -206,6 +296,7 @@ func _pagina_identidade(v: VBoxContainer) -> void:
 		_nome.max_length = 24
 		_nome.text_changed.connect(func(t):
 			ficha.nome = t
+			_foto.legenda = String(t).strip_edges()
 			var res := _validar()
 			_assinar.disabled = String(t).strip_edges() == "" or not res.erros.is_empty())
 	v.add_child(_nome)

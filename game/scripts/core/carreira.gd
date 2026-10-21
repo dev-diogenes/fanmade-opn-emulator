@@ -79,6 +79,8 @@ func recrutar_ficha(ficha: Dictionary) -> Dictionary:
 	if res.agente == null:
 		return res
 	var a: Agente = res.agente
+	a.aparencia = String(ficha.get("aparencia", ""))   # a foto do dossiê (docs/19)
+	a.tom = int(ficha.get("tom", 0))
 	a.id = "ag%d" % _proximo_id
 	_proximo_id += 1
 	var kit: Dictionary = kit_da_classe(String(ficha.get("classe", "")))

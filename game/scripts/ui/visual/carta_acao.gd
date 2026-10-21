@@ -2,6 +2,7 @@ class_name CartaAcao
 extends Button
 ## Carta de ação (docs/09, 5.2): papel, sigilo no topo, título em Cinzel e dica curta.
 ## Sobe no hover; borda dourada quando selecionada; atalho numérico no canto.
+## Textos (docs/19): título 17, dica 15 em tinta quase cheia, tecla num selo de 14.
 
 const TAMANHO := Vector2(132, 176)
 
@@ -40,7 +41,7 @@ static func criar(titulo: String, dica: String, atalho: int, semente: int, cor: 
 	t.text = titulo.to_upper()
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	t.add_theme_color_override("font_color", Tema.TINTA)
-	t.add_theme_font_size_override("font_size", 15)
+	t.add_theme_font_size_override("font_size", 17)
 	var f := Tema.fonte_titulo()
 	if f != null:
 		t.add_theme_font_override("font", f)
@@ -49,14 +50,19 @@ static func criar(titulo: String, dica: String, atalho: int, semente: int, cor: 
 	d.text = dica
 	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	d.add_theme_color_override("font_color", Color(Tema.TINTA, 0.7))
-	d.add_theme_font_size_override("font_size", 13)
+	d.add_theme_color_override("font_color", Color(Tema.TINTA, 0.88))   # 9:1 no papel
+	d.add_theme_font_size_override("font_size", 15)
+	d.add_theme_constant_override("line_spacing", -2)
 	v.add_child(d)
 	var n := Label.new()
 	n.text = tecla   # a tecla escolhida na folha de atalhos (docs/18, A4)
-	n.position = Vector2(8, 4)
-	n.add_theme_color_override("font_color", Color(Tema.TINTA, 0.7))
-	n.add_theme_font_size_override("font_size", 13)
+	n.position = Vector2(6, 4)
+	n.custom_minimum_size = Vector2(20, 20)
+	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	n.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	n.add_theme_color_override("font_color", Tema.PAPEL)
+	n.add_theme_font_size_override("font_size", 14)
+	n.add_theme_stylebox_override("normal", Tema.caixa(Color(Tema.TINTA, 0.82), Color(0, 0, 0, 0), 0, 4, Vector2(4, 0)))
 	n.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.add_child(n)
 	c.mouse_entered.connect(c._subir.bind(true))
@@ -83,7 +89,8 @@ func _draw() -> void:
 	if selecionada:
 		draw_rect(Rect2(Vector2.ZERO, size), Tema.OURO_CLARO, false, 3.0)
 	if disabled:
-		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.5))
+		# Mais leve que antes (0,5): a dica continua legível; o cadeado diz que está bloqueada
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.34))
 		# Cadeado (docs/16, A2): "indisponível" não depende só do cinza; o motivo vai no tooltip
 		var c := Vector2(size.x - 18, 18)
 		draw_arc(c + Vector2(0, -2), 5, PI, TAU, 10, Tema.PERGAMINHO, 2.0, true)

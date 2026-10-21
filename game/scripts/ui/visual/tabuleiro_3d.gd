@@ -136,7 +136,7 @@ func _atualizar_unidade(s: Ser) -> void:
 	var no: Node3D = _unidades.get(s)
 	if no == null:
 		if s is Agente:
-			no = Pecas.agente(s.classe_id, COR_AGENTE)
+			no = Pecas.do_agente(s, COR_AGENTE)
 		elif s is Ameaca:
 			no = Pecas.ameaca(s)
 		else:

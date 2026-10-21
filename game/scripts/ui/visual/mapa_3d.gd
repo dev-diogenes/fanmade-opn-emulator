@@ -64,6 +64,13 @@ func construir(p_mapa: MapaHex, terrenos: Dictionary) -> void:
 	add_child(_anel_vez)
 	rig.limites = AABB(minimo, maximo - minimo)
 	rig.distancia = 10.0
+	# 1ª pessoa no mapa (docs/19): olho acima da névoa, olhando para o chão à frente
+	rig.altura_olhos = 2.3
+	rig.olhar = -0.5
+	rig.recuo_primeira = 0.9
+	rig.fov_primeira = 70.0
+	rig.centro_olhar = (minimo + maximo) / 2.0
+	rig.modo_mudou.connect(func(_m): _visibilidade_das_pecas())
 
 
 ## Estradas (docs/13): uma faixa de terra do centro até a borda de cada vizinho que também
@@ -263,13 +270,13 @@ func _atualizar_agentes(missao: Missao) -> void:
 		var ficha: Node3D = _fichas.get(a)
 		var fora := not a in missao.agentes or a.tem(Ser.MORTO)
 		if ficha == null:
-			ficha = Pecas.agente(a.classe_id, CORES_AGENTES[i % CORES_AGENTES.size()], 0.75)
+			ficha = Pecas.do_agente(a, CORES_AGENTES[i % CORES_AGENTES.size()], 0.75)
 			var rot := Pecas.rotulo(a.nome, 36)
 			rot.position = Vector3(0, 1.0, 0)
 			ficha.add_child(rot)
 			add_child(ficha)
 			_fichas[a] = ficha
-		ficha.visible = not fora
+		ficha.set_meta("fora", fora)
 		if fora:
 			continue
 		var h := missao.posicao(a)
@@ -292,9 +299,23 @@ func _atualizar_agentes(missao: Missao) -> void:
 		if a.esta_fora_de_combate():
 			ficha.scale = Vector3(1, 0.5, 1)
 	var vez := missao.agente_atual()
+	# As peças nascem depois do primeiro foco: sem isto, a 1ª e a 2ª pessoa só pegavam no turno seguinte
+	if vez != null and rig.seguir != _fichas.get(vez):
+		rig.seguir = _fichas.get(vez)
+	_visibilidade_das_pecas()
 	_anel_vez.visible = vez != null
 	if vez != null:
 		_anel_vez.position = posicao_hex(missao.posicao(vez)) + Vector3(0, 0.02, 0)
+
+
+## Quem sai da missão some. Em 1ª pessoa (docs/19) somem também a peça do agente da vez (a
+## câmera está nos olhos dele) e quem divide o hex com ele (ficaria colado na lente).
+func _visibilidade_das_pecas() -> void:
+	var eu: Node3D = rig.seguir if rig.seguir != null and is_instance_valid(rig.seguir) else null
+	for a in _fichas:
+		var f: Node3D = _fichas[a]
+		var junto: bool = eu != null and rig.modo == "primeira" and _ultima_posicao.has(a) and 			Vector2(f.position.x - eu.position.x, f.position.z - eu.position.z).length() < 0.8
+		f.visible = not bool(f.get_meta("fora", false)) and not junto
 
 
 ## Centraliza a câmera no agente da vez.

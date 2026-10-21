@@ -77,7 +77,7 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 		add_child(rot)
 	var cores := Tema.CORES_JOGADORES
 	for i in agentes.size():
-		var f := Pecas.agente(agentes[i].classe_id, cores[i % cores.size()], 0.9)
+		var f := Pecas.do_agente(agentes[i], cores[i % cores.size()], 0.9)
 		f.position = Vector3(-0.5 + 0.5 * i, 0, 0.3 * (i % 2))
 		_figuras[agentes[i]] = f
 		var r := Pecas.rotulo(agentes[i].nome, 40)

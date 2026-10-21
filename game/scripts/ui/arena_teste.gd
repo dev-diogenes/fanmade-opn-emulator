@@ -623,23 +623,25 @@ func _montar_interface() -> void:
 	_mao.anchor_right = 1.0
 	_mao.anchor_top = 1.0
 	_mao.anchor_bottom = 1.0
-	var largura_carta := 112.0
+	var largura_carta := 118.0
+	var altura_carta := 156.0
 	_mao.offset_left = -5 * (largura_carta + 8) - 16
 	_mao.offset_right = -16
-	_mao.offset_top = -150 - 46
-	_mao.offset_bottom = -46
+	_mao.offset_top = -altura_carta - 60   # acima do relatório de campo (não encosta nele)
+	_mao.offset_bottom = -60
 	add_child(_mao)
-	var defs := [["mover", "Mover", "Clique numa célula azul", Tema.INFO, _modo_mover],
-		["atacar", "Atacar", "Clique num inimigo marcado", Tema.SANGUE_CLARO, _modo_atacar],
+	# Dicas curtas (docs/19): cabem em duas linhas de 14 px; o detalhe vai no tooltip e no bilhete
+	var defs := [["mover", "Mover", "Até uma célula azul", Tema.INFO, _modo_mover],
+		["atacar", "Atacar", "Um inimigo marcado", Tema.SANGUE_CLARO, _modo_atacar],
 		["ritual", "Ritual", "Conjurar com PE", Tema.ELEMENTO.energia, _abrir_bilhete.bind("ritual")],
-		["item", "Item", "Cicatrizante e itens de combate", Tema.OURO, _abrir_bilhete.bind("item")],
+		["item", "Item", "Curar ou usar item", Tema.OURO, _abrir_bilhete.bind("item")],
 		["encerrar", "Encerrar", "Passa a vez", Tema.ELEMENTO.morte, _encerrar_turno]]
 	for i in defs.size():
 		var d: Array = defs[i]
 		var carta := CartaAcao.criar(d[1], d[2], i + 1, 211 + i * 53, d[3])
-		carta.custom_minimum_size = Vector2(largura_carta, 150)
+		carta.custom_minimum_size = Vector2(largura_carta, altura_carta)
 		carta.size = carta.custom_minimum_size
-		carta._sigilo.custom_minimum_size = Vector2(0, 62)
+		carta._sigilo.custom_minimum_size = Vector2(0, 58)
 		carta.position = Vector2(i * (largura_carta + 8), 0)
 		carta.pressed.connect(d[4])
 		_mao.add_child(carta)

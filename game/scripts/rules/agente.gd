@@ -19,6 +19,10 @@ var idade := ""                  ## Faixa etária (regra opcional Idade Variada)
 var desvantagens_idade: Array[String] = []
 var trilha_versatil := ""        ## Versatilidade (NEX 50%): trilha alheia da qual recebe o 1º poder
 var sem_poder_origem := false    ## Criança/adolescente que não escolheu o poder da origem
+## Aparência (docs/19), só apresentação: modelo da miniatura e da foto ("" = o da classe)
+## e tom da roupa (índice em Pecas.TONS). As regras não leem.
+var aparencia := ""
+var tom := 0
 ## Ex-mundano (regra NEX 0%): bônus recebidos ao virar agente, ex.: {"pv": 12, "pe": 1, "san": 4}
 var transicao_mundano: Dictionary = {}
 var pp := 0                      ## Pontos de Prestígio (definem a patente)
@@ -507,6 +511,7 @@ func para_dicionario() -> Dictionary:
 		"rituais": Array(rituais), "san_perdida": san_perdida,
 		"poderes_paranormais": poderes_paranormais.duplicate(true), "afinidade": afinidade,
 		"pv": pv, "pe": pe, "san": san, "condicoes": condicoes.keys(),
+		"aparencia": aparencia, "tom": tom,
 	}
 
 
@@ -549,6 +554,8 @@ static func de_dicionario(p_ruleset: Ruleset, d: Dictionary) -> Agente:
 	for x in d.get("poderes_paranormais", []):
 		a.poderes_paranormais.append(x)
 	a.afinidade = d.get("afinidade", "")
+	a.aparencia = String(d.get("aparencia", ""))
+	a.tom = int(d.get("tom", 0))
 	a.arma_id = d.get("arma", "")
 	for x in d.get("equipamento", []):
 		a.equipamento.append(x)

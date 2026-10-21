@@ -79,11 +79,21 @@ func _montar() -> void:
 	ficha.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(24, 18)))
 	ficha.theme = Tema.tema_papel()
 	pasta.add_child(ficha)
+	var linha := HBoxContainer.new()
+	linha.add_theme_constant_override("separation", Tema.ESPACO_M)
+	ficha.add_child(linha)
 	var texto := RichTextLabel.new()
 	texto.bbcode_enabled = true
 	texto.text = ficha_bbcode(agente)
+	texto.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	texto.add_theme_color_override("default_color", Tema.TINTA)
-	ficha.add_child(texto)
+	linha.add_child(texto)
+	# A foto 3x4 do arquivo (docs/19), presa no canto da ficha
+	var foto := FotoAgente.new()
+	foto.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	foto.mostrar(agente.classe_id, agente.aparencia, agente.tom)
+	foto.legenda = agente.nome
+	linha.add_child(foto)
 
 	var inv := PanelContainer.new()
 	inv.name = "Inventário"

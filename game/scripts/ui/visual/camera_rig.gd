@@ -9,6 +9,9 @@ extends Node3D
 const MODOS := ["terceira", "segunda", "primeira"]
 const NOMES_MODOS := {"terceira": "3ª pessoa", "segunda": "2ª pessoa", "primeira": "1ª pessoa"}
 
+## A cena pode esconder mais peças em 1ª pessoa (o mapa esconde quem divide o hex).
+signal modo_mudou(modo: String)
+
 var camera: Camera3D
 var alvo := Vector3.ZERO          ## Ponto que a câmera olha
 var distancia := 10.0
@@ -26,8 +29,15 @@ var seguir: Node3D:
 			seguir.visible = true
 		seguir = v
 		_atualizar_visibilidade()
+		_virar_para_o_centro()
 var olhar := -0.32          ## inclinação do olhar em 1ª pessoa (radianos)
 var altura_olhos := 0.7
+## Ajustes da 1ª pessoa por cena. No mapa (maquete), a miniatura é pequena perto dos hexes:
+## o olho sobe, recua um pouco e abre o campo de visão para enxergar o caminho (docs/19).
+var recuo_primeira := 0.0
+var fov_primeira := 55.0
+## Para onde a 1ª e a 2ª pessoa se viram ao trocar de agente ou de modo (null = não vira).
+var centro_olhar: Variant = null
 
 var _alvo_atual := Vector3.ZERO
 var _distancia_atual := 10.0
@@ -56,13 +66,16 @@ func _aplicar() -> void:
 		var cabeca := to_local(seguir.global_position) + Vector3(0, altura_olhos, 0)
 		if modo == "primeira":
 			var frente := Vector3(-sin(giro) * cos(olhar), sin(olhar), -cos(giro) * cos(olhar))
-			camera.position = cabeca
-			camera.look_at(cabeca + frente, Vector3.UP)
+			camera.fov = fov_primeira
+			camera.position = cabeca - Vector3(-sin(giro), 0, -cos(giro)) * recuo_primeira
+			camera.look_at(camera.position + frente, Vector3.UP)
 		else:
 			var d := clampf(_distancia_atual * 0.3, 1.6, 4.0)
+			camera.fov = 55.0
 			camera.position = cabeca + Vector3(-sin(giro), 0.35, -cos(giro)) * d
 			camera.look_at(cabeca, Vector3.UP)
 		return
+	camera.fov = 55.0
 	var dir := Vector3(sin(giro) * cos(inclinacao), sin(inclinacao), cos(giro) * cos(inclinacao))
 	camera.position = _alvo_atual + dir * _distancia_atual
 	camera.look_at(_alvo_atual, Vector3.UP)
@@ -78,6 +91,17 @@ func definir_modo(novo: String) -> void:
 	modo = novo if novo in MODOS else "terceira"
 	Preferencias.definir_camera(modo)
 	_atualizar_visibilidade()
+	_virar_para_o_centro()
+	modo_mudou.emit(modo)
+
+
+## Nos modos próximos, começa olhando do agente para o centro (no mapa: o território, não a borda).
+func _virar_para_o_centro() -> void:
+	if modo == "terceira" or centro_olhar == null or seguir == null or not is_instance_valid(seguir):
+		return
+	var d: Vector3 = (centro_olhar as Vector3) - seguir.position
+	if Vector2(d.x, d.z).length() > 0.5:
+		giro = atan2(-d.x, -d.z)
 
 
 ## Em 1ª pessoa, a figura do próprio agente some (a câmera está dentro dela).

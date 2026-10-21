@@ -21,6 +21,7 @@
 | [16-pacote-acessibilidade-engajamento.md](16-pacote-acessibilidade-engajamento.md) | Desfecho dos eventos, rastreador do caso, Base na aba Missão, escala, motivos dos bloqueios, velocidade do texto |
 | [17-criacao-e-sanidade.md](17-criacao-e-sanidade.md) | Criação de agente em dossiê (E2) e sanidade com consequência visual: vultos, sussurros, imagem que respira (E6) |
 | [18-atalhos-flashes-daltonismo.md](18-atalhos-flashes-daltonismo.md) | Atalhos remapeáveis e folha de atalhos (A4), modo suave de flashes e aviso (A5), paleta azul e laranja para daltonismo (A6) |
+| [19-pendencias-visuais.md](19-pendencias-visuais.md) | 1ª pessoa no mapa (olho acima da névoa, virada para o território), cartas com texto maior, foto 3x4 e aparência do agente |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.
