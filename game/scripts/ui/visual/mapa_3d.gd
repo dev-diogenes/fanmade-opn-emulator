@@ -25,10 +25,18 @@ var _cursor: MeshInstance3D   ## cursor do controle (co-op local)
 var ver_tudo := false
 
 
+var _env: Environment   ## noite do mapa (docs/22); a Membrana engrossa a névoa
+
+
+## A Membrana pesa no clima do mapa (docs/22).
+func clima_membrana(valor: int) -> void:
+	Pecas.clima_membrana(_env, valor)
+
+
 func construir(p_mapa: MapaHex, terrenos: Dictionary) -> void:
 	mapa = p_mapa
 	_terrenos = terrenos
-	Pecas.ambiente(self)
+	_env = Pecas.ambiente(self)
 	rig = CameraRig.new()
 	add_child(rig)
 	var minimo := Vector3(INF, 0, INF)
@@ -167,11 +175,21 @@ func _decorar(raiz: Node3D, h: Vector2i, terreno: String, altura: float) -> void
 				r.position = p
 				raiz.add_child(r)
 		"cidade":
+			var acesas := 0
 			for p in pontos.call(3):
 				var c := Pecas.casa_br(hash(p) + hash(h))
 				c.position = p
 				c.rotation.y = rng.randf() * TAU
 				raiz.add_child(c)
+				if c.get_meta("acesa", false):
+					acesas += 1
+			if acesas > 0:   # a luz das janelas no chão da rua (docs/22)
+				var luz := OmniLight3D.new()
+				luz.light_color = Color("ffa040")
+				luz.light_energy = 0.35 + 0.2 * acesas
+				luz.omni_range = 1.3
+				luz.position = Vector3(0, altura + 0.35, 0)
+				raiz.add_child(luz)
 		"ruina":
 			for p in pontos.call(3):
 				var c := Pecas.pilar_quebrado(rng.randf_range(0.15, 0.45))
@@ -247,8 +265,8 @@ func _atualizar_marcador(h: Vector2i, tipo: String) -> void:
 	# Marcos vivos (docs/08, R6): a peça flutua um pouco e o marco ilumina o hex
 	var peca: Node3D = m.get_meta("peca")
 	var luz := OmniLight3D.new()
-	luz.light_color = m.get_meta("cor")
-	luz.light_energy = 1.4 if tipo == "objetivo" else 0.8
+	luz.light_color = m.get_meta("cor") if tipo != "vila" else Color("ffa64d")   # vila: lampião (docs/22)
+	luz.light_energy = 1.4 if tipo == "objetivo" else (1.1 if tipo == "vila" else 0.8)
 	luz.omni_range = 1.8 if tipo in ["objetivo", "vila"] else 1.2
 	luz.position = Vector3(0, 0.6, 0)
 	m.add_child(luz)

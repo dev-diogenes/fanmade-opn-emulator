@@ -6,6 +6,27 @@ extends Node3D
 const COR_CHAO_A := Color("2b2f38")
 const COR_CHAO_B := Color("262a32")
 const COR_DIFICIL := Color("22352a")
+## O combate acontece no hex do encontro (docs/22): chão (xadrez), terreno difícil, parede,
+## cobertura e o que cerca o tabuleiro. "" = a sala da demonstração.
+const CLAREAR_CHAO := 0.3
+const ESTILO_TERRENO := {
+	"floresta": {"chao": ["1f2a1d", "1b2519"], "dificil": "223d24", "parede": "3a3128", "cobertura": "rocha",
+		"borda": ["trees_A_large", "trees_B_large", "trees_A_medium", "trees_B_medium"]},
+	"campo": {"chao": ["2b2e1f", "27291c"], "dificil": "2c3d22", "parede": "5a4d3a", "cobertura": "rocha",
+		"borda": ["tree_single_A", "tree_single_B", "rock_single_A", ""]},
+	"estrada": {"chao": ["342d24", "2e2820"], "dificil": "2c3d22", "parede": "5a4d3a", "cobertura": "caixote",
+		"borda": ["tree_single_A", "rock_single_A", "", ""]},
+	"cidade": {"chao": ["2c2b30", "27262b"], "dificil": "30302a", "parede": "4f4a52", "cobertura": "caixote",
+		"borda": ["casa", "casa", "barrel", "crate_A_big", ""]},
+	"ruina": {"chao": ["2e2a2c", "282426"], "dificil": "2a3326", "parede": "5a5260", "cobertura": "rocha",
+		"borda": ["rock_single_C", "rock_single_E", "pilar", ""]},
+	"morro": {"chao": ["2f2c28", "2a2723"], "dificil": "333a28", "parede": "5e574d", "cobertura": "rocha",
+		"borda": ["hill_single_A", "rock_single_C", "mountain_A_grass_trees", ""]},
+	"pantano": {"chao": ["1e2621", "1a211d"], "dificil": "1f3328", "parede": "33352d", "cobertura": "rocha",
+		"borda": ["waterplant_A", "waterplant_B", "waterlily_A", "trees_B_medium"]},
+	"agua": {"chao": ["1c2329", "182026"], "dificil": "1f3328", "parede": "33352d", "cobertura": "rocha",
+		"borda": ["waterplant_A", "waterlily_A", "", ""]},
+}
 const COR_MOVER := Color(0.3, 0.6, 1.0, 0.45)
 const COR_AGENTE := Color("3d7bd9")
 const COR_AMEACA := Color("b03a2e")
@@ -27,9 +48,20 @@ var _anel_sel: MeshInstance3D
 var _cursor: MeshInstance3D   ## cursor do controle (co-op local)
 
 
-func construir(p_grade: Grade) -> void:
+var _env: Environment
+var terreno := ""   ## terreno do hex do encontro (docs/22)
+
+
+## A Membrana pesa no clima do combate (docs/22).
+func clima_membrana(valor: int) -> void:
+	Pecas.clima_membrana(_env, valor)
+
+
+func construir(p_grade: Grade, p_terreno: String = "") -> void:
 	grade = p_grade
-	Pecas.ambiente(self, Color("15141c"))
+	terreno = p_terreno
+	_env = Pecas.ambiente(self, Color("0b0d18"))
+	var estilo: Dictionary = ESTILO_TERRENO.get(terreno, {})
 	rig = CameraRig.new()
 	add_child(rig)
 	for x in grade.largura:
@@ -37,6 +69,10 @@ func construir(p_grade: Grade) -> void:
 			var c := Vector2i(x, y)
 			var t: String = grade.terreno.get(c, "")
 			var cor := COR_DIFICIL if t == Grade.DIFICIL else (COR_CHAO_A if (x + y) % 2 == 0 else COR_CHAO_B)
+			if not estilo.is_empty():
+				# A paleta é a do terreno à noite; clareada para o chão ler bem sob o foco da clareira
+				cor = Color(estilo.dificil) if t == Grade.DIFICIL else Color(estilo.chao[(x + y) % 2])
+			cor = cor.lightened(CLAREAR_CHAO)
 			var piso := BoxMesh.new()
 			piso.size = Vector3(0.98, 0.1, 0.98)
 			var mi := MeshInstance3D.new()
@@ -46,12 +82,15 @@ func construir(p_grade: Grade) -> void:
 			add_child(mi)
 			var deco: Node3D = null
 			match t:
-				Grade.PAREDE: deco = Pecas.parede()
-				Grade.COBERTURA: deco = Pecas.caixote()
-				Grade.DIFICIL: deco = Pecas.capim()
+				Grade.PAREDE: deco = Pecas.parede(1.4, Color(estilo.get("parede", "4a4f5c")).lightened(0.15))
+				Grade.COBERTURA: deco = Pecas.rocha(0.36) if estilo.get("cobertura", "") == "rocha" else Pecas.caixote()
+				Grade.DIFICIL: deco = Pecas.capim(Color(estilo.get("dificil", "2f5a2a")).lightened(0.25))
 			if deco != null:
 				deco.position = posicao(c)
 				add_child(deco)
+	if not estilo.is_empty():
+		_cercar(estilo)
+	_clareira()
 	_destaques = Node3D.new()
 	add_child(_destaques)
 	_anel_vez = Pecas.anel(0.46, Color("f1c40f"))
@@ -192,6 +231,82 @@ func _atualizar_unidade(s: Ser) -> void:
 		if chances.has(s):
 			rot.text += "\nacerto " + LinhaTeste.chance(float(chances[s]))
 		rot.modulate = Color("ecf0f1") if float(s.pv) / s.pv_maximo > 0.5 else Color("f5b041")
+
+
+## Clareira ao luar (docs/22): um foco frio de cima ilumina o tabuleiro e deixa o entorno no
+## escuro. A noite fica na moldura; a luta continua legível.
+func _clareira() -> void:
+	var centro := (posicao(Vector2i(0, 0)) + posicao(Vector2i(grade.largura - 1, grade.altura - 1))) / 2.0
+	var foco := SpotLight3D.new()
+	foco.light_color = Color("d2dcff")
+	foco.light_energy = 3.0
+	foco.spot_range = 22.0
+	foco.spot_angle = 46.0
+	foco.spot_angle_attenuation = 0.5
+	foco.shadow_enabled = true
+	foco.position = centro + Vector3(0, 11, 1.5)
+	foco.rotation = Vector3(-PI / 2.0 + 0.12, 0, 0)   # quase a pino
+	add_child(foco)
+	if _env != null:
+		_env.ambient_light_energy = 0.75
+		_env.tonemap_exposure = 1.0
+
+
+## O que cerca o tabuleiro (docs/22): duas faixas de peças do terreno em volta, sorteadas
+## pela posição (o mesmo encontro sempre tem a mesma moldura). Cidades ganham casas acesas.
+func _cercar(estilo: Dictionary) -> void:
+	var opcoes: Array = estilo.get("borda", [])
+	if opcoes.is_empty():
+		return
+	var acesas := 0
+	for x in range(-2, grade.largura + 2):
+		for y in range(-2, grade.altura + 2):
+			if x >= 0 and x < grade.largura and y >= 0 and y < grade.altura:
+				continue
+			var rng := RandomNumberGenerator.new()
+			rng.seed = hash(Vector2i(x, y)) + hash(terreno)
+			if rng.randf() < 0.35:
+				continue
+			var nome: String = opcoes[rng.randi() % opcoes.size()]
+			var peca: Node3D = null
+			match nome:
+				"":
+					continue
+				"casa":
+					peca = Pecas.casa_br(rng.randi())
+					peca.scale = Vector3.ONE * 2.6
+					if peca.get_meta("acesa", false):
+						acesas += 1
+						if acesas % 3 == 1:
+							var luz := OmniLight3D.new()
+							luz.light_color = Color("ffa040")
+							luz.light_energy = 0.9
+							luz.omni_range = 2.6
+							luz.position = Vector3(0, 0.25, 0)
+							peca.add_child(luz)
+				"pilar":
+					var p := Node3D.new()
+					p.add_child(Pecas.pilar_quebrado(rng.randf_range(0.6, 1.4)))
+					peca = p
+				_:
+					peca = Pecas.modelo(Pecas.DIR_HEX + nome + ".gltf")
+					if peca == null and (nome.begins_with("rock") or nome.begins_with("hill")):
+						peca = Pecas.rocha(0.3)   # sem os modelos KayKit: peças por código
+					elif peca == null:
+						peca = Pecas.arvore(rng.randf_range(0.8, 1.2))
+					else:
+						peca.scale = Vector3.ONE * rng.randf_range(0.7, 1.0)
+			peca.position = posicao(Vector2i(x, y)) + Vector3(rng.randf_range(-0.25, 0.25), 0, rng.randf_range(-0.25, 0.25))
+			peca.rotation.y = rng.randf() * TAU
+			add_child(peca)
+	# Chão do entorno: um pano escuro do tom do terreno, para as peças não flutuarem no vazio
+	var pano := PlaneMesh.new()
+	pano.size = Vector2(grade.largura + 8, grade.altura + 8)
+	var chao := MeshInstance3D.new()
+	chao.mesh = pano
+	chao.material_override = Pecas.material(Color(estilo.chao[1]).darkened(0.35))
+	chao.position = (posicao(Vector2i(0, 0)) + posicao(Vector2i(grade.largura - 1, grade.altura - 1))) / 2.0 + Vector3(0, -0.11, 0)
+	add_child(chao)
 
 
 ## Texto que sobe e some sobre um ser: dano, "ERROU", "CRÍTICO" (docs/12).

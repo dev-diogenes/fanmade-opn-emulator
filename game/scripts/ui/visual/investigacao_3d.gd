@@ -123,7 +123,7 @@ func _prop_para(cena_id: String, i: int) -> Node3D:
 	match "%s:%d" % [cena_id, i % 4]:
 		"casa_abandonada:0": return Pecas.caixote(0.9)
 		"casa_abandonada:1": return Pecas.caixote(0.7)
-		"casa_abandonada:2": return Pecas.casa()
+		"casa_abandonada:2": return Pecas.casa(Color("b8a88a"), Color("7b3f2e"), false)   # abandonada: janelas apagadas
 		"casa_abandonada:3": return Pecas.parede(0.8)
 		"capela:0", "capela:3": return Pecas.pilar_quebrado(0.9 if i % 4 == 0 else 0.6)
 		"capela:1": return Pecas.parede(1.2)

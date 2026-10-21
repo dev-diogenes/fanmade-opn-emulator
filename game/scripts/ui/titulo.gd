@@ -88,6 +88,7 @@ func _montar_diorama() -> void:
 	vp.add_child(_mapa3d)
 	var mapa := _mapa_vitrine()
 	_mapa3d.construir(mapa, DadosJogo.ler("mapa").terrenos)
+	_mapa3d.clima_membrana(70)   # a mesma Membrana do véu: a noite já pesa
 	_mapa3d.revelar_tudo()
 	var centro := Vector3.ZERO
 	for h in mapa.celulas:

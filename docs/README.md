@@ -24,6 +24,7 @@
 | [19-pendencias-visuais.md](19-pendencias-visuais.md) | 1ª pessoa no mapa (olho acima da névoa, virada para o território), cartas com texto maior, foto 3x4 e aparência do agente |
 | [20-critica-pos-acessibilidade.md](20-critica-pos-acessibilidade.md) | Nova crítica de todas as telas: o que mudou desde a 15, chance nas escolhas, clima do mundo 3D, contraste e fontes medidos, opções C1–C8 |
 | [21-chance-vez-e-limpeza.md](21-chance-vez-e-limpeza.md) | Chance nas escolhas (evento, investigação, ataque), faixa da vez da ameaça e a limpeza das pendências das críticas 15 e 20 |
+| [22-clima-de-terror-3d.md](22-clima-de-terror-3d.md) | Noite no mapa e no título, Membrana pesando no clima, casas acesas e combate no terreno do encontro (clareira ao luar) |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

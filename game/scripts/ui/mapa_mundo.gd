@@ -872,6 +872,7 @@ func _atualizar() -> void:
 			_montar_opcoes_evento()
 	_barra_membrana.value = missao.membrana.valor
 	Tema.membrana_na_tela(_vista, missao.membrana.valor)
+	_mapa3d.clima_membrana(missao.membrana.valor)
 	_lbl_membrana.text = "%d · %s   ·   Reforços %d   ·   Pistas %d" % [missao.membrana.valor, missao.membrana.estado().get("nome", ""), missao.reforcos, missao.pistas]
 	_atualizar_mestre()
 	_atualizar_grupo()

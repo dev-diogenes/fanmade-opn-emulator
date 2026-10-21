@@ -238,10 +238,13 @@ const PAREDES_BR := [Color("e8e2d0"), Color("d9b45a"), Color("c98f86"), Color("8
 static func casa_br(semente: int) -> Node3D:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = semente
-	return casa(PAREDES_BR[rng.randi() % PAREDES_BR.size()], Color("9a4a2c").darkened(rng.randf() * 0.2))
+	var parede: Color = PAREDES_BR[rng.randi() % PAREDES_BR.size()]
+	var telhado := Color("9a4a2c").darkened(rng.randf() * 0.2)
+	return casa(parede, telhado, rng.randf() < 0.65)   # de noite, nem toda casa tem alguém acordado
 
 
-static func casa(cor_parede: Color = Color("b8a88a"), cor_telhado: Color = Color("7b3f2e")) -> Node3D:
+## Casa simples. `acesa`: janelas quentes que brilham na noite (docs/22); apagada, janelas pretas.
+static func casa(cor_parede: Color = Color("b8a88a"), cor_telhado: Color = Color("7b3f2e"), acesa: bool = true) -> Node3D:
 	var n := Node3D.new()
 	var corpo := BoxMesh.new()
 	corpo.size = Vector3(0.32, 0.22, 0.26)
@@ -249,6 +252,15 @@ static func casa(cor_parede: Color = Color("b8a88a"), cor_telhado: Color = Color
 	var telhado := PrismMesh.new()
 	telhado.size = Vector3(0.36, 0.14, 0.3)
 	n.add_child(_malha(telhado, material(cor_telhado), Vector3(0, 0.29, 0)))
+	var vidro := material(Color("ffb04a"), false, 2.6) if acesa else material(Color("0b0a0e"))
+	for lado in [-1.0, 1.0]:
+		for x in [-0.08, 0.08]:
+			var janela := BoxMesh.new()
+			janela.size = Vector3(0.05, 0.06, 0.006)
+			var mi := _malha(janela, vidro, Vector3(x, 0.13, 0.131 * lado))
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			n.add_child(mi)
+	n.set_meta("acesa", acesa)
 	return n
 
 
@@ -267,16 +279,16 @@ static func rocha(tamanho: float) -> MeshInstance3D:
 	return _malha(m, material(Color("7d7466")), Vector3(0, tamanho * 0.4, 0))
 
 
-static func caixote(tamanho: float = 0.6) -> MeshInstance3D:
+static func caixote(tamanho: float = 0.6, cor: Color = Color("8b6a3e")) -> MeshInstance3D:
 	var m := BoxMesh.new()
 	m.size = Vector3(tamanho, tamanho * 0.75, tamanho)
-	return _malha(m, material(Color("8b6a3e")), Vector3(0, tamanho * 0.375, 0))
+	return _malha(m, material(cor), Vector3(0, tamanho * 0.375, 0))
 
 
-static func parede(altura: float = 1.4) -> MeshInstance3D:
+static func parede(altura: float = 1.4, cor: Color = Color("4a4f5c")) -> MeshInstance3D:
 	var m := BoxMesh.new()
 	m.size = Vector3(1.0, altura, 1.0)
-	return _malha(m, material(Color("4a4f5c")), Vector3(0, altura / 2.0, 0))
+	return _malha(m, material(cor), Vector3(0, altura / 2.0, 0))
 
 
 static func capim(cor: Color = Color("2f5a2a")) -> Node3D:
@@ -512,54 +524,63 @@ static func nevoa(raio: float, altura: float, cor: Color) -> Node3D:
 	return n
 
 
-## Luz, ambiente e névoa de horror para qualquer cena 3D (ADR 0008: luz quente,
-## céu em gradiente, névoa, SSAO, glow, ACES e desfoque de maquete nas bordas).
-static func ambiente(raiz: Node3D, cor_ceu: Color = Color("1b1a26")) -> void:
-	var sol := DirectionalLight3D.new()
-	sol.rotation_degrees = Vector3(-50, -40, 0)
-	sol.light_energy = 1.2
-	sol.light_color = Color("fff0dc")
-	sol.shadow_enabled = true
-	sol.shadow_blur = 1.5
-	sol.directional_shadow_max_distance = 60.0
-	raiz.add_child(sol)
-	# Luz de recorte fria do lado oposto: separa as peças do fundo
-	var recorte := DirectionalLight3D.new()
-	recorte.rotation_degrees = Vector3(-25, 140, 0)
-	recorte.light_energy = 0.35
-	recorte.light_color = Color("7f8fd6")
-	raiz.add_child(recorte)
+## Luz, ambiente e névoa de horror para qualquer cena 3D (ADR 0008; noite desde o docs/22):
+## lua fria e alta, um brilho de brasa baixo no horizonte, céu quase preto, névoa rasteira
+## (fog de altura), cores lavadas (saturação 0,62) e glow para as janelas e os marcos.
+## Devolve o Environment, para a cena reagir à Membrana (`clima_membrana`).
+const NOITE := {"lua": Color("b4c3ff"), "brasa": Color("c9603f"), "ambiente": Color("4a5378"),
+	"nevoa": Color("161a2a"), "saturacao": 0.62, "densidade": 0.03}
+
+static func ambiente(raiz: Node3D, cor_ceu: Color = Color("0b0d18")) -> Environment:
+	var lua := DirectionalLight3D.new()
+	lua.rotation_degrees = Vector3(-42, -35, 0)
+	lua.light_energy = 0.75
+	lua.light_color = NOITE.lua
+	lua.shadow_enabled = true
+	lua.shadow_blur = 2.0
+	lua.directional_shadow_max_distance = 60.0
+	raiz.add_child(lua)
+	# Brasa: luz quente, rasante e fraca do lado oposto (cidade queimando longe; recorta as peças)
+	var brasa := DirectionalLight3D.new()
+	brasa.rotation_degrees = Vector3(-12, 145, 0)
+	brasa.light_energy = 0.22
+	brasa.light_color = NOITE.brasa
+	raiz.add_child(brasa)
 	var amb := WorldEnvironment.new()
 	var env := Environment.new()
 	var ceu := ProceduralSkyMaterial.new()
-	ceu.sky_top_color = cor_ceu.darkened(0.3)
-	ceu.sky_horizon_color = cor_ceu.lerp(Color("5a3a4a"), 0.45)
+	ceu.sky_top_color = cor_ceu.darkened(0.5)
+	ceu.sky_horizon_color = cor_ceu.lerp(Color("3a1620"), 0.3)
 	ceu.ground_horizon_color = ceu.sky_horizon_color
-	ceu.ground_bottom_color = cor_ceu.darkened(0.5)
+	ceu.ground_bottom_color = Color.BLACK
 	ceu.sun_angle_max = 0.0
 	var sky := Sky.new()
 	sky.sky_material = ceu
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("767c9c")
-	env.ambient_light_energy = 0.6
+	env.ambient_light_color = NOITE.ambiente
+	env.ambient_light_energy = 0.55
 	env.fog_enabled = true
-	env.fog_light_color = ceu.sky_horizon_color
-	env.fog_density = 0.018
-	env.fog_sky_affect = 0.4
+	env.fog_light_color = NOITE.nevoa
+	env.fog_density = NOITE.densidade
+	env.fog_sky_affect = 0.6
+	# Névoa rasteira: mais densa perto do chão, some acima das peças
+	env.fog_height = 0.35
+	env.fog_height_density = 0.9
 	env.ssao_enabled = true
 	env.ssao_radius = 0.6
-	env.ssao_intensity = 1.6
+	env.ssao_intensity = 1.8
 	env.glow_enabled = true
-	env.glow_intensity = 0.6
-	env.glow_bloom = 0.05
-	env.glow_hdr_threshold = 1.1
+	env.glow_intensity = 0.9
+	env.glow_bloom = 0.08
+	env.glow_hdr_threshold = 0.9
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 0.95
+	env.tonemap_exposure = 0.92
 	env.adjustment_enabled = true
-	env.adjustment_saturation = 0.95
-	env.adjustment_contrast = 1.05
+	env.adjustment_saturation = NOITE.saturacao
+	env.adjustment_contrast = 1.12
+	env.adjustment_brightness = 0.96
 	amb.environment = env
 	var camera_attr := CameraAttributesPractical.new()
 	camera_attr.dof_blur_far_enabled = true
@@ -574,3 +595,23 @@ static func ambiente(raiz: Node3D, cor_ceu: Color = Color("1b1a26")) -> void:
 	var chao := _malha(mesa, material(cor_ceu.lerp(Color("0d0c12"), 0.5)), Vector3(0, -0.5, 0))
 	chao.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	raiz.add_child(chao)
+	return env
+
+
+## A Membrana pesa no clima (docs/22): a névoa engrossa e puxa para o vermelho-sangue, e as
+## cores se lavam ainda mais. Quase nada acima de 75; a partir daí, cresce até 25.
+static func clima_membrana(env: Environment, valor: int) -> void:
+	if env == null:
+		return
+	var t := intensidade_membrana(valor)
+	env.fog_light_color = (NOITE.nevoa as Color).lerp(Color("3a0c16"), t * 0.75)
+	env.fog_density = float(NOITE.densidade) + 0.03 * t
+	env.adjustment_saturation = float(NOITE.saturacao) - 0.2 * t
+	env.ambient_light_color = (NOITE.ambiente as Color).lerp(Color("5a2a3a"), t * 0.5)
+
+
+## 0 com a Membrana em 75 ou mais (um leve 0..0,15 de 100 a 75), 1 em 25 ou menos.
+static func intensidade_membrana(valor: int) -> float:
+	if valor >= 75:
+		return clampf((100.0 - valor) / 25.0, 0.0, 1.0) * 0.15
+	return clampf(0.15 + (75.0 - valor) / 50.0 * 0.85, 0.15, 1.0)

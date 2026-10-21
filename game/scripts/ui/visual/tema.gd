@@ -398,10 +398,12 @@ static func veu(vista: SubViewportContainer) -> void:
 ## Intensidade do véu: quase nada com a Membrana em 100, máxima abaixo de 25.
 static func membrana_na_tela(vista: SubViewportContainer, valor: int) -> void:
 	var m := vista.material as ShaderMaterial
-	Som.ambiente(clampf((100.0 - valor) / 75.0, 0.0, 1.0))
+	# A mesma curva do clima 3D (docs/22): leve até 75, pesada a partir daí
+	var t := Pecas.intensidade_membrana(valor)
+	Som.ambiente(t)
 	if m != null:
 		var ligado := Preferencias.efeito("grao")
-		m.set_shader_parameter("intensidade", clampf((100.0 - valor) / 75.0, 0.0, 1.0) if ligado else 0.0)
+		m.set_shader_parameter("intensidade", t if ligado else 0.0)
 		m.set_shader_parameter("grao", 1.0 if ligado else 0.0)
 
 

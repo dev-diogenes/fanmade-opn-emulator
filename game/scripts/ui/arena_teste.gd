@@ -134,7 +134,7 @@ func iniciar_combate(semente: int) -> void:
 	combate.registro.connect(_registrar)
 	combate.ser_adicionado.connect(_ao_adicionar)
 	if _tab3d != null:
-		_tab3d.construir(grade)
+		_tab3d.construir(grade, String(config.get("terreno", "")))   # o chão do hex do encontro (docs/22)
 	combate.ataque_resolvido.connect(_ao_atacar)
 	combate.ritual_conjurado.connect(_ao_conjurar)
 	combate.combate_encerrado.connect(_ao_encerrar)
@@ -1004,6 +1004,8 @@ func _atualizar() -> void:
 	_chk_ae.visible = agente != null and agente.classe_id == "combatente"
 	_barra_membrana.value = membrana.valor
 	Tema.membrana_na_tela(_vista, membrana.valor)
+	if _tab3d != null:
+		_tab3d.clima_membrana(membrana.valor)
 	_lbl_membrana.text = "%d — %s" % [membrana.valor, membrana.estado().get("nome", "")]
 	_atualizar_mestre()
 	_desenhar_slots()
