@@ -2,11 +2,18 @@ extends Control
 ## Saguão do cliente online (Fase 8.2): enquanto o host está na Base, quem entrou na sessão
 ## espera aqui e vê os jogadores, os agentes (e de quem é cada um) e a última missão.
 ## Quando o host começa uma missão, o estado chega e o Jogo troca de cena sozinho.
+## Desde o docs/29 (C8), a espera é visível: o código da sala, um "REC" de escuta, pontos
+## que andam, o tempo de espera e, se a conexão demorar, o que conferir.
 
 var _jogo: Node
 var _lbl_status: Label
 var _info: RichTextLabel
 var _sigilo: Sigilo
+var _lbl_espera: Label
+var _lbl_codigo: Label
+var _tempo := 0.0
+## Segundos de "Conectando…" até mostrar o que conferir.
+const DICA_APOS := 8.0
 
 
 func _ready() -> void:
@@ -44,10 +51,20 @@ func _montar() -> void:
 	titulo.text = "Sessão online"
 	titulo.theme_type_variation = "Titulo"
 	caixa.add_child(titulo)
+	_lbl_codigo = Label.new()
+	_lbl_codigo.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+	caixa.add_child(_lbl_codigo)
 	_lbl_status = Label.new()
 	_lbl_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_lbl_status.add_theme_color_override("font_color", Tema.INFO)
 	caixa.add_child(_lbl_status)
+	_lbl_espera = Label.new()
+	_lbl_espera.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_lbl_espera.add_theme_color_override("font_color", Tema.PERGAMINHO)
+	var maquina := Tema.fonte_maquina()
+	if maquina != null:
+		_lbl_espera.add_theme_font_override("font", maquina)
+	caixa.add_child(_lbl_espera)
 	# O que o host mandou fica num papel, como a ficha da operação
 	var papel := PanelContainer.new()
 	papel.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(18, 14)))
@@ -66,8 +83,34 @@ func _montar() -> void:
 
 
 func _process(delta: float) -> void:
+	_tempo += delta
 	if _sigilo != null:
 		_sigilo.rotation += delta * 0.04
+		# A "convocação" pulsa devagar (sem piscar: respeita o modo suave de flashes)
+		_sigilo.modulate.a = 0.75 + 0.25 * sin(_tempo * 1.2)
+	if _lbl_espera != null:
+		_lbl_espera.text = texto_espera(_tempo, _conectado())
+
+
+func _conectado() -> bool:
+	if _jogo == null:
+		return false
+	var peer: MultiplayerPeer = _jogo.rede.multiplayer.multiplayer_peer
+	return peer != null and not peer is OfflineMultiplayerPeer and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED
+
+
+## O que a espera diz: escuta com pontos que andam e o tempo; antes de conectar, depois de
+## alguns segundos, o que conferir. Estático para os testes.
+static func texto_espera(t: float, conectado: bool) -> String:
+	var pontos := ".".repeat(1 + int(t * 2.0) % 3)
+	var s := int(t)
+	var relogio := "%s REC  %02d:%02d" % ["●" if int(t * 2.0) % 2 == 0 else "○", s / 60, s % 60]
+	if conectado:
+		return "%s\nAguardando o host abrir a operação%s" % [relogio, pontos]
+	var texto := "%s\nProcurando a sala%s" % [relogio, pontos]
+	if t >= DICA_APOS:
+		texto += "\n\nDemorando? Confira o código, se o host está com a sala aberta e se vocês estão na mesma rede (ou na mesma VPN de jogos)."
+	return texto
 
 
 func _atualizar() -> void:
@@ -76,6 +119,8 @@ func _atualizar() -> void:
 	var info: Dictionary = _jogo.saguao_info if _jogo != null else {}
 	var aviso: String = _jogo.aviso_rede if _jogo != null else ""
 	_lbl_status.text = String(info.get("status", "Conectando…")) + ("\n" + aviso if aviso != "" else "")
+	if _jogo != null and _jogo.rede.endereco != "":
+		_lbl_codigo.text = "Sala %s" % CodigoSala.gerar(_jogo.rede.endereco, _jogo.rede.porta)
 	var linhas: Array[String] = []
 	var meu: int = _jogo.rede.meu_peer() if _jogo != null else 1
 	if not info.get("jogadores", []).is_empty():
@@ -97,7 +142,7 @@ func _atualizar() -> void:
 		var camp: Dictionary = rel.get("campanha", {})
 		if not camp.is_empty() and String(camp.get("texto", "")) != "":
 			linhas.append("[i]%s[/i]" % camp.texto)
-	_info.text = "\n".join(linhas)
+	_info.text = "\n".join(linhas) if not linhas.is_empty() else "[i]Quando o host responder, aqui aparecem os jogadores, os agentes da carreira e de quem é cada um.[/i]"
 
 
 func _sair() -> void:

@@ -254,7 +254,7 @@ func entrar_em_sessao(endereco: String, porta: int, nome: String) -> Error:
 	if erro == OK:
 		_carreira_local = guardada
 		aviso_rede = ""
-		saguao_info = {"status": "Conectando a %s:%d…" % [endereco, porta]}
+		saguao_info = {"status": "Conectando à sala…"}   # o endereço fica no código (docs/29)
 		ir_para_saguao()
 	return erro
 

@@ -50,7 +50,11 @@ func _ready() -> void:
 			jogo.iniciar_missao(jogo.carreira.roster.duplicate(), semente)
 	else:
 		await get_tree().create_timer((4.0 if tarde else 0.5) * Engine.time_scale).timeout   # dá tempo ao host
-		var erro: Error = jogo.entrar_em_sessao("127.0.0.1", porta, "Robo")
+		# Entra pelo código da sala, como um jogador (docs/29)
+		var codigo := CodigoSala.gerar("127.0.0.1", porta)
+		var alvo := CodigoSala.ler(codigo)
+		print("ROBO cliente entrando pelo código %s" % codigo)
+		var erro: Error = jogo.entrar_em_sessao(String(alvo.ip), int(alvo.porta), "Robo")
 		print("ROBO cliente entrando: %s" % error_string(erro))
 
 

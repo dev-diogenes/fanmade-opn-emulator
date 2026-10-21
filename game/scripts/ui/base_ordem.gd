@@ -771,6 +771,9 @@ func _definir_mestre(i: int) -> void:
 
 # --- Online (Fase 8.2) ------------------------------------------------------------
 
+## Online por código de sala (docs/29, C8): "Criar sala" mostra um código de 10 símbolos
+## (o endereço e a porta desta máquina); "Entrar na sala" pede o código e o nome. A porta e
+## o IP direto ficam no "Avançado".
 func _montar_online() -> void:
 	for filho in _caixa_online.get_children():
 		filho.queue_free()
@@ -780,31 +783,85 @@ func _montar_online() -> void:
 	if rede.eh_host():
 		var lbl := Label.new()
 		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		lbl.text = "Hospedando na porta %d. Endereços desta máquina: %s. Quem entrar aparece em Jogadores; escolha os donos dos agentes no grupo." % [rede.porta, ", ".join(PackedStringArray(_enderecos_locais()))]
+		lbl.text = "Sala aberta. Passe o código para quem vai jogar; quem entrar aparece em Jogadores, e você escolhe os donos dos agentes no grupo."
 		lbl.add_theme_color_override("font_color", Tema.INFO)
 		_caixa_online.add_child(lbl)
-		_caixa_online.add_child(_botao("Parar de hospedar", _parar_de_hospedar))
+		var ips := _enderecos_locais()
+		ips.sort_custom(func(x, y): return CodigoSala.tipo_de_rede(x)[0] < CodigoSala.tipo_de_rede(y)[0])
+		for ip in ips:
+			var codigo := CodigoSala.gerar(ip, rede.porta)
+			var linha := HBoxContainer.new()
+			linha.add_theme_constant_override("separation", Tema.ESPACO_M)
+			var c := Label.new()
+			c.text = codigo
+			c.add_theme_font_size_override("font_size", Tema.FONTE_G + 6)
+			c.add_theme_color_override("font_color", Tema.OURO_CLARO)
+			var maquina := Tema.fonte_maquina()
+			if maquina != null:
+				c.add_theme_font_override("font", maquina)
+			c.tooltip_text = "Endereço %s, porta %d" % [ip, rede.porta]
+			c.mouse_filter = Control.MOUSE_FILTER_PASS
+			linha.add_child(c)
+			var copiar := _botao("Copiar", func(): pass)
+			copiar.pressed.connect(func():
+				DisplayServer.clipboard_set(codigo)
+				copiar.text = "Copiado ✓")
+			linha.add_child(copiar)
+			var rede_nome := Label.new()
+			rede_nome.text = String(CodigoSala.tipo_de_rede(ip)[1])
+			rede_nome.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+			linha.add_child(rede_nome)
+			_caixa_online.add_child(linha)
+		var aviso := Label.new()
+		aviso.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		aviso.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+		aviso.text = "O código vale na mesma rede (Wi-Fi da casa) ou numa VPN de jogos, como ZeroTier ou Radmin. Pela internet, abra a porta %d no roteador." % rede.porta
+		_caixa_online.add_child(aviso)
+		var fechar := _botao("Fechar a sala", _parar_de_hospedar)
+		fechar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		_caixa_online.add_child(fechar)
 		return
 	var linha_host := HBoxContainer.new()
-	_txt_porta = LineEdit.new()
-	_txt_porta.text = str(Rede.PORTA_PADRAO)
-	_txt_porta.placeholder_text = "porta"
-	_txt_porta.custom_minimum_size = Vector2(70, 0)
-	linha_host.add_child(_txt_porta)
-	linha_host.add_child(_botao("Hospedar", _hospedar))
+	linha_host.add_theme_constant_override("separation", Tema.ESPACO_M)
+	var criar := _botao("Criar sala", _hospedar)
+	criar.theme_type_variation = "BotaoPrincipal"
+	linha_host.add_child(criar)
+	var dica := Label.new()
+	dica.text = "Você hospeda; os outros entram com o código."
+	dica.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+	linha_host.add_child(dica)
 	_caixa_online.add_child(linha_host)
 	var linha_entrar := HBoxContainer.new()
+	linha_entrar.add_theme_constant_override("separation", Tema.ESPACO_M)
 	_txt_endereco = LineEdit.new()
-	_txt_endereco.text = "127.0.0.1"
-	_txt_endereco.placeholder_text = "IP do host"
+	_txt_endereco.placeholder_text = "código da sala (ex.: 6A8R1-Z3K0P)"
 	_txt_endereco.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_txt_endereco.text_changed.connect(func(_t): _lbl_erros.text = "")
 	linha_entrar.add_child(_txt_endereco)
 	_txt_nome = LineEdit.new()
 	_txt_nome.placeholder_text = "seu nome"
-	_txt_nome.custom_minimum_size = Vector2(90, 0)
+	_txt_nome.custom_minimum_size = Vector2(120, 0)
 	linha_entrar.add_child(_txt_nome)
-	linha_entrar.add_child(_botao("Entrar", _entrar_na_sessao))
+	linha_entrar.add_child(_botao("Entrar na sala", _entrar_na_sessao))
 	_caixa_online.add_child(linha_entrar)
+	# Avançado: a porta e o IP direto (o campo do código também aceita "IP" ou "IP:porta")
+	var avancado := CheckBox.new()
+	avancado.text = "Avançado: porta"
+	_caixa_online.add_child(avancado)
+	var linha_av := HBoxContainer.new()
+	linha_av.visible = false
+	_txt_porta = LineEdit.new()
+	_txt_porta.text = str(Rede.PORTA_PADRAO)
+	_txt_porta.custom_minimum_size = Vector2(80, 0)
+	linha_av.add_child(_txt_porta)
+	var nota := Label.new()
+	nota.text = "Porta usada ao criar a sala. Para entrar por IP, digite \"IP\" ou \"IP:porta\" no lugar do código."
+	nota.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	nota.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nota.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+	linha_av.add_child(nota)
+	_caixa_online.add_child(linha_av)
+	avancado.toggled.connect(func(on): linha_av.visible = on)
 
 
 func _enderecos_locais() -> Array:
@@ -822,7 +879,7 @@ func _porta() -> int:
 
 func _hospedar() -> void:
 	var erro: Error = _jogo.hospedar(_porta())
-	_lbl_erros.text = "" if erro == OK else "Não deu para hospedar (erro %d): a porta pode estar em uso." % erro
+	_lbl_erros.text = "" if erro == OK else "Não deu para criar a sala (erro %d): a porta pode estar em uso. Troque-a no Avançado." % erro
 	_atualizar_tudo()
 
 
@@ -831,7 +888,11 @@ func _parar_de_hospedar() -> void:
 
 
 func _entrar_na_sessao() -> void:
-	var erro: Error = _jogo.entrar_em_sessao(_txt_endereco.text.strip_edges(), _porta(), _txt_nome.text.strip_edges())
+	var alvo := CodigoSala.ler(_txt_endereco.text, _porta())
+	if alvo.is_empty():
+		_lbl_erros.text = "Código não reconhecido. Confira as 10 letras e números (o hífen é opcional)."
+		return
+	var erro: Error = _jogo.entrar_em_sessao(String(alvo.ip), int(alvo.porta), _txt_nome.text.strip_edges())
 	if erro != OK:
 		_lbl_erros.text = "Não deu para conectar (erro %d)." % erro
 
