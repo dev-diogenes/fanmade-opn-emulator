@@ -108,6 +108,22 @@ func test_deduzir_na_cena_vale_ao_sair():
 	assert_eq(c.agente_atual(), mauro, "deduzir não gasta a vez")
 
 
+func test_cada_cena_tem_um_ponto_firme_por_pergunta_e_uma_testemunha():
+	# docs/44: duas pistas firmes da mesma pergunta pedem duas fontes (outra cena, evento,
+	# interrogatório); a testemunha pode errar
+	for c in DadosJogo.ler("cenas_investigacao").cenas:
+		var firmes: Array = []
+		var testemunhas := 0
+		for p in c.pontos:
+			if p.get("depoimento", false):
+				testemunhas += 1
+			else:
+				firmes.append(String(p.responde))
+		firmes.sort()
+		assert_eq(firmes, ["onde", "oque", "quem"], c.id)
+		assert_eq(testemunhas, 1, c.id)
+
+
 func test_cenas_novas_tem_ponto_para_cada_pergunta():
 	var d := DadosJogo.ler("cenas_investigacao")
 	for c in d.cenas:

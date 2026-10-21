@@ -261,8 +261,9 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 	return resultado
 
 
-## Depoimento firme: passar no teste da testemunha por 5 ou mais (docs/35, design do jogo).
-const MARGEM_DEPOIMENTO_FIRME := 5
+## Depoimento firme: passar no teste da testemunha por 10 ou mais (docs/35; era 5 até o
+## docs/44, design do jogo). Examinar com treino (pista central) continua firme.
+const MARGEM_DEPOIMENTO_FIRME := 10
 
 
 ## Anota a pista do ponto e tira o ponto da cena. Devolve o texto da pista.
