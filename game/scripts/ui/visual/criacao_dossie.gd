@@ -1,7 +1,8 @@
 class_name CriacaoDossie
 extends CanvasLayer
-## Criação de agente como um dossiê (docs/17, E2): identidade e origem, classe, atributos,
-## perícias, rituais e a revisão, numa pasta de papel. A ficha é validada a cada mudança
+## Criação de agente como um dossiê (docs/17, E2), na ordem do passo a passo do livro (p.23;
+## docs/27): conceito, atributos, origem, classe, perícias, rituais (ocultista), descrição
+## (toques finais, p.46-47) e a revisão da ficha, numa pasta de papel. A ficha é validada a cada mudança
 ## por CriacaoAgente; "Assinar e arquivar" só fica liberado sem erros. Ao lado das abas, a
 ## foto 3x4 presa com clipe (docs/19): aparência e tom da roupa, que valem para a miniatura.
 ##   CriacaoDossie.abrir(self, carreira, func(agente): ...)
@@ -9,6 +10,8 @@ extends CanvasLayer
 signal criado(agente: Agente)
 
 const CLASSES := ["combatente", "especialista", "ocultista"]
+## Os passos do livro (p.23), mais a descrição dos toques finais (p.46-47).
+const PASSOS := ["Conceito", "Atributos", "Origem", "Classe", "Perícias", "Rituais", "Descrição", "Revisão"]
 const ATRIBUTOS := ["agi", "for", "int", "pre", "vig"]
 const NOMES_ATRIBUTOS := {"agi": "Agilidade", "for": "Força", "int": "Intelecto", "pre": "Presença", "vig": "Vigor"}
 
@@ -17,13 +20,18 @@ var rs: Ruleset
 var ficha := {"nome": "", "origem": "", "classe": "combatente", "nex": 5,
 	"atributos": {"agi": 1, "for": 1, "int": 1, "pre": 1, "vig": 1},
 	"pericias_origem": [], "pericias_classe": [], "pericias_livres": [], "perito": [], "rituais": [],
-	"aparencia": "", "tom": 0, "personalidade": "", "historico": "", "objetivo": ""}
+	"aparencia": "", "tom": 0, "personalidade": "", "historico": "", "objetivo": "",
+	"conceito": "", "genero": "", "idade_anos": 0, "aparencia_texto": "",
+	"idade": "", "desvantagens_idade": [], "beneficios_origem": [], "trilha": "", "poderes": []}
+## Regra opcional Idade Variada (p.182): a faixa sai da idade em anos.
+var idade_variada := false
 
 var _abas: TabContainer
 var _paginas: Dictionary = {}     ## nome -> VBoxContainer (reconstruída a cada mudança)
 var _erros: Label
 var _assinar: Button
 var _nome: LineEdit
+var _idade: SpinBox
 ## Campos da descrição (docs/26): reaproveitados entre redesenhos, como o nome.
 var _campos_descricao: Dictionary = {}   ## "personalidade" | "historico" | "objetivo" -> LineEdit/TextEdit
 var _foto: FotoAgente
@@ -76,10 +84,11 @@ func _montar() -> void:
 	_abas = TabContainer.new()
 	_abas.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_abas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_abas.custom_minimum_size = Vector2(900, 0)   # a pasta não muda de largura entre as abas
+	_abas.custom_minimum_size = Vector2(900, 0)
+	_abas.add_theme_font_size_override("font_size", Tema.FONTE_M - 1)   # os oito passos do livro cabem   # a pasta não muda de largura entre as abas
 	meio.add_child(_abas)
 	meio.add_child(_coluna_foto())
-	for nome in ["Identidade", "Classe", "Atributos", "Perícias", "Rituais", "Descrição", "Revisão"]:
+	for nome in PASSOS:
 		var papel := PanelContainer.new()
 		papel.name = nome
 		papel.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(24, 18)))
@@ -144,15 +153,18 @@ func _redesenhar() -> void:
 	_assinar.tooltip_text = "" if erros.is_empty() else "Bloqueado: " + "; ".join(PackedStringArray(erros))
 	var pagina := _abas.get_tab_title(_abas.current_tab)
 	var v: VBoxContainer = _paginas[pagina]
+	if _idade != null and _idade.get_parent() != null:
+		_idade.get_parent().remove_child(_idade)   # a idade mora numa linha que é refeita
 	for filho in v.get_children():
-		if filho == _nome or filho in _campos_descricao.values():
+		if filho == _nome or filho == _idade or filho in _campos_descricao.values():
 			v.remove_child(filho)   # campos de texto são reaproveitados (mantêm o cursor)
 			continue
 		filho.visible = false
 		filho.queue_free()
 	_atualizar_foto()
 	match pagina:
-		"Identidade": _pagina_identidade(v)
+		"Conceito": _pagina_conceito(v)
+		"Origem": _pagina_origem(v)
 		"Classe": _pagina_classe(v)
 		"Atributos": _pagina_atributos(v)
 		"Perícias": _pagina_pericias(v)
@@ -290,11 +302,15 @@ func _nome_pericia(p: String) -> String:
 
 # --- Páginas ------------------------------------------------------------------------
 
-func _pagina_identidade(v: VBoxContainer) -> void:
-	_titulo(v, "Identidade")
+## Passo 1 (p.23-24): quem é o agente, numa frase. Nome, gênero e idade são dos toques
+## finais (p.46-47), mas a idade vem primeiro: com a regra opcional, ela muda os atributos.
+func _pagina_conceito(v: VBoxContainer) -> void:
+	_titulo(v, "Conceito")
+	_nota(v, "Antes dos números, a ideia: o que o agente fazia antes de topar com o paranormal, que evento causou esse primeiro contato, o quanto ele sabe do Outro Lado e como age numa investigação e numa briga. Resuma numa frase.")
+	_rotulo(v, "Nome")
 	if _nome == null:
 		_nome = LineEdit.new()
-		_nome.placeholder_text = "Nome do agente"
+		_nome.placeholder_text = "Nome do agente (de preferência, coerente com a nacionalidade)"
 		_nome.custom_minimum_size = Vector2(360, 0)
 		_nome.max_length = 24
 		_nome.text_changed.connect(func(t):
@@ -303,6 +319,90 @@ func _pagina_identidade(v: VBoxContainer) -> void:
 			var res := _validar()
 			_assinar.disabled = String(t).strip_edges() == "" or not res.erros.is_empty())
 	v.add_child(_nome)
+	for c in CAMPOS_CONCEITO:
+		_campo_texto(v, c)
+	_rotulo(v, "Idade")
+	var linha := HBoxContainer.new()
+	linha.add_theme_constant_override("separation", 10)
+	v.add_child(linha)
+	if _idade == null:
+		_idade = SpinBox.new()
+		_idade.min_value = 9
+		_idade.max_value = 99
+		_idade.suffix = "anos"
+		_idade.value = 22
+		ficha.idade_anos = 22
+		_idade.value_changed.connect(func(valor):
+			ficha.idade_anos = int(valor)
+			if idade_variada:
+				_aplicar_faixa()
+				_redesenhar())
+	linha.add_child(_idade)
+	var rolar := Button.new()
+	rolar.text = "Rolar 2d6+15"
+	rolar.theme_type_variation = "BotaoPapel"
+	rolar.tooltip_text = "Sem idade em mente? O livro sugere 2d6+15 (17 a 27 anos), ou a idade que combine com a origem."
+	rolar.pressed.connect(func(): _idade.value = 15 + randi_range(1, 6) + randi_range(1, 6))
+	linha.add_child(rolar)
+	var regra := CheckBox.new()
+	regra.text = "Regra opcional: idade variada"
+	regra.tooltip_text = "Com esta regra, a faixa etária muda o jogo: crianças e adolescentes têm atributos limitados e parte dos benefícios da origem; adultos ganham um poder; maduros e idosos começam com NEX maior e carregam desvantagens. Combine com a mesa."
+	regra.button_pressed = idade_variada
+	regra.toggled.connect(func(on):
+		idade_variada = on
+		_aplicar_faixa()
+		_redesenhar())
+	v.add_child(regra)
+	if idade_variada and String(ficha.idade) != "":
+		var faixa := rs.faixa_idade(String(ficha.idade))
+		_nota(v, "Faixa: %s (%s) — %s" % [faixa.nome, faixa.get("idade", ""), faixa.get("habilidade", {}).get("descricao", "")])
+		var n := int(faixa.get("desvantagens", 0))
+		if n > 0:
+			_nota(v, "Escolha %d desvantage%s de idade (%d/%d):" % [n, "m" if n == 1 else "ns", (ficha.desvantagens_idade as Array).size(), n])
+			var g := _grade(v, 3)
+			for dv in rs.dados.idades.desvantagens:
+				_opcao(g, String(dv.nome), String(dv.id) in ficha.desvantagens_idade, func():
+					_alternar(ficha.desvantagens_idade, String(dv.id), n), String(dv.get("descricao", "")))
+
+
+const CAMPOS_CONCEITO := [
+	["conceito", "Conceito", "Numa frase. Ex.: perita forense que nunca segurou uma arma, mas não larga um mistério.", false],
+	["genero", "Gênero", "Livre.", false],
+]
+
+
+## A faixa etária da regra opcional a partir da idade em anos, e o NEX inicial dela.
+func _aplicar_faixa() -> void:
+	ficha.idade = faixa_por_anos(rs, int(ficha.idade_anos)) if idade_variada else ""
+	var faixa := rs.faixa_idade(String(ficha.idade)) if String(ficha.idade) != "" else {}
+	ficha.nex = 5 + int(faixa.get("nex_bonus", 0))
+	var n := int(faixa.get("desvantagens", 0))
+	while (ficha.desvantagens_idade as Array).size() > n:
+		(ficha.desvantagens_idade as Array).pop_back()
+	if not faixa.has("beneficios_de_origem"):
+		ficha.beneficios_origem = []
+	if int(ficha.nex) < 10:
+		ficha.trilha = ""
+	while (ficha.poderes as Array).size() > poderes_esperados():
+		(ficha.poderes as Array).pop_back()
+
+
+## "9 a 12 anos" e "65 anos ou mais" viram limites; a primeira faixa que contém a idade.
+static func faixa_por_anos(ruleset: Ruleset, anos: int) -> String:
+	for f in ruleset.dados.idades.faixas:
+		var nums: Array = []
+		for m in RegEx.create_from_string("\\d+").search_all(String(f.get("idade", ""))):
+			nums.append(int(m.get_string()))
+		if nums.size() == 2 and anos >= nums[0] and anos <= nums[1]:
+			return String(f.id)
+		if nums.size() == 1 and anos >= nums[0]:
+			return String(f.id)
+	return ""
+
+
+## Passo 3 (p.26-31): o que fazia antes da Ordem. Crianças e adolescentes, na regra de idade,
+## escolhem só parte dos benefícios (p.182).
+func _pagina_origem(v: VBoxContainer) -> void:
 	_titulo(v, "Origem")
 	_nota(v, "O que o agente fazia antes da Ordem. Dá duas perícias treinadas e um poder.")
 	var g := _grade(v, 4)
@@ -312,9 +412,58 @@ func _pagina_identidade(v: VBoxContainer) -> void:
 			o.get("poder", {}).get("nome", "—"), o.get("poder", {}).get("descricao", "")]
 		_opcao(g, o.nome, ficha.origem == o.id, func():
 			ficha.origem = o.id
-			ficha.pericias_origem = [], dica)
+			ficha.pericias_origem = []
+			ficha.beneficios_origem = [], dica)
 	var atual := rs.origem(ficha.origem)
 	_nota(v, "%s · %s" % [atual.nome, atual.get("poder", {}).get("descricao", "")])
+	var faixa := rs.faixa_idade(String(ficha.idade)) if String(ficha.idade) != "" else {}
+	if faixa.has("beneficios_de_origem"):
+		var n := int(faixa.beneficios_de_origem)
+		_rotulo(v, "Benefícios da origem (%s): escolha %d" % [faixa.nome, n])
+		var opcoes: Array = (atual.get("pericias", []) as Array).map(func(p): return "pericia:" + String(p))
+		opcoes.append("poder")
+		var gb := _grade(v, 3)
+		for b in opcoes:
+			var texto := "Poder: " + String(atual.get("poder", {}).get("nome", "")) if b == "poder" else _nome_pericia(String(b).trim_prefix("pericia:"))
+			_opcao(gb, texto, b in ficha.beneficios_origem, func(): _alternar(ficha.beneficios_origem, b, n))
+
+
+func _rotulo(v: Control, texto: String) -> void:
+	var l := Label.new()
+	l.text = texto.to_upper()
+	l.add_theme_color_override("font_color", Tema.TINTA)
+	var f := Tema.fonte_titulo()
+	if f != null:
+		l.add_theme_font_override("font", f)
+	v.add_child(l)
+
+
+## Campo de texto livre reaproveitado entre redesenhos: [id, rótulo, dica, várias linhas].
+func _campo_texto(v: Control, c: Array) -> void:
+	var id: String = c[0]
+	_rotulo(v, c[1])
+	if not _campos_descricao.has(id):
+		var limite: int = Carreira.LIMITE_DESCRICAO[id]
+		var campo: Control
+		if c[3]:
+			var te := TextEdit.new()
+			te.custom_minimum_size = Vector2(0, 110)
+			te.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+			te.placeholder_text = c[2]
+			te.text_changed.connect(func():
+				if te.text.length() > limite:
+					te.text = te.text.left(limite)
+				ficha[id] = te.text)
+			campo = te
+		else:
+			var le := LineEdit.new()
+			le.max_length = limite
+			le.placeholder_text = c[2]
+			le.text_changed.connect(func(t): ficha[id] = t)
+			campo = le
+		campo.tooltip_text = "Até %d caracteres." % limite
+		_campos_descricao[id] = campo
+	v.add_child(_campos_descricao[id])
 
 
 func _pagina_classe(v: VBoxContainer) -> void:
@@ -327,9 +476,39 @@ func _pagina_classe(v: VBoxContainer) -> void:
 			ficha.pericias_classe = []
 			ficha.pericias_livres = []
 			ficha.perito = []
-			ficha.rituais = [])
+			ficha.rituais = []
+			ficha.trilha = ""
+			ficha.poderes = [])
 		b.custom_minimum_size = Vector2(0, 58)
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_bloco_trilha_e_poderes(v)
+
+
+## Trilha (NEX 10%) e poderes de classe, quando a idade variada faz o agente começar com
+## mais experiência (adulto: um poder a mais; maduro e idoso: NEX maior). Poderes que pedem
+## escolhas extras ficam para a Base, depois de assinar.
+const PODERES_COM_ESCOLHA := ["treinamento_em_pericia", "especialista_em_elemento", "ritual_predileto"]
+
+
+func _bloco_trilha_e_poderes(v: VBoxContainer) -> void:
+	var nex := int(ficha.nex)
+	if nex >= 10:
+		_rotulo(v, "Trilha (NEX 10%)")
+		var gt := _grade(v, 3)
+		for t in rs.dados.trilhas.trilhas.get(String(ficha.classe), []):
+			_opcao(gt, String(t.nome), ficha.trilha == t.id, func(): ficha.trilha = String(t.id), String(t.get("descricao", "")))
+	var n := poderes_esperados()
+	if n <= 0:
+		return
+	var motivo := "a Vivência do adulto" if nex < 15 else "o NEX %d%%" % nex
+	_rotulo(v, "Poderes de classe: %d (%s) — %d/%d" % [n, motivo, (ficha.poderes as Array).size(), n])
+	var gp := _grade(v, 3)
+	for p in rs.dados.poderes_classe.poderes.get(String(ficha.classe), []):
+		if String(p.id) in PODERES_COM_ESCOLHA:
+			continue
+		var pre := "" if (p.get("pre", {}) as Dictionary).is_empty() else "\nTem pré-requisito: o rodapé avisa se a ficha não cumprir."
+		_opcao(gp, String(p.nome), String(p.id) in ficha.poderes, func(): _alternar(ficha.poderes, String(p.id), n),
+			String(p.get("descricao", "")) + pre)
 
 
 func _pagina_atributos(v: VBoxContainer) -> void:
@@ -434,61 +613,45 @@ func _pagina_rituais(v: VBoxContainer) -> void:
 	if ficha.classe != "ocultista":
 		_nota(v, "Só o Ocultista começa conhecendo rituais. Combatentes e Especialistas aprendem por poderes, mais tarde.")
 		return
-	_nota(v, "Escolha 3 rituais de 1º círculo. Os marcados com * ainda não têm efeito no jogo.")
+	var qtd := rituais_esperados()
+	var circulo := rs.circulo_maximo(int(ficha.nex))
+	_nota(v, "Escolha %d rituais (%d/%d), até o %dº círculo. Os marcados com * ainda não têm efeito no jogo." % [qtd, (ficha.rituais as Array).size(), qtd, circulo])
 	var g := _grade(v, 3)
 	for r in rs.dados.rituais.rituais:
-		if int(r.circulo) != 1:
+		if int(r.circulo) > circulo:
 			continue
 		var rid: String = r.id
-		var nome := "%s (%s)%s" % [r.nome, r.elemento, "" if r.get("implementado", false) else " *"]
-		_opcao(g, nome, rid in ficha.rituais, func(): _alternar(ficha.rituais, rid, 3), String(r.get("descricao", "")))
+		var nome := "%s (%s%s)%s" % [r.nome, r.elemento, "" if int(r.circulo) == 1 else ", %dº" % int(r.circulo), "" if r.get("implementado", false) else " *"]
+		_opcao(g, nome, rid in ficha.rituais, func(): _alternar(ficha.rituais, rid, qtd), String(r.get("descricao", "")))
 
 
-## Descrição (docs/26): o quadro "Descrição" da ficha oficial. A aparência fica na foto ao
-## lado; personalidade, histórico e objetivo são texto livre e opcional.
+## Ocultista: 3 rituais iniciais, mais 1 por NEX acima de 5% (p.42).
+func rituais_esperados() -> int:
+	return 3 + rs.niveis_de_exposicao(int(ficha.nex)) - 1
+
+
+## Poderes de classe que a ficha precisa ter: os do NEX e o da Vivência do adulto (p.183).
+func poderes_esperados() -> int:
+	var n := rs.quantos_ate("poder", int(ficha.nex))
+	if String(ficha.idade) != "" and rs.faixa_idade(String(ficha.idade)).get("poder_extra", false):
+		n += 1
+	return n
+
+
+## Descrição (p.46-47; docs/26 e 27): os toques finais. Nada aqui muda as regras.
 const CAMPOS_DESCRICAO := [
-	["personalidade", "Personalidade", "Como o agente age sob pressão? Ex.: calado e observador; faz piada quando está com medo.", false],
-	["historico", "Histórico", "De onde veio, o que fazia antes da Ordem e como topou com o paranormal pela primeira vez.", true],
-	["objetivo", "Objetivo", "O que o mantém na Ordem? Ex.: descobrir o que aconteceu com a irmã.", false],
+	["aparencia_texto", "Aparência", "Uma frase pelos traços marcantes, não uma lista. Ex.: físico de halterofilista e um terno dois números menor.", false],
+	["personalidade", "Personalidade", "Três traços, um deles em conflito com os outros. Ex.: corajoso e decidido, mas tímido.", false],
+	["historico", "Histórico", "Infância e família, se acredita no paranormal, como foi recrutado. Pense em um acontecimento bom e um ruim no passado.", true],
+	["objetivo", "Objetivo", "Por que está na Ordem? Proteger inocentes, vingança, uma história para contar, aposentar-se em paz…", false],
 ]
 
 
 func _pagina_descricao(v: VBoxContainer) -> void:
 	_titulo(v, "Descrição")
-	_nota(v, "Opcional. Aparece na ficha do agente (página Habilidades e inventário). A aparência é a da foto, ao lado.")
+	_nota(v, "Opcional, e pode crescer ao longo do jogo. Atributos, origem e classe ajudam: Presença alta pede alguém falante; um militar fala curto e grosso. A foto ao lado é a aparência da miniatura.")
 	for c in CAMPOS_DESCRICAO:
-		var id: String = c[0]
-		var rotulo := Label.new()
-		rotulo.text = String(c[1]).to_upper()
-		rotulo.add_theme_color_override("font_color", Tema.TINTA)
-		var f := Tema.fonte_titulo()
-		if f != null:
-			rotulo.add_theme_font_override("font", f)
-		v.add_child(rotulo)
-		if not _campos_descricao.has(id):
-			var limite: int = Carreira.LIMITE_DESCRICAO[id]
-			var campo: Control
-			if c[3]:
-				var te := TextEdit.new()
-				te.custom_minimum_size = Vector2(0, 130)
-				te.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
-				te.placeholder_text = c[2]
-				te.text_changed.connect(func():
-					if te.text.length() > limite:
-						te.text = te.text.left(limite)
-						te.set_caret_column(te.get_line(te.get_line_count() - 1).length(), false)
-						te.set_caret_line(te.get_line_count() - 1)
-					ficha[id] = te.text)
-				campo = te
-			else:
-				var le := LineEdit.new()
-				le.max_length = limite
-				le.placeholder_text = c[2]
-				le.text_changed.connect(func(t): ficha[id] = t)
-				campo = le
-			campo.tooltip_text = "Até %d caracteres." % limite
-			_campos_descricao[id] = campo
-		v.add_child(_campos_descricao[id])
+		_campo_texto(v, c)
 
 
 ## Revisão (docs/26): a página 1 da ficha nova, como o agente vai ficar — já com o
@@ -500,17 +663,30 @@ func _pagina_revisao(v: VBoxContainer, res: Dictionary, erros: Array) -> void:
 		a.nome = String(ficha.nome).strip_edges() if String(ficha.nome).strip_edges() != "" else "(sem nome)"
 		a.aparencia = String(ficha.aparencia)
 		a.tom = int(ficha.tom)
+		a.conceito = String(ficha.conceito)
 		var kit := carreira.kit_da_classe(ficha.classe)
 		for item in kit.get("equipamento", []):
 			a.equipamento.append(item)
 		a.arma_id = String(kit.get("arma", ""))
+		# "Revise sua ficha" (p.23 e p.46): as características derivadas com a conta
+		var c := rs.classe(String(ficha.classe))
+		var conta := PackedStringArray()
+		conta.append("PV %d = %d (classe) + %d VIG" % [a.pv_maximo, int(c.pv.inicial), a.atributo("vig")])
+		conta.append("PE %d = %d (classe) + %d PRE" % [a.pe_maximo, int(c.pe.inicial), a.atributo("pre")])
+		conta.append("SAN %d (classe)" % a.san_maximo)
+		conta.append("Defesa %d = 10 + %d AGI e modificadores" % [a.defesa(), a.atributo("agi")])
+		conta.append("Deslocamento %d m" % int(a.deslocamento_m()))
+		_nota(v, " · ".join(conta))
+		var pend := Progressao.pendencias(a)
+		if not pend.is_empty():
+			_nota(v, "Depois de assinar, %d escolha%s na ficha (ex.: o poder extra do adulto)." % [pend.size(), "" if pend.size() == 1 else "s"])
 		_revisao = FichaAgente.pagina_um(a)
 		v.add_child(_revisao)
-		_nota(v, "Equipamento inicial: %s." % ", ".join(PackedStringArray((kit.equipamento as Array).map(func(i): return rs.equipamento(i).get("nome", i)))))
+		_nota(v, "Equipamento (p.23: a Ordem entrega o necessário na primeira missão): %s." % ", ".join(PackedStringArray((kit.equipamento as Array).map(func(i): return rs.equipamento(i).get("nome", i)))))
 		var desc := PackedStringArray()
-		for c in CAMPOS_DESCRICAO:
-			if String(ficha.get(c[0], "")).strip_edges() != "":
-				desc.append("%s: %s" % [c[1], String(ficha[c[0]]).strip_edges()])
+		for campo in CAMPOS_DESCRICAO:
+			if String(ficha.get(campo[0], "")).strip_edges() != "":
+				desc.append("%s: %s" % [campo[1], String(ficha[campo[0]]).strip_edges()])
 		_nota(v, "\n".join(desc) if not desc.is_empty() else "Descrição em branco (opcional).")
 	for e in erros:
 		var l := _nota(v, "• " + String(e))

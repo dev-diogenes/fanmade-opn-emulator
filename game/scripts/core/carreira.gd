@@ -66,7 +66,8 @@ func recrutar(nome: String) -> Agente:
 ## Agente criado pelo jogador (docs/17, E2). Valida com CriacaoAgente e dá o kit inicial
 ## da classe (o primeiro recruta da mesma classe em recrutas.json). Retorna {agente, erros}.
 ## Tamanho máximo dos textos da descrição (caracteres).
-const LIMITE_DESCRICAO := {"personalidade": 140, "historico": 600, "objetivo": 140}
+const LIMITE_DESCRICAO := {"personalidade": 140, "historico": 600, "objetivo": 140,
+	"conceito": 120, "genero": 40, "aparencia_texto": 200}
 
 
 func recrutar_ficha(ficha: Dictionary) -> Dictionary:
@@ -89,6 +90,10 @@ func recrutar_ficha(ficha: Dictionary) -> Dictionary:
 	a.personalidade = String(ficha.get("personalidade", "")).strip_edges().left(LIMITE_DESCRICAO.personalidade)
 	a.historico = String(ficha.get("historico", "")).strip_edges().left(LIMITE_DESCRICAO.historico)
 	a.objetivo = String(ficha.get("objetivo", "")).strip_edges().left(LIMITE_DESCRICAO.objetivo)
+	a.conceito = String(ficha.get("conceito", "")).strip_edges().left(LIMITE_DESCRICAO.conceito)
+	a.genero = String(ficha.get("genero", "")).strip_edges().left(LIMITE_DESCRICAO.genero)
+	a.idade_anos = int(ficha.get("idade_anos", 0))
+	a.aparencia_texto = String(ficha.get("aparencia_texto", "")).strip_edges().left(LIMITE_DESCRICAO.aparencia_texto)
 	a.id = "ag%d" % _proximo_id
 	_proximo_id += 1
 	var kit: Dictionary = kit_da_classe(String(ficha.get("classe", "")))

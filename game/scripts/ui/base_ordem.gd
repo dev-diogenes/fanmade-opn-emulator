@@ -160,6 +160,8 @@ func _montar_interface() -> void:
 	# Ficha no formato da ficha oficial (docs/25): Agente, Habilidades e inventário, Rituais
 	_ficha_agente = FichaAgente.new()
 	_ficha_agente.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_ficha_agente.editavel = true   # "Editar descrição" na página 2 (docs/27)
+	_ficha_agente.descricao_editada.connect(_salvar)
 	doc.add_child(_ficha_agente)
 	# Escolhas de NEX pendentes: um bilhete abaixo da ficha, só quando há o que escolher
 	_papel_pendencia = _papel(false)

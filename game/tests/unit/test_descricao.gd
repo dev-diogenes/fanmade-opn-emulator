@@ -31,20 +31,20 @@ func test_dossie_tem_a_aba_descricao_e_a_revisao_com_a_ficha_nova():
 	var titulos: Array = []
 	for i in d._abas.get_tab_count():
 		titulos.append(d._abas.get_tab_title(i))
-	assert_eq(titulos, ["Identidade", "Classe", "Atributos", "Perícias", "Rituais", "Descrição", "Revisão"])
-	d._abas.current_tab = 5
+	assert_eq(titulos, ["Conceito", "Atributos", "Origem", "Classe", "Perícias", "Rituais", "Descrição", "Revisão"], "a ordem do livro (p.23)")
+	d._abas.current_tab = CriacaoDossie.PASSOS.find("Descrição")
 	var campo: LineEdit = d._campos_descricao.personalidade
 	campo.text = "Calada"
 	campo.text_changed.emit("Calada")
 	assert_eq(d.ficha.personalidade, "Calada", "o campo escreve na ficha")
 	d._abas.current_tab = 0
-	d._abas.current_tab = 5
+	d._abas.current_tab = CriacaoDossie.PASSOS.find("Descrição")
 	assert_eq((d._campos_descricao.personalidade as LineEdit).text, "Calada", "o texto sobrevive à troca de aba")
 	# Revisão: a página 1 da ficha nova, com o equipamento inicial
 	d.ficha.nome = "Helena"
 	for k in _ficha_valida("Helena"):
 		d.ficha[k] = _ficha_valida("Helena")[k]
-	d._abas.current_tab = 6
+	d._abas.current_tab = CriacaoDossie.PASSOS.find("Revisão")
 	assert_not_null(d._revisao)
 	assert_gt(d._revisao.find_children("*", "PentagonoAtributos", true, false).size(), 0, "o pentágono da ficha nova")
 	var textos: Array = d._revisao.find_children("*", "Label", true, false).map(func(l): return l.text)

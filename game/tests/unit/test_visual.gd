@@ -368,7 +368,7 @@ func test_dossie_de_criacao_navega_e_valida():
 	for i in d._abas.get_tab_count():
 		d._abas.current_tab = i   # todas as páginas se desenham sem erro
 	d.ficha.classe = "ocultista"
-	d._abas.current_tab = 4
+	d._abas.current_tab = CriacaoDossie.PASSOS.find("Rituais")
 	assert_gt(d._paginas["Rituais"].get_child_count(), 2, "o ocultista escolhe rituais")
 	d.free()
 

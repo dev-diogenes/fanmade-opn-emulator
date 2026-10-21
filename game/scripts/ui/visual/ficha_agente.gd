@@ -12,6 +12,11 @@ extends TabContainer
 ##   var f := FichaAgente.new(); add_child(f); f.mostrar(agente, usar_item)
 
 signal item_usado(item_id: String)
+## A descrição foi editada (docs/27): quem abriu a ficha salva a carreira.
+signal descricao_editada
+
+## Na Base, a página 2 ganha "Editar descrição"; no jogo (F), não.
+var editavel := false
 
 const ELEMENTOS := ["conhecimento", "energia", "morte", "sangue", "medo"]
 const NOMES_ELEMENTO := {"conhecimento": "Conhecimento", "energia": "Energia", "morte": "Morte", "sangue": "Sangue", "medo": "Medo"}
@@ -180,6 +185,8 @@ func _montar_agente() -> Control:
 	topo.add_child(campo("Personagem", agente.nome, 210))
 	topo.add_child(campo("Patente", String(agente.patente().get("nome", "?")), 120))
 	esq.add_child(topo)
+	if agente.conceito.strip_edges() != "":
+		esq.add_child(campo("Conceito", agente.conceito, 420))
 	# Atributos no pentágono e a identidade ao lado
 	var meio := HBoxContainer.new()
 	meio.add_theme_constant_override("separation", 14)
@@ -343,7 +350,21 @@ func _montar_habilidades() -> Control:
 		else:
 			prof.add_child(_texto("%s %s" % ["☑" if agente.tem_proficiencia(par[1]) else "☐", par[0]]))
 	esq.add_child(prof)
-	esq.add_child(aba("Descrição"))
+	var cab_desc := HBoxContainer.new()
+	cab_desc.add_theme_constant_override("separation", 8)
+	var aba_desc := aba("Descrição")
+	aba_desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cab_desc.add_child(aba_desc)
+	if editavel:
+		var editar := Button.new()
+		editar.text = "Editar descrição"
+		editar.theme_type_variation = "BotaoPapel"
+		editar.pressed.connect(func():
+			EditorDescricao.abrir(self, agente, func():
+				descricao_editada.emit()
+				mostrar(agente, usar_item)))
+		cab_desc.add_child(editar)
+	esq.add_child(cab_desc)
 	var desc := HBoxContainer.new()
 	desc.add_theme_constant_override("separation", 14)
 	var foto := FotoAgente.new()
@@ -357,8 +378,17 @@ func _montar_habilidades() -> Control:
 	aparencia.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	aparencia.add_theme_color_override("font_color", Tema.TINTA)
 	var modelo := Pecas.modelo_do_agente(agente.classe_id, agente.aparencia)
-	aparencia.text = "Aparência: %s, roupa em tom %s.\nOrigem: %s. %s" % [String(Pecas.APARENCIAS.get(modelo, modelo)).to_lower(),
-		String(Pecas.TONS[clampi(agente.tom, 0, Pecas.TONS.size() - 1)][0]).to_lower(),
+	var quem := PackedStringArray()
+	if agente.genero.strip_edges() != "":
+		quem.append(agente.genero)
+	if agente.idade_anos > 0:
+		quem.append("%d anos" % agente.idade_anos)
+	var cabeca := ", ".join(quem)
+	if cabeca != "":
+		cabeca = cabeca.left(1).to_upper() + cabeca.substr(1) + ".\n"   # só a primeira letra ("31 anos", não "31 Anos")
+	aparencia.text = "%sAparência: %s\nOrigem: %s. %s" % [cabeca,
+		agente.aparencia_texto if agente.aparencia_texto.strip_edges() != "" else "%s, roupa em tom %s." % [String(Pecas.APARENCIAS.get(modelo, modelo)).to_lower(),
+			String(Pecas.TONS[clampi(agente.tom, 0, Pecas.TONS.size() - 1)][0]).to_lower()],
 		origem.get("nome", "—"), origem.get("poder", {}).get("descricao", "")]
 	texto.add_child(aparencia)
 	# Personalidade, histórico e objetivo (docs/26), quando o jogador escreveu

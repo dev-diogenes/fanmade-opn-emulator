@@ -27,6 +27,11 @@ var tom := 0
 var personalidade := ""
 var historico := ""
 var objetivo := ""
+## Conceito e toques finais do livro (p.23-24 e p.46-47; docs/27): só apresentação.
+var conceito := ""
+var genero := ""
+var idade_anos := 0        ## idade em anos (a faixa da regra opcional fica em `idade`)
+var aparencia_texto := ""   ## a frase de aparência (o modelo da foto fica em `aparencia`)
 ## Ex-mundano (regra NEX 0%): bônus recebidos ao virar agente, ex.: {"pv": 12, "pe": 1, "san": 4}
 var transicao_mundano: Dictionary = {}
 var pp := 0                      ## Pontos de Prestígio (definem a patente)
@@ -517,6 +522,7 @@ func para_dicionario() -> Dictionary:
 		"pv": pv, "pe": pe, "san": san, "condicoes": condicoes.keys(),
 		"aparencia": aparencia, "tom": tom,
 		"personalidade": personalidade, "historico": historico, "objetivo": objetivo,
+		"conceito": conceito, "genero": genero, "idade_anos": idade_anos, "aparencia_texto": aparencia_texto,
 	}
 
 
@@ -564,6 +570,10 @@ static func de_dicionario(p_ruleset: Ruleset, d: Dictionary) -> Agente:
 	a.personalidade = String(d.get("personalidade", ""))
 	a.historico = String(d.get("historico", ""))
 	a.objetivo = String(d.get("objetivo", ""))
+	a.conceito = String(d.get("conceito", ""))
+	a.genero = String(d.get("genero", ""))
+	a.idade_anos = int(d.get("idade_anos", 0))
+	a.aparencia_texto = String(d.get("aparencia_texto", ""))
 	a.arma_id = d.get("arma", "")
 	for x in d.get("equipamento", []):
 		a.equipamento.append(x)
