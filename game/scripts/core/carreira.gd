@@ -4,6 +4,9 @@ extends RefCounted
 ## relatório ao voltar (PP, NEX, patente, mortes). Salva tudo em JSON.
 
 const ARQUIVO := "user://carreira.json"
+## Onde o jogo salva. Nos testes, o Jogo troca por um arquivo de teste (docs/31): a suíte não
+## pode sobrescrever o save de verdade.
+static var arquivo_padrao := ARQUIVO
 const VERSAO := 1
 const MAX_ROSTER := 8
 const MAX_GRUPO := 4
@@ -335,7 +338,9 @@ static func de_dicionario(d: Dictionary, ruleset_: Ruleset = null) -> Carreira:
 	return c
 
 
-func salvar(caminho: String = ARQUIVO) -> Error:
+func salvar(caminho: String = "") -> Error:
+	if caminho == "":
+		caminho = arquivo_padrao
 	var f := FileAccess.open(caminho, FileAccess.WRITE)
 	if f == null:
 		return FileAccess.get_open_error()
@@ -343,7 +348,9 @@ func salvar(caminho: String = ARQUIVO) -> Error:
 	return OK
 
 
-static func carregar(caminho: String = ARQUIVO) -> Carreira:
+static func carregar(caminho: String = "") -> Carreira:
+	if caminho == "":
+		caminho = arquivo_padrao
 	if not FileAccess.file_exists(caminho):
 		return null
 	var d = JSON.parse_string(FileAccess.get_file_as_string(caminho))
@@ -354,7 +361,9 @@ static func carregar(caminho: String = ARQUIVO) -> Carreira:
 
 ## Uma linha sobre o save, sem carregar a carreira (tela de título, docs/21):
 ## "3 agentes · missão em andamento, turno 4". "" sem save legível.
-static func resumo_save(caminho: String = ARQUIVO) -> String:
+static func resumo_save(caminho: String = "") -> String:
+	if caminho == "":
+		caminho = arquivo_padrao
 	if not FileAccess.file_exists(caminho):
 		return ""
 	var d = JSON.parse_string(FileAccess.get_file_as_string(caminho))
@@ -371,5 +380,7 @@ static func resumo_save(caminho: String = ARQUIVO) -> String:
 	return " · ".join(partes)
 
 
-static func existe_save(caminho: String = ARQUIVO) -> bool:
+static func existe_save(caminho: String = "") -> bool:
+	if caminho == "":
+		caminho = arquivo_padrao
 	return FileAccess.file_exists(caminho)

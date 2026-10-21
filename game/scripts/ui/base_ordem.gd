@@ -38,6 +38,9 @@ var _btn_continuar: Button
 var _relatorio: RichTextLabel
 
 
+## Uma escolha de NEX foi aplicada (a sala de Transcender redesenha o papel dela).
+signal pendencias_mudaram(agente: Agente, erros: Array)
+
 ## Semente da próxima missão procedural: o briefing mostra a região que ela gera e o
 ## "Iniciar missão" usa a mesma (docs/23, C7).
 var semente_proxima := randi() % 1000000
@@ -530,13 +533,24 @@ func _atualizar_armas_requisicao() -> void:
 				_opt_arma.select(_opt_arma.item_count - 1)
 
 
-func _montar_pendencia(a: Agente) -> void:
-	for filho in _caixa_pendencia.get_children():
+## Escolhas de NEX pendentes. `caixa`: onde montar (a Base, ou o papel da sala de
+## Transcender, docs/31). Na Base, um botão leva à sala.
+func _montar_pendencia(a: Agente, caixa: VBoxContainer = null) -> void:
+	var na_base := caixa == null
+	if na_base:
+		caixa = _caixa_pendencia
+	for filho in caixa.get_children():
 		filho.queue_free()
 	var pend := Progressao.pendencias(a)
-	_papel_pendencia.visible = not pend.is_empty()
+	if na_base:
+		_papel_pendencia.visible = not pend.is_empty()
 	if pend.is_empty():
 		return
+	if na_base and _jogo != null:
+		var sala := _botao("✦ Transcender na sala de %s" % a.nome, func(): Transcender.abrir(self, a))
+		sala.theme_type_variation = "BotaoPrincipal"
+		sala.tooltip_text = "Entre na sala do agente, ande até o sigilo (WASD) e faça as escolhas do novo NEX ali."
+		caixa.add_child(sala)
 	var p: Dictionary = pend[0]
 	var rs := carreira.ruleset
 	var titulos := {"trilha": "Escolha a trilha (NEX 10%)", "poder": "Escolha um poder de classe", "aumento": "Aumente um atributo", "ritual": "Aprenda um ritual",
@@ -544,15 +558,15 @@ func _montar_pendencia(a: Agente) -> void:
 		"grau": "Grau de Treinamento: escolha %d perícias" % int(p.get("quantidade", 0)), "versatilidade": "Versatilidade (NEX 50%)"}
 	var lbl := _titulo("[%d pendente(s)] %s" % [pend.size(), titulos[p.tipo]])
 	lbl.add_theme_color_override("font_color", Tema.SANGUE)
-	_caixa_pendencia.add_child(lbl)
+	caixa.add_child(lbl)
 	if p.tipo == "grau":
 		var lista := ItemList.new()
 		lista.select_mode = ItemList.SELECT_MULTI
 		lista.custom_minimum_size = Vector2(0, 90)
 		for per in p.opcoes:
 			lista.add_item(rs.pericia(per).nome)
-		_caixa_pendencia.add_child(lista)
-		_caixa_pendencia.add_child(_botao("Confirmar", func():
+		caixa.add_child(lista)
+		caixa.add_child(_botao("Confirmar", func():
 			var escolhidas: Array = []
 			for i in lista.get_selected_items():
 				escolhidas.append(p.opcoes[i])
@@ -569,7 +583,7 @@ func _montar_pendencia(a: Agente) -> void:
 			"poder_paranormal": nome = "%s (%s)%s" % [rs.poder_paranormal(o).nome, rs.poder_paranormal(o).elemento, "" if rs.poder_paranormal(o).get("implementado", false) else " *"]
 			"afinidade": nome = String(o).capitalize()
 		opt.add_item(nome)
-	_caixa_pendencia.add_child(opt)
+	caixa.add_child(opt)
 	# Transcender pede um poder paranormal; outras escolhas usam o campo de texto
 	var opt_para := OptionButton.new()
 	if p.tipo == "poder":
@@ -578,11 +592,11 @@ func _montar_pendencia(a: Agente) -> void:
 		for pid in Progressao.poderes_paranormais_possiveis(a):
 			opt_para.add_item(rs.poder_paranormal(pid).nome)
 			opt_para.set_item_metadata(opt_para.item_count - 1, pid)
-		_caixa_pendencia.add_child(opt_para)
+		caixa.add_child(opt_para)
 	var extra := LineEdit.new()
 	extra.placeholder_text = "Escolha extra: perícias (Treinamento) · ritual/elemento/classe:poder (poderes paranormais)"
-	_caixa_pendencia.add_child(extra)
-	_caixa_pendencia.add_child(_botao("Confirmar", func():
+	caixa.add_child(extra)
+	caixa.add_child(_botao("Confirmar", func():
 		var escolha = p.opcoes[opt.selected]
 		var pares: Array = []
 		if p.tipo == "poder" and escolha == "transcender":
@@ -601,6 +615,7 @@ func _aplicar(a: Agente, tipo: String, escolha, extra: Array = []) -> void:
 	_lbl_requisicao.text = "\n".join(erros) if not erros.is_empty() else "Escolha aplicada."
 	_salvar()
 	_atualizar_tudo()
+	pendencias_mudaram.emit(a, erros)
 
 
 func _mostrar_relatorio() -> void:

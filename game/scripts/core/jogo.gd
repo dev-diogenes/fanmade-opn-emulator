@@ -35,6 +35,7 @@ var missao: Missao:
 
 
 func _ready() -> void:
+	_isolar_testes()
 	_modo_captura()
 	Tema.aplicar()
 	Tema.aplicar_escala(get_tree().root)
@@ -92,6 +93,16 @@ func _ao_entrar_no(no: Node) -> void:
 
 ## Captura de tela para a documentação: `godot --path game <cena> -- --captura=arquivo.png`.
 ## Não salva a carreira; espera a cena assentar, grava a imagem e fecha.
+## Rodando a suíte de testes (GUT), o save e as preferências vão para arquivos de teste:
+## antes, um teste que religava o salvamento automático sobrescrevia o save do jogador.
+func _isolar_testes() -> void:
+	for arg in OS.get_cmdline_args():
+		if String(arg).contains("gut_cmdln"):
+			Carreira.arquivo_padrao = "user://teste_carreira.json"
+			Preferencias.caminho = "user://teste_preferencias.json"
+			return
+
+
 func _modo_captura() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if not arg.begins_with("--captura="):
