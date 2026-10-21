@@ -189,6 +189,7 @@ func _decorar(raiz: Node3D, h: Vector2i, terreno: String, altura: float) -> void
 				luz.light_energy = 0.35 + 0.2 * acesas
 				luz.omni_range = 1.3
 				luz.position = Vector3(0, altura + 0.35, 0)
+				Qualidade.luz_extra(luz)   # janelas da cidade: clima, não informação
 				raiz.add_child(luz)
 		"ruina":
 			for p in pontos.call(3):

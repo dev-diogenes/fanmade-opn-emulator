@@ -244,6 +244,7 @@ func _clareira() -> void:
 	foco.spot_angle = 46.0
 	foco.spot_angle_attenuation = 0.5
 	foco.shadow_enabled = true
+	Qualidade.sombra(foco)
 	foco.position = centro + Vector3(0, 11, 1.5)
 	foco.rotation = Vector3(-PI / 2.0 + 0.12, 0, 0)   # quase a pino
 	add_child(foco)
@@ -283,6 +284,7 @@ func _cercar(estilo: Dictionary) -> void:
 							luz.light_energy = 0.9
 							luz.omni_range = 2.6
 							luz.position = Vector3(0, 0.25, 0)
+							Qualidade.luz_extra(luz)
 							peca.add_child(luz)
 				"pilar":
 					var p := Node3D.new()

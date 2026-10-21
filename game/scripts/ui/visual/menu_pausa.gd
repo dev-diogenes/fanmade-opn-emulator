@@ -160,6 +160,17 @@ static func montar_leitura(caixa: Control) -> void:
 		Preferencias.definir_flashes(novo)
 		flashes.text = "Flashes: %s" % nomes_flashes[novo])
 	caixa.add_child(flashes)
+	# Qualidade gráfica (docs/24): aplica na hora em tudo que está aberto
+	var qualidade := Button.new()
+	qualidade.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	qualidade.tooltip_text = "Alta: todos os efeitos.\nMédia: sem oclusão de ambiente nem desfoque; menos serrilhado tratado.\nBaixa: sem sombras, glow, névoa rasteira e luzes de clima; a cena 3D em 75%.\nPara máquinas mais fracas, comece pela média."
+	qualidade.text = "Qualidade gráfica: %s" % Qualidade.NOMES[Qualidade.nivel()]
+	qualidade.pressed.connect(func():
+		var novo: String = Qualidade.NIVEIS[(Qualidade.NIVEIS.find(Qualidade.nivel()) + 1) % Qualidade.NIVEIS.size()]
+		Preferencias.definir_qualidade(novo)
+		Qualidade.aplicar(qualidade.get_tree())
+		qualidade.text = "Qualidade gráfica: %s" % Qualidade.NOMES[novo])
+	caixa.add_child(qualidade)
 	# A6: paleta para daltonismo
 	var dalt := CheckBox.new()
 	dalt.text = "Cores para daltonismo (azul e laranja)"

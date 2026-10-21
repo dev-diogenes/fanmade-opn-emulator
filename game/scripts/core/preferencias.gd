@@ -162,6 +162,17 @@ static func marcar_aviso_flashes() -> void:
 	gravar(d)
 
 
+## Qualidade gráfica (docs/24): "alta" (padrão), "media" ou "baixa". Ver Qualidade.
+static func qualidade() -> String:
+	return String(ler().get("qualidade", "alta"))
+
+
+static func definir_qualidade(v: String) -> void:
+	var d := ler()
+	d["qualidade"] = v
+	gravar(d)
+
+
 ## Paleta para daltonismo (docs/18, A6): sucesso em azul e falha em laranja, no lugar de
 ## verde e vermelho. Cacheada: as cores são consultadas ao montar cada resultado.
 static var _daltonismo_cache := -1

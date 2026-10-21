@@ -81,7 +81,7 @@ func _montar_diorama() -> void:
 	Tema.veu(vista)
 	Tema.membrana_na_tela(vista, 70)   # um pouco de véu: o Outro Lado já está por perto
 	var vp := SubViewport.new()
-	vp.msaa_3d = Viewport.MSAA_4X
+	Qualidade.vista(vp)   # MSAA e escala 3D conforme a qualidade (docs/24)
 	vista.add_child(vp)
 	add_child(vista)
 	_mapa3d = Mapa3D.new()

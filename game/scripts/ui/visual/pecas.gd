@@ -588,6 +588,8 @@ static func ambiente(raiz: Node3D, cor_ceu: Color = Color("0b0d18")) -> Environm
 	camera_attr.dof_blur_far_transition = 12.0
 	camera_attr.dof_blur_amount = 0.06
 	amb.camera_attributes = camera_attr
+	Qualidade.ambiente(amb)   # SSAO, glow, névoa rasteira e desfoque conforme a qualidade (docs/24)
+	Qualidade.sombra(lua)
 	raiz.add_child(amb)
 	# Mesa escura sob o diorama: o vazio deixa de ser uma cor chapada
 	var mesa := PlaneMesh.new()

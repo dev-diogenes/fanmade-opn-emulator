@@ -26,6 +26,7 @@
 | [21-chance-vez-e-limpeza.md](21-chance-vez-e-limpeza.md) | Chance nas escolhas (evento, investigação, ataque), faixa da vez da ameaça e a limpeza das pendências das críticas 15 e 20 |
 | [22-clima-de-terror-3d.md](22-clima-de-terror-3d.md) | Noite no mapa e no título, Membrana pesando no clima, casas acesas e combate no terreno do encontro (clareira ao luar) |
 | [23-arquivo-investigacao-progressao.md](23-arquivo-investigacao-progressao.md) | Arsenal com ícones e efeitos, ficha da Base com pentágono, investigação mais limpa, briefing procedural e cerimônia de NEX |
+| [24-qualidade-grafica.md](24-qualidade-grafica.md) | Qualidade gráfica alta/média/baixa (SSAO, desfoque, glow, névoa rasteira, sombras, luzes de clima, MSAA, escala 3D), com FPS medido |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

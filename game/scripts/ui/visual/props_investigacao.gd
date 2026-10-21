@@ -116,6 +116,7 @@ static func altar() -> Node3D:
 	luz.light_energy = 0.8
 	luz.omni_range = 1.8
 	luz.position = Vector3(0, 1.0, 0)
+	Qualidade.luz_extra(luz)
 	n.add_child(luz)
 	return n
 
@@ -141,6 +142,7 @@ static func fogueira() -> Node3D:
 	luz.light_energy = 1.4
 	luz.omni_range = 2.6
 	luz.position = Vector3(0, 0.5, 0)
+	Qualidade.luz_extra(luz)
 	n.add_child(luz)
 	return n
 

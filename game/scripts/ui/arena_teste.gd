@@ -501,7 +501,7 @@ func _montar_interface() -> void:
 	Tema.veu(_vista)
 	_vista.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var vp := SubViewport.new()
-	vp.msaa_3d = Viewport.MSAA_4X
+	Qualidade.vista(vp)   # MSAA e escala 3D conforme a qualidade (docs/24)
 	_vista.add_child(vp)
 	_tab3d = Tabuleiro3D.new()
 	vp.add_child(_tab3d)

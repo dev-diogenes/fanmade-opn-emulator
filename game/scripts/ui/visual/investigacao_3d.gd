@@ -41,6 +41,7 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 	_ambiente.fog_density = 0.11
 	_ambiente.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	amb.environment = _ambiente
+	Qualidade.ambiente(amb)
 	add_child(amb)
 
 	var chao := CylinderMesh.new()
@@ -59,6 +60,7 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 	_luz.light_color = Color("ffd9a0")
 	_luz.light_energy = 2.2
 	_luz.shadow_enabled = true
+	Qualidade.sombra(_luz)
 	add_child(_luz)
 	_aplicar_luz()
 
