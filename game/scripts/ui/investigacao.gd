@@ -208,8 +208,9 @@ func _montar_quadro() -> void:
 
 
 func _posicionar_quadro(imediato: bool = false) -> void:
-	var esquerda := -LARGURA_QUADRO - 16.0 if _quadro_aberto else 8.0
-	var direita := -16.0 if _quadro_aberto else LARGURA_QUADRO + 8.0
+	var largura := _largura_quadro()
+	var esquerda := -largura - 16.0 if _quadro_aberto else 8.0
+	var direita := -16.0 if _quadro_aberto else largura + 8.0
 	if imediato:
 		_quadro.offset_left = esquerda
 		_quadro.offset_right = direita
@@ -217,6 +218,13 @@ func _posicionar_quadro(imediato: bool = false) -> void:
 	var tw := create_tween().set_parallel()
 	tw.tween_property(_quadro, "offset_left", esquerda, 0.25).set_trans(Tween.TRANS_CUBIC)
 	tw.tween_property(_quadro, "offset_right", direita, 0.25).set_trans(Tween.TRANS_CUBIC)
+
+
+## O quadro cresce com as perguntas da investigação ampliada (docs/36): cada bilhete a mais
+## ganha uma coluna, e os bilhetes não precisam estreitar.
+func _largura_quadro() -> float:
+	var extras := maxi(0, missao.caso.perguntas.size() - 3) if missao != null and missao.caso != null else 0
+	return LARGURA_QUADRO + 130.0 * extras
 
 
 func _alternar_quadro() -> void:
@@ -847,6 +855,9 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 			if res.ok and res.deducao.acertou:
 				Tema.pulso_vhs(_vista, 0.6, 0.7)
 				Som.tocar("pista")
+				if not res.deducao.get("ampliacao", {}).is_empty():
+					Som.tocar("carimbo")   # a ficha ganha uma pergunta (docs/36)
+					_posicionar_quadro()
 				if not _quadro_aberto:
 					_alternar_quadro()
 			elif res.ok:

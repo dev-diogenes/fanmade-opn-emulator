@@ -16,7 +16,7 @@
 | Ajudar | ✔ |
 | Urgência de 6, 5, 4, 3 ou 2 rodadas; a cada 3 falhas, −1 rodada (opcional) | ✔ |
 | Penalidades ao estourar a urgência: chefe com mais PV, reforços, sem descanso | ✔ Chefe mais forte, encontro no hex e Membrana |
-| Investigação ampliada: perguntas novas no meio do caso | ✗ Ainda não. Fica como próximo conteúdo |
+| Investigação ampliada: perguntas novas no meio do caso | ✔ Desde docs/36: a primeira acusação certa revela uma reviravolta e uma pergunta nova |
 
 Duas exceções, ambas design do jogo:
 - **A pista central** (docs/14) é inspirada no GUMSHOE: quem tem treino acha a pista sem rolar.

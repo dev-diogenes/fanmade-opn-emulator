@@ -41,7 +41,7 @@ func test_caso_gerado_e_perguntas():
 func test_dois_candidatos_nunca_dividem_mais_de_um_traco():
 	var d := DadosJogo.ler("casos")
 	for pid in Caso.PERGUNTA_GRUPO:
-		var cands := Caso.candidatos(pid)
+		var cands := m.caso.candidatos(pid)
 		assert_gt(cands.size(), 2, pid)
 		for i in cands.size():
 			assert_eq(cands[i].indicios.size(), 3, "%s: 3 traços" % cands[i].id)
@@ -69,7 +69,7 @@ func test_deduzir_certo_e_errado():
 	assert_false(c.deduzir("quem", c.sujeito.id).ok, "sem pista não dá para acusar")
 	c.registrar_pista("{indicio}", "quem", "t")
 	var errado := ""
-	for cand in Caso.candidatos("quem"):
+	for cand in c.candidatos("quem"):
 		if cand.id != c.sujeito.id:
 			errado = cand.id
 	var r := c.deduzir("quem", errado)
@@ -87,7 +87,7 @@ func test_deduzir_no_mapa_aplica_efeito_e_penalidade():
 	var antes := m.membrana.valor
 	m.caso.registrar_pista("{indicio}", "onde", "t")
 	var errado := ""
-	for cand in Caso.candidatos("onde"):
+	for cand in m.caso.candidatos("onde"):
 		if cand.id != m.caso.local.id:
 			errado = cand.id
 	var r := Comandos.aplicar_mapa(m, Comandos.novo("mapa", "deduzir", {"pergunta": "onde", "candidato": errado}))
@@ -408,3 +408,51 @@ func test_testemunha_por_pouco_da_depoimento_incerto():
 	assert_true(c.caso.pistas.back().duvidosa)
 	assert_true(c.pistas_encontradas.back().duvidosa)
 	assert_false(c.caso.pistas.back().indicio in c.caso.acao.indicios, "a vizinha responde o quê; enganada, aponta outro plano")
+
+
+# --- Investigação ampliada (p.79, docs/36) ---------------------------------------------
+
+func test_reviravoltas_respeitam_a_regra_da_tabela():
+	for a in DadosJogo.ler("casos").ampliacoes:
+		var cands: Array = a.candidatos
+		assert_gt(cands.size(), 2, a.id)
+		for i in cands.size():
+			assert_eq(cands[i].indicios.size(), 3, cands[i].id)
+			for j in range(i + 1, cands.size()):
+				var comuns: Array = cands[i].indicios.filter(func(t): return t in cands[j].indicios)
+				assert_lte(comuns.size(), 1, "%s e %s" % [cands[i].id, cands[j].id])
+
+
+func test_primeira_acusacao_certa_amplia_a_investigacao():
+	var c := m.caso
+	assert_ne(c.ampliacao_id, "", "todo caso guarda uma reviravolta")
+	assert_eq(c.perguntas.size(), 3, "ela começa escondida")
+	c.registrar_pista("{indicio}", "quem", "t")
+	var r := c.deduzir("quem", c.sujeito.id)
+	assert_true(r.acertou)
+	assert_false(r.ampliacao.is_empty(), "a primeira descoberta amplia o caso")
+	assert_eq(c.perguntas.size(), 4)
+	var nova: String = r.ampliacao.pergunta.id
+	assert_eq(c.candidatos(nova).size(), c.ampliacao().candidatos.size())
+	assert_eq(c.verdadeiro(nova).id, c.ampliacao_verdade)
+	# Os pontos de "quem" (já resolvida) agora dão pistas da pergunta nova
+	var p1 := c.registrar_pista("{indicio}", "quem", "t")
+	assert_eq(p1.responde, nova)
+	c.registrar_pista("{indicio}", "quem", "t")
+	assert_eq(c.compativeis(nova).size(), 1, "duas pistas firmes, um suspeito, também na reviravolta")
+	assert_true(c.deduzir(nova, c.ampliacao_verdade).acertou)
+	assert_eq(c.resposta(nova), String(c.verdadeiro(nova).nome))
+	# A segunda descoberta não amplia de novo
+	c.registrar_pista("{indicio}", "onde", "t")
+	assert_true(c.deduzir("onde", c.local.id).get("ampliacao", {}).is_empty())
+
+
+func test_caso_ampliado_vai_e_volta_no_save():
+	var c := m.caso
+	c.registrar_pista("{indicio}", "onde", "t")
+	c.deduzir("onde", c.local.id)
+	var c2 := Caso.de_dicionario(JSON.parse_string(JSON.stringify(c.para_dicionario())))
+	assert_true(c2.ampliada)
+	assert_eq(c2.perguntas.size(), 4)
+	assert_eq(c2.ampliacao_verdade, c.ampliacao_verdade)
+	assert_eq(c2.candidatos(c2.perguntas[3].id).size(), c.candidatos(c.perguntas[3].id).size())

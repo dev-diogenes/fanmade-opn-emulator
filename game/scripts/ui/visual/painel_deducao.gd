@@ -79,7 +79,8 @@ func _montar() -> void:
 		var b := Button.new()
 		b.theme_type_variation = "BotaoPapel"
 		b.toggle_mode = true
-		b.text = ("✔ " if q.respondida else "") + {"quem": "Quem?", "oque": "O quê?", "onde": "Onde?"}.get(q.id, String(q.id))
+		var curto: String = String(q.get("curto", "")) if String(q.get("curto", "")) != "" else {"quem": "Quem?", "oque": "O quê?", "onde": "Onde?"}.get(q.id, String(q.id))
+		b.text = ("✔ " if q.respondida else "") + curto
 		b.tooltip_text = q.texto
 		var pid := String(q.id)
 		b.pressed.connect(func(): mostrar(pid))
@@ -137,7 +138,7 @@ func mostrar(pid: String) -> void:
 	var duvidosos := caso.indicios_duvidosos(pid)
 	for traco in duvidosos:   # depoimentos incertos (docs/35): podem ser verdade ou não
 		linha.add_child(_chip(traco, false, true))
-	var colunas := 3 if Caso.candidatos(pid).size() > 4 else 2
+	var colunas := 3 if caso.candidatos(pid).size() > 4 else 2
 	var grade := GridContainer.new()
 	grade.columns = colunas
 	grade.add_theme_constant_override("h_separation", Tema.ESPACO_G)
@@ -145,7 +146,7 @@ func mostrar(pid: String) -> void:
 	_corpo.add_child(grade)
 	var pode: bool = not q.respondida and int(q.encontradas) > 0
 	var culpado := String(caso.verdadeiro(pid).get("id", "")) if q.respondida else ""
-	for c in Caso.candidatos(pid):
+	for c in caso.candidatos(pid):
 		grade.add_child(_carta(c, achados, q.get("descartados", []), pode, culpado, duvidosos))
 
 

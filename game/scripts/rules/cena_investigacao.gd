@@ -294,6 +294,8 @@ func deduzir(pergunta_id: String, candidato_id: String) -> Dictionary:
 	if r.acertou:
 		perguntas_respondidas.append(r.pergunta)
 		_log("[color=#e3c27a][b]Dedução certa:[/b] %s → %s[/color]" % [r.pergunta.texto, r.candidato.nome])
+		if not r.get("ampliacao", {}).is_empty():
+			_log("[color=#c9a0ff][b]A investigação se amplia.[/b] %s Nova pergunta: %s[/color]" % [r.ampliacao.revelacao, r.ampliacao.pergunta.texto])
 	else:
 		var custo := Caso.penalidade_palpite()
 		if membrana != null:

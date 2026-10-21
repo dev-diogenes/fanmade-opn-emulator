@@ -12,6 +12,7 @@ const LARGURA_BILHETE := 132.0
 const FOTO := Vector2(96, 108)
 
 var caso: Caso
+var _lb := LARGURA_BILHETE   ## largura do bilhete nesta montagem
 var _pistas_vistas := 0
 var _fios: Array = []          ## [[Control origem, Control destino]]
 var _camada_fios: Control
@@ -66,14 +67,15 @@ func _reconstruir() -> void:
 
 	var colunas := maxi(1, caso.perguntas.size())
 	var largura := (size.x - 40) / colunas
+	_lb = minf(LARGURA_BILHETE, largura - 8.0)   # com a 4ª pergunta (docs/36), o bilhete estreita
 	var topo := 40.0 + 90.0   # espaço para o "Deduzir" entre o objetivo e os bilhetes (docs/32)
 	var novas := caso.pistas.size() > _pistas_vistas
 	for i in caso.perguntas.size():
 		var q: Dictionary = caso.perguntas[i]
-		var x := 20.0 + largura * i + (largura - LARGURA_BILHETE) / 2.0
+		var x := 20.0 + largura * i + (largura - _lb) / 2.0
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash(q.id)
-		var nota := _bilhete(q.texto, Vector2(LARGURA_BILHETE, 0), rng.randf_range(-3.0, 3.0), Tema.FONTE_P)
+		var nota := _bilhete(q.texto, Vector2(_lb, 0), rng.randf_range(-3.0, 3.0), Tema.FONTE_P)
 		nota.position = Vector2(x, topo)
 		_conteudo.add_child(nota)
 		var alfinete_nota := _alfinete(nota)
@@ -114,7 +116,7 @@ func _reconstruir() -> void:
 
 ## Posição da k-ésima foto de uma coluna: empilhadas, cada uma cobrindo um pouco a anterior.
 func _vaga(x: float, y: float, k: int) -> Vector2:
-	return Vector2(x + LARGURA_BILHETE / 2.0 - FOTO.x / 2.0 + (8.0 if k % 2 else -8.0), y + k * FOTO.y * 0.62)
+	return Vector2(x + _lb / 2.0 - FOTO.x / 2.0 + (8.0 if k % 2 else -8.0), y + k * FOTO.y * 0.62)
 
 
 func _bilhete(texto: String, tamanho: Vector2, graus: float, fonte: int) -> PanelContainer:
@@ -194,7 +196,8 @@ func _botao_deduzir(nota: Control, q: Dictionary) -> void:
 	b.add_theme_font_size_override("font_size", Tema.FONTE_P)
 	b.disabled = int(q.encontradas) < 1
 	b.tooltip_text = "Abrir a ficha de suspeitos e acusar" if not b.disabled else "Ache uma pista desta pergunta para poder acusar"
-	b.position = nota.position + Vector2(LARGURA_BILHETE / 2.0 + 8, -30)   # à direita do alfinete
+	b.position = nota.position + Vector2(_lb / 2.0 + 8, -30)   # à direita do alfinete
+	b.position.x = minf(b.position.x, size.x - 14.0 - b.get_combined_minimum_size().x)   # não sai do quadro
 	b.z_index = 3
 	var pid := String(q.id)
 	b.pressed.connect(func(): deduzir_pedido.emit(pid))

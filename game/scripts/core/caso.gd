@@ -7,6 +7,10 @@ extends RefCounted
 ## Dedução por indícios (docs/32): cada candidato tem 3 traços. Cada pista revela um traço
 ## do culpado verdadeiro, e a pergunta só se resolve quando o grupo ACUSA um candidato
 ## (`deduzir`). Errar custa Membrana e risca o candidato.
+##
+## Investigação ampliada (p.79, docs/36): cada caso guarda uma reviravolta sorteada. A primeira
+## acusação certa a revela e põe uma pergunta nova na ficha, com candidatos e traços próprios.
+## Pistas de pontos cuja pergunta já foi resolvida passam a responder a pergunta nova.
 
 const PERGUNTA_GRUPO := {"quem": "sujeitos", "oque": "acoes", "onde": "locais"}
 
@@ -21,6 +25,9 @@ var objetivo := ""
 var perguntas: Array[Dictionary] = []
 ## [{texto, responde, cena, indicio}]
 var pistas: Array[Dictionary] = []
+var ampliacao_id := ""        ## a reviravolta deste caso (casos.json, "ampliacoes"); "" = nenhuma
+var ampliacao_verdade := ""   ## o candidato verdadeiro da pergunta nova
+var ampliada := false         ## a reviravolta já foi revelada
 
 
 static func gerar(dados: Dados) -> Caso:
@@ -35,7 +42,49 @@ static func gerar(dados: Dados) -> Caso:
 		c.perguntas.append({"id": p.id, "texto": p.texto, "pistas_necessarias": int(p.pistas_necessarias),
 			"encontradas": 0, "respondida": false, "efeito": p.efeito, "descartados": [],
 			"ordem": c._embaralhar_tracos(String(p.id))})
+	c._sortear_ampliacao()
 	return c
+
+
+## Sorteia a reviravolta e o culpado dela, com a semente do próprio caso (sem gastar os Dados).
+func _sortear_ampliacao() -> void:
+	var lista: Array = DadosJogo.ler("casos").get("ampliacoes", [])
+	if lista.is_empty():
+		return
+	var semente := absi(hash("%s|%s|%s|ampliacao" % [sujeito.get("id", ""), acao.get("id", ""), local.get("id", "")]))
+	var a: Dictionary = lista[semente % lista.size()]
+	ampliacao_id = String(a.id)
+	ampliacao_verdade = String(a.candidatos[(semente / 7) % a.candidatos.size()].id)
+
+
+## A definição da reviravolta deste caso ({} sem nenhuma).
+func ampliacao() -> Dictionary:
+	for a in DadosJogo.ler("casos").get("ampliacoes", []):
+		if a.id == ampliacao_id:
+			return a
+	return {}
+
+
+## Revela a reviravolta: a pergunta nova entra na ficha. Devolve {revelacao, pergunta}, ou {}.
+func ampliar() -> Dictionary:
+	var a := ampliacao()
+	if ampliada or a.is_empty():
+		return {}
+	ampliada = true
+	var q: Dictionary = a.pergunta
+	var nova := {"id": String(q.id), "texto": q.texto, "curto": q.get("curto", ""), "pistas_necessarias": int(q.get("pistas_necessarias", 2)),
+		"encontradas": 0, "respondida": false, "efeito": q.efeito, "descartados": [], "ampliacao": true}
+	perguntas.append(nova)
+	nova.ordem = _embaralhar_tracos(nova.id)
+	return {"revelacao": String(a.revelacao), "pergunta": nova}
+
+
+## A pergunta nova ainda aberta, se a reviravolta já veio ("" se não).
+func pergunta_ampliada_aberta() -> String:
+	for q in perguntas:
+		if q.get("ampliacao", false) and not q.respondida:
+			return String(q.id)
+	return ""
 
 
 ## Os traços do culpado verdadeiro, embaralhados. A semente sai do próprio caso (e não dos
@@ -57,21 +106,30 @@ func formatar(texto: String) -> String:
 	return texto.replace("{sujeito}", sujeito.get("nome", "?")).replace("{acao}", acao.get("texto", "?")).replace("{local}", local.get("nome", "?"))
 
 
-## O elemento verdadeiro de uma pergunta (o sujeito, a ação ou o local sorteado).
+## O elemento verdadeiro de uma pergunta (o sujeito, a ação ou o local sorteado; na pergunta
+## da reviravolta, o candidato sorteado dela).
 func verdadeiro(pergunta_id: String) -> Dictionary:
 	match pergunta_id:
 		"quem": return sujeito
 		"oque": return acao
 		"onde": return local
+	var a := ampliacao()
+	if not a.is_empty() and pergunta_id == String(a.pergunta.id):
+		for c in a.candidatos:
+			if c.id == ampliacao_verdade:
+				return c
 	return {}
 
 
 ## Os candidatos de uma pergunta (todos os da tabela, o verdadeiro entre eles):
 ## [{id, nome, indicios}]. O nome da ação é o texto dela.
-static func candidatos(pergunta_id: String) -> Array[Dictionary]:
+func candidatos(pergunta_id: String) -> Array[Dictionary]:
+	var fonte: Array = DadosJogo.ler("casos").get(PERGUNTA_GRUPO.get(pergunta_id, ""), [])
+	var a := ampliacao()
+	if fonte.is_empty() and not a.is_empty() and pergunta_id == String(a.pergunta.id):
+		fonte = a.candidatos
 	var lista: Array[Dictionary] = []
-	var d := DadosJogo.ler("casos")
-	for c in d.get(PERGUNTA_GRUPO.get(pergunta_id, ""), []):
+	for c in fonte:
 		lista.append({"id": String(c.id), "nome": String(c.get("nome", c.get("texto", c.id))), "indicios": c.get("indicios", [])})
 	return lista
 
@@ -135,13 +193,15 @@ func deduzir(pergunta_id: String, candidato_id: String) -> Dictionary:
 	if cand.is_empty() or candidato_id in p.get("descartados", []):
 		return {"ok": false}
 	var acertou := candidato_id == String(verdadeiro(pergunta_id).get("id", ""))
+	var r := {"ok": true, "acertou": acertou, "pergunta": p, "candidato": cand}
 	if acertou:
 		p.respondida = true
+		r.ampliacao = ampliar()   # a primeira descoberta amplia a investigação (p.79)
 	else:
 		if not p.has("descartados"):
 			p.descartados = []
 		p.descartados.append(candidato_id)
-	return {"ok": true, "acertou": acertou, "pergunta": p, "candidato": cand}
+	return r
 
 
 func pergunta(id: String) -> Dictionary:
@@ -160,6 +220,9 @@ func pergunta(id: String) -> Dictionary:
 ## testemunha está certa (ímpar: enganada) e, se enganada, qual traço de outro candidato ela dá.
 ## A pista fica marcada como duvidosa e não entra na conta de "duas pistas firmes, um suspeito".
 func registrar_pista(texto: String, responde: String, cena: String, incerta: bool = false, sorte: int = 0) -> Dictionary:
+	# Ponto de uma pergunta já resolvida: o que se acha ali agora serve à pergunta nova (docs/36)
+	if pergunta(responde).get("respondida", false) and pergunta_ampliada_aberta() != "":
+		responde = pergunta_ampliada_aberta()
 	var p := pergunta(responde)
 	var traco := ""
 	if not p.is_empty():
@@ -214,12 +277,13 @@ func resposta(id: String) -> String:
 		"quem": return sujeito.get("nome", "")
 		"oque": return acao.get("texto", "")
 		"onde": return local.get("nome", "")
-	return ""
+	return String(verdadeiro(id).get("nome", ""))
 
 
 func para_dicionario() -> Dictionary:
 	return {"sujeito": sujeito, "acao": acao, "local": local, "resumo": resumo, "objetivo": objetivo,
-		"perguntas": perguntas.duplicate(true), "pistas": pistas.duplicate(true)}
+		"perguntas": perguntas.duplicate(true), "pistas": pistas.duplicate(true),
+		"ampliacao_id": ampliacao_id, "ampliacao_verdade": ampliacao_verdade, "ampliada": ampliada}
 
 
 static func de_dicionario(d: Dictionary) -> Caso:
@@ -229,11 +293,16 @@ static func de_dicionario(d: Dictionary) -> Caso:
 	c.local = d.get("local", {})
 	c.resumo = d.get("resumo", "")
 	c.objetivo = d.get("objetivo", "")
+	c.ampliacao_id = String(d.get("ampliacao_id", ""))
+	c.ampliacao_verdade = String(d.get("ampliacao_verdade", ""))
+	c.ampliada = bool(d.get("ampliada", false))
+	if not d.has("ampliacao_id"):   # save de antes da investigação ampliada (docs/36)
+		c._sortear_ampliacao()
 	# Save de antes da dedução: o sujeito, a ação e o local vêm sem os traços
 	for pid in PERGUNTA_GRUPO:
 		var elem := c.verdadeiro(pid)
 		if not elem.has("indicios"):
-			for cand in candidatos(pid):
+			for cand in c.candidatos(pid):
 				if cand.id == String(elem.get("id", "")):
 					elem.indicios = cand.indicios
 	for p in d.get("perguntas", []):

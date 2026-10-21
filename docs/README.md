@@ -38,6 +38,7 @@
 | [33-pendencias-e-conteudo.md](33-pendencias-e-conteudo.md) | Pendências (teste intermitente, recrutas com descrição, sala de Transcender por classe, atalho da cerimônia) e conteúdo novo: 5 candidatos, 2 cenas e 4 eventos que dão pista |
 | [34-mapa-escalada-e-afinidade.md](34-mapa-escalada-e-afinidade.md) | Afinidade pelo livro (firma no próximo Transcender), sala de Transcender por elemento, serra escalável com 20 na Agilidade, água rasa e mais miudezas nos hexes |
 | [35-depoimentos-incertos.md](35-depoimentos-incertos.md) | Auditoria da investigação contra o livro (p.79-81) e depoimentos incertos: testemunha que passa por pouco pode se enganar, e a pista aparece com "?" |
+| [36-investigacao-ampliada.md](36-investigacao-ampliada.md) | Investigação ampliada (p.79): a primeira acusação certa revela uma reviravolta (cúmplice, objeto ou quando) e uma pergunta nova na ficha |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

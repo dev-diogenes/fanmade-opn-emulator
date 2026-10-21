@@ -118,6 +118,8 @@ func test_quadro_mostra_fotos_e_carimbo():
 	await wait_frames(1)
 	textos = q.find_children("*", "Label", true, false).filter(func(l): return l.is_visible_in_tree() and not l.is_queued_for_deletion()).map(func(l): return l.text)
 	assert_true(textos.any(func(t): return t.begins_with("RESOLVIDO")), "acusação certa recebe o carimbo")
+	assert_eq(caso.perguntas.size(), 4, "a acusação certa ampliou o caso (docs/36)")
+	assert_not_null(q.find_child("Deduzir_" + caso.perguntas[3].id, true, false), "o bilhete novo também tem Deduzir")
 
 
 func test_ficha_de_suspeitos_acusa():
@@ -125,7 +127,7 @@ func test_ficha_de_suspeitos_acusa():
 	caso.registrar_pista("{indicio}", "quem", "t")
 	var enviados := []
 	var f := PainelDeducao.abrir(self, caso, "quem", func(q, c): enviados.append([q, c]))
-	assert_eq(f._cartas.size(), Caso.candidatos("quem").size(), "uma carta por candidato")
+	assert_eq(f._cartas.size(), caso.candidatos("quem").size(), "uma carta por candidato")
 	assert_false((f._cartas[caso.sujeito.id] as Button).disabled)
 	var acesos := f.find_children("*", "Label", true, false).filter(func(l): return l.text.begins_with("✔ "))
 	assert_gt(acesos.size(), 1, "o traço achado acende (na lista e nas cartas)")

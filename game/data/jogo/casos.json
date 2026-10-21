@@ -327,10 +327,263 @@
     "flores": {
       "rotulo": "Flores de velório",
       "texto": "Pétalas de crisântemo e cera de vela presas no tecido."
+    },
+    "chaves": {
+      "rotulo": "Molho de chaves",
+      "texto": "Cópias de chaves de portões e portas que deveriam estar trancadas."
+    },
+    "insonia": {
+      "rotulo": "Noites em claro",
+      "texto": "Garrafas térmicas de café e anotações feitas sempre de madrugada."
+    },
+    "uniforme": {
+      "rotulo": "Uniforme",
+      "texto": "Um fiapo de tecido de uniforme preso num prego."
+    },
+    "seringas": {
+      "rotulo": "Sedativos",
+      "texto": "Ampolas vazias de sedativo e seringas descartadas com pressa."
+    },
+    "escala": {
+      "rotulo": "Escala de plantão",
+      "texto": "Uma escala de turnos com as mesmas noites marcadas a caneta."
+    },
+    "unhas_sujas": {
+      "rotulo": "Terra nas unhas",
+      "texto": "Marcas de dedos sujos de terra escura na maçaneta."
+    },
+    "rotas": {
+      "rotulo": "Rotas anotadas",
+      "texto": "Um mapa rodoviário com corridas anotadas e horários de madrugada."
+    },
+    "reflexo": {
+      "rotulo": "Reflexo errado",
+      "texto": "Testemunhas falam de um reflexo que se mexia fora de hora."
+    },
+    "douracao": {
+      "rotulo": "Douração antiga",
+      "texto": "Lascas de folha de ouro velha presas no carpete."
+    },
+    "sussurros": {
+      "rotulo": "Sussurros",
+      "texto": "Quem passou perto diz ter ouvido alguém sussurrar o próprio nome."
+    },
+    "clarao": {
+      "rotulo": "Clarões",
+      "texto": "Vizinhos viram clarões brancos e curtos, como flashes, saindo da janela."
+    },
+    "negativos": {
+      "rotulo": "Negativos",
+      "texto": "Tiras de negativo de filme com rostos que ninguém reconhece."
+    },
+    "chiado": {
+      "rotulo": "Chiado",
+      "texto": "Um chiado baixo, de agulha em disco, que continua mesmo com tudo desligado."
+    },
+    "giro": {
+      "rotulo": "Algo girando",
+      "texto": "Marcas circulares no pó, como se algo tivesse girado ali a noite toda."
+    },
+    "olhos_vidro": {
+      "rotulo": "Olhos de vidro",
+      "texto": "Um olho de vidro pequeno, de brinquedo antigo, rolado para baixo do sofá."
+    },
+    "lua": {
+      "rotulo": "Lua",
+      "texto": "Um almanaque com as fases da lua circuladas em vermelho."
+    },
+    "madrugada": {
+      "rotulo": "Madrugada",
+      "texto": "Tudo combinado para as três da manhã, a hora em que a cidade dorme."
+    },
+    "contagem": {
+      "rotulo": "Contagem",
+      "texto": "Riscos na parede contando dias, e poucos espaços sobrando."
+    },
+    "luto": {
+      "rotulo": "Luto",
+      "texto": "Uma faixa preta de luto guardada junto com os materiais do ritual."
+    },
+    "sino": {
+      "rotulo": "Sino",
+      "texto": "Anotações sobre a hora em que o sino da igreja toca."
+    },
+    "foto_antiga": {
+      "rotulo": "Foto antiga",
+      "texto": "Uma foto de jornal antigo com a data circulada."
+    },
+    "fogos": {
+      "rotulo": "Fogos",
+      "texto": "Caixas de fogos de artifício compradas em quantidade."
+    },
+    "multidao": {
+      "rotulo": "Multidão",
+      "texto": "Um panfleto de evento público, com a praça cheia desenhada à caneta."
     }
   },
   "penalidade_palpite": {
     "membrana": -5,
     "texto": "Acusação errada: a Ordem perde tempo com a pista falsa."
-  }
+  },
+  "ampliacoes_nota": "Investigação ampliada (p.79, docs/36): em casos extensos, o objetivo cresce com as descobertas. Cada caso sorteia uma reviravolta, que abre uma pergunta nova na primeira acusação certa. Conteúdo original.",
+  "ampliacoes": [
+    {
+      "id": "cumplice",
+      "revelacao": "A dedução abre outra porta: alguém de dentro ajuda o culpado. Sem essa pessoa, o plano não teria chegado tão longe.",
+      "pergunta": {
+        "id": "cumplice",
+        "texto": "Quem é o cúmplice?",
+        "curto": "Cúmplice?",
+        "pistas_necessarias": 2,
+        "efeito": {
+          "tipo": "membrana",
+          "valor": 5,
+          "texto": "Sem o cúmplice, o culpado perde olhos e mãos: a Membrana se fortalece."
+        }
+      },
+      "candidatos": [
+        {
+          "id": "vigia",
+          "nome": "o vigia noturno",
+          "indicios": [
+            "chaves",
+            "insonia",
+            "uniforme"
+          ]
+        },
+        {
+          "id": "enfermeira",
+          "nome": "uma enfermeira do plantão",
+          "indicios": [
+            "uniforme",
+            "seringas",
+            "escala"
+          ]
+        },
+        {
+          "id": "coveiro",
+          "nome": "o coveiro do cemitério",
+          "indicios": [
+            "chaves",
+            "unhas_sujas",
+            "escala"
+          ]
+        },
+        {
+          "id": "taxista",
+          "nome": "um taxista da rodoviária",
+          "indicios": [
+            "insonia",
+            "rotas",
+            "unhas_sujas"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "objeto",
+      "revelacao": "Há um objeto amaldiçoado no centro de tudo, e ainda não se sabe qual é.",
+      "pergunta": {
+        "id": "objeto",
+        "texto": "Que objeto amaldiçoado está em jogo?",
+        "curto": "Objeto?",
+        "pistas_necessarias": 2,
+        "efeito": {
+          "tipo": "chefe_enfraquecido",
+          "texto": "Sabendo qual objeto alimenta o culpado, os agentes sabem o que quebrar: o chefe começa mais fraco."
+        }
+      },
+      "candidatos": [
+        {
+          "id": "espelho",
+          "nome": "um espelho de moldura dourada",
+          "indicios": [
+            "reflexo",
+            "douracao",
+            "sussurros"
+          ]
+        },
+        {
+          "id": "camera",
+          "nome": "uma câmera fotográfica antiga",
+          "indicios": [
+            "reflexo",
+            "clarao",
+            "negativos"
+          ]
+        },
+        {
+          "id": "disco",
+          "nome": "um disco de vinil sem rótulo",
+          "indicios": [
+            "sussurros",
+            "chiado",
+            "giro"
+          ]
+        },
+        {
+          "id": "boneca",
+          "nome": "uma boneca de porcelana",
+          "indicios": [
+            "douracao",
+            "chiado",
+            "olhos_vidro"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quando",
+      "revelacao": "As pistas apontam para uma data: o ritual tem hora marcada, e ela está perto.",
+      "pergunta": {
+        "id": "quando",
+        "texto": "Quando será o ritual?",
+        "curto": "Quando?",
+        "pistas_necessarias": 2,
+        "efeito": {
+          "tipo": "membrana",
+          "valor": 10,
+          "texto": "Sabendo quando, os agentes chegam antes: a Membrana se fortalece."
+        }
+      },
+      "candidatos": [
+        {
+          "id": "lua_cheia",
+          "nome": "na próxima lua cheia",
+          "indicios": [
+            "lua",
+            "madrugada",
+            "contagem"
+          ]
+        },
+        {
+          "id": "velorio",
+          "nome": "no próximo velório da cidade",
+          "indicios": [
+            "luto",
+            "madrugada",
+            "sino"
+          ]
+        },
+        {
+          "id": "aniversario",
+          "nome": "no aniversário da tragédia",
+          "indicios": [
+            "contagem",
+            "luto",
+            "foto_antiga"
+          ]
+        },
+        {
+          "id": "festa",
+          "nome": "na festa do padroeiro",
+          "indicios": [
+            "sino",
+            "fogos",
+            "multidao"
+          ]
+        }
+      ]
+    }
+  ]
 }

@@ -304,6 +304,8 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 		"deduzir":
 			if res.ok:
 				Som.tocar("pista" if res.deducao.acertou else "erro")
+				if not res.deducao.get("ampliacao", {}).is_empty():
+					Som.tocar("carimbo")   # a ficha ganha uma pergunta (docs/36)
 		"mover":
 			if res.ok:
 				_cursor_ativo = false
