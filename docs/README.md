@@ -40,6 +40,7 @@
 | [35-depoimentos-incertos.md](35-depoimentos-incertos.md) | Auditoria da investigação contra o livro (p.79-81) e depoimentos incertos: testemunha que passa por pouco pode se enganar, e a pista aparece com "?" |
 | [36-investigacao-ampliada.md](36-investigacao-ampliada.md) | Investigação ampliada (p.79): a primeira acusação certa revela uma reviravolta (cúmplice, objeto ou quando) e uma pergunta nova na ficha |
 | [37-conclusao-do-caso.md](37-conclusao-do-caso.md) | Conclusão do Caso pelo livro: a solução (+10 PP) exige a ficha respondendo quem e o quê; morte de inocente (−2 PP) e o evento Pedido de socorro |
+| [38-combate-pelo-livro.md](38-combate-pelo-livro.md) | Auditoria do combate contra o livro (p.82-90) e as ações Primeiros Socorros (Medicina) e Acalmar (Diplomacia ou Religião); pendências: manobras, camuflagem leve, caído |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

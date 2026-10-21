@@ -164,3 +164,60 @@ func test_inspiracao_resoluto_cura():
 	c._sortear_inspiracoes()
 	c.aplicar_inspiracao(0, aliado)
 	assert_eq(aliado.pv, aliado.pv_maximo - 20 + 8)
+
+
+# --- Primeiros Socorros e Acalmar (p.46 e p.44) ---------------------------------------
+
+func _socorrista() -> Agente:
+	return Agente.criar(rs, "Socorrista", "especialista",
+		{"agi": 1, "for": 1, "int": 2, "pre": 2, "vig": 1},
+		{"medicina": "treinado", "diplomacia": "treinado"})
+
+
+func test_primeiros_socorros_tira_de_morrendo():
+	var c := Combate.new(rs, Dados.new(1))
+	var medico := _socorrista()
+	var caido := _defensor()
+	c.adicionar(medico)
+	c.adicionar(caido)
+	caido.sofrer_dano(caido.pv)
+	assert_true(caido.tem(Ser.MORRENDO))
+	c.acoes[medico] = {"padrao": 1, "movimento": 1}
+	assert_null(c.primeiros_socorros(medico, medico), "não socorre a si mesmo")
+	c.dados.forcar([20, 20])
+	var t := c.primeiros_socorros(medico, caido)
+	assert_not_null(t)
+	assert_eq(t.dt, 20)
+	assert_true(t.sucesso)
+	assert_false(caido.tem(Ser.MORRENDO))
+	assert_false(caido.tem(Ser.INCONSCIENTE))
+	assert_eq(caido.pv, 1)
+	assert_eq(int(c.acoes_restantes(medico).padrao), 0, "gasta a ação padrão")
+	# Caiu de novo na mesma cena: a DT sobe +5
+	caido.sofrer_dano(5)
+	assert_null(c.primeiros_socorros(medico, caido), "sem ação padrão, não dá")
+	c.acoes[medico] = {"padrao": 1, "movimento": 1}
+	c.dados.forcar([1, 1])
+	var t2 := c.primeiros_socorros(medico, caido)
+	assert_eq(t2.dt, 25, "a DT sobe +5 por vez na cena")
+	assert_true(caido.tem(Ser.MORRENDO), "falhou: continua morrendo")
+
+
+func test_acalmar_exige_treino_e_tira_de_enlouquecendo():
+	var c := Combate.new(rs, Dados.new(1))
+	var amigo := _socorrista()
+	var surtando := _defensor()
+	c.adicionar(amigo)
+	c.adicionar(surtando)
+	surtando.sofrer_dano_mental(surtando.san)
+	assert_true(surtando.tem(Ser.ENLOUQUECENDO))
+	c.acoes[amigo] = {"padrao": 1, "movimento": 1}
+	var leigo := _defensor()
+	c.acoes[leigo] = {"padrao": 1, "movimento": 1}
+	assert_null(c.acalmar(leigo, surtando), "sem Diplomacia nem Religião treinada, não dá")
+	c.dados.forcar([20, 20])
+	var t := c.acalmar(amigo, surtando)
+	assert_true(t.sucesso)
+	assert_false(surtando.tem(Ser.ENLOUQUECENDO))
+	assert_eq(surtando.san, 1)
+	assert_eq(surtando.acalmado_na_cena, 1)

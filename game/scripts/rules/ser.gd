@@ -83,6 +83,10 @@ var reacao_usada := false
 var _ultimo_atacante: WeakRef
 
 var _turnos_morrendo := 0
+## Primeiros Socorros e Acalmar (p.46 e p.44): a DT sobe +5 por vez que o ser já foi
+## estabilizado (ou acalmado) na cena.
+var estabilizado_na_cena := 0
+var acalmado_na_cena := 0
 var _turnos_enlouquecendo := 0
 
 
@@ -335,6 +339,8 @@ func iniciar_turno() -> void:
 func encerrar_cena() -> void:
 	_turnos_morrendo = 0
 	_turnos_enlouquecendo = 0
+	estabilizado_na_cena = 0
+	acalmado_na_cena = 0
 	mods_cena.clear()
 	defesa_temporaria = 0
 	penalidade_ataque_temporaria = 0

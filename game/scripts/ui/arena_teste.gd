@@ -48,6 +48,8 @@ var _btn_ritual: Button
 var _btn_enigma: Button
 var _btn_soltar: Button
 var _btn_apagar: Button
+var _btn_socorrer: Button
+var _btn_acalmar: Button
 var _btn_item_combate: Button
 var _lbl_vez: Label
 var _controles: ControleLocal
@@ -339,6 +341,14 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 				_registrar("%s usa %s em %s: +%d PV." % [ator.nome, nome_item, res.alvo.nome, int(res.cura)])
 			else:
 				_registrar("[color=#eda64a]Não dá para usar %s agora.[/color]" % nome_item)
+		"socorrer", "acalmar":
+			if res.ok:
+				_ultimo_teste = res.teste
+				var feito := "sai de morrendo com 1 PV" if cmd.acao == "socorrer" else "volta a si com 1 SAN"
+				_registrar("%s tenta %s em %s: %s" % [ator.nome, "primeiros socorros" if cmd.acao == "socorrer" else "acalmar",
+					res.alvo.nome, (Tema.bb("%s %s." % [res.alvo.nome, feito], Tema.SUCESSO)) if res.teste.sucesso else Tema.bb("não deu certo.", Tema.AVISO)])
+			else:
+				_registrar("[color=#eda64a]Precisa estar ao lado do aliado e ter a ação padrão.[/color]")
 		"decifrar":
 			if res.ok:
 				_ultimo_teste = res.teste
@@ -688,7 +698,12 @@ func _montar_interface() -> void:
 	_btn_enigma = _botao("Decifrar enigma", _decifrar)
 	_btn_soltar = _botao("Soltar-se", _soltar)
 	_btn_apagar = _botao("Apagar chamas", _apagar)
-	for b in [_btn_enigma, _btn_soltar, _btn_apagar]:
+	# Primeiros Socorros e Acalmar (p.46 e p.44): aparecem quando há um aliado ao lado precisando
+	_btn_socorrer = _botao("Primeiros socorros", _socorrer)
+	_btn_socorrer.tooltip_text = "Medicina DT 20 (+5 por vez na cena): o aliado ao lado sai de morrendo com 1 PV. Ação padrão."
+	_btn_acalmar = _botao("Acalmar", _acalmar)
+	_btn_acalmar.tooltip_text = "Diplomacia ou Religião treinada, DT 20 (+5 por vez na cena): o aliado ao lado sai de enlouquecendo com 1 SAN. Ação padrão."
+	for b in [_btn_enigma, _btn_soltar, _btn_apagar, _btn_socorrer, _btn_acalmar]:
 		b.theme_type_variation = "BotaoPrincipal"
 		extras.add_child(b)
 
@@ -932,6 +947,42 @@ func _modo_item() -> void:
 	_atualizar()
 
 
+## O aliado ao lado do agente da vez com a condição (o selecionado, se for um deles).
+func _aliado_ao_lado(agente: Agente, condicao: String) -> Ser:
+	var achado: Ser = null
+	for s in combate.participantes:
+		if s is Agente and s != agente and s.tem(condicao) and not s.tem(Ser.MORTO):
+			if combate.grade != null and combate.grade.tem(agente) and combate.grade.tem(s) and not combate.grade.estao_adjacentes(agente, s):
+				continue
+			if s == _selecionado:
+				return s
+			if achado == null:
+				achado = s
+	return achado
+
+
+## Perícia para acalmar: Diplomacia ou, sem ela, Religião (p.48).
+func _pericia_para_acalmar(agente: Agente) -> String:
+	for p in ["diplomacia", "religiao"]:
+		if agente.treinado_em(p):
+			return p
+	return ""
+
+
+func _socorrer() -> void:
+	var agente := _agente_da_vez()
+	var alvo := _aliado_ao_lado(agente, Ser.MORRENDO) if agente != null else null
+	if alvo != null:
+		_enviar("socorrer", {"alvo": Comandos.ref(combate, alvo)})
+
+
+func _acalmar() -> void:
+	var agente := _agente_da_vez()
+	var alvo := _aliado_ao_lado(agente, Ser.ENLOUQUECENDO) if agente != null else null
+	if alvo != null:
+		_enviar("acalmar", {"alvo": Comandos.ref(combate, alvo), "pericia": _pericia_para_acalmar(agente)})
+
+
 func _apagar() -> void:
 	if _agente_da_vez() != null:
 		_enviar("apagar")
@@ -996,6 +1047,10 @@ func _atualizar() -> void:
 	_btn_enigma.disabled = agente == null
 	_btn_soltar.visible = agente != null and agente.tem(Ser.AGARRADO)
 	_btn_apagar.visible = agente != null and agente.tem(Ser.EM_CHAMAS)
+	_btn_socorrer.visible = agente != null and _aliado_ao_lado(agente, Ser.MORRENDO) != null
+	_btn_socorrer.disabled = sem_padrao
+	_btn_acalmar.visible = agente != null and _pericia_para_acalmar(agente) != "" and _aliado_ao_lado(agente, Ser.ENLOUQUECENDO) != null
+	_btn_acalmar.disabled = sem_padrao
 	_btn_item.disabled = agente == null or sem_padrao or (not agente.tem_item("cicatrizante") and _itens_de_combate(agente).is_empty())
 	_motivos_cartas(agente, sem_padrao)
 	if sem_padrao and _modo in ["atacar", "ritual", "ritual_area", "granada", "contra"]:

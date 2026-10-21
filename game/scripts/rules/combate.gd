@@ -448,6 +448,55 @@ func usar_item(ser: Agente, item_id: String, alvo: Ser) -> int:
 	return cura
 
 
+## Primeiros Socorros (Medicina, DT 20, p.46): um aliado adjacente morrendo perde as condições
+## morrendo e inconsciente e fica com 1 PV. Ação padrão. A DT sobe +5 por vez que ele já foi
+## estabilizado na cena. Devolve o teste (null se não dá para tentar).
+func primeiros_socorros(agente: Agente, alvo: Ser) -> ResultadoTeste:
+	if alvo == agente or alvo.tem(Ser.MORTO) or not alvo.tem(Ser.MORRENDO):
+		return null
+	if grade != null and grade.tem(agente) and grade.tem(alvo) and not grade.estao_adjacentes(agente, alvo):
+		return null
+	if int(acoes_restantes(agente).get("padrao", 0)) <= 0:
+		return null
+	var dt := 20 + 5 * alvo.estabilizado_na_cena
+	var t := agente.testar(dados, "medicina", dt)
+	if t == null:
+		return null
+	gastar_acao(agente, "padrao")
+	if t.sucesso:
+		alvo.estabilizar()
+		if alvo.pv < 1:
+			alvo.curar(1 - alvo.pv)
+		alvo.condicoes.erase(Ser.INCONSCIENTE)
+		alvo.estabilizado_na_cena += 1
+	return t
+
+
+## Acalmar (Diplomacia treinada, DT 20, p.44; Religião serve no lugar, p.48): um aliado
+## adjacente enlouquecendo fica com Sanidade 1. Ação padrão. A DT sobe +5 por vez que ele
+## já foi acalmado na cena. `pericia`: "diplomacia" ou "religiao".
+func acalmar(agente: Agente, alvo: Ser, pericia: String = "diplomacia") -> ResultadoTeste:
+	if not pericia in ["diplomacia", "religiao"] or not agente.treinado_em(pericia):
+		return null
+	if alvo == agente or not alvo.tem(Ser.ENLOUQUECENDO):
+		return null
+	if grade != null and grade.tem(agente) and grade.tem(alvo) and not grade.estao_adjacentes(agente, alvo):
+		return null
+	if int(acoes_restantes(agente).get("padrao", 0)) <= 0:
+		return null
+	var dt := 20 + 5 * alvo.acalmado_na_cena
+	var t := agente.testar(dados, pericia, dt)
+	if t == null:
+		return null
+	gastar_acao(agente, "padrao")
+	if t.sucesso:
+		if alvo.san < 1:
+			alvo.recuperar_sanidade(1 - alvo.san)
+		alvo.condicoes.erase(Ser.ENLOUQUECENDO)
+		alvo.acalmado_na_cena += 1
+	return t
+
+
 ## Sem grade, tudo está "perto". Com grade, verifica a categoria de alcance.
 func _perto(a: Ser, b: Ser, categoria: String) -> bool:
 	return grade == null or not grade.tem(a) or not grade.tem(b) or grade.em_alcance(a, b, categoria)

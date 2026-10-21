@@ -8,7 +8,8 @@ extends RefCounted
 
 const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar", "deduzir"]
 const ACOES_INVESTIGACAO := ["examinar", "procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair", "deduzir"]
-const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair"]
+const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair",
+	"socorrer", "acalmar"]
 ## Modo Mestre (Fase 8.3): valem em qualquer tela, só do peer do mestre
 const ACOES_MESTRE := ["narrar", "membrana", "revelar", "encontro", "evento", "limpar", "curar", "ferir", "sanidade"]
 
@@ -209,6 +210,12 @@ static func aplicar_combate(c: Combate, armas: Dictionary, cmd: Dictionary) -> D
 			return {"ok": t != null, "teste": t}
 		"apagar":
 			return {"ok": c.apagar_chamas(ator)}
+		"socorrer", "acalmar":
+			var aliado := ser(c, cmd.get("alvo", -1))
+			if not ator is Agente or aliado == null:
+				return {"ok": false, "erro": "alvo inválido"}
+			var t := c.primeiros_socorros(ator as Agente, aliado) if acao == "socorrer" else c.acalmar(ator as Agente, aliado, String(cmd.get("pericia", "diplomacia")))
+			return {"ok": t != null, "teste": t, "alvo": aliado}
 		"soltar":
 			return {"ok": c.escapar(ator)}
 	return {"ok": false, "erro": "ação de combate desconhecida: %s" % acao}
