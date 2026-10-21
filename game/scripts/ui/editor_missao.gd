@@ -9,7 +9,7 @@ const MARCAS := {"inicio": "I", "objetivo": "X", "vila": "V", "encontro": "!", "
 const FERRAMENTAS := [
 	["Terreno: campo", "terreno", "campo"], ["Terreno: estrada", "terreno", "estrada"], ["Terreno: mata fechada", "terreno", "floresta"],
 	["Terreno: pântano", "terreno", "pantano"], ["Terreno: morro", "terreno", "morro"], ["Terreno: cidade", "terreno", "cidade"],
-	["Terreno: ruínas", "terreno", "ruina"], ["Terreno: água", "terreno", "agua"],
+	["Terreno: ruínas", "terreno", "ruina"], ["Terreno: água rasa", "terreno", "agua"], ["Terreno: serra", "terreno", "serra"],
 	["Início do grupo (I)", "conteudo", "inicio"], ["Objetivo / covil (X)", "conteudo", "objetivo"], ["Vila (V)", "conteudo", "vila"],
 	["Encontro (!)", "conteudo", "encontro"], ["Evento (?)", "conteudo", "evento"], ["Investigação (◆)", "conteudo", "investigacao"],
 	["Apagar conteúdo", "apagar", ""],

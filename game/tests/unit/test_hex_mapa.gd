@@ -81,3 +81,17 @@ func test_mapa_serializa():
 	var copia := MapaHex.new(m.terrenos)
 	copia.de_dicionario(m.para_dicionario())
 	assert_eq(copia.para_dicionario(), m.para_dicionario())
+
+
+func test_serra_so_com_escalada():
+	var m := MapaHex.new({"campo": {"custo": 1}, "serra": {"custo": -1, "escalavel": true, "custo_escalada": 2}})
+	m.colunas = 3
+	m.linhas = 1
+	for x in 3:
+		m.celulas[Vector2i(x, 0)] = {"terreno": "campo", "conteudo": {}, "revelado": false}
+	m.celulas[Vector2i(1, 0)].terreno = "serra"
+	assert_false(m.passavel(Vector2i(1, 0)))
+	assert_true(m.passavel(Vector2i(1, 0), true), "com escalada, a serra é passável")
+	assert_eq(m.custo(Vector2i(1, 0), true), 2)
+	assert_false(m.alcancaveis(Vector2i(0, 0), 5).has(Vector2i(1, 0)))
+	assert_true(m.alcancaveis(Vector2i(0, 0), 5, true, true).has(Vector2i(1, 0)))

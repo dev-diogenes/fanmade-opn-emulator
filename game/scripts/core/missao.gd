@@ -23,6 +23,7 @@ var turno_mundo := 1
 var indice := 0
 var movimento_restante := 0
 var movimento_rolado := false
+var pode_escalar := false               ## Tirou 20 nos dados de movimento: sobe a serra neste turno (docs/34)
 ## Ação do turno no mapa (docs/13): usar um item ou conjurar um ritual que não seja de ataque.
 var acao_usada := false
 var ultimo_movimento: Dictionary = {}   ## {"slots": [...], "dt": int, "sucessos": int, "total": int}
@@ -156,9 +157,14 @@ func rolar_movimento(pe_foco: int = 0) -> Dictionary:
 	var sucessos := slots.filter(func(v): return v >= dt).size()
 	movimento_restante = int(regra.base) + sucessos
 	movimento_rolado = true
-	ultimo_movimento = {"slots": slots, "dt": dt, "sucessos": sucessos, "total": movimento_restante, "agente": a.nome}
+	# Escalada (docs/34): um 20 em algum dado de Agilidade do movimento deixa subir a serra
+	pode_escalar = slots.has(20)
+	ultimo_movimento = {"slots": slots, "dt": dt, "sucessos": sucessos, "total": movimento_restante, "agente": a.nome,
+		"escalada": pode_escalar}
 	ultimo_movimento["atributo"] = String(regra.atributo)
 	_log("%s rola movimento: %s (DT %d) → %d de movimento" % [a.nome, str(slots), dt, movimento_restante])
+	if pode_escalar:
+		_log("[color=#e3c27a]Um 20! %s acha apoio na rocha: neste turno dá para escalar a serra.[/color]" % a.nome)
 	return ultimo_movimento
 
 
@@ -167,7 +173,7 @@ func destinos() -> Dictionary:
 	var a := agente_atual()
 	if a == null or not movimento_rolado or ocupado():
 		return {}
-	var custos := mapa.alcancaveis(posicao(a), movimento_restante)
+	var custos := mapa.alcancaveis(posicao(a), movimento_restante, true, pode_escalar)
 	custos.erase(posicao(a))
 	return custos
 
@@ -177,14 +183,18 @@ func mover(destino: Vector2i) -> bool:
 	var a := agente_atual()
 	if a == null or not destinos().has(destino):
 		return false
-	var passos := mapa.caminho(posicao(a), destino, true)
-	if passos.is_empty() or mapa.custo_do_caminho(passos) > movimento_restante:
+	var passos := mapa.caminho(posicao(a), destino, true, pode_escalar)
+	if passos.is_empty() or mapa.custo_do_caminho(passos, pode_escalar) > movimento_restante:
 		return false
 	_descansou.erase(a)
 	for h in passos:
-		movimento_restante -= mapa.custo(h)
+		movimento_restante -= mapa.custo(h, pode_escalar)
 		posicoes[a] = h
-		mapa.revelar(h, int(_cfg.visao))
+		# Do alto da serra se vê longe (docs/34)
+		var visao := int(_cfg.visao) + (int(_cfg.get("visao_da_serra", 2)) if mapa.escalavel(h) else 0)
+		mapa.revelar(h, visao)
+		if mapa.escalavel(h):
+			_log("%s chega ao alto da serra e enxerga longe." % a.nome)
 		if not mapa.conteudo(h).is_empty():
 			_entrar(a, h)
 			break
@@ -249,6 +259,7 @@ func encerrar_turno() -> void:
 func _iniciar_turno_do_agente() -> void:
 	movimento_restante = 0
 	movimento_rolado = false
+	pode_escalar = false
 	acao_usada = false
 	ultimo_movimento = {}
 	var a := agente_atual()
@@ -871,6 +882,7 @@ func para_dicionario() -> Dictionary:
 		"mortos": mortos.map(func(a): return a.id), "resgatados": resgatados.map(func(a): return a.id),
 		"posicoes": pos, "turno_mundo": turno_mundo, "indice": indice,
 		"movimento_restante": movimento_restante, "movimento_rolado": movimento_rolado, "acao_usada": acao_usada,
+		"pode_escalar": pode_escalar,
 		"evento_pendente": ev, "encontro_pendente": enc, "reforcos": reforcos, "pistas": pistas,
 		"caso": caso.para_dicionario() if caso != null else {}, "modificador_chefe": modificador_chefe,
 		"investigacao_pendente": {"hex": [investigacao_pendente.hex.x, investigacao_pendente.hex.y], "cena": investigacao_pendente.cena,
@@ -915,6 +927,7 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.indice = int(d.get("indice", 0))
 	m.movimento_restante = int(d.get("movimento_restante", 0))
 	m.movimento_rolado = d.get("movimento_rolado", false)
+	m.pode_escalar = d.get("pode_escalar", false)
 	m.acao_usada = d.get("acao_usada", false)
 	m.reforcos = int(d.get("reforcos", 0))
 	m.pistas = int(d.get("pistas", 0))

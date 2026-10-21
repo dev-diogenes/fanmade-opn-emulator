@@ -360,3 +360,22 @@ func test_examinar_na_dt_simples_e_de_graca():
 	assert_eq(bianca.pe, pe - custo)
 	if per == "investigacao":
 		assert_eq(custo, 0, "DT 15 com treino: de graça")
+
+
+
+# --- Mapa: serra e escalada (docs/34) ------------------------------------------------
+
+func test_vinte_no_movimento_libera_a_serra():
+	var serras := 0
+	for h in m.mapa.celulas:
+		if m.mapa.terreno(h) == "serra":
+			serras += 1
+	assert_between(serras, 1, 6, "pouquíssimos hexes bloqueados")
+	m.dados.forcar([20, 5, 5])
+	var r := m.rolar_movimento()
+	assert_true(r.escalada, "um 20 nos dados de Agilidade deixa escalar")
+	assert_true(m.pode_escalar)
+	m.encerrar_turno()
+	m.dados.forcar([19, 5, 5, 5])   # Bianca: AGI 2 + 2 slots extras
+	r = m.rolar_movimento()
+	assert_false(m.pode_escalar, "sem 20, sem escalada")

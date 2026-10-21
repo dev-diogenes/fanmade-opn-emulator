@@ -60,17 +60,19 @@ func test_erros_de_validacao():
 	d.mapa.conteudo.append({"em": [4, 4], "tipo": "encontro", "encontro": "nao_existe"})
 	d.encontros[0].ameacas.append("fantasma")
 	d.eventos[0].pericia = "danca"
-	d.mapa.inicio = [2, 5]   # água
+	var linha: String = d.mapa.terreno[5]
+	d.mapa.terreno[5] = linha.substr(0, 2) + "s" + linha.substr(3)   # serra (docs/34)
+	d.mapa.inicio = [2, 5]
 	erros = MissaoComunidade.validar(d, rs)
 	assert_true(erros.any(func(e): return "nao_existe" in e))
 	assert_true(erros.any(func(e): return "fantasma" in e))
 	assert_true(erros.any(func(e): return "danca" in e))
-	assert_true(erros.any(func(e): return "água" in e))
+	assert_true(erros.any(func(e): return "intransponível" in e))
 
 
 func test_sem_caminho_ate_o_objetivo():
 	var d := {"formato": "opn-missao", "versao": 1, "titulo": "Ilha",
-		"mapa": {"terreno": ["ccacc", "ccacc", "ccacc"], "inicio": [0, 1], "objetivo": [4, 1]}}
+		"mapa": {"terreno": ["ccscc", "ccscc", "ccscc"], "inicio": [0, 1], "objetivo": [4, 1]}}
 	assert_true(MissaoComunidade.validar(d, rs).any(func(e): return "caminho" in e))
 
 

@@ -42,6 +42,9 @@ var rituais: Array[String] = []  ## Rituais conhecidos
 ## Poderes paranormais (Transcender, Cultista Arrependido): [{"id": ..., "escolha": ...}]
 var poderes_paranormais: Array[Dictionary] = []
 var afinidade := ""              ## Elemento de afinidade (NEX 50%, p.114)
+## O elemento escolhido em NEX 50%: a afinidade só se desenvolve na primeira vez que o agente
+## transcender depois disso (p.114). Até lá, fica aqui (docs/34).
+var afinidade_escolhida := ""
 var em_acao := false             ## Dentro de uma cena de ação (Encarar a Morte)
 var _dano_massivo := false       ## Escapar da Morte não vale contra dano massivo
 var san_perdida := 0             ## Sanidade máxima perdida para sempre (Custo do Paranormal, Medo)
@@ -519,6 +522,7 @@ func para_dicionario() -> Dictionary:
 		"pp": pp, "arma": arma_id, "equipamento": Array(equipamento),
 		"rituais": Array(rituais), "san_perdida": san_perdida,
 		"poderes_paranormais": poderes_paranormais.duplicate(true), "afinidade": afinidade,
+		"afinidade_escolhida": afinidade_escolhida,
 		"pv": pv, "pe": pe, "san": san, "condicoes": condicoes.keys(),
 		"aparencia": aparencia, "tom": tom,
 		"personalidade": personalidade, "historico": historico, "objetivo": objetivo,
@@ -565,6 +569,7 @@ static func de_dicionario(p_ruleset: Ruleset, d: Dictionary) -> Agente:
 	for x in d.get("poderes_paranormais", []):
 		a.poderes_paranormais.append(x)
 	a.afinidade = d.get("afinidade", "")
+	a.afinidade_escolhida = d.get("afinidade_escolhida", "")
 	a.aparencia = String(d.get("aparencia", ""))
 	a.tom = int(d.get("tom", 0))
 	a.personalidade = String(d.get("personalidade", ""))

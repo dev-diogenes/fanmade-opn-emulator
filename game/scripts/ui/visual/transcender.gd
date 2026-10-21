@@ -197,6 +197,13 @@ func _ao_aplicar(a: Agente, erros: Array) -> void:
 	if erros.is_empty():
 		Tema.pulso_vhs(_vista, 0.4, 0.6)
 		Som.tocar("pista")
+		# A afinidade se firmou neste Transcender (p.114): a sala vira a do elemento (docs/34)
+		var tema := SalaTranscender.tema_de(agente)
+		if tema != sala.tipo_sala:
+			sala.transformar(tema)
+			Tema.pulso_vhs(_vista, 1.0, 1.2)
+			Som.tocar("ritual")
+			_dica.text = "A afinidade com %s desperta." % tema.capitalize()
 	_redesenhar()
 
 

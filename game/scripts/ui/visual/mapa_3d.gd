@@ -6,7 +6,7 @@ extends Node3D
 
 const RAIO := 1.0
 const ALTURAS := {"agua": 0.08, "pantano": 0.12, "campo": 0.2, "estrada": 0.2, "cidade": 0.22,
-	"ruina": 0.22, "floresta": 0.24, "morro": 0.5}
+	"ruina": 0.22, "floresta": 0.24, "morro": 0.5, "serra": 0.85}   # serra: o platô alto (docs/34)
 const COR_NEVOA := Color("1c1b24")
 const COR_DESTAQUE := Color(0.35, 0.65, 1.0, 0.45)
 const CORES_AGENTES := Tema.CORES_JOGADORES
@@ -57,11 +57,12 @@ func construir(p_mapa: MapaHex, terrenos: Dictionary) -> void:
 		var tile := Pecas.tile_terreno(t, RAIO, altura, hash(h), cor_tile.lightened(0.2 if t in ["agua", "pantano"] else 0.4))
 		if tile != null:
 			terreno.add_child(tile)
-			if t in ["cidade", "ruina"]:   # casas e pilares continuam por código
+			if t in ["cidade", "ruina", "serra"]:   # casas, ruínas e paredão continuam por código
 				_decorar(terreno, h, t, altura)
 		else:
 			terreno.add_child(Pecas.tile_hex(RAIO, altura, cor))
 			_decorar(terreno, h, t, altura)
+		_enfeitar(terreno, h, t, altura)
 		raiz.add_child(terreno)
 		var nevoa := Pecas.nevoa(RAIO, 0.16, COR_NEVOA)
 		raiz.add_child(nevoa)
@@ -228,6 +229,57 @@ func _decorar(raiz: Node3D, h: Vector2i, terreno: String, altura: float) -> void
 				var c := Pecas.capim(Color("3c5a3f"))
 				c.position = p
 				raiz.add_child(c)
+		"serra":
+			var paredao := Pecas.paredao(hash(h))
+			paredao.position = Vector3(0, altura, 0)
+			raiz.add_child(paredao)
+
+
+## Miudezas de cada terreno (docs/34): cercas, moitas, tocos, cupinzeiros, marcos de km,
+## cruzes de beira de estrada e árvores secas, na borda do hex (o centro é das figuras).
+## Na qualidade baixa, só uma peça por hex.
+const ENFEITES := {
+	"campo": ["cerca", "arbusto", "cupinzeiro", "toco", "pedra", "cerca"],
+	"estrada": ["marco_km", "poste", "cruz", "arbusto", "placa"],
+	"floresta": ["arbusto", "toco", "arbusto", "pedra"],
+	"pantano": ["arvore_seca", "arbusto", "toco"],
+	"morro": ["pedra", "arbusto", "cerca"],
+	"cidade": ["arbusto", "cerca"],
+	"ruina": ["arbusto", "pedra", "toco"],
+	"agua": ["arvore_seca"],
+	"serra": ["arbusto", "pedra"],
+}
+
+func _enfeitar(raiz: Node3D, h: Vector2i, terreno: String, altura: float) -> void:
+	var opcoes: Array = ENFEITES.get(terreno, [])
+	if opcoes.is_empty():
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(h) * 31 + 7
+	var qtd := 1 if Qualidade.nivel() == "baixa" else rng.randi_range(2, 3)
+	var base := rng.randf() * TAU
+	for i in qtd:
+		var nome: String = opcoes[rng.randi() % opcoes.size()]
+		var peca: Node3D
+		match nome:
+			"cerca": peca = Pecas.cerca(rng.randf_range(0.4, 0.6))
+			"arbusto": peca = Pecas.arbusto(rng.randf_range(0.1, 0.16), Color("2f4f2a") if terreno != "pantano" else Color("34472f"))
+			"cupinzeiro": peca = Pecas.cupinzeiro()
+			"toco": peca = Pecas.toco()
+			"marco_km": peca = Pecas.marco_km()
+			"poste": peca = Pecas.poste(rng.randf() < 0.4)
+			"cruz": peca = Pecas.cruz(0.32)
+			"placa": peca = Pecas.placa_estrada()
+			"arvore_seca": peca = Pecas.arvore_seca(rng.randf_range(0.6, 0.95))
+			_:
+				var pedra := Node3D.new()
+				pedra.add_child(Pecas.rocha(rng.randf_range(0.06, 0.12)))
+				peca = pedra
+		var ang := base + TAU * i / qtd + rng.randf_range(-0.4, 0.4)
+		var r := rng.randf_range(0.6, 0.78)
+		peca.position = Vector3(cos(ang) * r, altura, sin(ang) * r)
+		peca.rotation.y = -ang + PI / 2.0 + rng.randf_range(-0.3, 0.3)
+		raiz.add_child(peca)
 
 
 ## Sincroniza a apresentação com o estado da missão.

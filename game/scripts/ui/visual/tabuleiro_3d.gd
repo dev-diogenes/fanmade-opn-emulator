@@ -22,6 +22,8 @@ const ESTILO_TERRENO := {
 		"borda": ["rock_single_C", "parede", "parede", "cruz", ""]},
 	"morro": {"chao": ["2f2c28", "2a2723"], "dificil": "333a28", "parede": "5e574d", "cobertura": "rocha",
 		"borda": ["hill_single_A", "rock_single_C", "mountain_A_grass_trees", ""]},
+	"serra": {"chao": ["2b2826", "262321"], "dificil": "333a28", "parede": "5b544c", "cobertura": "rocha",
+		"borda": ["rock_single_C", "rock_single_E", "mountain_A_grass_trees", "rock_single_C"]},
 	"pantano": {"chao": ["1e2621", "1a211d"], "dificil": "1f3328", "parede": "33352d", "cobertura": "rocha",
 		"borda": ["waterplant_A", "waterplant_B", "waterlily_A", "trees_B_medium"]},
 	"agua": {"chao": ["1c2329", "182026"], "dificil": "1f3328", "parede": "33352d", "cobertura": "rocha",

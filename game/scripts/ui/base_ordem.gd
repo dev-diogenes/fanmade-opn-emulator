@@ -555,7 +555,7 @@ func _montar_pendencia(a: Agente, caixa: VBoxContainer = null) -> void:
 	var p: Dictionary = pend[0]
 	var rs := carreira.ruleset
 	var titulos := {"trilha": "Escolha a trilha (NEX 10%)", "poder": "Escolha um poder de classe", "aumento": "Aumente um atributo", "ritual": "Aprenda um ritual",
-		"poder_paranormal": "Escolha um poder paranormal", "afinidade": "Afinidade elemental (NEX 50%)",
+		"poder_paranormal": "Escolha um poder paranormal", "afinidade": "Elemento da afinidade (NEX 50%): ela se firma no próximo Transcender",
 		"grau": "Grau de Treinamento: escolha %d perícias" % int(p.get("quantidade", 0)), "versatilidade": "Versatilidade (NEX 50%)"}
 	var lbl := _titulo("[%d pendente(s)] %s" % [pend.size(), titulos[p.tipo]])
 	lbl.add_theme_color_override("font_color", Tema.SANGUE)

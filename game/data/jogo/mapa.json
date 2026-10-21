@@ -9,6 +9,8 @@
     "atributo": "agi"
   },
   "visao": 2,
+  "visao_da_serra": 2,
+  "escalada": "Revisado em 21/10/2026 (docs/34): a água rasa se atravessa (custo 3); a serra é o único bloqueio e só se sobe no turno em que algum dado de Agilidade do movimento dá 20 (custo 2). Do alto, a visão cresce.",
   "aliados_entram_no_combate_ate": 2,
   "dificuldade_encontro": 1.0,
   "dificuldade_covil": 1.5,
@@ -21,7 +23,8 @@
     "morro":    { "nome": "Morro",    "custo": 2, "cor": "6d6457", "arena": { "cobertura": 4, "dificil": 4, "parede": 3 } },
     "cidade":   { "nome": "Cidade",   "custo": 1, "cor": "7f8c8d", "arena": { "cobertura": 4, "dificil": 0, "parede": 6 } },
     "ruina":    { "nome": "Ruínas",   "custo": 1, "cor": "5d4e60", "arena": { "cobertura": 5, "dificil": 2, "parede": 5 } },
-    "agua":     { "nome": "Água",     "custo": -1, "cor": "1f3a5f" }
+    "agua":     { "nome": "Água rasa", "custo": 3, "cor": "1f3a5f", "arena": { "cobertura": 1, "dificil": 14, "parede": 0 } },
+    "serra":    { "nome": "Serra",    "custo": -1, "escalavel": true, "custo_escalada": 2, "cor": "4a443d", "arena": { "cobertura": 5, "dificil": 6, "parede": 4 } }
   },
   "geracao": {
     "encontros": 7,
@@ -30,13 +33,14 @@
     "vilas": 1,
     "distancia_minima_do_inicio": 3,
     "limiares_ruido": [
-      { "ate": -0.45, "terreno": "agua" },
-      { "ate": -0.2,  "terreno": "pantano" },
+      { "ate": -0.5,  "terreno": "agua" },
+      { "ate": -0.3,  "terreno": "pantano" },
       { "ate": 0.25,  "terreno": "campo" },
       { "ate": 0.5,   "terreno": "floresta" },
       { "ate": 1.0,   "terreno": "morro" }
     ],
-    "ruinas_por_mapa": 4
+    "ruinas_por_mapa": 4,
+    "serras_por_mapa": 4
   },
   "mundo": {
     "descricao": "Depois que todos os agentes jogam, o mundo age: a Membrana enfraquece e, conforme o estado dela, novas ameaças surgem perto do grupo.",

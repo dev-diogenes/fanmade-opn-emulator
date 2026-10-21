@@ -10,7 +10,7 @@ const PASTA_USUARIO := "user://missoes"
 const MAX_COLUNAS := 30
 const MAX_LINHAS := 20
 ## Uma letra por terreno nas linhas de "terreno"
-const LETRAS := {"c": "campo", "e": "estrada", "f": "floresta", "p": "pantano", "m": "morro", "u": "cidade", "r": "ruina", "a": "agua"}
+const LETRAS := {"c": "campo", "e": "estrada", "f": "floresta", "p": "pantano", "m": "morro", "u": "cidade", "r": "ruina", "a": "agua", "s": "serra"}   # docs/34: a água se atravessa; a serra bloqueia
 const TIPOS_CONTEUDO := ["encontro", "evento", "investigacao", "vila"]
 const SURGIMENTOS := ["padrao", "proprios", "nenhum"]
 
@@ -126,7 +126,7 @@ static func validar(d: Dictionary, ruleset: Ruleset) -> Array[String]:
 		if not mapa.tem(par[1]):
 			erros.append("O %s está fora do mapa" % par[0])
 		elif not mapa.passavel(par[1]):
-			erros.append("O %s está em água (terreno intransponível)" % par[0])
+			erros.append("O %s está num terreno intransponível (serra)" % par[0])
 	if erros.is_empty() and mapa.caminho(inicio, objetivo, false).is_empty():
 		erros.append("Não há caminho por terra do início até o objetivo")
 	# Conteúdo próprio
@@ -211,7 +211,7 @@ static func validar(d: Dictionary, ruleset: Ruleset) -> Array[String]:
 			continue
 		var h := Hex.de_offset(int(c.em[0]), int(c.em[1]))
 		if not mapa.tem(h) or not mapa.passavel(h):
-			erros.append("%s em [%d, %d] fora do mapa ou na água" % [tipo.capitalize(), int(c.em[0]), int(c.em[1])])
+			erros.append("%s em [%d, %d] fora do mapa ou na serra" % [tipo.capitalize(), int(c.em[0]), int(c.em[1])])
 		match tipo:
 			"encontro":
 				if not ids_encontros.has(c.get("encontro", "")) and not encontros_jogo.has(c.get("encontro", "")):

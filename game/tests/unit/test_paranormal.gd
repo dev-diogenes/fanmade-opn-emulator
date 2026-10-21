@@ -217,7 +217,14 @@ func test_transcender_na_progressao():
 	a.nex = 50
 	assert_true(Progressao.pendencias(a).any(func(p): return p.tipo == "afinidade"))
 	Progressao.aplicar(a, "afinidade", "energia")
+	assert_eq(a.afinidade, "", "a afinidade só se firma no próximo Transcender (p.114)")
+	assert_eq(a.afinidade_escolhida, "energia")
+	assert_false(Progressao.pendencias(a).any(func(p): return p.tipo == "afinidade"), "o elemento já foi escolhido")
+	# Transcender de novo: a afinidade se desenvolve
+	assert_eq(Progressao.adicionar_poder_paranormal(a, "afortunado", ""), [] as Array[String])
 	assert_eq(a.afinidade, "energia")
+	var b := Agente.de_dicionario(rs, a.para_dicionario())
+	assert_eq(b.afinidade_escolhida, "energia")
 
 
 func test_paranormais_salvam():

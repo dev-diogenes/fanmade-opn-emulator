@@ -26,6 +26,7 @@ static func _tentar(semente: int, cfg: Dictionary, forcar: bool = false) -> Mapa
 	ruido.frequency = 0.12
 	ruido.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 	var limiares: Array = cfg.geracao.limiares_ruido
+	var alturas: Dictionary = {}   ## hex -> ruído (o mais alto vira serra)
 
 	for linha in mapa.linhas:
 		for coluna in mapa.colunas:
@@ -37,10 +38,25 @@ static func _tentar(semente: int, cfg: Dictionary, forcar: bool = false) -> Mapa
 					t = l.terreno
 					break
 			mapa.celulas[h] = {"terreno": t, "conteudo": {}, "revelado": false}
+			alturas[h] = v
 
 	# Início (coluna 0-1) e objetivo (últimas colunas), forçados a terreno firme.
 	var inicio := Hex.de_offset(1, mapa.linhas / 2)
 	var objetivo := Hex.de_offset(mapa.colunas - 2, rng.randi_range(1, mapa.linhas - 2))
+
+	# Serras (docs/34): os poucos hexes bloqueados, nos pontos mais altos do ruído, longe do
+	# início e do covil. Só se sobem com um 20 nos dados de movimento. Sem rng: o resto da
+	# seed não muda.
+	var picos: Array = alturas.keys()
+	picos.sort_custom(func(a, b): return alturas[a] > alturas[b])
+	var serras := 0
+	for h in picos:
+		if serras >= int(cfg.geracao.get("serras_por_mapa", 0)):
+			break
+		if Hex.distancia(h, inicio) <= 2 or Hex.distancia(h, objetivo) <= 1:
+			continue
+		mapa.celulas[h].terreno = "serra"
+		serras += 1
 	for h in Hex.area(inicio, 1):
 		if mapa.tem(h) and not mapa.passavel(h):
 			mapa.celulas[h].terreno = "campo"

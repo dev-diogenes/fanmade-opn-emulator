@@ -32,7 +32,7 @@ static func pendencias(a: Agente) -> Array[Dictionary]:
 		lista.append({"tipo": "ritual", "opcoes": rituais_possiveis(a)})
 	for i in maxi(0, paranormais_esperados(a) - a.poderes_paranormais.size()):
 		lista.append({"tipo": "poder_paranormal", "opcoes": poderes_paranormais_possiveis(a)})
-	if a.nex >= int(rs.dados.get("poderes_paranormais", {}).get("afinidade", {}).get("nex", 50)) and a.afinidade == "":
+	if a.nex >= int(rs.dados.get("poderes_paranormais", {}).get("afinidade", {}).get("nex", 50)) and a.afinidade == "" and a.afinidade_escolhida == "":
 		lista.append({"tipo": "afinidade", "opcoes": ["conhecimento", "energia", "morte", "sangue"]})
 	for i in maxi(0, rs.quantos_ate("grau_treinamento", a.nex) - a.graus_feitos):
 		var regra: Dictionary = rs.dados.classes.grau_treinamento_qtd.get(a.classe_id, {"base": 0, "soma_atributo": "int"})
@@ -128,6 +128,10 @@ static func adicionar_poder_paranormal(a: Agente, poder_id: String, escolha: Str
 		a.poderes_paranormais.append({"id": poder_id, "escolha": escolha})
 		if poder_id == "aprender_ritual":
 			a.rituais.append(escolha)
+		# Afinidade (p.114): o elemento escolhido em NEX 50% se firma na primeira vez que o
+		# agente transcende depois disso, ou seja, ao ganhar este poder paranormal
+		if a.afinidade == "" and a.afinidade_escolhida != "":
+			a.afinidade = a.afinidade_escolhida
 		a.recalcular_maximos()
 	return erros
 
@@ -216,7 +220,7 @@ static func aplicar(a: Agente, tipo: String, escolha, extra: Array = []) -> Arra
 			if not escolha in p.opcoes:
 				erros.append("Elemento inválido: %s" % escolha)
 			else:
-				a.afinidade = escolha
+				a.afinidade_escolhida = escolha   # vira afinidade no próximo Transcender (p.114)
 		"ritual":
 			if not escolha in p.opcoes:
 				erros.append("Ritual indisponível: %s" % escolha)

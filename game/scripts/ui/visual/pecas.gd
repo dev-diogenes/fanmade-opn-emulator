@@ -18,6 +18,7 @@ const PERSONAGEM_POR_CLASSE := {"combatente": "Knight", "especialista": "Rogue_H
 ## Tile e decorações por terreno do mapa-múndi
 ## Estrada usa grama: o caminho é desenhado por cima, ligando os vizinhos (Mapa3D)
 const TILE_POR_TERRENO := {"agua": "hex_water", "pantano": "hex_water"}
+## Serra (docs/34): sem decoração KayKit; o paredão vem por código (Mapa3D)
 const DECORACAO_POR_TERRENO := {
 	"floresta": ["trees_A_large", "trees_A_medium", "trees_B_large", "trees_B_medium"],
 	"morro": ["hills_A_trees", "hills_B", "mountain_A_grass_trees", "hill_single_A"],
@@ -430,6 +431,129 @@ static func fita_isolamento(raio: float = 0.5, estacas: int = 5) -> Node3D:
 	var placa := PrismMesh.new()
 	placa.size = Vector3(0.09, 0.08, 0.06)
 	n.add_child(_malha(placa, amarelo, Vector3(raio * 0.55, 0.04, -raio * 0.3)))
+	return n
+
+
+## Cerca de arame e mourões de madeira (campos e pastos, docs/34). ~0,22 de altura.
+static func cerca(comprimento: float = 0.5) -> Node3D:
+	var n := Node3D.new()
+	var madeira := material(Color("5a4330"))
+	var postes := 3
+	for i in postes:
+		var m := BoxMesh.new()
+		m.size = Vector3(0.025, 0.24, 0.025)
+		n.add_child(_malha(m, madeira, Vector3(-comprimento / 2.0 + comprimento * i / (postes - 1), 0.12, 0)))
+	for y in [0.1, 0.18]:
+		var fio := BoxMesh.new()
+		fio.size = Vector3(comprimento, 0.005, 0.005)
+		var f := _malha(fio, material(Color("8a8780")), Vector3(0, y, 0))
+		f.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		n.add_child(f)
+	return n
+
+
+## Moita baixa: duas ou três bolas de folhagem.
+static func arbusto(tamanho: float = 0.14, cor: Color = Color("2f4f2a")) -> Node3D:
+	var n := Node3D.new()
+	for i in 3:
+		var m := SphereMesh.new()
+		m.radius = tamanho * (1.0 - 0.2 * i)
+		m.height = tamanho * 1.6 * (1.0 - 0.2 * i)
+		m.radial_segments = 6
+		m.rings = 3
+		n.add_child(_malha(m, material(cor.darkened(0.08 * i)), Vector3((i - 1) * tamanho * 0.8, tamanho * 0.6, (i % 2) * tamanho * 0.5)))
+	return n
+
+
+## Toco de árvore cortada.
+static func toco() -> Node3D:
+	var n := Node3D.new()
+	var m := CylinderMesh.new()
+	m.top_radius = 0.045
+	m.bottom_radius = 0.06
+	m.height = 0.08
+	m.radial_segments = 7
+	n.add_child(_malha(m, material(Color("4a3426")), Vector3(0, 0.04, 0)))
+	var topo := CylinderMesh.new()
+	topo.top_radius = 0.042
+	topo.bottom_radius = 0.042
+	topo.height = 0.006
+	topo.radial_segments = 7
+	n.add_child(_malha(topo, material(Color("b39566")), Vector3(0, 0.082, 0)))
+	return n
+
+
+## Cupinzeiro de pasto (o morrinho de terra vermelha do interior).
+static func cupinzeiro() -> Node3D:
+	var n := Node3D.new()
+	var m := CylinderMesh.new()
+	m.top_radius = 0.02
+	m.bottom_radius = 0.09
+	m.height = 0.2
+	m.radial_segments = 7
+	n.add_child(_malha(m, material(Color("8a4a2c")), Vector3(0, 0.1, 0)))
+	var lado := CylinderMesh.new()
+	lado.top_radius = 0.01
+	lado.bottom_radius = 0.05
+	lado.height = 0.11
+	lado.radial_segments = 6
+	n.add_child(_malha(lado, material(Color("7d4228")), Vector3(0.06, 0.055, 0.02)))
+	return n
+
+
+## Marco de quilômetro de estrada: o toco branco de concreto com a faixa preta.
+static func marco_km() -> Node3D:
+	var n := Node3D.new()
+	var m := BoxMesh.new()
+	m.size = Vector3(0.07, 0.16, 0.04)
+	n.add_child(_malha(m, material(Color("d9d4c8")), Vector3(0, 0.08, 0)))
+	var faixa := BoxMesh.new()
+	faixa.size = Vector3(0.072, 0.03, 0.042)
+	n.add_child(_malha(faixa, material(Color("1a1a1a")), Vector3(0, 0.13, 0)))
+	return n
+
+
+## Árvore seca de galhos tortos (pântano e beira de estrada à noite).
+static func arvore_seca(altura: float = 0.8) -> Node3D:
+	var n := Node3D.new()
+	var madeira := material(Color("3a2c22"))
+	var tronco := CylinderMesh.new()
+	tronco.top_radius = 0.018
+	tronco.bottom_radius = 0.04
+	tronco.height = altura
+	tronco.radial_segments = 5
+	n.add_child(_malha(tronco, madeira, Vector3(0, altura / 2.0, 0)))
+	for i in 3:
+		var galho := CylinderMesh.new()
+		galho.top_radius = 0.004
+		galho.bottom_radius = 0.016
+		galho.height = altura * (0.45 - 0.08 * i)
+		galho.radial_segments = 4
+		var g := _malha(galho, madeira, Vector3(0, altura * (0.55 + 0.13 * i), 0))
+		g.rotation = Vector3(0.0, TAU * i / 3.0, 0.75 * (1 if i % 2 == 0 else -1))
+		g.position += Vector3(cos(TAU * i / 3.0), 0, sin(TAU * i / 3.0)) * altura * 0.08
+		n.add_child(g)
+	return n
+
+
+## Paredão de pedra da serra (docs/34): blocos escuros na borda do platô, deixando o centro
+## livre para quem consegue subir.
+static func paredao(semente: int) -> Node3D:
+	var n := Node3D.new()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = semente
+	for i in 6:
+		var ang := TAU * i / 6.0 + rng.randf_range(-0.3, 0.3)
+		var m := CylinderMesh.new()   # agulha de pedra: base larga, topo fino, 5 faces
+		var alto := rng.randf_range(0.35, 0.75)
+		m.bottom_radius = rng.randf_range(0.13, 0.19)
+		m.top_radius = m.bottom_radius * rng.randf_range(0.35, 0.6)
+		m.height = alto
+		m.radial_segments = 5
+		m.rings = 1
+		var b := _malha(m, material(Color("7a7066").darkened(rng.randf() * 0.3)), Vector3(cos(ang), 0, sin(ang)) * 0.72 + Vector3(0, alto / 2.0, 0))
+		b.rotation = Vector3(rng.randf_range(-0.15, 0.15), -ang + rng.randf_range(-0.4, 0.4), rng.randf_range(-0.12, 0.12))
+		n.add_child(b)
 	return n
 
 

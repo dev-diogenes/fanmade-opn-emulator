@@ -43,7 +43,7 @@ static func ficha_bbcode(a: Agente, completa: bool = true) -> String:
 		var pps := PackedStringArray()
 		for e in a.poderes_paranormais:
 			pps.append(rs.poder_paranormal(e.id).get("nome", e.id) + ("" if String(e.get("escolha", "")) == "" else " (%s)" % e.escolha))
-		linhas.append("[color=#5b2a86]Poderes paranormais:[/color] %s%s" % [", ".join(pps), "  ·  afinidade: " + a.afinidade if a.afinidade != "" else ""])
+		linhas.append("[color=#5b2a86]Poderes paranormais:[/color] %s%s" % [", ".join(pps), "  ·  afinidade: " + a.afinidade if a.afinidade != "" else ("  ·  elemento escolhido: %s (a afinidade se firma ao transcender)" % a.afinidade_escolhida if a.afinidade_escolhida != "" else "")])
 	if not a.rituais.is_empty():
 		var rits := PackedStringArray()
 		for rid in a.rituais:

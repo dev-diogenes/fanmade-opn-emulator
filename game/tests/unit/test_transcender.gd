@@ -76,5 +76,31 @@ func test_sala_de_cada_classe():
 		sala.construir(a)
 		assert_eq(sala.tipo_sala, a.classe_id, a.nome)
 		if esperado.has(a.classe_id):
-			assert_not_null(sala.find_child(esperado[a.classe_id], false, false), "%s: a sala tem a cara da classe" % a.nome)
+			assert_not_null(sala.find_child(esperado[a.classe_id], true, false), "%s: a sala tem a cara da classe" % a.nome)
 		assert_not_null(sala.sigilo, "o sigilo é o mesmo em toda sala")
+
+
+func test_sala_da_afinidade():
+	var c := Carreira.nova()
+	var a: Agente = c.roster[0]
+	var esperado := {"sangue": "Ganchos", "morte": "Relogio", "conhecimento": "Mascaras", "energia": "Televisores"}
+	for el in esperado:
+		a.afinidade = el
+		var sala := SalaTranscender.new()
+		add_child_autofree(sala)
+		sala.construir(a)
+		assert_eq(sala.tipo_sala, el, "com afinidade, a sala é a do elemento")
+		assert_not_null(sala.find_child(esperado[el], true, false), el)
+	# Só o elemento escolhido ainda não muda a sala; a afinidade firmada no ritual, sim
+	a.afinidade = ""
+	a.afinidade_escolhida = "morte"
+	var sala := SalaTranscender.new()
+	add_child_autofree(sala)
+	sala.construir(a)
+	assert_eq(sala.tipo_sala, a.classe_id)
+	a.afinidade = "morte"
+	sala.transformar(SalaTranscender.tema_de(a))
+	await wait_frames(1)
+	assert_eq(sala.tipo_sala, "morte")
+	assert_not_null(sala.find_child("Relogio", true, false), "a sala se transforma no ritual")
+	assert_null(sala.find_child("SacoDePancada", true, false), "os móveis da classe somem")
