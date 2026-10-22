@@ -132,8 +132,9 @@ func _vulto() -> void:
 	var centro: Vector3 = obter_centro.call() if obter_centro.is_valid() else Vector3.ZERO
 	var ang := randf() * TAU
 	v.position = centro + Vector3(cos(ang), 0, sin(ang)) * randf_range(1.4, 2.4)
-	v.look_at(Vector3(centro.x, v.position.y, centro.z), Vector3.UP, true)
-	raiz3d.add_child(v)
+	raiz3d.add_child(v)   # na árvore antes de olhar: look_at fora da árvore dá erro
+	if v.is_inside_tree():
+		v.look_at(Vector3(centro.x, v.position.y, centro.z), Vector3.UP, true)
 	Som.tocar("glitch")
 	Tema.pulso_vhs(vista, 0.35 * loucura, 0.3)
 	var tw := v.create_tween()

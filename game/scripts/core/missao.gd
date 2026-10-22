@@ -1177,7 +1177,11 @@ func concluir_encontro(vencedor: String, rendidos: int = 0) -> void:
 				a.curar(1)
 				a.condicoes.erase(Ser.INCONSCIENTE)
 				_log("%s é socorrido e volta com 1 PV." % a.nome)
-		mapa.limpar_conteudo(h)
+		# Só sai do mapa o que era o encontro (ou o covil, com o chefe). Uma caça que alcança o
+		# agente parado nas ruínas do covil fechado, numa vila ou num evento luta ali, mas não
+		# apaga o lugar: antes, vencer a caça em cima do covil apagava o covil.
+		if chefe or String(mapa.conteudo(h).get("tipo", "")) == "encontro":
+			mapa.limpar_conteudo(h)
 		_log("[color=#6fcf8e]Encontro vencido.[/color]")
 		if chefe and extras.get("covil", {}).is_empty() and caso != null:
 			_abrir_varredura(h, participantes)
