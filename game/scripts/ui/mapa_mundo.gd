@@ -1005,6 +1005,11 @@ func _atualizar() -> void:
 			_lbl_evento.text += "\n\nNenhuma saída é segura: estão em jogo vidas, tempo, Sanidade ou um covil mais forte."
 		else:
 			_lbl_tipo_evento.remove_theme_color_override("font_color")
+		# Ajuda (docs/59, p.86): quem está no mesmo hex ajuda o teste
+		var ajudantes: Array = missao.ajudantes_do_evento().map(func(x): return x.nome)
+		if not ajudantes.is_empty():
+			_lbl_evento.text += "\n\n%s %s junto: cada um testa a mesma perícia contra DT 10 e, passando, dá +1." % [
+				" e ".join(PackedStringArray(ajudantes)), "está" if ajudantes.size() == 1 else "estão"]
 		if abriu:
 			Som.tocar("papel")
 			Tema.datilografar(_lbl_evento)

@@ -477,7 +477,8 @@ func resolver_evento(pe_foco: int = 0, opcao: int = 0) -> Dictionary:
 	if o.get("sem_teste", false):
 		linha = "%s: %s" % [a.nome, String(o.get("texto", "segue em frente"))]
 	else:
-		teste = a.testar(dados, String(o.pericia), int(o.dt), pe_foco)
+		var ajuda := _ajudar_no_evento(a, String(o.pericia))
+		teste = a.testar(dados, String(o.pericia), int(o.dt), pe_foco, {"bonus_extra": ajuda} if ajuda > 0 else {})
 		sucesso = teste != null and teste.sucesso
 		linha = "%s testa %s (DT %d): %s" % [a.nome, ruleset.pericia(o.pericia).nome, int(o.dt),
 			teste.descrever() if teste != null else "sem treino — falha automática"]
@@ -498,6 +499,34 @@ func resolver_evento(pe_foco: int = 0, opcao: int = 0) -> Dictionary:
 	_verificar_derrota()
 	return {"teste": teste, "sucesso": sucesso, "texto": lado.get("texto", ""), "efeitos": aplicados,
 		"titulo": titulo, "agente": a.nome, "sem_teste": o.get("sem_teste", false)}
+
+
+## Quem está no hex do evento e pode ajudar o teste (docs/59): vivo, de pé e sem Teimoso.
+func ajudantes_do_evento() -> Array:
+	if evento_pendente.is_empty():
+		return []
+	var a: Agente = evento_pendente.agente
+	if not a.efeitos("sem_ajuda").is_empty():
+		return []
+	return agentes.filter(func(x): return x != a and posicao(x) == evento_pendente.hex and not x.tem(Ser.MORTO) \
+		and not x.esta_fora_de_combate() and x.efeitos("sem_ajuda").is_empty())
+
+
+## Ajuda (p.86, a regra de ajuda do livro): cada um no hex testa a mesma perícia contra DT 10;
+## quem passa dá +1, e mais +1 a cada 10 acima da DT. Quem não pode usar a perícia não ajuda.
+func _ajudar_no_evento(a: Agente, pericia: String) -> int:
+	var cfg: Dictionary = ruleset.dados.get("investigacao", {}).get("ajuda", {"dt": 10, "bonus": 1, "bonus_por_10_acima": 1})
+	var total := 0
+	for h in ajudantes_do_evento():
+		var t: ResultadoTeste = h.testar(dados, pericia, int(cfg.dt))
+		if t == null:
+			continue
+		var b := 0
+		if t.sucesso:
+			b = int(cfg.bonus) + maxi(0, (t.total - int(cfg.dt)) / 10) * int(cfg.bonus_por_10_acima)
+		total += b
+		_log("%s ajuda %s (%s): %s%s" % [h.nome, a.nome, ruleset.pericia(pericia).nome, t.descrever(), "  → +%d" % b if b > 0 else ""])
+	return total
 
 
 # --- Ação do turno no mapa (docs/13) ------------------------------------------------

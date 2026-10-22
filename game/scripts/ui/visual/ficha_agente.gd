@@ -391,6 +391,12 @@ func _montar_habilidades() -> Control:
 	var cabeca := ", ".join(quem)
 	if cabeca != "":
 		cabeca = cabeca.left(1).to_upper() + cabeca.substr(1) + ".\n"   # só a primeira letra ("31 anos", não "31 Anos")
+	# Adereços (docs/59): o apelido, a cidade e o objeto que leva sempre
+	if agente.apelido != "" or agente.cidade != "":
+		cabeca += "%s%s\n" % [("Conhecido como “%s”. " % agente.apelido) if agente.apelido != "" else "",
+			("De %s." % agente.cidade) if agente.cidade != "" else ""]
+	if agente.objeto != "":
+		cabeca += "Leva sempre %s.\n" % agente.objeto
 	aparencia.text = "%sAparência: %s\nOrigem: %s. %s" % [cabeca,
 		agente.aparencia_texto if agente.aparencia_texto.strip_edges() != "" else "%s, roupa em tom %s." % [String(Pecas.APARENCIAS.get(modelo, modelo)).to_lower(),
 			String(Pecas.TONS[clampi(agente.tom, 0, Pecas.TONS.size() - 1)][0]).to_lower()],

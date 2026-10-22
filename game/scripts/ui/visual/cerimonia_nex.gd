@@ -3,7 +3,8 @@ extends CanvasLayer
 ## Cerimônia de NEX e patente (docs/23, C7): na volta de uma missão, a Base abre uma folha
 ## "Relatório de progressão" com a foto de cada agente que voltou, o NEX antes e depois, a
 ## patente e o carimbo PROMOVIDO, e quantas escolhas novas esperam na ficha. Quem morreu ou
-## enlouqueceu entra no rodapé, em memória. Aparece uma vez por missão.
+## enlouqueceu entra embaixo, em memória, com a foto de luto e a vela (docs/59). Aparece uma
+## vez por missão.
 ##   if CerimoniaNex.tem_o_que_mostrar(carreira.ultimo_relatorio): CerimoniaNex.abrir(self, carreira)
 
 signal fechada
@@ -69,17 +70,22 @@ func _montar(carreira: Carreira) -> void:
 	var por_id := {}
 	for a in carreira.roster:
 		por_id[a.id] = a
-	var memoria: Array[String] = []
+	var memoria_nomes: Array[String] = []
 	for ag in r.get("agentes", []):
 		if String(ag.get("situacao", "")) in ["morto", "insano"]:
-			memoria.append("%s (%s)" % [ag.nome, "morto" if ag.situacao == "morto" else "perdido para o Outro Lado"])
+			memoria_nomes.append(String(ag.nome))
 			continue
 		linha.add_child(_cartao(ag, por_id.get(String(ag.get("id", "")))))
-	if not memoria.is_empty():
-		var m := Label.new()
-		m.text = "Em memória: " + ", ".join(PackedStringArray(memoria))
-		m.add_theme_color_override("font_color", Tema.SANGUE)
-		v.add_child(m)
+	# A despedida (docs/59): quem não voltou fica na mesma fileira, com a foto de luto, a vela e
+	# o que levava; o resto da história fica na parede de memória da Base
+	for nome in memoria_nomes:
+		var entrada := {}
+		for e in carreira.memorial:
+			if e.nome == nome:
+				entrada = e
+		if entrada.is_empty():
+			entrada = {"nome": nome, "causa": "morto em missão"}
+		linha.add_child(Memorial.cartao_despedida(entrada))
 	var botao := Button.new()
 	botao.text = "Arquivar"
 	botao.theme_type_variation = "BotaoPrincipal"
@@ -98,7 +104,7 @@ func _cartao(ag: Dictionary, agente: Agente) -> Control:
 	foto.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	if agente != null:
 		foto.mostrar(agente.classe_id, agente.aparencia, agente.tom, hash(agente.nome))
-	foto.legenda = String(ag.nome)
+	foto.legenda = agente.nome_com_apelido() if agente != null else String(ag.nome)
 	c.add_child(foto)
 	var nex := Label.new()
 	var subiu := int(ag.get("nex", 0)) > int(ag.get("nex_antes", 0))

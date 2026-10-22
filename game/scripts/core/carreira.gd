@@ -111,6 +111,7 @@ static func _copiar_descricao(a: Agente, ficha: Dictionary) -> void:
 	a.genero = String(ficha.get("genero", "")).strip_edges().left(LIMITE_DESCRICAO.genero)
 	a.idade_anos = int(ficha.get("idade_anos", 0))
 	a.aparencia_texto = String(ficha.get("aparencia_texto", "")).strip_edges().left(LIMITE_DESCRICAO.aparencia_texto)
+	a.completar_pessoais()   # apelido, cidade e objeto (docs/59)
 
 
 ## Save de antes das descrições dos recrutas (docs/32): o recruta pronto sem conceito nem
@@ -225,6 +226,24 @@ func iniciar_missao_campanha(grupo: Array, campanha: Dictionary, semente: int) -
 
 
 ## Volta para a Base: aplica PP, NEX e patente (p.61-63), enterra os mortos e recupera todos.
+## A entrada do memorial (docs/59, AG1 do relatório): o bastante para a parede de memória
+## na Base e para a despedida na volta. A foto (classe, modelo, tom), o NEX e a patente de
+## quando caiu, o lugar do caso, a data, a causa e o último registro em que o nome aparece.
+func entrada_do_memorial(a: Agente, m: Missao, causa: String) -> Dictionary:
+	var ultimo := ""
+	var tags := RegEx.create_from_string("\\[[^\\]]*\\]")
+	for i in range(m.historico.size() - 1, -1, -1):
+		var linha := tags.sub(m.historico[i], "", true).strip_edges()
+		if linha.contains(a.nome) and linha != "%s morreu." % a.nome:   # o aviso da morte não é registro
+			ultimo = linha
+			break
+	return {"nome": a.nome, "causa": causa, "missao": missoes_concluidas + 1,
+		"classe": a.classe_id, "aparencia": a.aparencia, "tom": a.tom, "nex": a.nex, "patente": a.patente().get("nome", ""),
+		"apelido": a.apelido, "cidade": a.cidade, "objeto": a.objeto,
+		"lugar": String(m.caso.local.get("nome", "")) if m.caso != null else "",
+		"data": Time.get_date_string_from_system(), "ultimo": ultimo}
+
+
 func encerrar_missao() -> Dictionary:
 	if missao == null or not missao.encerrada:
 		return {}
@@ -253,11 +272,11 @@ func encerrar_missao() -> Dictionary:
 		var linha := {"nome": a.nome, "id": a.id}
 		if a in m.mortos or a.tem(Ser.MORTO):
 			linha.situacao = "morto"
-			memorial.append({"nome": a.nome, "causa": "morto em missão", "missao": missoes_concluidas + 1})
+			memorial.append(entrada_do_memorial(a, m, "morto em missão"))
 			roster.erase(a)
 		elif a.tem(Ser.INSANO):
 			linha.situacao = "insano"
-			memorial.append({"nome": a.nome, "causa": "perdido para o Outro Lado", "missao": missoes_concluidas + 1})
+			memorial.append(entrada_do_memorial(a, m, "perdido para o Outro Lado"))
 			roster.erase(a)
 		else:
 			linha.situacao = "resgatado" if a in m.resgatados else "voltou"
@@ -348,6 +367,7 @@ static func de_dicionario(d: Dictionary, ruleset_: Ruleset = null) -> Carreira:
 	for ad in d.get("roster", []):
 		var a := Agente.de_dicionario(c.ruleset, ad)
 		_descricao_do_recruta(a)
+		a.completar_pessoais()   # saves de antes dos adereços (docs/59)
 		c.roster.append(a)
 		por_id[a.id] = a
 	for ad in d.get("extras", []):

@@ -47,6 +47,10 @@ var conceito := ""
 var genero := ""
 var idade_anos := 0        ## idade em anos (a faixa da regra opcional fica em `idade`)
 var aparencia_texto := ""   ## a frase de aparência (o modelo da foto fica em `aparencia`)
+## Adereços (docs/59): apelido, cidade natal e um objeto pessoal. Só apresentação.
+var apelido := ""
+var cidade := ""
+var objeto := ""
 ## Ex-mundano (regra NEX 0%): bônus recebidos ao virar agente, ex.: {"pv": 12, "pe": 1, "san": 4}
 var transicao_mundano: Dictionary = {}
 var pp := 0                      ## Pontos de Prestígio (definem a patente)
@@ -525,6 +529,22 @@ func validar_equipamento(lista: Array) -> Array[String]:
 
 # --- Salvar / carregar ------------------------------------------------------
 
+## Adereços no lugar de biografia (docs/59, AG2 do relatório): o que faltar entre apelido,
+## cidade natal e objeto pessoal sai das listas de data/jogo/pessoais.json pelo nome, então o
+## mesmo agente tem os mesmos adereços em todas as máquinas e em saves antigos.
+func completar_pessoais() -> void:
+	var d := DadosJogo.ler("pessoais")
+	for par in [["apelido", "apelidos"], ["cidade", "cidades"], ["objeto", "objetos"]]:
+		var lista: Array = d.get(par[1], [])
+		if String(get(par[0])) == "" and not lista.is_empty():
+			set(par[0], String(lista[absi(hash(nome + "|" + String(par[0]))) % lista.size()]))
+
+
+## "Mauro “Prego”": o nome com o apelido, para a foto, o memorial e a despedida.
+func nome_com_apelido() -> String:
+	return "%s “%s”" % [nome, apelido] if apelido != "" else nome
+
+
 func para_dicionario() -> Dictionary:
 	return {
 		"id": id, "aumentos": Array(aumentos), "graus_feitos": graus_feitos, "versatilidade": versatilidade,
@@ -545,6 +565,7 @@ func para_dicionario() -> Dictionary:
 		"aparencia": aparencia, "tom": tom,
 		"personalidade": personalidade, "historico": historico, "objetivo": objetivo,
 		"conceito": conceito, "genero": genero, "idade_anos": idade_anos, "aparencia_texto": aparencia_texto,
+		"apelido": apelido, "cidade": cidade, "objeto": objeto,
 	}
 
 
@@ -603,6 +624,9 @@ static func de_dicionario(p_ruleset: Ruleset, d: Dictionary) -> Agente:
 	a.genero = String(d.get("genero", ""))
 	a.idade_anos = int(d.get("idade_anos", 0))
 	a.aparencia_texto = String(d.get("aparencia_texto", ""))
+	a.apelido = String(d.get("apelido", ""))
+	a.cidade = String(d.get("cidade", ""))
+	a.objeto = String(d.get("objeto", ""))
 	a.arma_id = d.get("arma", "")
 	for x in d.get("equipamento", []):
 		a.equipamento.append(x)

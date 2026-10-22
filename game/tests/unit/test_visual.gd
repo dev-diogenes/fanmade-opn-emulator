@@ -189,7 +189,7 @@ func test_base_e_dossie_com_abas():
 	var base = load("res://scenes/base_ordem.tscn").instantiate()
 	add_child_autofree(base)
 	await wait_frames(2)
-	assert_eq(base._abas.get_tab_count(), 4)
+	assert_eq(base._abas.get_tab_count(), 5, "Agentes, Arsenal, Missão, Jogadores e Memorial (docs/59)")
 	assert_eq(base._abas.current_tab, 2, "a Base abre na aba Missão (E5)")
 	base._abas.current_tab = 0
 	var tour := TourGuiado.new()   # fora da árvore: não conta como tour aberto

@@ -1,0 +1,21 @@
+{
+  "nota": "Adereços dos agentes (docs/59, AG2 do relatório): apelido, cidade natal e um objeto pessoal, no lugar de uma biografia. Só apresentação; as regras não leem. Quem não tem recebe um de cada lista pelo nome (igual no online). Cidades reais do Brasil de hoje; apelidos sem gênero; textos nossos.",
+  "apelidos": [
+    "Prego", "Faísca", "Corvo", "Lanterna", "Agulha", "Tatu", "Bússola", "Fumaça", "Ferrugem",
+    "Fósforo", "Trovão", "Sete Vidas", "Coruja", "Sabiá", "Pipoca", "Caju", "Tijolo", "Vela"
+  ],
+  "cidades": [
+    "Santos (SP)", "Juiz de Fora (MG)", "Belém (PA)", "Campina Grande (PB)", "Londrina (PR)",
+    "Feira de Santana (BA)", "Caxias do Sul (RS)", "Anápolis (GO)", "Petrolina (PE)", "Manaus (AM)",
+    "Niterói (RJ)", "Uberlândia (MG)", "Joinville (SC)", "Teresina (PI)", "Mossoró (RN)",
+    "São Luís (MA)", "Cuiabá (MT)", "Vitória da Conquista (BA)", "Ribeirão Preto (SP)", "Macapá (AP)"
+  ],
+  "objetos": [
+    "um terço que era da avó", "o boné desbotado do time do coração", "o chaveiro da primeira casa",
+    "um relógio de pulso parado, herança do pai", "uma fita cassete sem capa", "o crachá do antigo emprego",
+    "uma foto 3×4 de alguém que não volta", "uma fitinha do Bonfim no pulso", "um isqueiro que nunca acende",
+    "uma figurinha rara da Copa", "um caderno de receitas com a letra da mãe", "fones de ouvido remendados com fita",
+    "um santinho de São Jorge na carteira", "uma moeda de um real de 1998", "o pingente de uma medalha de natação",
+    "um bilhete de ônibus guardado há anos"
+  ]
+}

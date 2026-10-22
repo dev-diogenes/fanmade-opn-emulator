@@ -61,6 +61,7 @@
 | [56-testemunhas-e-o-momento-da-pista.md](56-testemunhas-e-o-momento-da-pista.md) | Testemunhas com nome, aparência e jeito (roteiro de NPC, p.163), a testemunha que some à noite (terror indireto) e o close-up da pista com lente, sentido do elemento e assinaturas da Morte |
 | [57-interface-fila-iniciativa-contorno.md](57-interface-fila-iniciativa-contorno.md) | Um papel por vez (o tour espera o briefing e a cerimônia), faixa de iniciativa no combate, botões que cabem a 1280 px, alcance do mapa por contorno e a ★ só com 50% ou mais |
 | [58-covil-e-chefe-do-caso.md](58-covil-e-chefe-do-caso.md) | O covil vestido pelo lugar do caso (bancos, carcaças, macas, carteiras, fardos, lápides), o Enigma de Medo do chefe (regenera até ser resolvido), a virada na metade dos PV e a apresentação do chefe |
+| [59-memorial-aderecos-e-ajuda.md](59-memorial-aderecos-e-ajuda.md) | Apelido, cidade natal e objeto pessoal de cada agente; a parede de memória na Base (foto de luto, vela, último registro) e a despedida na cerimônia; a ajuda dos colegas nos eventos do mapa (p.86) |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

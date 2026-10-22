@@ -14,9 +14,19 @@ var legenda := "":
 		if _nome != null:
 			_nome.text = v if v != "" else "sem nome"
 var chave := ""          ## modelo|tom da figura na foto (troca só quando muda)
+## Foto de luto (docs/59): cinza, sem o amarelado, e a fita preta no canto.
+var luto := false:
+	set(v):
+		luto = v
+		if _vista_foto != null and _vista_foto.material is ShaderMaterial:
+			(_vista_foto.material as ShaderMaterial).set_shader_parameter("sepia", 0.0 if v else 0.6)
+		if _fita != null:
+			_fita.visible = v
 var figura: Node3D
 
 var _vp: SubViewport
+var _vista_foto: SubViewportContainer
+var _fita: Polygon2D
 var _palco: Node3D
 var _nome: Label
 
@@ -37,6 +47,7 @@ func _init() -> void:
 		m.shader = load(caminho)
 		vista.material = m
 	add_child(vista)
+	_vista_foto = vista
 	_vp = SubViewport.new()
 	_vp.own_world_3d = true
 	_vp.msaa_3d = Viewport.MSAA_4X
@@ -75,6 +86,12 @@ func _init() -> void:
 		_nome.add_theme_font_override("font", maquina)
 	_nome.text = "sem nome"
 	add_child(_nome)
+	# A fita de luto no canto de cima, à esquerda, por cima da foto
+	_fita = Polygon2D.new()
+	_fita.polygon = PackedVector2Array([Vector2(0, 30), Vector2(30, 0), Vector2(48, 0), Vector2(0, 48)])
+	_fita.color = Color("141214")
+	_fita.visible = false
+	add_child(_fita)
 
 
 ## Fotografa a figura com esta aparência. Não refaz se nada mudou.

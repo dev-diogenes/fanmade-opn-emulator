@@ -22,6 +22,8 @@ var _checks_grupo: Dictionary = {}     ## Agente -> CheckBox
 var _donos_grupo: Dictionary = {}      ## Agente -> OptionButton (dono no co-op local)
 var _caixa_jogadores: VBoxContainer
 var _caixa_online: VBoxContainer
+var _aba_memorial: ScrollContainer
+var _memorial_visto := -1   ## quantas entradas a parede mostra (só remonta quando muda)
 var _txt_porta: LineEdit
 var _txt_endereco: LineEdit
 var _txt_nome: LineEdit
@@ -53,6 +55,7 @@ func _ready() -> void:
 	if not carreira.roster.is_empty():
 		_selecionado = carreira.roster[0]
 	_atualizar_tudo()
+	_montar_memorial()
 	# E5 (docs/16): a Base abre na aba Missão, onde se monta o grupo e se começa a jogar.
 	# Se algum agente tem escolha de NEX pendente, abre na aba Agentes, nele.
 	_abas.current_tab = 2
@@ -312,6 +315,11 @@ func _montar_interface() -> void:
 	cj.add_theme_constant_override("separation", Tema.ESPACO_M)
 	jog.add_child(cj)
 	cj.add_child(_titulo("Jogadores (co-op local e online)"))
+	# --- Aba Memorial (docs/59): a parede de memória; montada em _montar_memorial
+	_aba_memorial = ScrollContainer.new()
+	_aba_memorial.name = "Memorial"
+	_aba_memorial.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_abas.add_child(_aba_memorial)   # a última aba, depois de Jogadores
 	_caixa_jogadores = VBoxContainer.new()
 	cj.add_child(_caixa_jogadores)
 	cj.add_child(_titulo("Online"))
@@ -1006,6 +1014,22 @@ func _nova_carreira() -> void:
 		carreira = Carreira.nova()
 	_selecionado = carreira.roster[0]
 	_atualizar_tudo()
+	_montar_memorial()
+
+
+## A parede de memória (docs/59): remonta só quando o memorial muda (as fotos custam).
+func _montar_memorial() -> void:
+	if _aba_memorial == null or carreira.memorial.size() == _memorial_visto:
+		return
+	_memorial_visto = carreira.memorial.size()
+	for f in _aba_memorial.get_children():
+		f.queue_free()
+	var margem := MarginContainer.new()
+	margem.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for lado in ["left", "right", "top", "bottom"]:
+		margem.add_theme_constant_override("margin_" + lado, Tema.ESPACO_G)
+	margem.add_child(Memorial.parede(carreira.memorial))
+	_aba_memorial.add_child(margem)
 
 
 func _salvar() -> void:
