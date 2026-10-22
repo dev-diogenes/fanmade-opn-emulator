@@ -532,6 +532,10 @@ func _opcoes_procurar(a: Agente) -> void:
 	_linha_foco(a)
 	var selos := HFlowContainer.new()
 	_caixa_bilhete.add_child(selos)
+	if cena.pode_usar_credencial(pt):   # credencial de fachada (docs/63)
+		var cfg_c: Dictionary = DadosJogo.ler("sinais").credencial
+		_selo(selos, "credencial", "Credencial %s (+%d, depoimento firme · %d/%d)" % [cfg_c.sigla, int(cfg_c.bonus),
+			int(cena.credencial.get("usos", 0)), int(cfg_c.limite)])
 	if a.tem_habilidade("faro_para_pistas"):
 		_selo(selos, "faro", "Faro p/ Pistas")
 	if not a.perito.is_empty():
@@ -779,6 +783,7 @@ func _procurar() -> void:
 	var op := _opcoes_selos(a, _pericia)
 	var foco := _foco
 	_foco = 0
+	_selos.erase("credencial")   # a credencial vale para um teste (docs/63)
 	_enviar("procurar", {"ponto": _ponto, "pericia": _pericia, "foco": foco, "opcoes": op})
 
 
@@ -789,6 +794,8 @@ func _opcoes_selos(a: Agente, pericia: String) -> Dictionary:
 		op["habilidades"] = ["faro_para_pistas"]
 	if _selos.get("perito", false) and pericia in a.perito:
 		op["perito"] = true
+	if _selos.get("credencial", false) and cena.pode_usar_credencial(cena.ponto(_ponto)):
+		op["credencial"] = true
 	if _selos.get("ecletico", false) and a.classe_id == "especialista":
 		op["ecletico"] = true
 	return op

@@ -28,6 +28,12 @@ var campanhas: Dictionary = {}
 var recrutas_extras: Array = []
 ## A varredura malfeita do último covil (docs/62): a próxima missão começa com o eco dele.
 var eco_do_covil := false
+## A contenção da Base (docs/63, OR8): [{nome, papel, elemento, cela, segredos, interrogado}].
+var contencao: Array = []
+## O que um preso contou e vale na próxima missão: uma pista firme no começo (docs/63).
+var pista_do_preso: Dictionary = {}
+## Amostras para o laboratório (docs/63, OR2): saem das pistas além do necessário.
+var amostras := 0
 var _proximo_id := 1
 
 
@@ -194,6 +200,9 @@ func iniciar_missao(grupo: Array, semente: int, sinal: Dictionary = {}) -> Missa
 	if eco_do_covil:
 		missao.plantar_eco_do_covil()
 		eco_do_covil = false
+	if not pista_do_preso.is_empty():
+		missao.receber_pista_do_preso(pista_do_preso)
+		pista_do_preso = {}
 	ultimo_relatorio = {}
 	return missao
 
@@ -328,6 +337,27 @@ func encerrar_missao() -> Dictionary:
 			linha.pendencias = Progressao.pendencias(a).size()
 			_restaurar(a)
 		agentes_rel.append(linha)
+	# A contenção e o laboratório (docs/63): presos para as celas livres, amostras das pistas a mais
+	var cfg_c: Dictionary = DadosJogo.ler("sinais").contencao
+	var presos_novos: Array = []
+	if m.vitoria:
+		for p in m.presos:
+			var livres: Array = (cfg_c.celas as Array).filter(func(cl): return not contencao.any(func(x): return x.cela == cl))
+			if livres.is_empty():
+				linhas_pp.append("%s foi transferido: as celas estão cheias (+0)" % p.nome)
+				continue
+			var preso: Dictionary = p.duplicate()
+			preso.cela = String(livres[0])
+			preso.segredos = int(cfg_c.segredos)
+			preso.interrogado = -1
+			contencao.append(preso)
+			presos_novos.append("%s (cela %s)" % [preso.nome, preso.cela])
+		if adicionais > 0 and not m.alarme_confirmado:
+			var novas := mini(adicionais, int(DadosJogo.ler("sinais").laboratorio.amostras_por_missao))
+			amostras += novas
+			linhas_pp.append("Amostras para o laboratório: %d (+0)" % novas)
+	if not presos_novos.is_empty():
+		linhas_pp.append("Contenção: %s (+0)" % ", ".join(PackedStringArray(presos_novos)))
 	missoes_concluidas += 1
 	ultimo_relatorio = {"vitoria": m.vitoria, "solucionado": m.caso_solucionado(), "pp": pp_base, "detalhes_pp": linhas_pp, "agentes": agentes_rel,
 		"turnos": m.turno_mundo, "membrana": m.membrana.valor, "missao": missoes_concluidas}
@@ -364,6 +394,46 @@ func _avancar_campanha(m: Missao) -> Dictionary:
 	return rel
 
 
+## Interrogar um preso (docs/63, OR8): uma vez por visita à Base. O agente testa a melhor
+## das perícias sociais contra a DT; passando, o preso conta algo que vale uma pista firme no
+## começo da próxima missão e gasta um segredo; sem segredos, é transferido.
+func interrogar(indice: int, agente: Agente) -> Dictionary:
+	if indice < 0 or indice >= contencao.size() or agente == null or not agente in roster:
+		return {"ok": false}
+	var p: Dictionary = contencao[indice]
+	if int(p.get("interrogado", -1)) == missoes_concluidas:
+		return {"ok": false, "erro": "já interrogado nesta visita"}
+	var cfg: Dictionary = DadosJogo.ler("sinais").contencao
+	var melhor := String(cfg.pericias[0])
+	for per in cfg.pericias:
+		if agente.dados_da_pericia(per) * 100 + agente.bonus_pericia(per) > agente.dados_da_pericia(melhor) * 100 + agente.bonus_pericia(melhor):
+			melhor = String(per)
+	var dados := Dados.new(absi(hash("%d|%s|%s" % [missoes_concluidas, p.nome, agente.id])))
+	var t := agente.testar(dados, melhor, int(cfg.dt))
+	p.interrogado = missoes_concluidas
+	var sucesso := t != null and t.sucesso
+	var texto := ""
+	if sucesso:
+		pista_do_preso = {"cela": p.cela, "nome": p.nome}
+		p.segredos = int(p.segredos) - 1
+		texto = "%s fala. A próxima missão começa com uma pista firme." % p.nome
+		if int(p.segredos) <= 0:
+			contencao.remove_at(indice)
+			texto += " Sem mais o que contar, %s é transferido." % p.nome
+	else:
+		texto = String(cfg.falha)
+	return {"ok": true, "sucesso": sucesso, "teste": t, "pericia": melhor, "texto": texto}
+
+
+## Laboratório (docs/63, OR2): uma amostra diz se um sinal é real ou alarme falso.
+func analisar_sinal(sinal: Dictionary) -> Dictionary:
+	if amostras <= 0:
+		return {"ok": false}
+	amostras -= 1
+	sinal["verificado"] = true
+	return {"ok": true, "alarme_falso": bool(sinal.get("alarme_falso", false))}
+
+
 ## Entre missões, na Base: recuperação total e fim de condições.
 func _restaurar(a: Agente) -> void:
 	a.bonus_exercicio = 0   # os bônus do interlúdio valem até o fim da missão (p.93)
@@ -382,6 +452,7 @@ func para_dicionario() -> Dictionary:
 		"roster": roster.map(func(a): return a.para_dicionario()),
 		"memorial": memorial.duplicate(true), "opcoes": opcoes.duplicate(), "controles": controles.para_dicionario(),
 		"missoes_concluidas": missoes_concluidas, "ultimo_relatorio": ultimo_relatorio.duplicate(true), "eco_do_covil": eco_do_covil,
+		"contencao": contencao.duplicate(true), "pista_do_preso": pista_do_preso.duplicate(), "amostras": amostras,
 		"campanhas": campanhas.duplicate(true), "recrutas_extras": recrutas_extras.duplicate(true),
 		"missao": missao.para_dicionario() if missao != null else {},
 		# Agentes que estão na missão mas saíram do roster (mortos aguardando o relatório)
@@ -415,6 +486,13 @@ static func de_dicionario(d: Dictionary, ruleset_: Ruleset = null) -> Carreira:
 	c.controles = ControleLocal.de_dicionario(d.get("controles", {}))
 	c.missoes_concluidas = int(d.get("missoes_concluidas", 0))
 	c.eco_do_covil = bool(d.get("eco_do_covil", false))
+	for p in d.get("contencao", []):
+		var preso: Dictionary = p.duplicate()
+		preso.segredos = int(preso.get("segredos", 0))
+		preso.interrogado = int(preso.get("interrogado", -1))
+		c.contencao.append(preso)
+	c.pista_do_preso = (d.get("pista_do_preso", {}) as Dictionary).duplicate()
+	c.amostras = int(d.get("amostras", 0))
 	c.ultimo_relatorio = d.get("ultimo_relatorio", {})
 	c.campanhas = d.get("campanhas", {})
 	c.recrutas_extras = d.get("recrutas_extras", [])

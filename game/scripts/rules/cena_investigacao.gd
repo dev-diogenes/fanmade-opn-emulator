@@ -33,6 +33,10 @@ var _cfg: Dictionary
 var _facilitar: Dictionary = {}       ## Agente -> bônus pendente (+2, não acumula)
 var _presteza_pendente := false       ## Presteza Atlética: o próximo aliado que usar o bônus ganha +1 dado
 var _ajuda: Dictionary = {}           ## Agente -> bônus de ajuda pendente
+## Credencial de fachada (docs/63, OR4), que a Missão passa: {nome, usos, queimada}.
+## `usos_credencial` conta os desta cena (a Missão soma no fim).
+var credencial: Dictionary = {}
+var usos_credencial := 0
 var _trilha: Dictionary = {}          ## Agente -> {"sucessos": int, "dados": int} (Na Trilha Certa)
 var _acoes_extras := 0
 var _atributo_forcado := ""           ## Incansável: a ação extra usa Força ou Agilidade
@@ -207,6 +211,8 @@ func _preparar_procurar(a: Agente, p: Dictionary, pericia: String, opcoes: Dicti
 	if _facilitar.has(a) and _presteza_pendente:
 		extras += 1
 		presteza = true
+	if bool(opcoes.get("credencial", false)) and pode_usar_credencial(p):
+		bonus += int(DadosJogo.ler("sinais").credencial.bonus)   # acesso e jurisdição (docs/63)
 	op["bonus_extra"] = int(op.get("bonus_extra", 0)) + bonus
 	op["dados_extras"] = int(op.get("dados_extras", 0)) + extras
 	if _atributo_forcado != "":
@@ -281,10 +287,14 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 	if _trilha.has(a):
 		_trilha[a].dados = 0
 	var resultado := {"teste": teste, "sucesso": teste.sucesso, "pista": ""}
+	var com_credencial := bool(opcoes.get("credencial", false)) and pode_usar_credencial(p)
+	if com_credencial:
+		_usar_credencial(a, p)
 	_log("%s procura em [b]%s[/b] com %s: %s" % [a.nome, p.nome, ruleset.pericia(pericia).nome, teste.descrever()])
 	if teste.sucesso:
-		# Depoimento passado por pouco (docs/35): a testemunha hesita e pode estar enganada
-		var incerta: bool = p.get("depoimento", false) and teste.total - dt < MARGEM_DEPOIMENTO_FIRME
+		# Depoimento passado por pouco (docs/35): a testemunha hesita e pode estar enganada.
+		# Diante da credencial (docs/63), ninguém arrisca mentir: o depoimento sai firme.
+		var incerta: bool = p.get("depoimento", false) and teste.total - dt < MARGEM_DEPOIMENTO_FIRME and not com_credencial
 		resultado.pista = _encontrar_pista(a, ponto_id, incerta, -1, pericia)
 		resultado.incerta = incerta
 		var t: Dictionary = _trilha.get_or_add(a, {"sucessos": 0, "dados": 0})
@@ -298,6 +308,23 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 			_log("[color=#eda64a]Descuidos acumulados: a urgência aumenta (−1 rodada).[/color]")
 	_acao_concluida()
 	return resultado
+
+
+## A credencial vale numa testemunha (ponto de depoimento) enquanto não queimou.
+func pode_usar_credencial(p: Dictionary) -> bool:
+	return not credencial.is_empty() and not credencial.get("queimada", false) and bool(p.get("depoimento", false))
+
+
+## Mostrar a credencial (docs/63): conta um uso; no limite, alguém liga para a delegacia
+## que não existe e a fachada queima (a Missão aplica o resto no fim da cena).
+func _usar_credencial(a: Agente, p: Dictionary) -> void:
+	var cfg: Dictionary = DadosJogo.ler("sinais").credencial
+	usos_credencial += 1
+	credencial.usos = int(credencial.get("usos", 0)) + 1
+	_log("[color=#7fd3c7]%s mostra a credencial de %s (%s) para %s.[/color]" % [a.nome, credencial.get("nome", "agente"), cfg.sigla, String(p.nome).to_lower()])
+	if int(credencial.usos) >= int(cfg.limite):
+		credencial.queimada = true
+		_log("[color=#e0574a][b]A fachada queimou.[/b] Alguém ligou para a %s, e o número não existe.[/color]" % cfg.orgao)
 
 
 ## Depoimento firme: passar no teste da testemunha por 10 ou mais (docs/35; era 5 até o
@@ -544,7 +571,7 @@ func resultado() -> Dictionary:
 	return {"pistas": pistas_encontradas.duplicate(true), "perguntas": perguntas_respondidas.duplicate(true),
 		"urgencia_estourada": urgencia_estourada, "penalidade": penalidade, "motivo": motivo_fim,
 		"cena": String(cena.get("id", "")), "restantes": pontos_restantes.duplicate(),   # Revisar Caso (docs/48)
-		"testemunhas": testemunhas_ouvidas()}
+		"testemunhas": testemunhas_ouvidas(), "usos_credencial": usos_credencial}
 
 
 ## As testemunhas que o grupo ouviu nesta cena (docs/56): [{nome, papel, cena}].

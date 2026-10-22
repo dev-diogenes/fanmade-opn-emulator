@@ -23,6 +23,9 @@ var _donos_grupo: Dictionary = {}      ## Agente -> OptionButton (dono no co-op 
 var _caixa_jogadores: VBoxContainer
 var _caixa_online: VBoxContainer
 var _aba_memorial: ScrollContainer
+var _aba_planta: ScrollContainer
+var _opt_interrogador: OptionButton
+var _lbl_servico: Label   ## o que a última sala fez (laboratório, contenção)
 var _memorial_visto := -1   ## quantas entradas a parede mostra (só remonta quando muda)
 var _txt_porta: LineEdit
 var _txt_endereco: LineEdit
@@ -64,12 +67,13 @@ func _ready() -> void:
 		_selecionado = carreira.roster[0]
 	_atualizar_tudo()
 	_montar_memorial()
+	_montar_planta()
 	# E5 (docs/16): a Base abre na aba Missão, onde se monta o grupo e se começa a jogar.
 	# Se algum agente tem escolha de NEX pendente, abre na aba Agentes, nele.
-	_abas.current_tab = 2
+	ir_para_aba("Missão")
 	for a in carreira.roster:
 		if not Progressao.pendencias(a).is_empty():
-			_abas.current_tab = 0
+			ir_para_aba("Agentes")
 			_selecionado = a
 			_atualizar_tudo()
 			break
@@ -141,6 +145,12 @@ func _montar_interface() -> void:
 	_abas = TabContainer.new()
 	_abas.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	corpo.add_child(_abas)
+
+	# --- Aba Base (docs/63, OR2): a planta, com as salas que prestam serviços
+	_aba_planta = ScrollContainer.new()
+	_aba_planta.name = "Base"
+	_aba_planta.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_abas.add_child(_aba_planta)
 
 	# --- Aba Agentes: pastas à esquerda, a ficha como documento à direita
 	var agentes := HBoxContainer.new()
@@ -654,7 +664,7 @@ func _criar_agente() -> void:
 		return
 	CriacaoDossie.abrir(self, carreira, func(a: Agente):
 		_selecionado = a
-		_abas.current_tab = 0
+		ir_para_aba("Agentes")
 		_salvar()
 		_atualizar_tudo())
 
@@ -1060,6 +1070,167 @@ func _nova_carreira() -> void:
 	_selecionado = carreira.roster[0]
 	_atualizar_tudo()
 	_montar_memorial()
+
+
+## Vai para a aba pelo nome (as abas mudam de ordem quando entra uma nova).
+func ir_para_aba(nome: String) -> void:
+	for i in _abas.get_tab_count():
+		if _abas.get_tab_title(i) == nome:
+			_abas.current_tab = i
+			return
+
+
+# --- A planta da Base (docs/63, OR2) --------------------------------------------------
+
+## As salas da Base, pela wiki: um bar velho de fachada e, lá dentro, salas que funcionam
+## como serviços. Cada cartão diz o que a sala faz e leva até ela; o laboratório e a
+## contenção têm serviço próprio aqui.
+func _montar_planta() -> void:
+	if _aba_planta == null:
+		return
+	for f in _aba_planta.get_children():
+		_aba_planta.remove_child(f)
+		f.queue_free()
+	var margem := MarginContainer.new()
+	margem.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for lado in ["left", "right", "top", "bottom"]:
+		margem.add_theme_constant_override("margin_" + lado, Tema.ESPACO_M)
+	_aba_planta.add_child(margem)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", Tema.ESPACO_M)
+	margem.add_child(v)
+	var sub := Label.new()
+	sub.text = "Por fora, um bar velho de bairro. Por dentro, as salas da Ordem."
+	sub.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+	v.add_child(sub)
+	var grade := GridContainer.new()
+	grade.columns = 3
+	grade.add_theme_constant_override("h_separation", Tema.ESPACO_M)
+	grade.add_theme_constant_override("v_separation", Tema.ESPACO_M)
+	v.add_child(grade)
+	var pendentes := carreira.roster.filter(func(a): return not Progressao.pendencias(a).is_empty())
+	_sala(grade, "Bar de fachada", "Quem entra pede uma cerveja e uma senha. É aqui que os jogadores se juntam.",
+		"Mesa dos jogadores", func(): ir_para_aba("Jogadores"))
+	_sala(grade, "Escritório", "As pastas dos agentes, as fichas e o quadro de fios vermelhos.",
+		"Abrir as pastas", func(): ir_para_aba("Agentes"))
+	_sala(grade, "Central de sinais", "A rede varre posts, jornais e boletins atrás de padrões. Há %d sinais esperando." % sinais.size(),
+		"Ver os sinais", func(): ir_para_aba("Missão"))
+	_sala(grade, "Balcão de equipamentos", "Requisição por patente: o que cada agente leva para a missão.",
+		"Ir ao balcão", func(): ir_para_aba("Arsenal"))
+	var b_oc := _sala(grade, "Sala de ocultismo", ("%d agente(s) com escolhas de NEX à espera." % pendentes.size()) if not pendentes.is_empty()
+		else "Nenhuma escolha de NEX à espera. Os sigilos dormem.", "Transcender", func():
+			if not pendentes.is_empty():
+				Transcender.abrir(self, pendentes[0]))
+	b_oc.disabled = pendentes.is_empty()
+	_sala(grade, "Enfermaria", "Quem volta, volta inteiro: PV, PE e Sanidade cheios, condições e efeitos de insanidade curados.", "", Callable())
+	_sala_laboratorio(grade)
+	_sala_contencao(grade)
+	_sala(grade, "Memorial", "%d agente(s) na parede, cada um com a sua vela." % carreira.memorial.size(),
+		"Ver a parede", func(): ir_para_aba("Memorial"))
+	_lbl_servico = Label.new()
+	_lbl_servico.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_lbl_servico.add_theme_color_override("font_color", Tema.OURO_CLARO)
+	v.add_child(_lbl_servico)
+
+
+## Um cartão de sala: nome, o que faz e, se houver, o botão do serviço.
+func _sala(pai: Control, nome: String, texto: String, botao: String, acao: Callable) -> Button:
+	var p := _papel(false)
+	p.custom_minimum_size = Vector2(360, 150)
+	pai.add_child(p)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", Tema.ESPACO_P)
+	p.add_child(v)
+	var t := Label.new()
+	t.text = nome.to_upper()
+	t.theme_type_variation = "TextoPapel"
+	var f := Tema.fonte_titulo()
+	if f != null:
+		t.add_theme_font_override("font", f)
+	v.add_child(t)
+	var l := Label.new()
+	l.text = texto
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(320, 0)
+	l.add_theme_color_override("font_color", Tema.TINTA)
+	l.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v.add_child(l)
+	if botao == "":
+		return null
+	var b := Button.new()
+	b.text = botao
+	b.theme_type_variation = "BotaoPapel"
+	b.size_flags_horizontal = Control.SIZE_SHRINK_END
+	b.pressed.connect(acao)
+	v.add_child(b)
+	return b
+
+
+## Laboratório (docs/63): cada amostra diz se um dos sinais é real ou alarme falso.
+func _sala_laboratorio(pai: Control) -> void:
+	_sala(pai, "Laboratório", "Amostras trazidas das missões: %d. Uma amostra diz se um sinal da rede é real ou alarme falso." % carreira.amostras, "", Callable())
+	var caixa: VBoxContainer = pai.get_child(pai.get_child_count() - 1).get_child(0)
+	for i in sinais.size():
+		var s: Dictionary = sinais[i]
+		var b := Button.new()
+		b.theme_type_variation = "BotaoPapel"
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.text = ("%s: %s" % [s.fonte, "alarme falso" if s.alarme_falso else "real"]) if s.get("verificado", false) else "Analisar: %s" % s.fonte
+		b.disabled = s.get("verificado", false) or carreira.amostras <= 0
+		b.pressed.connect(func():
+			var r := carreira.analisar_sinal(sinais[i])
+			if r.ok:
+				_lbl_servico.text = "Laboratório: o sinal \"%s\" %s." % [sinais[i].fonte, "é alarme falso" if r.alarme_falso else "é real"]
+				_salvar()
+				_atualizar_sinais()
+				_montar_planta_depois())
+		caixa.add_child(b)
+
+
+## Contenção (docs/63): as celas de A a D, só com uma vela; um interrogatório por preso a
+## cada visita, com o agente escolhido.
+func _sala_contencao(pai: Control) -> void:
+	_sala(pai, "Contenção", "Celas de A a D, escuras, só com uma vela: ninguém se concentra em símbolos ali." +
+		("" if not carreira.contencao.is_empty() else " Nenhum preso."), "", Callable())
+	var caixa: VBoxContainer = pai.get_child(pai.get_child_count() - 1).get_child(0)
+	if carreira.contencao.is_empty():
+		return
+	_opt_interrogador = OptionButton.new()
+	for a in carreira.roster:
+		_opt_interrogador.add_item("Interroga: %s" % a.nome)
+	caixa.add_child(_opt_interrogador)
+	for i in carreira.contencao.size():
+		var p: Dictionary = carreira.contencao[i]
+		var b := Button.new()
+		b.theme_type_variation = "BotaoPapel"
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.text = "Cela %s · %s, %s · %d segredo(s)" % [p.cela, p.nome, String(p.papel).to_lower(), int(p.segredos)]
+		b.disabled = int(p.get("interrogado", -1)) == carreira.missoes_concluidas or carreira.roster.is_empty()
+		b.tooltip_text = "Já interrogado nesta visita." if b.disabled else "Interrogar (Intimidação, Diplomacia ou Intuição, DT %d)." % int(DadosJogo.ler("sinais").contencao.dt)
+		b.pressed.connect(func():
+			var ag: Agente = carreira.roster[clampi(_opt_interrogador.selected, 0, carreira.roster.size() - 1)]
+			var r := carreira.interrogar(i, ag)
+			if r.get("ok", false):
+				Som.tocar("pista" if r.sucesso else "erro")
+				_lbl_servico.text = "Contenção: %s (%s: %s)" % [r.texto, ag.nome, r.teste.descrever() if r.teste != null else "sem treino"]
+				_salvar()
+				_montar_planta_depois())
+		caixa.add_child(b)
+
+
+## Remonta a planta no fim do quadro (o botão que chamou ainda está na árvore).
+func _montar_planta_depois() -> void:
+	var texto := _lbl_servico.text if _lbl_servico != null else ""
+	await get_tree().process_frame
+	_montar_planta()
+	_lbl_servico.text = texto
+
+
+## O texto dos botões de sinal na aba Missão, com o resultado do laboratório.
+func _atualizar_sinais() -> void:
+	for i in mini(_botoes_sinais.size(), sinais.size()):
+		var s: Dictionary = sinais[i]
+		_botoes_sinais[i].text = Sinais.resumo(s) + (("\nLaboratório: %s." % ("alarme falso" if s.alarme_falso else "real")) if s.get("verificado", false) else "")
 
 
 ## A parede de memória (docs/59): remonta só quando o memorial muda (as fotos custam).

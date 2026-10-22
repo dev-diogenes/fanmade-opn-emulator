@@ -189,13 +189,13 @@ func test_base_e_dossie_com_abas():
 	var base = load("res://scenes/base_ordem.tscn").instantiate()
 	add_child_autofree(base)
 	await wait_frames(2)
-	assert_eq(base._abas.get_tab_count(), 5, "Agentes, Arsenal, Missão, Jogadores e Memorial (docs/59)")
-	assert_eq(base._abas.current_tab, 2, "a Base abre na aba Missão (E5)")
+	assert_eq(base._abas.get_tab_count(), 6, "Base, Agentes, Arsenal, Missão, Jogadores e Memorial (docs/59, docs/63)")
+	assert_eq(base._abas.get_tab_title(base._abas.current_tab), "Missão", "a Base abre na aba Missão (E5)")
 	base._abas.current_tab = 0
 	var tour := TourGuiado.new()   # fora da árvore: não conta como tour aberto
 	tour._abrir_aba_de(base._btn_iniciar)
 	tour.free()
-	assert_eq(base._abas.current_tab, 2, "o tour abre a aba Missão para mostrar o Iniciar")
+	assert_eq(base._abas.get_tab_title(base._abas.current_tab), "Missão", "o tour abre a aba Missão para mostrar o Iniciar")
 	for c in get_tree().root.find_children("ConviteTutorial", "", true, false):
 		c.queue_free()
 

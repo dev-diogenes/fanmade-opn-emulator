@@ -78,6 +78,10 @@ var sinal: Dictionary = {}
 var alarme_falso := false
 var alarme_confirmado := false
 var varredura := ""
+## Credencial de fachada (docs/63, OR4): {nome, usos, queimada}; nome inventado por missão.
+var credencial: Dictionary = {}
+## Cultistas rendidos que vão para a contenção da Base (docs/63, OR8): [{nome, papel, elemento}].
+var presos: Array = []
 
 
 const NOMES_TERRENO := {"campo": "campos abertos", "estrada": "estradas de terra", "floresta": "mata fechada",
@@ -122,6 +126,9 @@ static func nova(semente_: int, ruleset_: Ruleset = null, grupo: Array = [], opc
 	m.sinal = (opcoes_.get("sinal", {}) as Dictionary).duplicate()
 	m.alarme_falso = bool(m.sinal.get("alarme_falso", false))
 	m.reforcos = 2 if m.opcoes.get("modo_morte", "normal") == "normal" else 0
+	var cfg_cred: Dictionary = DadosJogo.ler("sinais").credencial
+	m.credencial = {"nome": "Agente %s" % String(cfg_cred.sobrenomes[absi(hash("%d|credencial" % semente_)) % cfg_cred.sobrenomes.size()]),
+		"usos": 0, "queimada": false}
 	m.caso = Caso.gerar(m.dados)
 	m._ajustar_encontros_ao_elemento()
 	if m.alarme_falso:
@@ -1010,6 +1017,7 @@ func concluir_encontro(vencedor: String, rendidos: int = 0) -> void:
 	if vencedor == "agentes" and rendidos > 0 and caso != null:
 		_log("[color=#7fd3c7]Interrogatório: %d rendido(s) acorda(m) algemado(s) e fala(m).[/color]" % rendidos)
 		_aplicar_efeito(agente_atual() if agente_atual() != null else agentes[0], {"tipo": "pista"}, encontro_pendente.hex)
+		_levar_preso(encontro_pendente)
 	var h: Vector2i = encontro_pendente.hex
 	var chefe: bool = encontro_pendente.chefe
 	for a in encontro_pendente.agentes:
@@ -1039,6 +1047,38 @@ func concluir_encontro(vencedor: String, rendidos: int = 0) -> void:
 				_tratar_queda(a)
 	_ajustar_indice()
 	_verificar_derrota()
+
+
+## Credencial (docs/63): soma os usos da cena e, no limite, queima a fachada. A polícia de
+## verdade vem atrás de quem se passou por polícia: uma patrulha surge ao lado do grupo.
+func _somar_usos_da_credencial(usos: int, h: Vector2i) -> void:
+	if usos <= 0 or credencial.get("queimada", false):
+		return
+	var cfg: Dictionary = DadosJogo.ler("sinais").credencial
+	credencial.usos = int(credencial.get("usos", 0)) + usos
+	if int(credencial.usos) < int(cfg.limite):
+		return
+	credencial.queimada = true
+	var livres: Array = Hex.vizinhos(h).filter(func(v): return mapa.tem(v) and mapa.conteudo(v).is_empty())
+	livres.sort()
+	if not livres.is_empty():
+		mapa.definir_conteudo(livres[absi(hash("%d|patrulha" % semente)) % livres.size()], {"tipo": "encontro", "encontro": String(cfg.encontro_ao_queimar)})
+	_log("[color=#e0574a]A %s não existe, e a polícia local descobriu. Uma patrulha procura os falsos agentes por perto.[/color]" % cfg.orgao)
+
+
+## Um cultista rendido vai para a contenção da Base (docs/63, OR8): um por encontro, com
+## nome de gente comum e o papel que tinha no combate. A Carreira o põe numa cela no fim.
+func _levar_preso(enc: Dictionary) -> void:
+	var papel := "Cultista"
+	for am in enc.get("ameacas", []):
+		if not am.get("ficha", {}).get("criatura", false):
+			papel = String(am.get("nome", papel))
+			break
+	var t := DadosJogo.ler("testemunhas")
+	var nomes: Array = t.nomes_f + t.nomes_m
+	var nome := String(nomes[absi(hash("%d|preso|%d" % [semente, presos.size()])) % nomes.size()])
+	presos.append({"nome": nome, "papel": papel, "elemento": caso.elemento if caso != null else ""})
+	_log("[color=#7fd3c7]%s, %s, vai algemado para a contenção da Base.[/color]" % [nome, papel.to_lower()])
 
 
 ## A varredura do covil (docs/62, OR5): com o chefe no chão, o grupo varre o covil, paga uma
@@ -1077,6 +1117,16 @@ func _tirar_o_paranormal() -> void:
 			mapa.limpar_conteudo(h)
 		else:
 			mapa.definir_conteudo(h, {"tipo": "encontro", "encontro": String(opcoes[absi(hash(h)) % opcoes.size()].id)})
+
+
+## O que o preso contou (docs/63, OR8): uma pista firme na pergunta "quem", logo no começo.
+func receber_pista_do_preso(info: Dictionary) -> void:
+	if caso == null:
+		return
+	var texto := String(DadosJogo.ler("sinais").contencao.pista).replace("{cela}", String(info.get("cela", "")))
+	var pista := caso.registrar_pista(texto, "quem", "contencao")
+	pistas += 1
+	_log("[color=#6fcf8e]Pista:[/color] %s" % pista.texto)
 
 
 ## O que ficou no último covil (docs/62): a varredura malfeita volta como um evento de Medo
@@ -1156,7 +1206,9 @@ func criar_cena_investigacao() -> CenaInvestigacao:
 	if investigacao_pendente.is_empty():
 		return null
 	var d := Dados.new(int(investigacao_pendente.get("semente", 1)))
-	return CenaInvestigacao.nova(ruleset, d, caso, investigacao_pendente.cena, investigacao_pendente.agentes, "", membrana, extras.get("cenas", []))
+	var cena := CenaInvestigacao.nova(ruleset, d, caso, investigacao_pendente.cena, investigacao_pendente.agentes, "", membrana, extras.get("cenas", []))
+	cena.credencial = credencial.duplicate()   # docs/63: a cena usa, a Missão soma no fim
+	return cena
 
 
 ## Aplica o resultado de uma cena de investigação: pistas (PP), perguntas respondidas e
@@ -1170,6 +1222,7 @@ func concluir_investigacao(resultado: Dictionary) -> void:
 	pistas += resultado.get("pistas", []).size()
 	if not resultado.get("pistas", []).is_empty():
 		_anotar_rumor(h)
+	_somar_usos_da_credencial(int(resultado.get("usos_credencial", 0)), h)
 	for t in resultado.get("testemunhas", []):
 		testemunhas_vistas.append({"nome": String(t.nome), "papel": String(t.papel), "cena": String(t.get("cena", "")), "sumiu": false})
 	if String(resultado.get("cena", "")) != "" and not resultado.get("restantes", []).is_empty():
@@ -1726,6 +1779,7 @@ func para_dicionario() -> Dictionary:
 		"turnos_sem_surgimento": _turnos_sem_surgimento, "alivio": alivio, "testemunhas_vistas": testemunhas_vistas.duplicate(true),
 		"pesquisa": pesquisa.duplicate(), "rumores": rumores.duplicate(true),
 		"sinal": sinal.duplicate(), "alarme_confirmado": alarme_confirmado, "varredura": varredura,
+		"credencial": credencial.duplicate(), "presos": presos.duplicate(true),
 		"rastros": rastros.keys().map(func(h): return [h.x, h.y, int(rastros[h])]), "descansos": descansos, "revisaveis": revisaveis.duplicate(true),
 		"historico": historico.slice(maxi(0, historico.size() - 300)),
 		"encerrada": encerrada, "vitoria": vitoria, "extras": extras.duplicate(true),
@@ -1785,6 +1839,10 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.alarme_falso = bool(m.sinal.get("alarme_falso", false))
 	m.alarme_confirmado = bool(d.get("alarme_confirmado", false))
 	m.varredura = String(d.get("varredura", ""))
+	if d.has("credencial"):
+		m.credencial = {"nome": String(d.credencial.get("nome", "")), "usos": int(d.credencial.get("usos", 0)),
+			"queimada": bool(d.credencial.get("queimada", false))}
+	m.presos = (d.get("presos", []) as Array).duplicate(true)
 	for r in d.get("rastros", []):
 		m.rastros[Vector2i(int(r[0]), int(r[1]))] = int(r[2])
 	for i in d.get("descansos", {}):
