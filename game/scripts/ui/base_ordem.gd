@@ -77,12 +77,15 @@ var sinais: Array = []
 var sinal_escolhido := 0
 var _caixa_sinais: VBoxContainer
 var _botoes_sinais: Array[Button] = []
+var _caixa_recortes: VBoxContainer   ## docs/71: o quadro do escritório
 
 
 func _ready() -> void:
 	_jogo = get_node_or_null("/root/Jogo")
 	carreira = _jogo.carregar_ou_criar() if _jogo != null else Carreira.nova()
 	sinais = Sinais.gerar(semente_proxima)
+	if carreira.vilao_encontrado():   # docs/71: três recortes e a sede do vilão vira um sinal
+		sinais.append(carreira.sinal_do_vilao(absi(hash("%d|vilao_final" % semente_proxima)) % 1000000))
 	semente_proxima = int(sinais[0].semente)
 	_montar_interface()
 	if not carreira.roster.is_empty():
@@ -355,9 +358,18 @@ func _montar_interface() -> void:
 		b.custom_minimum_size = Vector2(340, 0)
 		b.tooltip_text = "Confiança %s: %s" % [sinais[i].rotulo, {"baixa": "pode ser alarme falso; se for real, rende mais prestígio.",
 			"media": "às vezes é alarme falso.", "alta": "a Ordem tem certeza: é paranormal."}.get(String(sinais[i].confianca), "")]
+		var sub_i := Culto.dados_subgenero(String(sinais[i].get("subgenero", "classico")))
+		b.tooltip_text += "\n%s: %s" % [sub_i.nome, sub_i.texto]   # docs/71
+		if sinais[i].get("vilao", {}).get("final", false):
+			b.tooltip_text += "\nA sede da %s: o chefe é mais forte e a Membrana começa mais fraca; vencer derruba o vilão." % sinais[i].vilao.nome
+			b.add_theme_color_override("font_color", Tema.SANGUE_CLARO)
 		b.pressed.connect(func(): _escolher_sinal(i))
 		_caixa_sinais.add_child(b)
 		_botoes_sinais.append(b)
+	# O quadro do escritório (docs/71): os recortes que ligam os casos ao vilão
+	_caixa_recortes = VBoxContainer.new()
+	_caixa_recortes.add_theme_constant_override("separation", Tema.ESPACO_P)
+	c3.add_child(_caixa_recortes)
 	c3.add_child(_titulo("Regras opcionais"))
 	_opt_modo = OptionButton.new()
 	_opt_modo.add_item("Normal (2 Reforços da Ordem)")
@@ -831,6 +843,7 @@ func _atualizar_tudo() -> void:
 	_montar_jogadores()
 	_montar_online()
 	_listar_missoes()
+	_montar_recortes()
 	_opt_modo.select(0 if carreira.opcoes.get("modo_morte", "normal") == "normal" else 1)
 	_chk_lesoes.set_pressed_no_signal(carreira.opcoes.get("lesoes", true))
 	_chk_inspiracao.set_pressed_no_signal(carreira.opcoes.get("inspiracao_resoluta", true))
@@ -1402,6 +1415,11 @@ static func briefing_procedural(p: Dictionary, grupo: Array, sinal: Dictionary =
 		linhas.append("[b]Sinal:[/b] %s, confiança %s. \"%s\"" % [sinal.fonte, sinal.rotulo, String(sinal.relato).left(1).to_upper() + String(sinal.relato).substr(1) + "."])
 		var f := Sinais.fachada(int(sinal.semente))
 		linhas.append("[b]Ponto de encontro:[/b] %s. Senha: \"%s\" Resposta: \"%s\"" % [f.lugar, f.senha, f.resposta])
+		var sub := Culto.dados_subgenero(String(sinal.get("subgenero", "classico")))
+		if String(sinal.get("subgenero", "classico")) != "classico":
+			linhas.append("[b]%s:[/b] %s" % [sub.nome, sub.texto])   # docs/71
+		if sinal.get("vilao", {}).get("final", false):
+			linhas.append("[color=#8e1b22][b]O vilão:[/b] a sede da %s. Vencer aqui derruba quem pagava os cultos.[/color]" % sinal.vilao.nome)
 		linhas.append("")
 	linhas.append("[b]Região:[/b] %s, %d áreas no mapa." % [" e ".join(PackedStringArray(p.terrenos)), int(p.celulas)])
 	var ocupacao := PackedStringArray()
@@ -1647,6 +1665,39 @@ func _unhandled_input(evento: InputEvent) -> void:
 
 
 ## Um cartão de sala: nome, o que faz e, se houver, o botão do serviço.
+## O quadro do escritório (docs/71): os recortes de jornal que ligam os cultos ao vilão.
+func _montar_recortes() -> void:
+	if _caixa_recortes == null:
+		return
+	for f in _caixa_recortes.get_children():
+		f.queue_free()
+	if carreira.recortes.is_empty():
+		return
+	_caixa_recortes.add_child(_titulo("Quadro do escritório"))
+	var falta := int(DadosJogo.ler("cultos").vilao.get("recortes_para_achar", 3)) - carreira.recortes.size()
+	var nota := Label.new()
+	nota.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	nota.custom_minimum_size = Vector2(340, 0)
+	nota.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+	nota.text = ("Um nome se repete nos recortes: %s. Falta%s %d recorte%s para achar a sede." % [carreira.vilao.nome, "" if falta == 1 else "m", falta, "" if falta == 1 else "s"]) if falta > 0 \
+		else "Os recortes apontam para o mesmo endereço: a sede da %s está entre os sinais." % carreira.vilao.nome
+	_caixa_recortes.add_child(nota)
+	for r in carreira.recortes:
+		var p := _papel(false)
+		p.custom_minimum_size = Vector2(340, 0)
+		var l := Label.new()
+		l.text = "“%s”\n— recorte da missão %d (%s)" % [r.texto, int(r.missao), r.culto]
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.add_theme_color_override("font_color", Tema.TINTA)
+		var maquina := Tema.fonte_maquina()
+		if maquina != null:
+			l.add_theme_font_override("font", maquina)
+		l.add_theme_font_size_override("font_size", Tema.FONTE_P)
+		p.add_child(l)
+		p.rotation_degrees = -1.0 if int(r.missao) % 2 == 0 else 1.0
+		_caixa_recortes.add_child(p)
+
+
 ## A Enfermaria (docs/70): cura o corpo de quem volta; os traumas pedem tratamento, e quem se
 ## trata fica fora da próxima missão.
 func _sala_enfermaria(pai: Control) -> void:

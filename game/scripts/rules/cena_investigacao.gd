@@ -322,7 +322,7 @@ func _usar_credencial(a: Agente, p: Dictionary) -> void:
 	usos_credencial += 1
 	credencial.usos = int(credencial.get("usos", 0)) + 1
 	_log("[color=#7fd3c7]%s mostra a credencial de %s (%s) para %s.[/color]" % [a.nome, credencial.get("nome", "agente"), cfg.sigla, String(p.nome).to_lower()])
-	if int(credencial.usos) >= int(cfg.limite):
+	if int(credencial.usos) >= int(credencial.get("limite", cfg.limite)):
 		credencial.queimada = true
 		_log("[color=#e0574a][b]A fachada queimou.[/b] Alguém ligou para a %s, e o número não existe.[/color]" % cfg.orgao)
 

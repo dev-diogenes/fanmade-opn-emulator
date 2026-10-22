@@ -1,0 +1,13 @@
+{
+  "nota": "Subgênero por missão (docs/71, OR7 do relatório). Na série, cada temporada troca de subgênero (a ilha em que cada episódio é um dia; o suplemento de sobrevivência com perseguição e recursos contados). Aqui o sinal da Base traz um subgênero, que mexe no ciclo de dia e noite, na caça (docs/53), no interlúdio e na Membrana. 'cfg' sobrepõe o mapa.json só nesta missão.",
+  "pesos": {"classico": 50, "perseguicao": 20, "ilha": 15, "transmissao": 15},
+  "lista": {
+    "classico": {"nome": "Investigação", "texto": "Um caso como os outros: investigar, achar o covil, fechar o caso."},
+    "perseguicao": {"nome": "Perseguição", "texto": "Algo caça o grupo. A noite é mais longa, a caça vê mais longe e não descansa depois de uma luta.",
+      "cfg": {"mundo": {"ciclo": {"dia": 2, "noite": 3}, "caca": {"raio": 9, "rastro_turnos": 3, "alivio_depois_de_combate": 0}}}},
+    "ilha": {"nome": "Isolados", "texto": "Ninguém chega e ninguém sai: cada turno é um dia inteiro, e o descanso rende menos (uma ação por agente no interlúdio).",
+      "cfg": {"mundo": {"ciclo": {"dia": 1, "noite": 1}}, "interludio": {"acoes_por_agente": 1}}},
+    "transmissao": {"nome": "Transmissão", "texto": "Alguém transmite o ritual ao vivo: a cada turno do mundo, a Membrana cai mais 1.",
+      "membrana_por_turno": -1}
+  }
+}

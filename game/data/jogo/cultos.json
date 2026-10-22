@@ -1,0 +1,67 @@
+{
+  "nota": "Cultos (docs/71, OR6 do relatório). Na wiki, todo culto junta cinco coisas: um elemento, uma fachada banal, uma estrutura, um método de espalhar o medo e um sinal visual. Aqui cada caso ganha um culto sorteado da semente do próprio caso; a estrutura e o método mexem em sistemas que o jogo já tem. Nomes, fachadas e textos são nossos: nenhum culto canônico.",
+  "nomes": {
+    "prefixos": ["Irmandade", "Círculo", "Coletivo", "Família", "Associação", "Congregação", "Grupo", "Fraternidade"],
+    "nucleos": {
+      "sangue": ["da Carne Aberta", "do Arame Vivo", "dos Que Não Dormem", "do Coração Inquieto", "da Fome Santa"],
+      "morte": ["do Relógio Parado", "da Cinza Mansa", "dos Que Esperam", "do Lodo Calmo", "da Hora Certa"],
+      "conhecimento": ["do Sigilo Dourado", "dos Que Leram", "da Página Branca", "do Olho Fechado", "da Palavra Certa"],
+      "energia": ["da Faísca", "do Ruído Branco", "dos Que Piscam", "da Corrente Solta", "do Acaso"],
+      "medo": ["da Névoa", "do Que Não Tem Nome", "dos Que Viram", "do Silêncio Fundo", "da Porta Aberta"]
+    }
+  },
+  "fachadas": [
+    {"id": "academia", "nome": "uma academia de bairro", "dica": "a mensalidade é barata demais e o treino acaba depois da meia-noite"},
+    {"id": "igreja", "nome": "uma igreja nova num galpão", "dica": "o culto de quarta não aparece no cartaz"},
+    {"id": "corrida", "nome": "um grupo de corrida de rua", "dica": "correm de madrugada, sempre pelo mesmo trajeto"},
+    {"id": "ong", "nome": "uma ONG de reciclagem", "dica": "recolhem mais do que reciclam"},
+    {"id": "clinica", "nome": "uma clínica de estética", "dica": "a lista de espera tem nomes de quem sumiu"},
+    {"id": "escola", "nome": "um cursinho pré-vestibular", "dica": "a apostila tem páginas a mais"},
+    {"id": "radio", "nome": "uma rádio comunitária", "dica": "a programação da madrugada não tem locutor"},
+    {"id": "festa", "nome": "uma produtora de festas", "dica": "as festas não têm endereço até a hora"},
+    {"id": "cooperativa", "nome": "uma cooperativa rural", "dica": "a colheita sai à noite"},
+    {"id": "loja", "nome": "uma loja de penhores", "dica": "compram objetos que ninguém quer"}
+  ],
+  "estruturas": [
+    {"id": "celulas", "nome": "células sem líder", "texto": "Cada grupo age sozinho e sabe pouco dos outros: o preso conta menos.", "efeito": {"segredos_preso": -1}},
+    {"id": "hierarquia", "nome": "uma hierarquia com um líder", "texto": "Há alguém no topo, e os de baixo sabem a quem obedecem: o preso conta mais.", "efeito": {"segredos_preso": 1}},
+    {"id": "mente_coletiva", "nome": "uma mente coletiva mascarada", "texto": "De máscara, falam como um só: o preso quase não fala.", "efeito": {"segredos_preso": -2}},
+    {"id": "familia", "nome": "uma família", "texto": "Laços de sangue e de casa: protegem uns aos outros.", "efeito": {"segredos_preso": 0}},
+    {"id": "empresa", "nome": "uma empresa com diretoria", "texto": "Tudo tem nota fiscal e procuração: a papelada também é pista.", "efeito": {"segredos_preso": 1}}
+  ],
+  "metodos": [
+    {"id": "autoridades", "nome": "manda na polícia e na prefeitura", "texto": "A credencial de fachada se queima mais rápido.", "efeito": {"credencial_limite": -1}},
+    {"id": "transmissoes", "nome": "transmite os rituais pela internet", "texto": "Gente demais viu: a Membrana começa mais fraca.", "efeito": {"membrana_inicial": -6}},
+    {"id": "sacrificios", "nome": "faz sacrifícios em lugares abandonados", "texto": "O que está no covil já comeu: o chefe começa mais forte.", "efeito": {"chefe": 10}},
+    {"id": "sumicos", "nome": "faz gente sumir", "texto": "Quem fala com a Ordem corre perigo: as testemunhas somem mais.", "efeito": {"sumico_chance_em": 2}},
+    {"id": "festas", "nome": "esconde os rituais em festas", "texto": "Muita gente perto do Outro Lado sem saber: a Membrana começa um pouco mais fraca.", "efeito": {"membrana_inicial": -3}}
+  ],
+  "sinais": {
+    "sangue": ["arame farpado enrolado nos postes", "marcas de mão vermelha nas portas", "uma flor de pétalas escuras deixada nos degraus"],
+    "morte": ["relógios pendurados ao contrário", "cinzas em círculo na calçada", "fotos com os rostos raspados"],
+    "conhecimento": ["sigilos dourados pintados em muros", "páginas arrancadas pregadas nos postes", "máscaras brancas sem boca"],
+    "energia": ["lâmpadas quebradas em fila", "fios de cobre trançados nos portões", "dados de seis faces deixados nas esquinas"],
+    "medo": ["portas abertas sem ninguém", "névoa que não sai de um terreno", "desenhos de olhos em papel molhado"]
+  },
+  "vilao": {
+    "nota": "O vilão que liga os casos (OR6): uma empresa de fachada que patrocina cultos isolados. Aparece primeiro em recortes de jornal; com três recortes no quadro, a Ordem acha o endereço dela.",
+    "chance_de_ligar": 50,
+    "recortes_para_achar": 3,
+    "empresas": ["Imobiliária", "Construtora", "Fundação", "Companhia", "Holding", "Incorporadora"],
+    "sobrenomes": ["Valadares", "Arruda Lins", "Bezerra & Filhos", "Monte Azul", "Santa Clara", "Horizonte", "Ribeiro Prado", "Nova Aurora"],
+    "recortes": [
+      "{empresa} compra um terreno no bairro; moradores falam de {sinal}",
+      "{empresa} patrocina {fachada}",
+      "Vizinhos de um imóvel da {empresa} reclamam de {sinal}",
+      "{empresa} doa um prédio para {fachada}",
+      "Nota fiscal liga {fachada} a uma conta da {empresa}"
+    ],
+    "final": {
+      "fonte": "Quadro do escritório",
+      "relato": "três recortes apontam para o mesmo endereço: a sede da {empresa}",
+      "chefe": 25,
+      "membrana_inicial": -5,
+      "pp": 5
+    }
+  }
+}

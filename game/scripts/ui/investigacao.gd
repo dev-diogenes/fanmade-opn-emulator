@@ -535,7 +535,7 @@ func _opcoes_procurar(a: Agente) -> void:
 	if cena.pode_usar_credencial(pt):   # credencial de fachada (docs/63)
 		var cfg_c: Dictionary = DadosJogo.ler("sinais").credencial
 		_selo(selos, "credencial", "Credencial %s (+%d, depoimento firme · %d/%d)" % [cfg_c.sigla, int(cfg_c.bonus),
-			int(cena.credencial.get("usos", 0)), int(cfg_c.limite)])
+			int(cena.credencial.get("usos", 0)), int(cena.credencial.get("limite", cfg_c.limite))])
 	if a.tem_habilidade("faro_para_pistas"):
 		_selo(selos, "faro", "Faro p/ Pistas")
 	if not a.perito.is_empty():

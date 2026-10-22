@@ -25,7 +25,7 @@ static func de(semente: int, confianca: String) -> Dictionary:
 		"relato": String(_escolher(d.relatos[el], semente, "relato")), "confianca": confianca,
 		"rotulo": String(conf.rotulo), "alarme_falso": falso, "elemento": el,
 		"explicacao": String(_escolher(d.explicacoes[el], semente, "explicacao")),
-		"bonus_pp": int(conf.get("bonus_pp", 0))}
+		"bonus_pp": int(conf.get("bonus_pp", 0)), "subgenero": Culto.subgenero(semente)}
 
 
 ## Três sinais, um de cada nível de confiança, com sementes tiradas da semente da Base e
@@ -50,6 +50,10 @@ static func fachada(semente: int) -> Dictionary:
 	return (_escolher(DadosJogo.ler("sinais").fachadas, semente, "fachada") as Dictionary).duplicate()
 
 
-## O texto do sinal num cartão: "Post viral · confiança baixa — um açougue amanhece…".
+## O texto do sinal num cartão: "Post viral · confiança baixa · Perseguição — um açougue…".
 static func resumo(s: Dictionary) -> String:
-	return "%s · confiança %s\n%s" % [s.fonte, s.rotulo, String(s.relato).left(1).to_upper() + String(s.relato).substr(1) + "."]
+	var sub := String(s.get("subgenero", "classico"))
+	var marca := "" if sub == "classico" else " · " + String(Culto.dados_subgenero(sub).nome)
+	if s.get("vilao", {}).get("final", false):
+		marca += " · O VILÃO"
+	return "%s · confiança %s%s\n%s" % [s.fonte, s.rotulo, marca, String(s.relato).left(1).to_upper() + String(s.relato).substr(1) + "."]

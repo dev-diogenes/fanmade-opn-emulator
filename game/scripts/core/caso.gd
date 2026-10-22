@@ -36,6 +36,7 @@ var ampliacao_id := ""        ## a reviravolta deste caso (casos.json, "ampliaco
 var ampliacao_verdade := ""   ## o candidato verdadeiro da pergunta nova
 var ampliada := false         ## a reviravolta já foi revelada
 var elemento := "sangue"      ## o elemento do caso (docs/52)
+var culto: Dictionary = {}    ## o culto por trás do caso, em cinco eixos (docs/71)
 ## Relatórios já recusados ([{quem, oque, onde}]): o mesmo não se manda duas vezes.
 var relatorios_recusados: Array = []
 
@@ -47,6 +48,7 @@ static func gerar(dados: Dados) -> Caso:
 	c.acao = d.acoes[dados.rolar(d.acoes.size()) - 1].duplicate(true)
 	c.local = d.locais[dados.rolar(d.locais.size()) - 1].duplicate(true)
 	c.elemento = c._sortear_elemento()
+	c.culto = Culto.gerar(c._semente_do_caso("culto"), c.elemento)
 	c.resumo = String(d.resumo).replace("{sintomas}", String(d.get("elementos", {}).get(c.elemento, {}).get("sintomas", "")))
 	c.objetivo = d.objetivo
 	for p in d.perguntas:
@@ -55,6 +57,10 @@ static func gerar(dados: Dados) -> Caso:
 			"ordem": c._embaralhar_tracos(String(p.id))})
 	c._sortear_ampliacao()
 	return c
+
+
+func _semente_do_caso(sal: String) -> int:
+	return absi(hash("%s|%s|%s|%s" % [sujeito.get("id", ""), acao.get("id", ""), local.get("id", ""), sal]))
 
 
 ## O elemento do caso, da semente do próprio caso (sem gastar os Dados, igual no online).
@@ -386,7 +392,7 @@ func para_dicionario() -> Dictionary:
 	return {"sujeito": sujeito, "acao": acao, "local": local, "resumo": resumo, "objetivo": objetivo,
 		"perguntas": perguntas.duplicate(true), "pistas": pistas.duplicate(true),
 		"ampliacao_id": ampliacao_id, "ampliacao_verdade": ampliacao_verdade, "ampliada": ampliada,
-		"elemento": elemento, "relatorios_recusados": relatorios_recusados.duplicate(true)}
+		"elemento": elemento, "relatorios_recusados": relatorios_recusados.duplicate(true), "culto": culto.duplicate(true)}
 
 
 static func de_dicionario(d: Dictionary) -> Caso:
@@ -400,6 +406,9 @@ static func de_dicionario(d: Dictionary) -> Caso:
 	c.ampliacao_verdade = String(d.get("ampliacao_verdade", ""))
 	c.ampliada = bool(d.get("ampliada", false))
 	c.elemento = String(d.get("elemento", "sangue"))   # save de antes de docs/52: Sangue
+	c.culto = (d.get("culto", {}) as Dictionary).duplicate(true)
+	if not d.has("culto"):   # save de antes de docs/71
+		c.culto = Culto.gerar(c._semente_do_caso("culto"), c.elemento)
 	c.relatorios_recusados = (d.get("relatorios_recusados", []) as Array).duplicate(true)
 	if not d.has("ampliacao_id"):   # save de antes da investigação ampliada (docs/36)
 		c._sortear_ampliacao()

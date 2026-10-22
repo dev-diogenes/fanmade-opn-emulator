@@ -137,6 +137,8 @@ static func nova(semente_: int, ruleset_: Ruleset = null, grupo: Array = [], opc
 	m._ajustar_encontros_ao_elemento()
 	if m.alarme_falso:
 		m._tirar_o_paranormal()
+	m._aplicar_culto_e_subgenero(false)
+	m.credencial["limite"] = int(DadosJogo.ler("sinais").credencial.limite)
 	m.covil_localizado = not bool(DadosJogo.ler("mapa").get("covil_selado", true))
 	var inicio := m.mapa.encontrar("inicio")
 	if grupo.is_empty():
@@ -754,6 +756,37 @@ func _conjurar_ritual_de_mapa(a: Agente, rid: String) -> Dictionary:
 	return {"tipo": "mapa", "efeitos": feitos, "alvo": a, "valor": 0}
 
 
+## O subgênero do sinal (docs/71): sobrepõe o mapa.json só nesta missão (ciclo, caça, interlúdio).
+func _aplicar_culto_e_subgenero(_inicio: bool) -> void:
+	var sub := Culto.dados_subgenero(String(sinal.get("subgenero", "classico")))
+	_cfg = Culto.mesclar(DadosJogo.ler("mapa"), sub.get("cfg", {})) if sub.has("cfg") else DadosJogo.ler("mapa")
+
+
+## O culto do caso (docs/71), nas missões procedurais da carreira: o método e a estrutura mexem
+## na Membrana, no chefe e na credencial; o sinal do vilão deixa o chefe mais forte. Missões de
+## campanha e da comunidade não passam por aqui (o conteúdo delas é escrito à mão).
+func aplicar_efeitos_do_culto() -> void:
+	extras["culto"] = true
+	var sub := subgenero()
+	var ef: Dictionary = caso.culto.get("efeito", {}) if caso != null and not alarme_falso else {}
+	if ef.has("membrana_inicial"):
+		membrana.alterar(int(ef.membrana_inicial), "culto")
+	if ef.has("chefe"):
+		modificador_chefe += int(ef.chefe) / 100.0
+	credencial["limite"] = int(DadosJogo.ler("sinais").credencial.limite) + int(ef.get("credencial_limite", 0))
+	if sinal.get("vilao", {}).get("final", false):
+		var fim: Dictionary = DadosJogo.ler("cultos").vilao.final
+		membrana.alterar(int(fim.membrana_inicial), "vilao")
+		modificador_chefe += int(fim.chefe) / 100.0
+	if String(sinal.get("subgenero", "classico")) != "classico":
+		_log("[color=#8fa3d9][b]%s.[/b] %s[/color]" % [sub.nome, sub.texto])
+
+
+## O subgênero da missão ({nome, texto, …}).
+func subgenero() -> Dictionary:
+	return Culto.dados_subgenero(String(sinal.get("subgenero", "classico")))
+
+
 func _valor(v) -> int:
 	return dados.rolar_expressao(v) if v is String else int(v)
 
@@ -1166,7 +1199,7 @@ func _somar_usos_da_credencial(usos: int, h: Vector2i) -> void:
 		return
 	var cfg: Dictionary = DadosJogo.ler("sinais").credencial
 	credencial.usos = int(credencial.get("usos", 0)) + usos
-	if int(credencial.usos) < int(cfg.limite):
+	if int(credencial.usos) < int(credencial.get("limite", cfg.limite)):
 		return
 	credencial.queimada = true
 	var livres: Array = Hex.vizinhos(h).filter(func(v): return mapa.tem(v) and mapa.conteudo(v).is_empty())
@@ -1456,6 +1489,9 @@ func _turno_do_mundo() -> void:
 		_log("[color=#8fa3d9][b]%s[/b][/color]" % ("A noite cai. Algo começa a se mexer lá fora." if eh_noite() else "Amanhece. O que caçava volta para a névoa."))
 		if eh_noite():
 			_sumir_testemunha()
+	var transmissao := int(subgenero().get("membrana_por_turno", 0))
+	if transmissao != 0:
+		membrana.alterar(transmissao, "transmissao")   # subgênero Transmissão (docs/71)
 	_turnos_sem_surgimento += 2 if eh_noite() else 1   # à noite, duas vezes mais rápido (docs/53)
 	if _turnos_sem_surgimento >= int(_cfg.mundo.surgimento_a_cada_turnos) and membrana.nivel_ameaca() >= 1:
 		_turnos_sem_surgimento = 0
@@ -1475,7 +1511,8 @@ func _sumir_testemunha() -> void:
 	if vivas.is_empty() or cfg.is_empty() or (caso != null and caso.elemento_confirmado()):
 		return
 	var s := absi(hash("%d|%d|sumico" % [semente, turno_mundo]))
-	if s % int(cfg.get("chance_em", 3)) != 0:
+	var chance_em := int(caso.culto.get("efeito", {}).get("sumico_chance_em", cfg.get("chance_em", 3))) if caso != null and extras.get("culto", false) else int(cfg.get("chance_em", 3))
+	if s % chance_em != 0:   # o culto que faz gente sumir: mais vezes (docs/71)
 		return
 	var t: Dictionary = vivas[(s / 5) % vivas.size()]
 	t.sumiu = true
@@ -1949,10 +1986,11 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.sinal = (d.get("sinal", {}) as Dictionary).duplicate()
 	m.alarme_falso = bool(m.sinal.get("alarme_falso", false))
 	m.alarme_confirmado = bool(d.get("alarme_confirmado", false))
+	m._aplicar_culto_e_subgenero(false)   # o subgênero volta a valer no mapa.json desta missão (docs/71)
 	m.varredura = String(d.get("varredura", ""))
 	if d.has("credencial"):
 		m.credencial = {"nome": String(d.credencial.get("nome", "")), "usos": int(d.credencial.get("usos", 0)),
-			"queimada": bool(d.credencial.get("queimada", false))}
+			"queimada": bool(d.credencial.get("queimada", false)), "limite": int(d.credencial.get("limite", DadosJogo.ler("sinais").credencial.limite))}
 	m.presos = (d.get("presos", []) as Array).duplicate(true)
 	m.rituais_usados_no_mapa = (d.get("rituais_usados_no_mapa", []) as Array).duplicate()
 	m.bonus_de_ritual = (d.get("bonus_de_ritual", {}) as Dictionary).duplicate(true)

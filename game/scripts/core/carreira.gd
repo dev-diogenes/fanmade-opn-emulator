@@ -34,6 +34,9 @@ var contencao: Array = []
 var pista_do_preso: Dictionary = {}
 ## Amostras para o laboratório (docs/63, OR2): saem das pistas além do necessário.
 var amostras := 0
+## O vilão que liga os casos (docs/71): a empresa de fachada e os recortes que a apontam.
+var vilao: Dictionary = {}
+var recortes: Array = []
 var _proximo_id := 1
 
 
@@ -197,8 +200,9 @@ func iniciar_missao(grupo: Array, semente: int, sinal: Dictionary = {}) -> Missa
 		_restaurar(a)
 	var op := _opcoes_da_missao()
 	if not sinal.is_empty():
-		op["sinal"] = sinal
+		op["sinal"] = _ligar_ao_vilao(sinal)
 	missao = Missao.nova(semente, ruleset, grupo.duplicate(), op)
+	missao.aplicar_efeitos_do_culto()   # docs/71
 	if eco_do_covil:
 		missao.plantar_eco_do_covil()
 		eco_do_covil = false
@@ -216,6 +220,8 @@ func iniciar_missao_comunidade(grupo: Array, definicao: Dictionary, semente: int
 	for a in grupo:
 		_restaurar(a)
 	missao = MissaoComunidade.criar_missao(definicao, ruleset, grupo.duplicate(), _opcoes_da_missao(), semente)
+	if missao.caso != null:
+		missao.caso.culto = {}   # o caso escrito à mão não ganha culto sorteado (docs/71)
 	ultimo_relatorio = {}
 	return missao
 
@@ -250,6 +256,8 @@ func iniciar_missao_campanha(grupo: Array, campanha: Dictionary, semente: int) -
 		_restaurar(a)
 	missao = MissaoComunidade.criar_missao(campanha.missoes[i].definicao, ruleset, grupo.duplicate(), _opcoes_da_missao(), semente)
 	missao.extras["campanha"] = Campanha.extras_da_etapa(campanha, i)
+	if missao.caso != null:
+		missao.caso.culto = {}   # o caso escrito à mão não ganha culto sorteado (docs/71)
 	Campanha.aplicar_marcas(missao, campanha.missoes[i], p.marcas)
 	ultimo_relatorio = {}
 	return missao
@@ -293,6 +301,7 @@ func encerrar_missao() -> Dictionary:
 	if m.vitoria and not m.alarme_confirmado and int(m.sinal.get("bonus_pp", 0)) > 0:
 		pp_base += int(m.sinal.bonus_pp)   # ninguém dava nada por esse sinal (docs/62)
 		linhas_pp.append("Sinal de confiança baixa, e era real: %+d" % int(m.sinal.bonus_pp))
+	pp_base += _fechar_vilao(m, linhas_pp)   # docs/71
 	match m.varredura:   # docs/62
 		"equipe":
 			pp_base -= 2
@@ -362,7 +371,7 @@ func encerrar_missao() -> Dictionary:
 				continue
 			var preso: Dictionary = p.duplicate()
 			preso.cela = String(livres[0])
-			preso.segredos = int(cfg_c.segredos)
+			preso.segredos = maxi(1, int(cfg_c.segredos) + (int(m.caso.culto.get("efeito", {}).get("segredos_preso", 0)) if m.caso != null and m.extras.get("culto", false) else 0))   # a estrutura do culto (docs/71)
 			preso.interrogado = -1
 			contencao.append(preso)
 			presos_novos.append("%s (cela %s)" % [preso.nome, preso.cela])
@@ -449,6 +458,54 @@ func analisar_sinal(sinal: Dictionary) -> Dictionary:
 
 
 ## Entre missões, na Base: recuperação total e fim de condições.
+# --- O vilão que liga os casos (docs/71, OR6) -------------------------------------
+
+## Metade das missões tem um culto ligado ao vilão da carreira; o sinal final já vem ligado.
+func _ligar_ao_vilao(sinal: Dictionary) -> Dictionary:
+	var s := sinal.duplicate(true)
+	if vilao.is_empty():
+		vilao = Culto.vilao(int(s.get("semente", 0)))
+	if s.get("vilao", {}).get("final", false):
+		return s
+	if not s.get("alarme_falso", false) and Culto.liga_ao_vilao(int(s.get("semente", 0))):
+		s["vilao"] = {"ligado": true, "nome": vilao.nome}
+	return s
+
+
+## Três recortes no quadro: a Ordem acha a sede do vilão.
+func vilao_encontrado() -> bool:
+	return not vilao.is_empty() and recortes.size() >= int(DadosJogo.ler("cultos").vilao.get("recortes_para_achar", 3))
+
+
+## O sinal da sede do vilão: certeza total, chefe mais forte.
+func sinal_do_vilao(semente: int) -> Dictionary:
+	var fim: Dictionary = DadosJogo.ler("cultos").vilao.final
+	var s := Sinais.de(semente, "alta")
+	s.fonte = String(fim.fonte)
+	s.relato = String(fim.relato).replace("{empresa}", String(vilao.nome))
+	s.rotulo = "certeza"
+	s.alarme_falso = false
+	s.vilao = {"final": true, "nome": vilao.nome}
+	return s
+
+
+## Fim de missão: o recorte novo, ou a queda do vilão. Devolve o PP a somar.
+func _fechar_vilao(m: Missao, linhas_pp: Array[String]) -> int:
+	var vil: Dictionary = m.sinal.get("vilao", {})
+	if vil.is_empty() or m.caso == null or not m.vitoria or not m.caso_solucionado():
+		return 0
+	if vil.get("final", false):
+		var pp := int(DadosJogo.ler("cultos").vilao.final.pp)
+		linhas_pp.append("A %s cai: os cultos que ela pagava ficam sem dono: %+d" % [vil.nome, pp])
+		vilao = Culto.vilao(int(m.semente) + 1, int(vilao.get("derrotados", 0)) + 1)
+		recortes.clear()
+		return pp
+	var texto := Culto.recorte(vilao, m.caso.culto, int(m.semente))
+	recortes.append({"missao": missoes_concluidas + 1, "texto": texto, "culto": String(m.caso.culto.get("nome", ""))})
+	linhas_pp.append("Recorte para o quadro do escritório: \"%s\" (+0)" % texto)
+	return 0
+
+
 ## Traumas que ficam (docs/70): quem chegou a enlouquecer na missão (o efeito de insanidade
 ## durava até o fim dela) testa Vontade; falhando, leva uma fobia do elemento do caso.
 func _trauma_da_missao(a: Agente, m: Missao) -> String:
@@ -492,6 +549,7 @@ func para_dicionario() -> Dictionary:
 		"memorial": memorial.duplicate(true), "opcoes": opcoes.duplicate(), "controles": controles.para_dicionario(),
 		"missoes_concluidas": missoes_concluidas, "ultimo_relatorio": ultimo_relatorio.duplicate(true), "eco_do_covil": eco_do_covil,
 		"contencao": contencao.duplicate(true), "pista_do_preso": pista_do_preso.duplicate(), "amostras": amostras,
+		"vilao": vilao.duplicate(true), "recortes": recortes.duplicate(true),
 		"campanhas": campanhas.duplicate(true), "recrutas_extras": recrutas_extras.duplicate(true),
 		"missao": missao.para_dicionario() if missao != null else {},
 		# Agentes que estão na missão mas saíram do roster (mortos aguardando o relatório)
@@ -532,6 +590,8 @@ static func de_dicionario(d: Dictionary, ruleset_: Ruleset = null) -> Carreira:
 		c.contencao.append(preso)
 	c.pista_do_preso = (d.get("pista_do_preso", {}) as Dictionary).duplicate()
 	c.amostras = int(d.get("amostras", 0))
+	c.vilao = (d.get("vilao", {}) as Dictionary).duplicate(true)
+	c.recortes = (d.get("recortes", []) as Array).duplicate(true)
 	c.ultimo_relatorio = d.get("ultimo_relatorio", {})
 	c.campanhas = d.get("campanhas", {})
 	c.recrutas_extras = d.get("recrutas_extras", [])

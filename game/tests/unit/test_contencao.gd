@@ -81,7 +81,8 @@ func test_rendido_vai_para_a_contencao():
 	c.encerrar_missao()
 	assert_eq(c.contencao.size(), 1)
 	assert_eq(c.contencao[0].cela, "A")
-	assert_eq(int(c.contencao[0].segredos), 2)
+	var estrutura := int(m.caso.culto.get("efeito", {}).get("segredos_preso", 0))   # docs/71: a estrutura do culto
+	assert_eq(int(c.contencao[0].segredos), maxi(1, 2 + estrutura))
 	var volta := Carreira.de_dicionario(JSON.parse_string(JSON.stringify(c.para_dicionario())), rs)
 	assert_eq(volta.contencao[0].nome, c.contencao[0].nome, "vai no save")
 

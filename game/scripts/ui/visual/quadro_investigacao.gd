@@ -61,7 +61,12 @@ func _reconstruir() -> void:
 	titulo.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	titulo.position = Vector2(20, 14)
 	_conteudo.add_child(titulo)
-	var objetivo := _bilhete(caso.objetivo, Vector2(size.x - 40, 0), 0.0, Tema.FONTE_P)
+	var texto_objetivo := caso.objetivo
+	if not caso.culto.is_empty():   # docs/71: o sinal do culto aparece desde o começo; o resto, quando se sabe quem é
+		texto_objetivo += "\nNos muros e nas portas: %s." % caso.culto.sinal
+		if caso.resposta("quem") != "":
+			texto_objetivo += "\nCulto: %s, %s, organizado em %s." % [caso.culto.nome, caso.culto.fachada.nome, caso.culto.estrutura.nome]
+	var objetivo := _bilhete(texto_objetivo, Vector2(size.x - 40, 0), 0.0, Tema.FONTE_P)
 	objetivo.position = Vector2(20, 40)
 	_conteudo.add_child(objetivo)
 
