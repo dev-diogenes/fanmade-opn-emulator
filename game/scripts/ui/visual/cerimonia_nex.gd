@@ -96,7 +96,7 @@ func _cartao(ag: Dictionary, agente: Agente) -> Control:
 	var foto := FotoAgente.new()
 	foto.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	if agente != null:
-		foto.mostrar(agente.classe_id, agente.aparencia, agente.tom)
+		foto.mostrar(agente.classe_id, agente.aparencia, agente.tom, hash(agente.nome))
 	foto.legenda = String(ag.nome)
 	c.add_child(foto)
 	var nex := Label.new()

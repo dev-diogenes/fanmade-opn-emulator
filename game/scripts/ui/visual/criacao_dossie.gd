@@ -231,7 +231,7 @@ func _trocar_tom(passo: int) -> void:
 func _atualizar_foto() -> void:
 	if _foto == null:
 		return
-	_foto.mostrar(String(ficha.classe), String(ficha.aparencia), int(ficha.tom))
+	_foto.mostrar(String(ficha.classe), String(ficha.aparencia), int(ficha.tom), hash(String(ficha.nome)))
 	_foto.legenda = String(ficha.nome).strip_edges()
 	var modelo := Pecas.modelo_do_agente(String(ficha.classe), String(ficha.aparencia))
 	_lbl_aparencia.text = "%s · %s%s" % [Pecas.APARENCIAS.get(modelo, modelo), Pecas.TONS[int(ficha.tom)][0],

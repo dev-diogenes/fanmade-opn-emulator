@@ -78,14 +78,14 @@ func _init() -> void:
 
 
 ## Fotografa a figura com esta aparência. Não refaz se nada mudou.
-func mostrar(classe_id: String, aparencia: String = "", tom: int = 0) -> void:
-	var nova := "%s|%d" % [Pecas.modelo_do_agente(classe_id, aparencia), tom]
+func mostrar(classe_id: String, aparencia: String = "", tom: int = 0, semente: int = 0) -> void:
+	var nova := "%s|%d|%d" % [Pecas.modelo_do_agente(classe_id, aparencia), tom, semente]
 	if nova == chave:
 		return
 	chave = nova
 	if figura != null:
 		figura.queue_free()
-	figura = Pecas.agente(classe_id, Color("3a3530"), 1.0, aparencia, tom)
+	figura = Pecas.agente(classe_id, Color("3a3530"), 1.0, aparencia, tom, semente)   # semente: o tom de pele (docs/55)
 	if figura.get_child_count() > 1 and figura.get_child(0) is MeshInstance3D:
 		figura.get_child(0).visible = false   # sem a base de peça: é um retrato, não o tabuleiro
 	figura.rotation.y = 0.35

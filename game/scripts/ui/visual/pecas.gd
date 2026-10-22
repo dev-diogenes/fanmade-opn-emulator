@@ -96,7 +96,7 @@ static func tingir(raiz: Node, tinta: Color) -> void:
 
 
 ## Aparências escolhidas na foto do dossiê (docs/19): modelo da KayKit e tom da roupa.
-const APARENCIAS := {"Knight": "Armadura", "Rogue_Hooded": "Capuz", "Mage": "Chapéu", "Barbarian": "Rústico"}
+const APARENCIAS := {"Knight": "Colete tático", "Rogue_Hooded": "Moletom", "Mage": "Sobretudo", "Barbarian": "Jaqueta de couro"}
 const TONS := [["Original", Color.WHITE], ["Sépia", Color("d9c39c")], ["Noite", Color("8d9bbb")], ["Luto", Color("77707c")]]
 
 
@@ -105,18 +105,295 @@ static func modelo_do_agente(classe_id: String, aparencia: String = "") -> Strin
 	return aparencia if APARENCIAS.has(aparencia) else String(PERSONAGEM_POR_CLASSE.get(classe_id, "Knight"))
 
 
-## Figura de um agente: personagem animado da KayKit sobre uma base na cor do jogador
-## (como uma peça de tabuleiro). Sem o modelo, cai no peão de `figura`.
-static func agente(classe_id: String, cor: Color, escala: float = 1.0, aparencia: String = "", tom: int = 0) -> Node3D:
+## Figura de um agente: personagem animado sobre uma base na cor do jogador (peça de tabuleiro).
+## Gente de hoje (docs/55): o esqueleto e as animações da KayKit, sem elmo, chapéu, capa nem
+## arma; a roupa recolorida pelo shader e acessórios presos aos ossos. `semente` escolhe o tom de
+## pele. Sem o modelo, cai no peão de `figura`.
+static func agente(classe_id: String, cor: Color, escala: float = 1.0, aparencia: String = "", tom: int = 0, semente: int = 0) -> Node3D:
 	var nome := modelo_do_agente(classe_id, aparencia)
 	var tinta: Color = TONS[clampi(tom, 0, TONS.size() - 1)][1]
-	var n := personagem(DIR_PERSONAGENS + nome + ".glb", nome.split("_")[0] + "_", cor, escala, tinta)
-	return n if n != null else figura(cor, escala)
+	var n := personagem(DIR_PERSONAGENS + nome + ".glb", nome.split("_")[0] + "_", cor, escala)
+	if n == null:
+		return figura(cor, escala)
+	var v: Dictionary = VISUAL_CONTEMPORANEO.get(nome, VISUAL_CONTEMPORANEO.Knight)
+	if v.has("cabeca"):
+		trocar_cabeca(n, nome, String(v.cabeca))
+	vestir(n, nome, PELES[absi(semente) % PELES.size()], Color(v.roupa), Color(v.calca), tinta, v.get("capa", false),
+		CABELOS[absi(semente / 7) % CABELOS.size()])
+	var esq := esqueleto(n)
+	if esq != null:
+		_acessorio(esq, String(v.acessorio))
+		_na_mao(esq, String(ITEM_POR_CLASSE.get(classe_id, "")))
+	return n
 
 
 ## A figura com a aparência escolhida pelo jogador.
 static func do_agente(a: Agente, cor: Color, escala: float = 1.0) -> Node3D:
-	return agente(a.classe_id, cor, escala, a.aparencia, a.tom)
+	return agente(a.classe_id, cor, escala, a.aparencia, a.tom, hash(a.nome))
+
+
+# --- Gente de hoje (docs/55) ---------------------------------------------------------
+
+## A roupa de cada modelo: cor de cima, de baixo e o acessório. As chaves são as de APARENCIAS.
+const VISUAL_CONTEMPORANEO := {
+	"Knight": {"roupa": "6b7680", "calca": "7a8256", "acessorio": "colete"},
+	"Rogue_Hooded": {"roupa": "6f9474", "calca": "5a80b0", "acessorio": "mochila", "cabeca": "Mage"},
+	"Mage": {"roupa": "8a6450", "calca": "4a505c", "acessorio": "bolsa", "capa": true},
+	"Barbarian": {"roupa": "5c5052", "calca": "5a80b0", "acessorio": "bone"},
+}
+## Tons de pele do Brasil de hoje, do mais claro ao mais escuro.
+const PELES := [Color("f2cba8"), Color("e0ad86"), Color("c48c5f"), Color("a56f49"), Color("86573a"), Color("6a4329")]
+const ITEM_POR_CLASSE := {"combatente": "pistola", "especialista": "lanterna", "ocultista": "caderno", "mundano": "celular"}
+const SAPATO := Color("1b1a1c")
+## Cabelo e barba: castanho-escuro, preto, castanho, ruivo, grisalho e loiro-escuro.
+const CABELOS := [Color("5a3a24"), Color("3a2c24"), Color("7a5232"), Color("94502a"), Color("a29c94"), Color("b48e56")]
+static var _shader_roupa: Shader
+
+
+## Troca a cabeça do modelo pela de outro do mesmo esqueleto (docs/55): o moletom da KayKit vem
+## com um pano no rosto, que fica para os cultistas; a agente de moletom ganha um rosto de verdade.
+static func trocar_cabeca(n: Node3D, nome: String, de: String) -> void:
+	var esq := esqueleto(n)
+	var outro := modelo(DIR_PERSONAGENS + de + ".glb")
+	if esq == null or outro == null:
+		return
+	var prefixo := nome.split("_")[0] + "_"
+	var antiga: MeshInstance3D = null
+	for mi in n.find_children("*", "MeshInstance3D", true, false):
+		if String(mi.name).begins_with(prefixo + "Head"):
+			antiga = mi
+	var nova: MeshInstance3D = null
+	for mi in outro.find_children("*", "MeshInstance3D", true, false):
+		if String(mi.name) == de + "_Head":
+			nova = mi
+	if antiga == null or nova == null:
+		outro.free()
+		return
+	nova.get_parent().remove_child(nova)
+	nova.owner = null
+	antiga.get_parent().add_child(nova)
+	nova.skeleton = nova.get_path_to(esq)
+	nova.name = prefixo + "Head"   # o prefixo do corpo, para valer nas regras de quem aparece
+	antiga.visible = false
+	antiga.name = prefixo + "Capuz_Oculto"
+	outro.free()
+
+
+## O esqueleto do modelo dentro da figura (null nas peças por código).
+static func esqueleto(n: Node3D) -> Skeleton3D:
+	var lista := n.find_children("*", "Skeleton3D", true, false)
+	return lista.front() if not lista.is_empty() else null
+
+
+## Tira o que é de fantasia (elmo, chapéu, capa, escudo) e recolore o resto como roupa de hoje.
+## `capa`: o sobretudo fica (a capa do mago vira a aba do casaco).
+static func vestir(n: Node3D, nome: String, pele: Color, roupa: Color, calca: Color, tinta: Color = Color.WHITE, capa: bool = false,
+		cabelo: Color = Color("3a2618")) -> void:
+	if _shader_roupa == null and ResourceLoader.exists("res://assets/shaders/roupa_contemporanea.gdshader"):
+		_shader_roupa = load("res://assets/shaders/roupa_contemporanea.gdshader")
+	var prefixo := nome.split("_")[0] + "_"
+	for mi in n.find_children("*", "MeshInstance3D", true, false):
+		var nm := String(mi.name)
+		if not nm.begins_with(prefixo) or not mi.visible:
+			continue
+		if nm.ends_with("Helmet") or nm.ends_with("Hat") or nm.contains("Shield") or (nm.ends_with("Cape") and not capa):
+			mi.visible = false
+			continue
+		if _shader_roupa == null:
+			continue
+		var original: Material = mi.get_active_material(0)
+		var tex: Texture2D = original.albedo_texture if original is StandardMaterial3D else null
+		if tex == null:
+			continue
+		var m := ShaderMaterial.new()
+		m.shader = _shader_roupa
+		m.set_shader_parameter("textura", tex)
+		m.set_shader_parameter("pele", pele)
+		var perna := nm.contains("Leg")
+		var cabeca := nm.contains("Head")
+		var capuz := nm.contains("Hooded")
+		# Na cabeça, os cinzas são cabelo e barba; no capuz do moletom, a cor vira roupa
+		m.set_shader_parameter("roupa", calca if perna else (roupa if capuz else (cabelo if cabeca else roupa)))
+		m.set_shader_parameter("escuro", SAPATO if perna else (cabelo.darkened(0.3) if cabeca else calca))
+		m.set_shader_parameter("tinta", tinta)
+		m.set_shader_parameter("cor_vira_roupa", 0.0 if (cabeca and not capuz) else 1.0)
+		mi.material_override = m
+
+
+static func _osso(esq: Skeleton3D, osso: String) -> BoneAttachment3D:
+	var b := BoneAttachment3D.new()
+	b.bone_name = osso
+	esq.add_child(b)
+	return b
+
+
+static func _peca(pai: Node3D, mesh: Mesh, cor: Color, pos: Vector3, rot: Vector3 = Vector3.ZERO, emissao: float = 0.0) -> MeshInstance3D:
+	var mi := _malha(mesh, material(cor, false, emissao), pos)
+	mi.rotation = rot
+	pai.add_child(mi)
+	return mi
+
+
+static func _cubo(x: float, y: float, z: float) -> BoxMesh:
+	var b := BoxMesh.new()
+	b.size = Vector3(x, y, z)
+	return b
+
+
+## O acessório do visual: colete tático, mochila, bolsa a tiracolo ou boné (medidas no espaço
+## do modelo da KayKit, antes da escala da peça).
+static func _acessorio(esq: Skeleton3D, tipo: String) -> void:
+	match tipo:
+		"colete":
+			var b := _osso(esq, "chest")
+			_peca(b, _cubo(0.82, 0.5, 0.62), Color("3d4530"), Vector3(0, 0.08, 0.02))
+			_peca(b, _cubo(0.2, 0.14, 0.08), Color("2c3324"), Vector3(-0.2, 0.06, 0.35))   # bolsos
+			_peca(b, _cubo(0.2, 0.14, 0.08), Color("2c3324"), Vector3(0.2, 0.06, 0.35))
+		"mochila":
+			var b := _osso(esq, "chest")
+			_peca(b, _cubo(0.7, 0.75, 0.32), Color("5a3b26"), Vector3(0, 0.05, -0.5))
+			_peca(b, _cubo(0.5, 0.25, 0.1), Color("4a2f1e"), Vector3(0, -0.12, -0.7))
+		"bolsa":
+			var b := _osso(esq, "hips")
+			_peca(b, _cubo(0.42, 0.32, 0.14), Color("6b4a2e"), Vector3(0.42, 0.15, 0.1))
+		"bone":
+			var b := _osso(esq, "head")
+			var copa := SphereMesh.new()
+			copa.radius = 0.52
+			copa.height = 0.6
+			_peca(b, copa, Color("1d2230"), Vector3(0, 0.62, 0))
+			_peca(b, _cubo(0.62, 0.05, 0.42), Color("141824"), Vector3(0, 0.5, 0.5))   # aba
+
+
+## O que o agente leva na mão direita: pistola, lanterna (com a ponta acesa), caderno ou celular.
+static func _na_mao(esq: Skeleton3D, tipo: String) -> void:
+	if tipo == "":
+		return
+	var b := _osso(esq, "handslot.r")
+	match tipo:
+		"pistola":
+			_peca(b, _cubo(0.1, 0.12, 0.42), Color("1a1a1c"), Vector3(0, 0.02, 0.12))
+			_peca(b, _cubo(0.09, 0.26, 0.12), Color("2a2622"), Vector3(0, -0.12, -0.02))
+		"lanterna":
+			var corpo := CylinderMesh.new()
+			corpo.top_radius = 0.07
+			corpo.bottom_radius = 0.06
+			corpo.height = 0.5
+			_peca(b, corpo, Color("2b2b30"), Vector3(0, 0, 0.15), Vector3(PI / 2, 0, 0))
+			var ponta := CylinderMesh.new()
+			ponta.top_radius = 0.09
+			ponta.bottom_radius = 0.07
+			ponta.height = 0.06
+			_peca(b, ponta, Color("fff2c0"), Vector3(0, 0, 0.42), Vector3(PI / 2, 0, 0), 2.5)
+		"caderno":
+			_peca(b, _cubo(0.34, 0.06, 0.46), Color("5b1e1e"), Vector3(0, 0, 0.05))
+			_peca(b, _cubo(0.3, 0.07, 0.42), Color("e8e0c8"), Vector3(0.02, 0, 0.05))
+		"celular":
+			_peca(b, _cubo(0.16, 0.03, 0.3), Color("141416"), Vector3(0, 0, 0.05))
+
+
+## Quem é a pessoa pela ficha (docs/55): polícia, culto, crime ou bicho.
+static func visual_de_pessoa(nome: String) -> String:
+	var n := nome.to_lower()
+	for par in [["polic", "policia"], ["delegad", "policia"], ["cultista", "cultista"], ["culto", "cultista"],
+			["iniciado", "cultista"], ["investido", "cultista"], ["cão", "cao"], ["cao", "cao"], ["javaporco", "porco"],
+			["onça", "onca"], ["onca", "onca"], ["sucuri", "cobra"], ["jacaré", "jacare"], ["jacare", "jacare"],
+			["enxame", "enxame"], ["ratos", "enxame"], ["abelhas", "enxame"]]:
+		if n.contains(par[0]):
+			return String(par[1])
+	return "crime"
+
+
+## Gente da ficha: o mesmo esqueleto, vestido conforme quem é. Cultistas de túnica escura com o
+## pano preto recortado nos olhos (os indícios do caso falam dele); polícia de farda azul com
+## quepe; o crime de moletom e jeans.
+static func pessoa(nome: String, escala: float = 1.0) -> Node3D:
+	var visual := visual_de_pessoa(nome)
+	var modelo_nome: String = {"cultista": "Rogue_Hooded", "policia": "Knight", "crime": "Barbarian"}.get(visual, "Barbarian")
+	var cores: Array = {"cultista": [Color("7a2832"), Color("3a262a")], "policia": [Color("3a5590"), Color("2e3c60")],
+		"crime": [Color("6a7076"), Color("5a80b0")]}.get(visual, [Color("6a7076"), Color("5a80b0")])
+	var n := personagem(DIR_PERSONAGENS + modelo_nome + ".glb", modelo_nome.split("_")[0] + "_", Color("b03a2e"), escala)
+	if n == null:
+		return figura(Color("b03a2e"), escala)
+	vestir(n, modelo_nome, PELES[absi(hash(nome)) % PELES.size()], cores[0], cores[1], Color.WHITE, false, CABELOS[absi(hash(nome) / 7) % CABELOS.size()])
+	var esq := esqueleto(n)
+	if esq != null:
+		match visual:
+			"cultista":
+				var b := _osso(esq, "head")
+				_peca(b, _cubo(0.7, 0.42, 0.06), Color("0d0b0c"), Vector3(0, 0.38, 0.55))   # o pano nos olhos
+				_peca(b, _cubo(0.16, 0.06, 0.07), Color("c0392b"), Vector3(-0.16, 0.42, 0.58), Vector3.ZERO, 1.2)
+				_peca(b, _cubo(0.16, 0.06, 0.07), Color("c0392b"), Vector3(0.16, 0.42, 0.58), Vector3.ZERO, 1.2)
+			"policia":
+				var b := _osso(esq, "head")
+				var quepe := CylinderMesh.new()
+				quepe.top_radius = 0.56
+				quepe.bottom_radius = 0.5
+				quepe.height = 0.22
+				_peca(b, quepe, Color("141a2c"), Vector3(0, 0.72, 0))
+				_peca(b, _cubo(0.5, 0.04, 0.3), Color("0f1320"), Vector3(0, 0.62, 0.45))
+				_na_mao(esq, "pistola")
+			_:
+				_na_mao(esq, "celular")
+	return n
+
+
+## Bicho de quatro patas, cobra ou enxame (docs/55): antes eram gente encapuzada.
+static func bicho(nome: String, escala: float = 1.0) -> Node3D:
+	var visual := visual_de_pessoa(nome)
+	var n := Node3D.new()
+	var s := escala
+	match visual:
+		"cobra", "jacare":
+			var cor: Color = Color("3f5a2a") if visual == "cobra" else Color("4a5238")
+			var partes := 7 if visual == "cobra" else 4
+			for i in partes:
+				var seg := SphereMesh.new() if visual == "cobra" else null
+				var mesh: Mesh = seg if seg != null else _cubo(0.28 * s, 0.14 * s, 0.26 * s)
+				if seg != null:
+					seg.radius = 0.1 * s
+					seg.height = 0.16 * s
+				var p := _malha(mesh, material(cor.darkened(0.08 * (i % 2))), Vector3(-0.42 * s + i * 0.13 * s * (1.0 if visual == "cobra" else 2.0), 0.08 * s, sin(i * 1.1) * 0.12 * s))
+				n.add_child(p)
+			if visual == "jacare":
+				n.add_child(_malha(_cubo(0.4 * s, 0.1 * s, 0.16 * s), material(cor.darkened(0.15)), Vector3(0.62 * s, 0.07 * s, 0)))
+		"enxame":
+			for i in 14:
+				var b := SphereMesh.new()
+				b.radius = 0.035 * s
+				b.height = 0.07 * s
+				var a := i * 2.39
+				n.add_child(_malha(b, material(Color("2a2420") if nome.to_lower().contains("rato") else Color("c9a020")),
+					Vector3(cos(a) * 0.05 * s * (i % 5 + 1), 0.15 * s + 0.08 * s * (i % 3), sin(a) * 0.05 * s * (i % 5 + 1))))
+		_:
+			var cor: Color = {"cao": Color("3a2e26"), "porco": Color("5a4a40"), "onca": Color("c99236")}.get(visual, Color("4a3a30"))
+			var comp := 0.6 if visual == "onca" else (0.5 if visual == "porco" else 0.46)
+			var alto := 0.16 if visual == "porco" else 0.2   # pernas
+			var gordo := 0.3 if visual == "porco" else 0.24
+			var corpo := CapsuleMesh.new()
+			corpo.radius = gordo * 0.5 * s
+			corpo.height = comp * s
+			var c := _malha(corpo, material(cor), Vector3(0, (alto + gordo * 0.5) * s, 0))
+			c.rotation.z = PI / 2
+			n.add_child(c)
+			var cabeca := SphereMesh.new()
+			cabeca.radius = 0.12 * s
+			cabeca.height = 0.22 * s
+			n.add_child(_malha(cabeca, material(cor.darkened(0.08)), Vector3(comp * 0.55 * s, (alto + gordo * 0.8) * s, 0)))
+			n.add_child(_malha(_cubo(0.12 * s, 0.08 * s, 0.1 * s), material(cor.darkened(0.3)), Vector3(comp * 0.55 * s + 0.12 * s, (alto + gordo * 0.65) * s, 0)))
+			if visual == "cao":   # orelhas
+				for dz in [-1, 1]:
+					n.add_child(_malha(_cubo(0.05 * s, 0.09 * s, 0.04 * s), material(cor.darkened(0.25)), Vector3(comp * 0.5 * s, (alto + gordo + 0.04) * s, dz * 0.06 * s)))
+			var rabo := _malha(_cubo(0.18 * s, 0.04 * s, 0.04 * s), material(cor.darkened(0.15)), Vector3(-comp * 0.62 * s, (alto + gordo * 0.75) * s, 0))
+			rabo.rotation.z = 0.5
+			n.add_child(rabo)
+			for dx in [-1, 1]:
+				for dz in [-1, 1]:
+					n.add_child(_malha(_cubo(0.07 * s, alto * s, 0.07 * s), material(cor.darkened(0.2)), Vector3(dx * comp * 0.32 * s, alto * 0.5 * s, dz * 0.07 * s)))
+			if visual == "onca":   # as pintas
+				for i in 6:
+					n.add_child(_malha(_cubo(0.05 * s, 0.01 * s, 0.05 * s), material(Color("2a1a10")), Vector3(-0.2 * s + i * 0.07 * s, (alto + gordo) * s, -0.05 * s + (i % 2) * 0.1 * s)))
+	return n
 
 
 ## Figura de uma ameaça (docs/09): criaturas viram esqueletos tingidos pela cor do elemento;
@@ -134,16 +411,48 @@ static func ameaca(ser: Ameaca, escala: float = 1.0) -> Node3D:
 			"energia": tinta = Tema.ESPECTRO_ENERGIA[absi(hash(ser.nome)) % Tema.ESPECTRO_ENERGIA.size()].lightened(0.15)
 			"medo": tinta = Color(0.85, 0.88, 0.92)
 		n = personagem(DIR_ESQUELETOS + nome + ".glb", nome + "_", elemento.darkened(0.3), escala * (1.25 if grande else 1.0), tinta)
+		if n != null:
+			_silhueta_do_elemento(n, ser.elemento)
 		if n != null and ser.elemento == "medo":
 			for mi in n.find_children("*", "MeshInstance3D", true, false):
 				(mi as MeshInstance3D).transparency = 0.55   # o Medo distorce: quase transparente
 		if n != null and ser.elemento == "energia":
 			_neon(n)
+	elif visual_de_pessoa(ser.nome) in ["cao", "porco", "onca", "cobra", "jacare", "enxame"]:
+		return bicho(ser.nome, escala)
 	else:
-		n = personagem(DIR_PERSONAGENS + "Rogue_Hooded.glb", "Rogue_", cor_base, escala, Color(0.62, 0.2, 0.22))
+		n = pessoa(ser.nome, escala)
 	if n != null:
 		return n
 	return criatura(cor_base, escala * 1.2) if grande else figura(cor_base, escala)
+
+
+## Silhueta por elemento (docs/55, pela wiki): Sangue baixa e larga; Morte alta e magra;
+## Conhecimento ereta, com a máscara dourada; Energia e Medo ficam como estão (a cor faz o resto).
+static func _silhueta_do_elemento(n: Node3D, elemento: String) -> void:
+	var modelo: Node3D = null
+	for f in n.get_children():
+		if f is Node3D and not f is MeshInstance3D:
+			modelo = f
+	if modelo == null:
+		return
+	for mi in n.find_children("*", "MeshInstance3D", true, false):
+		if String(mi.name).ends_with("Helmet"):
+			mi.visible = false   # elmo de chifres é coisa de fantasia
+	match elemento:
+		"sangue":
+			modelo.scale = Vector3(modelo.scale.x * 1.25, modelo.scale.y * 0.85, modelo.scale.z * 1.25)
+		"morte":
+			modelo.scale = Vector3(modelo.scale.x * 0.82, modelo.scale.y * 1.22, modelo.scale.z * 0.82)
+		"conhecimento":
+			var esq := esqueleto(n)
+			if esq != null:
+				var b := _osso(esq, "head")
+				var mascara := SphereMesh.new()
+				mascara.radius = 0.42
+				mascara.height = 0.5
+				var mi := _peca(b, mascara, Tema.ELEMENTO.conhecimento, Vector3(0, 0.45, 0.32), Vector3.ZERO, 0.8)
+				mi.scale = Vector3(1, 1.1, 0.35)
 
 
 ## A criatura de Energia pisca no espectro neon (docs/54): uma luz que troca de cor sem parar.
@@ -826,9 +1135,12 @@ static func _peca_do_marcador(tipo: String) -> Node3D:
 	return peca
 
 
-## Cultista encapuzado em miniatura (encontros no mapa), ou null sem o modelo.
+## Cultista encapuzado em miniatura (encontros no mapa), ou null sem o modelo: túnica escura e
+## o pano preto nos olhos (docs/55).
 static func cultista_miniatura(escala: float) -> Node3D:
-	return personagem(DIR_PERSONAGENS + "Rogue_Hooded.glb", "Rogue_", Color("b03a2e"), escala, Color(0.62, 0.2, 0.22))
+	if modelo(DIR_PERSONAGENS + "Rogue_Hooded.glb") == null:
+		return null
+	return pessoa("Cultista", escala)
 
 
 ## Sigilo procedural deitado no chão (cache da textura por semente e cor).

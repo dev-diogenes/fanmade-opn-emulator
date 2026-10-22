@@ -373,7 +373,7 @@ func _montar_habilidades() -> Control:
 	var desc := HBoxContainer.new()
 	desc.add_theme_constant_override("separation", 14)
 	var foto := FotoAgente.new()
-	foto.mostrar(agente.classe_id, agente.aparencia, agente.tom)
+	foto.mostrar(agente.classe_id, agente.aparencia, agente.tom, hash(agente.nome))
 	foto.legenda = agente.nome
 	desc.add_child(foto)
 	var texto := VBoxContainer.new()
