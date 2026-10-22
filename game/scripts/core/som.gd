@@ -3,7 +3,9 @@ extends Node
 ## Áudio procedural (docs/11): todos os sons são sintetizados em código na primeira vez
 ## que tocam (sem arquivos de áudio no repositório) e ficam em cache.
 ##   Som.tocar("tecla")              efeito curto
-##   Som.ambiente(intensidade)       drone + sussurros (0 = calmo, 1 = Membrana rompendo)
+##   Som.ambiente(intensidade)       duas camadas (docs/61): a Realidade acústica (piano esparso)
+##                                   some enquanto o Outro Lado sintético (drone + sussurros)
+##                                   cresce; 0 = calmo, 1 = Membrana rompendo
 ## O autoload Jogo cria a instância. Sem ela (testes de regras), as chamadas não fazem nada.
 
 const TAXA := 22050
@@ -23,6 +25,7 @@ var _proxima := 0
 var _drone: AudioStreamPlayer
 var _sussurro: AudioStreamPlayer
 var _musica: AudioStreamPlayer
+var _piano: AudioStreamPlayer   ## a camada da Realidade (docs/61)
 var _intensidade := 0.0
 
 
@@ -43,6 +46,9 @@ func _ready() -> void:
 	_musica = AudioStreamPlayer.new()
 	_musica.bus = "Ambiente"
 	add_child(_musica)
+	_piano = AudioStreamPlayer.new()
+	_piano.bus = "Ambiente"
+	add_child(_piano)
 	aplicar_volume()
 
 
@@ -109,6 +115,15 @@ static func ambiente(intensidade: float) -> void:
 
 func _ambiente(intensidade: float) -> void:
 	_intensidade = intensidade
+	# A Realidade: o piano toca baixo enquanto a Membrana aguenta e some quando ela racha
+	if _piano.stream == null:
+		_piano.stream = gerar("piano")
+	var vol_piano := volume_da_realidade(intensidade)
+	if vol_piano > -60.0 and not _piano.playing:
+		_piano.play()
+	elif vol_piano <= -60.0 and _piano.playing:
+		_piano.stop()
+	_piano.volume_db = vol_piano
 	if _drone.stream == null:
 		_drone.stream = gerar("drone")
 	if not _drone.playing:
@@ -123,6 +138,13 @@ func _ambiente(intensidade: float) -> void:
 	elif not sussurrar and _sussurro.playing:
 		_sussurro.stop()
 	_sussurro.volume_db = lerpf(-34.0, -14.0, (intensidade - 0.35) / 0.65)
+
+
+## Volume da camada da Realidade (docs/61): -20 dB com a Membrana inteira, em silêncio
+## (-60 dB) a partir de 0,7 de intensidade, quando o Outro Lado já domina.
+static func volume_da_realidade(intensidade: float) -> float:
+	var t := clampf(intensidade / 0.7, 0.0, 1.0)
+	return lerpf(-20.0, -60.0, t * t)
 
 
 # --- Síntese --------------------------------------------------------------------
@@ -157,6 +179,9 @@ static func gerar(nome: String) -> AudioStreamWAV:
 			laco = true
 		"chefe":
 			amostras = _chefe_laco()
+			laco = true
+		"piano":
+			amostras = _piano_laco()
 			laco = true
 		"drone":
 			amostras = _drone_laco()
@@ -428,6 +453,27 @@ static func _caixinha() -> PackedFloat32Array:
 			var t := float(i - ini) / TAXA
 			var env := exp(-t / 0.45) * minf(1.0, t / 0.004)
 			a[i] += 0.22 * env * (sin(TAU * f * t) + 0.35 * sin(TAU * f * 2.0 * t) + 0.12 * sin(TAU * f * 3.01 * t))
+	return a
+
+
+## A Realidade (docs/61): um piano esparso em lá menor, poucas notas num laço de 16 s, com
+## ataque de martelo e cauda longa (parciais levemente desafinados, como corda de verdade).
+static func _piano_laco() -> PackedFloat32Array:
+	var d := 16.0
+	var n := int(d * TAXA)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	var notas := [[0.0, 220.0], [2.0, 261.6], [4.0, 329.6], [6.5, 293.7], [8.0, 220.0], [10.0, 196.0],
+		[11.0, 246.9], [12.4, 220.0]]
+	for nota in notas:
+		var ini := int(float(nota[0]) * TAXA)
+		var f: float = nota[1]
+		for i in range(ini, mini(n, ini + int(3.5 * TAXA))):
+			var t := float(i - ini) / TAXA
+			var env := minf(1.0, t / 0.006) * exp(-t / 1.1)
+			var som := sin(TAU * f * t) + 0.45 * sin(TAU * f * 2.003 * t) * exp(-t / 0.6) \
+				+ 0.2 * sin(TAU * f * 3.01 * t) * exp(-t / 0.35)
+			a[i] += 0.18 * env * som
 	return a
 
 

@@ -6,7 +6,7 @@ extends RefCounted
 ## `participantes`; agentes da investigação, pelo índice na cena; hexes e células, como [x, y].
 ## Números chegam da rede como float: tudo passa por int() aqui.
 
-const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar", "deduzir", "interludio", "relatar"]
+const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar", "deduzir", "interludio", "relatar", "pesquisa"]
 const ACOES_INVESTIGACAO := ["examinar", "procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair", "deduzir", "relatar"]
 const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair",
 	"socorrer", "acalmar", "manobra", "levantar", "pegar_arma"]
@@ -64,6 +64,9 @@ static func aplicar_mapa(m: Missao, cmd: Dictionary) -> Dictionary:
 		"relatar":
 			var r := m.relatar(cmd.get("respostas", {}))
 			return {"ok": r.get("ok", false), "relatorio": r}
+		"pesquisa":   # contato da Pesquisa (docs/61)
+			var r := m.ligar_pesquisa()
+			return {"ok": r.get("ok", false), "pesquisa": r}
 	return {"ok": false, "erro": "ação de mapa desconhecida: %s" % cmd.get("acao", "")}
 
 

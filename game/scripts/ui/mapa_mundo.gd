@@ -39,6 +39,7 @@ var _btn_acao: Button
 var _caso: PanelContainer
 var _lbl_caso: RichTextLabel
 var _btn_deduzir: Button
+var _btn_pesquisa: Button   ## contato da Pesquisa (docs/61)
 var _caixa_opcoes: VBoxContainer
 var _bilhete_acao: PanelContainer
 var _log: RelatorioCampo
@@ -765,7 +766,16 @@ func _montar_interface() -> void:
 	_btn_deduzir.text = "Deduzir…"
 	_btn_deduzir.tooltip_text = "Abrir a ficha de suspeitos e acusar (docs/32)"
 	_btn_deduzir.pressed.connect(abrir_deducao)
-	vc.add_child(_btn_deduzir)
+	var linha_caso := HBoxContainer.new()
+	linha_caso.add_theme_constant_override("separation", Tema.ESPACO_P)
+	vc.add_child(linha_caso)
+	_btn_deduzir.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	linha_caso.add_child(_btn_deduzir)
+	# Contato da Pesquisa (docs/61): dicas em camadas, cada uma com um custo
+	_btn_pesquisa = Button.new()
+	_btn_pesquisa.text = "☎ Pesquisa"
+	_btn_pesquisa.pressed.connect(_pedir_pesquisa)
+	linha_caso.add_child(_btn_pesquisa)
 
 	# Topo central: a Membrana, com sigilo e estado
 	var membrana := PanelContainer.new()
@@ -1023,6 +1033,7 @@ func _atualizar() -> void:
 	_lbl_membrana.tooltip_text = "Caso: pistas firmes que contam para o relatório à Ordem (duas por pergunta em aberto)."
 	_desenhar_linha_tempo()
 	_mapa3d.atualizar_pressagios(missao)
+	_mapa3d.atualizar_rumores(missao.regiao_dos_rumores())   # o mapa de rumores (docs/61)
 	_mapa3d.atualizar_rastros(missao.rastros, Tema.ELEMENTO.get(missao.caso.elemento if missao.caso != null else "sangue", Tema.SANGUE_CLARO))
 	if missao.turno_mundo != _turno_visto:
 		var primeiro := _turno_visto < 0
@@ -1049,6 +1060,24 @@ func _motivos_mapa(a: Agente, ocupado: bool) -> void:
 		(evento if evento != "" else ("A ação deste turno já foi usada." if missao.acao_usada else
 		("Sem itens de cura nem rituais que funcionem fora de combate." if sem_recurso else "Indisponível agora.")))
 	_btn_encerrar.tooltip_text = "A vez passa ao próximo agente." if not _btn_encerrar.disabled else evento
+
+
+## O papel da ligação (docs/61): o que se pede, o que custa e "Ligar"; a resposta vai num
+## segundo papel e no registro.
+func _pedir_pesquisa() -> void:
+	var p := missao.proxima_pesquisa()
+	if p.is_empty():
+		return
+	var texto := "Sobre \"%s\"
+
+%s: %s.
+Custo: %s." % [p.texto_pergunta, p.titulo, p.ganho, p.custo]
+	var ligar := func():
+		var res := _enviar("pesquisa")
+		if res.get("ok", false):
+			Som.tocar("tecla")
+			DialogoPapel.perguntar(self, "A Pesquisa responde", String(res.pesquisa.texto), "Anotado", func(): pass, "Fechar", false)
+	DialogoPapel.perguntar(self, "Ligar para a Pesquisa", texto, "Ligar", ligar, "Voltar", false)
 
 
 func _atualizar_caso() -> void:
@@ -1083,6 +1112,11 @@ func _atualizar_caso() -> void:
 		linhas.append(Tema.bb("Elemento: %s" % c.nome_elemento(), Tema.ELEMENTO.get(c.elemento, Tema.OURO_CLARO)))
 	_btn_deduzir.visible = alguma_aberta
 	_btn_deduzir.disabled = not alguma_com_pista
+	var prox := missao.proxima_pesquisa()
+	_btn_pesquisa.visible = alguma_aberta
+	_btn_pesquisa.disabled = prox.is_empty() or missao.ocupado() or (int(prox.get("camada", 0)) == 1 and not missao.pode_agir_no_mapa())
+	_btn_pesquisa.tooltip_text = "Ligar para a Pesquisa da Ordem: %s (%s)." % [String(prox.titulo).to_lower(), prox.custo] \
+		if not prox.is_empty() else "A Pesquisa já mandou tudo o que tinha."
 	var obj := missao.mapa.encontrar("objetivo")
 	var covil_visto := missao.mapa.tem(obj) and missao.mapa.revelado(obj)
 	var estado_covil := "aberto: o confronto espera" if missao.covil_aberto() else ("avistado, entrada escondida" if covil_visto else "desconhecido")

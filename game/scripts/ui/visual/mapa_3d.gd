@@ -28,6 +28,8 @@ var ver_tudo := false
 
 var _env: Environment   ## noite do mapa (docs/22); a Membrana engrossa a névoa
 var _rastros: Dictionary = {}   ## Vector2i -> Node3D: por onde algo passou (docs/53)
+var _rumores: Node3D            ## fios das pistas até o "?" (docs/61)
+var _chave_rumores := ""
 var _pressagios: Dictionary = {}   ## Vector2i (da criatura) -> Node3D no hex vizinho (docs/54)
 var _noite := false
 var _centro_mapa := Vector3.ZERO   ## as peças nascem viradas para cá (docs/30)
@@ -107,6 +109,70 @@ func atualizar_rastros(rastros: Dictionary, cor: Color) -> void:
 		r.rotation.y = float(hash(h) % 628) / 100.0
 		add_child(r)
 		_rastros[h] = r
+
+
+## Mapa de rumores (docs/61, IN5): um fio tracejado vermelho de cada lugar onde o grupo achou
+## pista firme até um "?" que flutua sobre a região onde o covil deve estar, com um anel fino
+## no chão marcando o tamanho dela. Mais pistas, região menor. Só refaz quando muda.
+const COR_FIO := Color("c0392b")
+
+
+func atualizar_rumores(regiao: Dictionary) -> void:
+	var chave := str(regiao)
+	if chave == _chave_rumores:
+		return
+	_chave_rumores = chave
+	if _rumores != null:
+		_rumores.queue_free()
+		_rumores = null
+	if regiao.is_empty():
+		return
+	_rumores = Node3D.new()
+	_rumores.name = "Rumores"
+	add_child(_rumores)
+	var centro := posicao_hex(regiao.centro) + Vector3(0, 0.3, 0)
+	var mat := Pecas.material(COR_FIO, false, 0.8)
+	for o in regiao.origens:
+		var de := posicao_hex(o) + Vector3(0, 0.3, 0)
+		var v := centro - de
+		var n := int(v.length() / 0.4)
+		for i in n:
+			if i % 2 == 1:
+				continue   # tracejado: um traço, um vão
+			var traco := MeshInstance3D.new()
+			var b := BoxMesh.new()
+			b.size = Vector3(0.05, 0.03, 0.34)
+			traco.mesh = b
+			traco.material_override = mat
+			traco.position = de + v * ((float(i) + 0.5) / float(n))
+			traco.basis = Basis.looking_at(Vector3(v.x, 0, v.z).normalized(), Vector3.UP)
+			_rumores.add_child(traco)
+	var anel := MeshInstance3D.new()
+	var t := TorusMesh.new()
+	var r := float(regiao.raio) * RAIO * 1.732 + RAIO * 0.8
+	t.inner_radius = r - 0.07
+	t.outer_radius = r
+	t.rings = 48
+	t.ring_segments = 3
+	anel.mesh = t
+	anel.material_override = Pecas.material(Color(COR_FIO, 0.7), true)
+	anel.position = posicao_hex(regiao.centro) + Vector3(0, 0.25, 0)
+	_rumores.add_child(anel)
+	var q := Label3D.new()
+	q.text = "?"
+	q.font_size = 160
+	q.pixel_size = 0.006
+	q.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	q.modulate = Color("ff6b5e")
+	q.outline_size = 24
+	q.outline_modulate = Color(0, 0, 0, 0.85)
+	q.no_depth_test = true
+	q.position = posicao_hex(regiao.centro) + Vector3(0, 1.4, 0)
+	_rumores.add_child(q)
+	if q.is_inside_tree():
+		var tw := q.create_tween().set_loops()   # o "?" respira devagar
+		tw.tween_property(q, "position:y", q.position.y + 0.15, 1.2).set_trans(Tween.TRANS_SINE)
+		tw.tween_property(q, "position:y", q.position.y, 1.2).set_trans(Tween.TRANS_SINE)
 
 
 ## A Membrana pesa no clima do mapa (docs/22).

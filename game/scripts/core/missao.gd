@@ -68,6 +68,10 @@ var _covil_selado_avisado := -1
 ## Testemunhas que falaram com o grupo (docs/56): [{nome, papel, cena, sumiu}]. Numa noite, uma
 ## delas pode sumir: o terror indireto do livro (p.163).
 var testemunhas_vistas: Array = []
+## Contato da Pesquisa (docs/61, IN5): a camada já usada em cada pergunta (pergunta -> 1..3).
+var pesquisa: Dictionary = {}
+## Mapa de rumores (docs/61, IN5): os hexes onde o grupo achou pista firme ([x, y]).
+var rumores: Array = []
 
 
 const NOMES_TERRENO := {"campo": "campos abertos", "estrada": "estradas de terra", "floresta": "mata fechada",
@@ -402,6 +406,7 @@ func _revisar_caso(a: Agente, alvo: String, prato_rapido: bool) -> String:
 	var pista := caso.registrar_pista(String(ponto.pista), String(ponto.responde), partes[0], incerta,
 		absi(hash("%s|%s|%d" % [alvo, a.id, turno_mundo])))
 	pistas += 1
+	_anotar_rumor(posicao(a))
 	return "revisa %s e acha uma pista que tinha passado: %s" % [ponto.nome, pista.texto]
 
 
@@ -697,6 +702,7 @@ func _aplicar_efeito(a: Agente, ef: Dictionary, h: Vector2i) -> Dictionary:
 			if pid == "":
 				return {}
 			var pista := caso.registrar_pista(String(ef.get("texto", "{indicio}")), pid, "evento")
+			_anotar_rumor(h)
 			var rotulo := String(Caso.indicio(pista.indicio).get("rotulo", "")) if pista.indicio != "" else ""
 			_log("[color=#6fcf8e]Pista:[/color] %s" % pista.texto)
 			return {"tipo": "pista", "valor": 1, "texto": "Pista: %s" % rotulo.to_lower() if rotulo != "" else "Pista"}
@@ -1074,6 +1080,8 @@ func concluir_investigacao(resultado: Dictionary) -> void:
 	investigacao_pendente = {}
 	mapa.limpar_conteudo(h)
 	pistas += resultado.get("pistas", []).size()
+	if not resultado.get("pistas", []).is_empty():
+		_anotar_rumor(h)
 	for t in resultado.get("testemunhas", []):
 		testemunhas_vistas.append({"nome": String(t.nome), "papel": String(t.papel), "cena": String(t.get("cena", "")), "sumiu": false})
 	if String(resultado.get("cena", "")) != "" and not resultado.get("restantes", []).is_empty():
@@ -1405,6 +1413,117 @@ func rumo_do_caso() -> String:
 	return direcao_em_texto(Hex.para_pixel(melhor, 1.0) - Hex.para_pixel(pos, 1.0))
 
 
+# --- Contato da Pesquisa e mapa de rumores (docs/61, IN5) ------------------------------
+
+## A próxima ligação para a Pesquisa: a pergunta mais fraca do caso (menos traços firmes) e a
+## camada seguinte dela. {} se não há o que pedir. Camadas, cada uma mais cara:
+##   1 · orientação: qual pergunta pesa menos e para onde há pista sem visita (a ação do turno);
+##   2 · cruzamento: um candidato errado que ainda batia sai da lista (ruído: o que caça ouve);
+##   3 · ficha: um traço verdadeiro chega por mensagem, como pista firme (a Membrana sente).
+func proxima_pesquisa() -> Dictionary:
+	if caso == null or encerrada:
+		return {}
+	var abertas: Array = caso.perguntas.filter(func(q): return not q.respondida)
+	abertas.sort_custom(func(x, y): return caso.indicios_encontrados(String(x.id)).size() < caso.indicios_encontrados(String(y.id)).size())
+	for q in abertas:
+		var pid := String(q.id)
+		var camada := int(pesquisa.get(pid, 0)) + 1
+		if camada == 2 and _descartavel(pid).is_empty():
+			camada = 3   # nada a descartar: vai direto à ficha
+		if camada > 3:
+			continue
+		var cfg: Dictionary = DadosJogo.ler("casos").get("pesquisa", {})
+		var c: Dictionary = (cfg.get("camadas", []) as Array)[camada - 1]
+		return {"pergunta": pid, "texto_pergunta": String(q.texto), "camada": camada, "titulo": String(c.titulo),
+			"ganho": String(c.ganho), "custo": String(c.custo)}
+	return {}
+
+
+## Liga para a Pesquisa (comando "pesquisa"): aplica o custo da camada e devolve a resposta.
+## Sem Dados: tudo sai do estado e de hash da semente, igual no online.
+func ligar_pesquisa() -> Dictionary:
+	var p := proxima_pesquisa()
+	var a := agente_atual()
+	if p.is_empty() or a == null or ocupado():
+		return {"ok": false}
+	var pid := String(p.pergunta)
+	var cfg: Dictionary = DadosJogo.ler("casos").get("pesquisa", {})
+	var texto := ""
+	match int(p.camada):
+		1:
+			if not pode_agir_no_mapa():
+				return {"ok": false, "erro": "sem ação neste turno"}
+			acao_usada = true
+			var rumo := _rumo_de_pista_sem_visita()
+			texto = String(cfg.orientacao).format({"pergunta": String(p.texto_pergunta).to_lower(),
+				"rumo": (String(cfg.orientacao_rumo) % rumo) if rumo != "" else String(cfg.orientacao_sem_rumo)})
+		2:
+			var lista := _descartavel(pid)
+			var c: Dictionary = lista[absi(hash("%d|pesquisa|%s" % [semente, pid])) % lista.size()]
+			var q := caso.pergunta(pid)
+			var desc: Array = q.get("descartados", [])
+			desc.append(String(c.id))
+			q.descartados = desc
+			texto = String(cfg.cruzamento) % String(c.nome)
+			_turnos_sem_surgimento += 1
+			_cacar()   # ruído: o que caça ouve a ligação
+			texto += " " + String(cfg.ruido)
+		3:
+			var pista := caso.registrar_pista(String(cfg.ficha), pid, "pesquisa")
+			_anotar_rumor(posicao(a))
+			pistas += 1
+			membrana.alterar(int(cfg.get("membrana", -5)), "pesquisa")
+			texto = String(pista.texto) + " " + String(cfg.membrana_texto)
+	pesquisa[pid] = int(p.camada)
+	_log("[color=#7fd3c7][b]Pesquisa (%s):[/b] %s[/color]" % [String(p.titulo).to_lower(), texto])
+	return {"ok": true, "camada": int(p.camada), "titulo": p.titulo, "texto": texto}
+
+
+## Candidatos errados que ainda batem com os traços firmes (a camada 2 tira um deles).
+func _descartavel(pid: String) -> Array:
+	var certo := String(caso.verdadeiro(pid).get("id", ""))
+	return caso.compativeis(pid).filter(func(c): return String(c.id) != certo)
+
+
+## Para onde fica o lugar com pista mais perto ainda sem visita, visto ou não ("" se nenhum).
+func _rumo_de_pista_sem_visita() -> String:
+	var a := agente_atual()
+	if a == null:
+		return ""
+	var pos := posicao(a)
+	var melhor := Vector2i.ZERO
+	var md := 1 << 20
+	for h in mapa.celulas:
+		if not String(mapa.conteudo(h).get("tipo", "")) in ["investigacao", "evento"]:
+			continue
+		var d := Hex.distancia(pos, h)
+		if d < md:
+			md = d
+			melhor = h
+	return "" if md == 1 << 20 else ("aqui perto" if md <= 1 else direcao_em_texto(Hex.para_pixel(melhor, 1.0) - Hex.para_pixel(pos, 1.0)))
+
+
+func _anotar_rumor(h: Vector2i) -> void:
+	if not [h.x, h.y] in rumores:
+		rumores.append([h.x, h.y])
+
+
+## O "?" do mapa de rumores (docs/61): com duas pistas firmes achadas em lugares diferentes,
+## uma região de raio 3 em volta de um ponto perto do covil; com três, raio 2; com quatro ou
+## mais, raio 1. O covil está sempre dentro dela. {} sem pistas o bastante ou com o covil já
+## localizado. {centro: Vector2i, raio: int, origens: [Vector2i]}.
+func regiao_dos_rumores() -> Dictionary:
+	var obj := mapa.encontrar("objetivo")
+	if caso == null or not mapa.tem(obj) or rumores.size() < 2 or caso.pergunta("onde").get("respondida", false):
+		return {}
+	var raio := 3 if rumores.size() == 2 else (2 if rumores.size() == 3 else 1)
+	var perto: Array = mapa.celulas.keys().filter(func(h): return Hex.distancia(h, obj) <= raio - 1)
+	perto.sort()
+	var centro: Vector2i = perto[absi(hash("%d|rumor|%d" % [semente, raio])) % perto.size()] if not perto.is_empty() else obj
+	var origens: Array = rumores.map(func(r): return Vector2i(int(r[0]), int(r[1])))
+	return {"centro": centro, "raio": raio, "origens": origens}
+
+
 ## "ao norte", "a nordeste"... para um vetor na tela (y para baixo é o sul).
 static func direcao_em_texto(v: Vector2) -> String:
 	if v.length() < 0.01:
@@ -1506,6 +1625,7 @@ func para_dicionario() -> Dictionary:
 		"investigacao_pendente": {"hex": [investigacao_pendente.hex.x, investigacao_pendente.hex.y], "cena": investigacao_pendente.cena,
 			"semente": int(investigacao_pendente.semente)} if not investigacao_pendente.is_empty() else {},
 		"turnos_sem_surgimento": _turnos_sem_surgimento, "alivio": alivio, "testemunhas_vistas": testemunhas_vistas.duplicate(true),
+		"pesquisa": pesquisa.duplicate(), "rumores": rumores.duplicate(true),
 		"rastros": rastros.keys().map(func(h): return [h.x, h.y, int(rastros[h])]), "descansos": descansos, "revisaveis": revisaveis.duplicate(true),
 		"historico": historico.slice(maxi(0, historico.size() - 300)),
 		"encerrada": encerrada, "vitoria": vitoria, "extras": extras.duplicate(true),
@@ -1557,6 +1677,10 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.revisaveis = (d.get("revisaveis", []) as Array).duplicate(true)
 	m.alivio = int(d.get("alivio", 0))
 	m.testemunhas_vistas = (d.get("testemunhas_vistas", []) as Array).duplicate(true)
+	for k in d.get("pesquisa", {}):
+		m.pesquisa[String(k)] = int(d.pesquisa[k])
+	for r in d.get("rumores", []):
+		m.rumores.append([int(r[0]), int(r[1])])
 	for r in d.get("rastros", []):
 		m.rastros[Vector2i(int(r[0]), int(r[1]))] = int(r[2])
 	for i in d.get("descansos", {}):

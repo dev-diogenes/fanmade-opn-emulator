@@ -953,5 +953,33 @@
         }
       ]
     }
-  ]
+  ],
+  "pesquisa_nota": "Contato da Pesquisa (docs/61, IN5 do relatório): na wiki, a equipe de pesquisa da Ordem trabalha a distância e manda por telefone fichas, fotos e listas. Aqui, três camadas por pergunta, cada uma mais cara: orientação (a ação do turno), cruzamento (ruído que o que caça ouve) e ficha (a Membrana sente). Textos nossos.",
+  "pesquisa": {
+    "camadas": [
+      {
+        "titulo": "Orientação",
+        "ganho": "qual pergunta pesa menos e para onde há pista sem visita",
+        "custo": "a ação deste turno"
+      },
+      {
+        "titulo": "Cruzamento",
+        "ganho": "um candidato errado sai da lista de suspeitos",
+        "custo": "ruído: o que caça ouve a ligação e se aproxima"
+      },
+      {
+        "titulo": "Ficha",
+        "ganho": "um traço verdadeiro chega por mensagem, como pista firme",
+        "custo": "5 de Membrana: cavar fundo chama a atenção do Outro Lado"
+      }
+    ],
+    "orientacao": "A Pesquisa cruzou boletins de ocorrência e posts da região. O que mais falta é \"{pergunta}\". {rumo}",
+    "orientacao_rumo": "Tem um lugar com pista sem visita %s.",
+    "orientacao_sem_rumo": "Não sobrou lugar novo: revisem o que já acharam.",
+    "cruzamento": "A Pesquisa cruzou as fichas com o que vocês acharam: %s não bate. Podem riscar.",
+    "ruido": "A ligação foi longa demais, e algo lá fora ouviu.",
+    "ficha": "A Pesquisa manda a ficha por mensagem: {indicio}",
+    "membrana": -5,
+    "membrana_texto": "Do outro lado da linha, a estática demora a passar."
+  }
 }
