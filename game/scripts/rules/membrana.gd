@@ -49,9 +49,14 @@ func alterar(delta: int, motivo: String = "") -> int:
 
 ## Estado atual (o de maior "a_partir_de" que o valor alcança).
 func estado() -> Dictionary:
+	return estado_de(valor)
+
+
+## O estado para um valor qualquer (a previsão da linha do tempo, docs/53).
+func estado_de(v: int) -> Dictionary:
 	var melhor: Dictionary = {}
 	for e in config.estados:
-		if valor >= int(e.a_partir_de) and (melhor.is_empty() or int(e.a_partir_de) > int(melhor.a_partir_de)):
+		if v >= int(e.a_partir_de) and (melhor.is_empty() or int(e.a_partir_de) > int(melhor.a_partir_de)):
 			melhor = e
 	return melhor
 

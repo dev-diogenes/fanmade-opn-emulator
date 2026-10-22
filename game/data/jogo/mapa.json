@@ -98,7 +98,9 @@
   },
   "mundo": {
     "descricao": "Depois que todos os agentes jogam, o mundo age: a Membrana enfraquece e, conforme o estado dela, novas ameaças surgem perto do grupo.",
-    "surgimento_a_cada_turnos": 2
+    "surgimento_a_cada_turnos": 2,
+    "ciclo": {"dia": 3, "noite": 2, "nota": "docs/53: a cada 3 turnos do mundo de dia, 2 de noite. À noite a visão cai 1, as ameaças surgem duas vezes mais rápido e as que surgiram caçam."},
+    "caca": {"raio": 6, "rastro_turnos": 2, "alivio_depois_de_combate": 1, "nota": "docs/53, diretor de Alien: Isolation: anda 1 hex por turno da noite até o agente mais isolado a até 'raio' hexes, deixa rastro e recua por 'alivio' turnos depois de um combate. Vilas e o ponto de encontro são seguros."}
   },
   "interludio": {
     "ref": "p.92-93",

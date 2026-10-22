@@ -142,11 +142,11 @@ func test_turno_do_mundo_enfraquece_a_membrana_e_faz_surgir_ameacas():
 		m.encerrar_turno()
 	assert_eq(m.turno_mundo, 4)
 	assert_eq(m.membrana.valor, 54, "−2 por turno do mundo")
-	var depois := 0
+	var depois := 0 if m.encontro_pendente.is_empty() else 1   # uma caçada pode ter virado emboscada
 	for h in m.mapa.celulas:
 		if m.mapa.conteudo(h).get("tipo", "") == "encontro":
 			depois += 1
-	assert_eq(depois, antes + 1, "um surgimento a cada 2 turnos com a Membrana instável (no turno 3; o próximo no 5)")
+	assert_eq(depois, antes + 2, "um surgimento a cada 2 turnos com a Membrana instável: no turno 3 e, à noite (contando dobrado), no 4 (docs/53)")
 
 
 func test_descanso_na_cidade():

@@ -27,7 +27,55 @@ var ver_tudo := false
 
 
 var _env: Environment   ## noite do mapa (docs/22); a Membrana engrossa a névoa
+var _rastros: Dictionary = {}   ## Vector2i -> Node3D: por onde algo passou (docs/53)
+var _noite := false
 var _centro_mapa := Vector3.ZERO   ## as peças nascem viradas para cá (docs/30)
+
+
+## Dia e noite (docs/53): o dia é um crepúsculo; a noite escurece, esfria a luz e fecha a névoa.
+func ciclo(noite: bool, imediato: bool = false) -> void:
+	if _env == null or (noite == _noite and not imediato):
+		return
+	_noite = noite
+	var alvo_amb := 0.32 if noite else 0.55
+	var alvo_cor: Color = Color("2e3a66") if noite else Pecas.NOITE.ambiente
+	if imediato or not is_inside_tree():
+		_env.ambient_light_energy = alvo_amb
+		_env.ambient_light_color = alvo_cor
+		return
+	var tw := create_tween().set_parallel()
+	tw.tween_property(_env, "ambient_light_energy", alvo_amb, 1.6)
+	tw.tween_property(_env, "ambient_light_color", alvo_cor, 1.6)
+
+
+## A peça de uma ameaça que caça anda de um hex ao vizinho (docs/53), em vez de sumir e aparecer.
+func mover_marcador(de: Vector2i, para: Vector2i) -> void:
+	var m: Node3D = _marcadores.get(de)
+	if m == null or _marcadores.has(para):
+		return
+	_marcadores.erase(de)
+	_marcadores[para] = m
+	var tw := m.create_tween()
+	tw.tween_property(m, "position", posicao_hex(para), 0.9).set_trans(Tween.TRANS_SINE)
+
+
+## Rastros nos hexes revelados por onde algo passou (docs/53), na cor do elemento do caso.
+func atualizar_rastros(rastros: Dictionary, cor: Color) -> void:
+	for h in _rastros.keys():
+		if not rastros.has(h):
+			_rastros[h].queue_free()
+			_rastros.erase(h)
+	for h in rastros:
+		if _rastros.has(h) or not (ver_tudo or mapa.revelado(h)):
+			continue
+		var r := PropsInvestigacao.rastros()
+		for f in r.get_children():
+			if f is MeshInstance3D:
+				f.material_override = Pecas.material(cor.darkened(0.45))
+		r.position = posicao_hex(h) + Vector3(0, 0.02, 0)
+		r.rotation.y = float(hash(h) % 628) / 100.0
+		add_child(r)
+		_rastros[h] = r
 
 
 ## A Membrana pesa no clima do mapa (docs/22).

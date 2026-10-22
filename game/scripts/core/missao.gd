@@ -59,6 +59,12 @@ var _descansou: Dictionary = {}          ## Agente -> hex onde já fez interlúd
 ## Pontos de cenas já vistas que ficaram para trás: [{"cena", "pontos": [ids]}] (Revisar Caso, docs/48)
 var revisaveis: Array = []
 var _turnos_sem_surgimento := 0
+## Medo no mapa (docs/53): por onde algo passou ({hex: turno do mundo}), os turnos de alívio
+## depois de um combate e os passos da caçada no último turno do mundo (para a tela animar).
+var rastros: Dictionary = {}
+var alivio := 0
+var passos_da_caca: Array = []   ## [{"de": Vector2i, "para": Vector2i}]
+var _covil_selado_avisado := -1
 
 
 const NOMES_TERRENO := {"campo": "campos abertos", "estrada": "estradas de terra", "floresta": "mata fechada",
@@ -213,6 +219,8 @@ func mover(destino: Vector2i) -> bool:
 		posicoes[a] = h
 		# Do alto da serra se vê longe (docs/34)
 		var visao := int(_cfg.visao) + (int(_cfg.get("visao_da_serra", 2)) if mapa.escalavel(h) else 0)
+		if eh_noite():
+			visao = maxi(1, visao - 1)   # à noite se vê menos (docs/53)
 		mapa.revelar(h, visao)
 		if mapa.escalavel(h):
 			_log("%s chega ao alto da serra e enxerga longe." % a.nome)
@@ -230,7 +238,9 @@ func _entrar(a: Agente, h: Vector2i) -> void:
 		"objetivo":
 			if not covil_aberto():
 				mapa.revelar(h, 0)
-				_log("[color=#c9a0ff]%s chega às ruínas do covil, mas não acha a entrada. Sem saber [b]onde[/b] procurar, é só pedra fria. (Responda \"Onde fica o covil?\" na ficha.)[/color]" % a.nome)
+				if _covil_selado_avisado != turno_mundo:   # uma vez por turno, não a cada passo (docs/51)
+					_covil_selado_avisado = turno_mundo
+					_log("[color=#c9a0ff]%s chega às ruínas do covil, mas não acha a entrada. Sem saber [b]onde[/b] procurar, é só pedra fria. (Mande o relatório à Ordem com quem, o quê e onde.)[/color]" % a.nome)
 				return
 			_preparar_encontro(h, c.encontro, true)
 		"evento":
@@ -892,6 +902,7 @@ func concluir_encontro(vencedor: String, rendidos: int = 0) -> void:
 		a.encerrar_cena()
 	var participantes: Array = encontro_pendente.agentes
 	encontro_pendente = {}
+	alivio = int(_cfg.get("mundo", {}).get("caca", {}).get("alivio_depois_de_combate", 1))   # o pico passou: respiro (docs/53)
 	if vencedor == "agentes":
 		for a in participantes:
 			if a.tem(Ser.MORTO):
@@ -1108,11 +1119,200 @@ func _turno_do_mundo() -> void:
 		covil_localizado = true   # confronto final, preparado ou não (membrana.json)
 		mapa.revelar(mapa.encontrar("objetivo"), 1)
 		_log("[color=#e0574a][b]A Membrana se rompe.[/b] O covil se abre sozinho e chama os agentes.[/color]")
-	_turnos_sem_surgimento += 1
+	if eh_noite() != eh_noite(turno_mundo - 1):
+		_log("[color=#8fa3d9][b]%s[/b][/color]" % ("A noite cai. Algo começa a se mexer lá fora." if eh_noite() else "Amanhece. O que caçava volta para a névoa."))
+	_turnos_sem_surgimento += 2 if eh_noite() else 1   # à noite, duas vezes mais rápido (docs/53)
 	if _turnos_sem_surgimento >= int(_cfg.mundo.surgimento_a_cada_turnos) and membrana.nivel_ameaca() >= 1:
 		_turnos_sem_surgimento = 0
 		_surgir_ameaca()
+	_cacar()
 	_ataque_a_sanidade()
+
+
+# --- Medo no mapa (docs/53) ---------------------------------------------------------
+
+## Noite no turno `t` do mundo: 3 de dia, 2 de noite (mapa.json, mundo.ciclo).
+func eh_noite(t: int = -1) -> bool:
+	var c: Dictionary = _cfg.get("mundo", {}).get("ciclo", {"dia": 3, "noite": 2})
+	var n := int(c.dia) + int(c.noite)
+	var turno := turno_mundo if t < 0 else t
+	return n > 0 and int(c.noite) > 0 and ((turno - 1) % n) >= int(c.dia)
+
+
+## À noite, as criaturas caçam (diretor de Alien: Isolation): as que surgiram e as paranormais
+## já espalhadas pelo mapa (gente e bichos ficam onde estão). Cada uma anda um hex
+## até o agente mais isolado a até 6 hexes, sem atravessar conteúdo nem entrar em vila, e deixa
+## rastro. Depois de um combate, recuam por um turno (alívio). Alcançar o hex de um agente
+## começa o encontro ali, com quem estiver por perto. Uma emboscada por turno do mundo.
+func _cacar() -> void:
+	passos_da_caca.clear()
+	var cfg: Dictionary = _cfg.get("mundo", {}).get("caca", {})
+	var ttl := int(cfg.get("rastro_turnos", 2))
+	for h in rastros.keys():
+		if turno_mundo - int(rastros[h]) > ttl:
+			rastros.erase(h)
+	if alivio > 0:
+		alivio -= 1
+		return
+	if not eh_noite() or ocupado():
+		return
+	var raio := int(cfg.get("raio", 6))
+	var cacadores: Array[Vector2i] = []
+	for h in mapa.celulas:
+		var c := mapa.conteudo(h)
+		if String(c.get("tipo", "")) == "encontro" and (c.get("caca", false) or _paranormal(String(c.get("encontro", "")))):
+			cacadores.append(h)
+	cacadores.sort()   # a mesma ordem nas duas máquinas do online
+	for h in cacadores:
+		var c := mapa.conteudo(h)
+		var alvo := _presa_perto(h, raio)
+		if alvo == null:
+			continue
+		var destino := posicao(alvo)
+		var passo := _passo_para(h, destino)
+		if passo == h:
+			continue
+		mapa.limpar_conteudo(h)
+		rastros[h] = turno_mundo
+		if passo == destino:
+			_log("[color=#e0574a][b]Na escuridão, algo alcança %s.[/b][/color]" % alvo.nome)
+			_preparar_encontro(destino, String(c.get("encontro", "")), false)
+			return
+		mapa.definir_conteudo(passo, c)
+		passos_da_caca.append({"de": h, "para": passo})
+
+
+## Encontro com criatura paranormal (o elemento de alguma ameaça), com cache por id.
+var _elemento_por_encontro: Dictionary = {}
+func _paranormal(encontro_id: String) -> bool:
+	if not _elemento_por_encontro.has(encontro_id):
+		_elemento_por_encontro[encontro_id] = elemento_do_encontro(_encontro(encontro_id))
+	return String(_elemento_por_encontro[encontro_id]) != ""
+
+
+## O agente mais isolado (menos aliados por perto) a até `raio` hexes; fora de vilas e do ponto
+## de encontro, que são seguros. null se ninguém.
+func _presa_perto(h: Vector2i, raio: int) -> Agente:
+	var melhor: Agente = null
+	var nota := 1 << 20
+	for a in agentes:
+		if a.esta_fora_de_combate() or a.tem(Ser.MORTO):
+			continue
+		var p := posicao(a)
+		var d := Hex.distancia(h, p)
+		if d > raio or String(mapa.conteudo(p).get("tipo", "")) in ["vila", "inicio"]:
+			continue
+		var n := aliados_perto(a, p) * 100 + d
+		if n < nota:
+			nota = n
+			melhor = a
+	return melhor
+
+
+## O próximo passo de `de` em direção a `para`: um vizinho transitável, sem conteúdo (ou o próprio
+## destino), mais perto dele. Sem passo melhor, fica onde está (não se teletransporta).
+func _passo_para(de: Vector2i, para: Vector2i) -> Vector2i:
+	var melhor := de
+	var dist := Hex.distancia(de, para)
+	for v in Hex.vizinhos(de):
+		if not mapa.tem(v) or not mapa.passavel(v):
+			continue
+		if v != para and not mapa.conteudo(v).is_empty():
+			continue
+		var d := Hex.distancia(v, para)
+		if d < dist:
+			dist = d
+			melhor = v
+	return melhor
+
+
+## Os próximos `n` turnos do mundo, para a linha do tempo do Outro Lado (docs/53):
+## [{turno, noite, eventos: [{id, texto}]}]. Prevê a Membrana (−2 por turno), o surgimento de
+## ameaças, a caçada noturna e o rompimento.
+func previsao(n: int = 5) -> Array:
+	var lista: Array = []
+	var valor := membrana.valor
+	var cont := _turnos_sem_surgimento
+	var por_turno := int(membrana.config.get("eventos", {}).get("turno_mapa", -2))
+	var a_cada := int(_cfg.get("mundo", {}).get("surgimento_a_cada_turnos", 2))
+	var tem_cacador := false
+	for h in mapa.celulas:
+		var c := mapa.conteudo(h)
+		if String(c.get("tipo", "")) == "encontro" and (c.get("caca", false) or _paranormal(String(c.get("encontro", "")))):
+			tem_cacador = true
+			break
+	for i in range(1, n + 1):
+		var t := turno_mundo + i
+		var noite := eh_noite(t)
+		var eventos: Array = []
+		var antes := membrana.estado_de(valor)
+		valor = maxi(0, valor + por_turno)
+		var depois := membrana.estado_de(valor)
+		if depois.get("id", "") != antes.get("id", ""):
+			eventos.append({"id": "membrana", "texto": "Membrana %s" % String(depois.get("nome", "")).to_lower()})
+		cont += 2 if noite else 1
+		if cont >= a_cada and int(depois.get("nivel_ameaca", 0)) >= 1:
+			cont = 0
+			eventos.append({"id": "surge", "texto": "algo surge"})
+			tem_cacador = true
+		if noite and tem_cacador:
+			eventos.append({"id": "caca", "texto": "algo caça"})
+		if valor == 0:
+			eventos.append({"id": "rompe", "texto": "o covil se abre"})
+		lista.append({"turno": t, "noite": noite, "eventos": eventos})
+	return lista
+
+
+## Progresso do caso (Ato, docs/53): pistas firmes que contam para o relatório, até 2 por
+## pergunta de base em aberto. {firmes, necessarias}.
+func progresso_do_caso() -> Dictionary:
+	if caso == null:
+		return {"firmes": 0, "necessarias": 0}
+	var firmes := 0
+	var necessarias := 0
+	for q in caso.perguntas:
+		if q.respondida:
+			continue
+		var precisa := int(q.get("pistas_necessarias", 2))
+		necessarias += precisa
+		firmes += mini(precisa, caso.indicios_encontrados(String(q.id)).size())
+	return {"firmes": firmes, "necessarias": necessarias}
+
+
+## Rumo do caso (docs/51, IN5): sem pista à vista e com perguntas em aberto, a direção do lugar
+## com pista mais perto do grupo, ainda na névoa ("ao norte", "a sudeste"...). "" se há o que
+## investigar à vista ou nada a achar.
+func rumo_do_caso() -> String:
+	if caso == null or caso.perguntas.all(func(q): return q.respondida):
+		return ""
+	var a := agente_atual()
+	if a == null:
+		return ""
+	var pos := posicao(a)
+	var melhor := Vector2i(-999, -999)
+	var md := 1 << 20
+	for h in mapa.celulas:
+		var tipo := String(mapa.conteudo(h).get("tipo", ""))
+		if not tipo in ["investigacao", "evento"]:
+			continue
+		if mapa.revelado(h):
+			return ""   # há pista à vista
+		var d := Hex.distancia(pos, h)
+		if d < md:
+			md = d
+			melhor = h
+	if md == 1 << 20:
+		return ""
+	return direcao_em_texto(Hex.para_pixel(melhor, 1.0) - Hex.para_pixel(pos, 1.0))
+
+
+## "ao norte", "a nordeste"... para um vetor na tela (y para baixo é o sul).
+static func direcao_em_texto(v: Vector2) -> String:
+	if v.length() < 0.01:
+		return "por perto"
+	var ang := fposmod(rad_to_deg(atan2(-v.y, v.x)), 360.0)
+	var nomes := ["a leste", "a nordeste", "ao norte", "a noroeste", "a oeste", "a sudoeste", "ao sul", "a sudeste"]
+	return nomes[int(round(ang / 45.0)) % 8]
 
 
 ## Membrana Rompendo: o Outro Lado ataca a mente de todos (Vontade ou perde Sanidade).
@@ -1155,7 +1355,7 @@ func _surgir_ameaca() -> void:
 		_log("[color=#b98ae6]O Medo se manifesta perto de %s: %s.[/color]" % [alvo.nome, ev.titulo])
 		return
 	var e: Dictionary = opcoes[dados.rolar(opcoes.size()) - 1]
-	mapa.definir_conteudo(h, {"tipo": "encontro", "encontro": e.id})
+	mapa.definir_conteudo(h, {"tipo": "encontro", "encontro": e.id, "caca": true})   # caça à noite (docs/53)
 	mapa.revelar(h, 0)
 	_log("[color=#b98ae6]Com a Membrana %s, algo surge perto de %s: %s.[/color]" % [membrana.estado().nome.to_lower(), alvo.nome, e.nome])
 
@@ -1206,7 +1406,8 @@ func para_dicionario() -> Dictionary:
 		"caso": caso.para_dicionario() if caso != null else {}, "modificador_chefe": modificador_chefe,
 		"investigacao_pendente": {"hex": [investigacao_pendente.hex.x, investigacao_pendente.hex.y], "cena": investigacao_pendente.cena,
 			"semente": int(investigacao_pendente.semente)} if not investigacao_pendente.is_empty() else {},
-		"turnos_sem_surgimento": _turnos_sem_surgimento, "descansos": descansos, "revisaveis": revisaveis.duplicate(true),
+		"turnos_sem_surgimento": _turnos_sem_surgimento, "alivio": alivio,
+		"rastros": rastros.keys().map(func(h): return [h.x, h.y, int(rastros[h])]), "descansos": descansos, "revisaveis": revisaveis.duplicate(true),
 		"historico": historico.slice(maxi(0, historico.size() - 300)),
 		"encerrada": encerrada, "vitoria": vitoria, "extras": extras.duplicate(true),
 	}
@@ -1255,6 +1456,9 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.pistas = int(d.get("pistas", 0))
 	m._turnos_sem_surgimento = int(d.get("turnos_sem_surgimento", 0))
 	m.revisaveis = (d.get("revisaveis", []) as Array).duplicate(true)
+	m.alivio = int(d.get("alivio", 0))
+	for r in d.get("rastros", []):
+		m.rastros[Vector2i(int(r[0]), int(r[1]))] = int(r[2])
 	for i in d.get("descansos", {}):
 		if por_id.has(i):
 			var hx: Array = d.descansos[i]

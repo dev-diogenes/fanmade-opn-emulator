@@ -29,6 +29,8 @@ var _btn_descansar: Button
 var _btn_encerrar: Button
 var _barra_membrana: ProgressBar
 var _lbl_membrana: Label
+var _linha_tempo: HBoxContainer   ## a linha do tempo do Outro Lado (docs/53)
+var _turno_visto := -1
 var _painel_evento: PanelContainer
 var _lbl_evento: Label
 var _lbl_tipo_evento: Label   ## "EVENTO" ou, nas escolhas morais (docs/50), "ESCOLHA DIFÍCIL"
@@ -547,6 +549,73 @@ func _ao_encerrar(venceu: bool) -> void:
 	_painel_fim.mostrar(carimbo, linhas, venceu, Color("a5651a") if venceu and not solucionado else Color(0, 0, 0, 0))
 
 
+## A linha do tempo do Outro Lado (docs/53): um bilhete por turno do mundo que vem, com dia
+## ou noite e o que se prevê (a Membrana mudando, algo surgindo, a caçada, o covil abrindo).
+func _desenhar_linha_tempo() -> void:
+	for f in _linha_tempo.get_children():
+		f.queue_free()
+	for t in missao.previsao(5):
+		var p := PanelContainer.new()
+		var noite: bool = t.noite
+		p.add_theme_stylebox_override("panel", Tema.caixa(Color("1b2240") if noite else Color(Tema.PERGAMINHO, 0.12),
+			Color("4a5a9a") if noite else Color(Tema.OURO_ESCURO, 0.6), 1, 3, Vector2(4, 2)))
+		p.custom_minimum_size = Vector2(44, 0)
+		p.mouse_filter = Control.MOUSE_FILTER_PASS
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 0)
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p.add_child(v)
+		var cab := Label.new()
+		cab.text = "%d %s" % [int(t.turno), "☾" if noite else "·"]
+		cab.add_theme_font_size_override("font_size", Tema.FONTE_P - 2)
+		cab.add_theme_color_override("font_color", Color("b4c3ff") if noite else Tema.TEXTO_SUAVE)
+		cab.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(cab)
+		var dicas: Array[String] = ["Turno %d do mundo, %s." % [int(t.turno), "noite" if noite else "dia"]]
+		for e in t.eventos:
+			var l := Label.new()
+			l.text = String(e.texto)
+			l.add_theme_font_size_override("font_size", Tema.FONTE_P - 3)
+			l.add_theme_color_override("font_color", Tema.PERIGO if String(e.id) in ["caca", "rompe"] else Tema.AVISO)
+			l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			v.add_child(l)
+			dicas.append(String(e.texto).capitalize())
+		p.tooltip_text = "\n".join(PackedStringArray(dicas))
+		_linha_tempo.add_child(p)
+
+
+## O turno do mundo vira um momento (docs/53): uma faixa no meio da tela, a fita treme, as
+## ameaças que caçam andam, e a noite cai ou amanhece.
+func _momento_do_turno() -> void:
+	for passo in missao.passos_da_caca:
+		_mapa3d.mover_marcador(passo.de, passo.para)
+	var noite := missao.eh_noite()
+	var virou := noite != missao.eh_noite(missao.turno_mundo - 1)
+	var faixa := Label.new()
+	faixa.text = "TURNO %d DO MUNDO%s" % [missao.turno_mundo, ("  ·  A NOITE CAI" if noite else "  ·  AMANHECE") if virou else ("  ·  NOITE" if noite else "")]
+	faixa.add_theme_font_size_override("font_size", Tema.FONTE_G + 6)
+	faixa.add_theme_color_override("font_color", Color("b4c3ff") if noite else Tema.OURO_CLARO)
+	faixa.add_theme_constant_override("outline_size", 8)
+	faixa.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	var ft := Tema.fonte_titulo()
+	if ft != null:
+		faixa.add_theme_font_override("font", ft)
+	faixa.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	faixa.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	faixa.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	faixa.position.y -= 120
+	faixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	faixa.modulate.a = 0.0
+	add_child(faixa)
+	var tw := faixa.create_tween()
+	tw.tween_property(faixa, "modulate:a", 1.0, 0.35)
+	tw.tween_interval(1.4)
+	tw.tween_property(faixa, "modulate:a", 0.0, 0.8)
+	tw.tween_callback(faixa.queue_free)
+	Som.tocar("estatica" if not virou else "encontro")
+	Tema.pulso_vhs(_vista, 0.35 if not virou else 0.6, 0.6)
+
+
 ## Ficha de suspeitos (docs/32): o relatório vira o comando `relatar` e a acusação da
 ## reviravolta, `deduzir` (lockstep no online, docs/52).
 func abrir_deducao(pergunta_id: String = "") -> PainelDeducao:
@@ -726,6 +795,10 @@ func _montar_interface() -> void:
 	_lbl_membrana = Label.new()
 	_lbl_membrana.add_theme_font_size_override("font_size", Tema.FONTE_P)
 	vm.add_child(_lbl_membrana)
+	# Linha do tempo do Outro Lado (docs/53): os próximos turnos do mundo, como em For The King
+	_linha_tempo = HBoxContainer.new()
+	_linha_tempo.add_theme_constant_override("separation", 3)
+	vm.add_child(_linha_tempo)
 
 	# Grupo embaixo à esquerda
 	_grupo = HBoxContainer.new()
@@ -939,7 +1012,18 @@ func _atualizar() -> void:
 	_barra_membrana.value = missao.membrana.valor
 	Tema.membrana_na_tela(_vista, missao.membrana.valor)
 	_mapa3d.clima_membrana(missao.membrana.valor)
-	_lbl_membrana.text = "%d · %s   ·   Reforços %d   ·   Pistas %d" % [missao.membrana.valor, missao.membrana.estado().get("nome", ""), missao.reforcos, missao.pistas]
+	var prog := missao.progresso_do_caso()   # o Ato contra a Agenda (docs/53): progresso do caso, não "pistas"
+	_lbl_membrana.text = "%d · %s   ·   Reforços %d   ·   Caso %d/%d" % [missao.membrana.valor, missao.membrana.estado().get("nome", ""), missao.reforcos,
+		int(prog.firmes), int(prog.necessarias)]
+	_lbl_membrana.tooltip_text = "Caso: pistas firmes que contam para o relatório à Ordem (duas por pergunta em aberto)."
+	_desenhar_linha_tempo()
+	_mapa3d.atualizar_rastros(missao.rastros, Tema.ELEMENTO.get(missao.caso.elemento if missao.caso != null else "sangue", Tema.SANGUE_CLARO))
+	if missao.turno_mundo != _turno_visto:
+		var primeiro := _turno_visto < 0
+		_turno_visto = missao.turno_mundo
+		_mapa3d.ciclo(missao.eh_noite(), primeiro)
+		if not primeiro:
+			_momento_do_turno()
 	_atualizar_mestre()
 	_atualizar_grupo()
 	_atualizar_caso()
@@ -986,6 +1070,9 @@ func _atualizar_caso() -> void:
 				tracos.append(String(Caso.indicio(t).get("rotulo", t)).to_lower() + "?")
 			if not tracos.is_empty():
 				linhas.append("   " + Tema.bb(" · ".join(tracos), Tema.TEXTO_SUAVE))
+	var rumo := missao.rumo_do_caso()   # rumo do caso (docs/53): sem pista à vista, para onde ir
+	if rumo != "":
+		linhas.append(Tema.bb("Sem pista à vista: há algo %s, na névoa." % rumo, Tema.AVISO))
 	if c.elemento_confirmado():   # o elemento do caso (docs/52)
 		linhas.append(Tema.bb("Elemento: %s" % c.nome_elemento(), Tema.ELEMENTO.get(c.elemento, Tema.OURO_CLARO)))
 	_btn_deduzir.visible = alguma_aberta

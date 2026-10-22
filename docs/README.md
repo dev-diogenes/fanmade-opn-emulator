@@ -55,6 +55,7 @@
 | [50-reviravoltas-testemunhas-escolhas.md](50-reviravoltas-testemunhas-escolhas.md) | Mais conteúdo: 3 reviravoltas novas (próxima vítima, mandante, origem), 3 cenas com duas testemunhas (velório, delegacia, rodoviária) e 6 eventos de escolha moral com o cabeçalho ESCOLHA DIFÍCIL e o efeito `chefe` |
 | [51-critica-partida-ftk2-op.md](51-critica-partida-ftk2-op.md) | Crítica de design a partir de uma partida inteira, com For The King 2 e o livro (cap. 6) como régua: caso que se resolve em 5 turnos, mapa sem antecipação, miniaturas de fantasia, modais empilhados; prioridades |
 | [52-relatorio-em-lote-e-elemento.md](52-relatorio-em-lote-e-elemento.md) | Relatório à Ordem (quem, o quê e onde confirmados juntos), todo traço em dois candidatos ou mais, e o elemento do caso (sintomas no briefing, covil, chefes e encontros do elemento) |
+| [53-medo-no-mapa.md](53-medo-no-mapa.md) | Dia e noite, criaturas que caçam o agente isolado com alívio depois do combate, rastros, linha do tempo do Outro Lado, "Caso a/b" no HUD, rumo do caso e o turno do mundo como momento |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.
