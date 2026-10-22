@@ -471,11 +471,15 @@ func pacote_de_municao(arma_base: Dictionary) -> String:
 	var tipo := String(arma_base.get("municao", ""))
 	if tipo == "":
 		return ""
+	var achado := ""
 	for item_id in equipamento:
 		var m = ruleset.equipamento(item_id).get("municao")
 		if m is Dictionary and String(m.get("tipo", "")) == tipo:
-			return item_id
-	return ""
+			if item_id.contains("+"):
+				return item_id   # a munição modificada (dum dum, explosiva) vai primeiro
+			if achado == "":
+				achado = item_id
+	return achado
 
 
 func tem_municao(arma_base: Dictionary) -> bool:
@@ -588,6 +592,8 @@ func bonus_contra(tags: Array, pericia_id: String) -> int:
 		var b: Dictionary = ruleset.equipamento(item_id).get("bonus_resistencia", {})
 		if not b.is_empty() and String(b.get("contra", "")) in tags:
 			melhor = maxi(melhor, int(b.get(pericia_id, b.get("todas", 0))))
+	if "area" in tags:
+		melhor = maxi(melhor, int(protecao().get("bonus_area", 0)))   # proteção antibombas (p.72)
 	return melhor
 
 
@@ -1215,6 +1221,8 @@ func _efeito_se_aplica(e: Dictionary, pericia_id: String, contexto: String) -> b
 
 func modificar_ataque(arma: Dictionary, alvo: Ser) -> Dictionary:
 	var mods := super.modificar_ataque(arma, alvo)
+	mods.bonus_ataque += int(arma.get("bonus_ataque", 0))   # certeira, alongada (p.70)
+	mods.bonus_dano += int(arma.get("bonus_dano", 0))       # cruel
 	var tipo_ataque: String = arma.get("ataque", "corpo_a_corpo")
 	var aplica := func(e): return tipo_ataque in e.get("ataques", [])
 	mods.bonus_dano += _soma_efeitos("bonus_dano", aplica)
@@ -1261,6 +1269,13 @@ func arma_efetiva(arma: Dictionary) -> Dictionary:
 	if a.get("agil", false) and atributo("agi") > atributo("for"):
 		a = a.duplicate()
 		a["atributo_ataque"] = "agi"
+	var pacote := pacote_de_municao(a) if String(a.get("id", "")) in equipamento else ""
+	var em: Dictionary = ruleset.equipamento(pacote).get("efeitos_municao", {}) if pacote != "" else {}
+	if not em.is_empty():   # dum dum e explosiva (p.70-71)
+		a = a.duplicate()
+		a.multiplicador = int(a.get("multiplicador", 2)) + int(em.get("multiplicador", 0))
+		if em.has("dano_municao"):
+			a["dano_municao"] = em.dano_municao
 	return a
 
 

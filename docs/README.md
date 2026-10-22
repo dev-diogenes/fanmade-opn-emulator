@@ -70,6 +70,7 @@
 | [65-base-caminhavel.md](65-base-caminhavel.md) | A Base como lugar: o bar de fachada em 3D com WASD, nove seções que levam às abas ou abrem o bilhete do serviço (laboratório, contenção, enfermaria, ocultismo), a partir de uma crítica de design |
 | [66-simbolos-dos-testes.md](66-simbolos-dos-testes.md) | Um símbolo para cada atributo e perícia: no cabeçalho da rolagem (a perícia e o atributo) e no canto de cada d20 e dos slots do último teste |
 | [67-arsenal-do-livro.md](67-arsenal-do-livro.md) | O equipamento do livro: as 34 armas da Tabela 3.3 com as regras delas (ágil, rajada, recarga, explosão, linha), munição por cena, escudo, itens de combate com cargas, a condição cego e o arsenal com filtros por grupo |
+| [68-modificacoes.md](68-modificacoes.md) | As modificações do livro para armas, munições, proteções e acessórios (cada uma sobe a categoria em I) e a Oficina no arsenal, que mostra como o item fica e se a patente deixa levar |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

@@ -1410,5 +1410,297 @@
         "defesa"
       ]
     }
-  ]
+  ],
+  "modificacoes": {
+    "ref": "p.70-74",
+    "nota": "Cada modificação sobe a categoria do item em I; a mesma modificação não se repete. Um item modificado é guardado como 'base+mod+mod', e 'funcao' e 'instrumental' levam a escolha depois de ':' (ADR 0013).",
+    "lista": [
+      {
+        "id": "certeira",
+        "nome": "certeira",
+        "aplica": [
+          "corpo_a_corpo",
+          "disparo"
+        ],
+        "efeitos": {
+          "bonus_ataque": 2
+        },
+        "ref": "p.70",
+        "descricao": "Feita para ser precisa e balanceada: +2 nos testes de ataque."
+      },
+      {
+        "id": "cruel",
+        "nome": "cruel",
+        "aplica": [
+          "corpo_a_corpo",
+          "disparo"
+        ],
+        "efeitos": {
+          "bonus_dano": 2
+        },
+        "ref": "p.70",
+        "descricao": "Lâmina mais afiada ou material mais denso: +2 no dano."
+      },
+      {
+        "id": "perigosa",
+        "nome": "perigosa",
+        "aplica": [
+          "corpo_a_corpo",
+          "disparo"
+        ],
+        "efeitos": {
+          "margem": 2
+        },
+        "ref": "p.70",
+        "descricao": "Gume de navalha ou material maciço: +2 na margem de ameaça."
+      },
+      {
+        "id": "alongada",
+        "nome": "alongada",
+        "aplica": [
+          "fogo"
+        ],
+        "efeitos": {
+          "bonus_ataque": 2
+        },
+        "ref": "p.70",
+        "descricao": "Cano mais longo e mais preciso: +2 nos testes de ataque."
+      },
+      {
+        "id": "calibre_grosso",
+        "nome": "calibre grosso",
+        "aplica": [
+          "fogo"
+        ],
+        "efeitos": {
+          "dados_dano": 1
+        },
+        "ref": "p.70",
+        "pendente": "a munição própria de calibre grosso",
+        "descricao": "Dispara calibre maior: mais um dado de dano do mesmo tipo."
+      },
+      {
+        "id": "compensador",
+        "nome": "compensador",
+        "aplica": [
+          "fogo"
+        ],
+        "exige": "automatica",
+        "efeitos": {
+          "compensador": true
+        },
+        "ref": "p.70",
+        "descricao": "Amortece o coice: a rajada não tira dado do ataque. Só em armas automáticas."
+      },
+      {
+        "id": "ferrolho_automatico",
+        "nome": "ferrolho automático",
+        "aplica": [
+          "fogo"
+        ],
+        "exclui_se": "automatica",
+        "efeitos": {
+          "automatica": true
+        },
+        "ref": "p.70",
+        "descricao": "O mecanismo dispara em sequência: a arma vira automática e pode dar rajadas."
+      },
+      {
+        "id": "mira_laser",
+        "nome": "mira laser",
+        "aplica": [
+          "fogo"
+        ],
+        "efeitos": {
+          "margem": 2
+        },
+        "ref": "p.70",
+        "descricao": "Um retículo vermelho ajuda a acertar onde dói: +2 na margem de ameaça."
+      },
+      {
+        "id": "mira_telescopica",
+        "nome": "mira telescópica",
+        "aplica": [
+          "fogo"
+        ],
+        "efeitos": {
+          "alcance_mais": 1
+        },
+        "ref": "p.70",
+        "pendente": "o Ataque Furtivo em qualquer alcance",
+        "descricao": "Luneta: o alcance sobe uma categoria (curto para médio, médio para longo, longo para extremo)."
+      },
+      {
+        "id": "silenciador",
+        "nome": "silenciador",
+        "aplica": [
+          "fogo"
+        ],
+        "efeitos": {},
+        "ref": "p.70",
+        "pendente": "a Furtividade para se esconder depois do tiro",
+        "descricao": "Abafa o disparo: −2 dados a menos de penalidade em Furtividade para se esconder no turno em que atirou."
+      },
+      {
+        "id": "visao_de_calor",
+        "nome": "visão de calor",
+        "aplica": [
+          "fogo"
+        ],
+        "efeitos": {
+          "ignora_camuflagem": true
+        },
+        "ref": "p.70",
+        "descricao": "Mira térmica: ignora a camuflagem do alvo."
+      },
+      {
+        "id": "discreta",
+        "nome": "discreta",
+        "aplica": [
+          "corpo_a_corpo",
+          "disparo",
+          "fogo",
+          "protecao_leve"
+        ],
+        "exclui": [
+          "reforcada"
+        ],
+        "efeitos": {
+          "espacos": -1
+        },
+        "ref": "p.70",
+        "pendente": "o +5 em Crime para ocultar",
+        "descricao": "Desmontável, retrátil ou compacta: ocupa um espaço a menos e é fácil de esconder."
+      },
+      {
+        "id": "tatica",
+        "nome": "tática",
+        "aplica": [
+          "corpo_a_corpo",
+          "disparo",
+          "fogo"
+        ],
+        "efeitos": {},
+        "ref": "p.70",
+        "pendente": "o jogo não cobra ação para sacar",
+        "descricao": "Cabo texturizado e bandoleira: saca a arma como ação livre."
+      },
+      {
+        "id": "dum_dum",
+        "nome": "dum dum",
+        "aplica": [
+          "municao_balas"
+        ],
+        "efeitos": {
+          "multiplicador": 1
+        },
+        "ref": "p.71",
+        "descricao": "Balas que se expandem no impacto: +1 no multiplicador de crítico."
+      },
+      {
+        "id": "explosiva",
+        "nome": "explosiva",
+        "aplica": [
+          "municao_balas"
+        ],
+        "efeitos": {
+          "dano_municao": "2d6"
+        },
+        "ref": "p.70",
+        "descricao": "Uma gota de mercúrio ou glicerina faz a bala explodir: +2d6 de dano."
+      },
+      {
+        "id": "antibombas",
+        "nome": "antibombas",
+        "aplica": [
+          "protecao_pesada"
+        ],
+        "efeitos": {
+          "bonus_area": 5
+        },
+        "ref": "p.72",
+        "descricao": "Tratada contra calor e estilhaços, com viseira: +5 nos testes de resistência contra efeitos de área."
+      },
+      {
+        "id": "blindada",
+        "nome": "blindada",
+        "aplica": [
+          "protecao_pesada"
+        ],
+        "efeitos": {
+          "rd": 5,
+          "espacos": 1
+        },
+        "ref": "p.72",
+        "descricao": "Placas de aço e cerâmica entre o kevlar: resistência a dano 5 e um espaço a mais."
+      },
+      {
+        "id": "reforcada",
+        "nome": "reforçada",
+        "aplica": [
+          "protecao"
+        ],
+        "exclui": [
+          "discreta"
+        ],
+        "efeitos": {
+          "defesa": 2,
+          "espacos": 1
+        },
+        "ref": "p.72",
+        "descricao": "+2 na Defesa e um espaço a mais. Não combina com discreta."
+      },
+      {
+        "id": "aprimorado",
+        "nome": "aprimorado",
+        "aplica": [
+          "acessorio"
+        ],
+        "efeitos": {
+          "bonus_pericia_para": 5
+        },
+        "ref": "p.74",
+        "descricao": "O bônus em perícia do acessório sobe para +5."
+      },
+      {
+        "id": "discreto",
+        "nome": "discreto",
+        "aplica": [
+          "acessorio"
+        ],
+        "efeitos": {
+          "espacos": -1
+        },
+        "ref": "p.74",
+        "pendente": "o +5 em Crime para ocultar",
+        "descricao": "Miniaturizado ou disfarçado de outra coisa: ocupa um espaço a menos."
+      },
+      {
+        "id": "funcao",
+        "nome": "função adicional",
+        "aplica": [
+          "acessorio"
+        ],
+        "parametro": "pericia",
+        "efeitos": {
+          "bonus_pericia_extra": 2
+        },
+        "ref": "p.74",
+        "descricao": "+2 em mais uma perícia, à escolha (exceto Luta e Pontaria)."
+      },
+      {
+        "id": "instrumental",
+        "nome": "instrumental",
+        "aplica": [
+          "acessorio"
+        ],
+        "parametro": "kit",
+        "efeitos": {
+          "kit": true
+        },
+        "ref": "p.74",
+        "descricao": "Serve também de kit de uma perícia (Crime, Enganação, Medicina ou Tecnologia)."
+      }
+    ]
+  }
 }

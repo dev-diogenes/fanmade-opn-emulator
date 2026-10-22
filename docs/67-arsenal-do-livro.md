@@ -133,7 +133,7 @@ A etiqueta mostra os números: o dano e o crítico da arma, a Defesa da proteç�
 
 ## O que fica para depois
 
-- **Modificações** de armas, munições, proteções e acessórios (p.70-71 e p.74). Cada uma sobe a categoria em I. Próximo documento.
+- **Modificações** de armas, munições, proteções e acessórios (p.70-71 e p.74): feitas em docs/68.
 - **Arremessar** a faca, a lança e a machadinha. Hoje elas só servem no corpo a corpo.
 - **Itens sem efeito ainda:**
   - mina antipessoal;

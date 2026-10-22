@@ -29,6 +29,7 @@ const GRUPOS_ARSENAL := [["arma", "Armas"], ["municao", "Munição"], ["protecao
 	["contra_criatura", "Contra criaturas"], ["requisitado", "Na requisição"]]
 var _filtro_arsenal := "arma"
 var _botoes_filtro: Dictionary = {}   ## grupo -> Button do filtro
+var _oficina: Control                  ## a Oficina aberta (docs/68), ou null
 var _opt_arma: OptionButton
 var _lbl_requisicao: Label
 var _caixa_grupo: VBoxContainer
@@ -311,6 +312,8 @@ func _montar_interface() -> void:
 			chk.set_meta("texto", chk.text)
 			if Ruleset.empilhavel(item):
 				_botoes_quantidade(chk, id)
+			if not carreira.ruleset.classes_para_modificar(item).is_empty() and not item.has("maldicoes"):
+				_botao_oficina(chk, id, Ruleset.empilhavel(item))
 			_checks_itens[id] = chk
 			fluxo.add_child(chk)
 
@@ -491,9 +494,7 @@ func _etiqueta_item(item: Dictionary) -> Button:
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 	var cat: String = ["0", "I", "II", "III", "IV", "V"][mini(5, int(item.get("categoria", 0)))]
-	var resumo := IconeItem.resumo(item, carreira.ruleset)
-	b.text = "%s%s
-cat. %s · %d esp.%s" % ["☠ " if amaldicoado else "", item.nome, cat, int(item.get("espacos", 1)), (" · " + resumo) if resumo != "" else ""]
+	b.text = _texto_etiqueta(item)
 	var efeito := IconeItem.efeito(item, carreira.ruleset)
 	if amaldicoado:
 		b.tooltip_text = "%s\nMaldições: %s" % [efeito, ", ".join(PackedStringArray(item.maldicoes.map(func(m): return "%s (%s) — %s" % [m.nome, m.elemento, m.descricao])))]
@@ -523,6 +524,13 @@ cat. %s · %d esp.%s" % ["☠ " if amaldicoado else "", item.nome, cat, int(item
 		if amaldicoado:
 			b.draw_rect(Rect2(Vector2(1, 1), b.size - Vector2(2, 2)), Color(Tema.SANGUE_CLARO, 0.8), false, 2.0))
 	return b
+
+
+## Nome, categoria, espaços e os números do item (o item modificado mostra os dele).
+func _texto_etiqueta(item: Dictionary) -> String:
+	var cat: String = ["0", "I", "II", "III", "IV", "V"][mini(5, int(item.get("categoria", 0)))]
+	var resumo := IconeItem.resumo(item, carreira.ruleset)
+	return "%s%s\ncat. %s · %d esp.%s" % ["☠ " if item.has("maldicoes") else "", item.nome, cat, int(item.get("espacos", 1)), (" · " + resumo) if resumo != "" else ""]
 
 
 ## Folha de papel (dossiê). `carimbo` põe "CONFIDENCIAL" no canto.
@@ -608,8 +616,163 @@ func _mudar_quantidade(item_id: String, delta: int) -> void:
 			return
 		lista.append(item_id)
 	else:
-		lista.erase(item_id)
+		var variantes := _variantes(lista, item_id)
+		if not variantes.is_empty():
+			lista.erase(variantes[-1])
 	_aplicar_requisicao(lista)
+
+
+## Os ids da lista que são este item, modificado ou não ("pistola", "pistola+certeira").
+func _variantes(lista: Array, item_id: String) -> Array:
+	return lista.filter(func(i): return Ruleset.base_do_item(String(i)) == item_id)
+
+
+## "Modificar" na etiqueta do item requisitado: abre a Oficina (p.70-74).
+func _botao_oficina(etiqueta: Button, item_id: String, com_quantidade: bool) -> void:
+	var b := Button.new()
+	b.name = "Oficina"
+	b.text = "Modificar"
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_size_override("font_size", Tema.FONTE_P - 1)
+	b.tooltip_text = "Oficina: modificações do livro. Cada uma sobe a categoria do item em I."
+	b.position = Vector2(196 if com_quantidade else 268, 6)
+	b.pressed.connect(func(): _abrir_oficina(item_id))
+	b.visible = false
+	etiqueta.add_child(b)
+
+
+## Oficina (docs/68): marca as modificações do item requisitado. Mostra como o item fica e se
+## a patente e a cota deixam levar; "Aplicar" troca o item da requisição pelo modificado.
+func _abrir_oficina(item_id: String) -> void:
+	var a := _selecionado
+	if a == null:
+		return
+	var variantes := _variantes(a.equipamento, item_id)
+	if variantes.is_empty():
+		return
+	_fechar_oficina()
+	var rs := carreira.ruleset
+	var atual: String = variantes[0]
+	var escolhidas: Dictionary = {}   # mod_id -> parâmetro ("" sem parâmetro)
+	for parte in atual.split("+").slice(1):
+		escolhidas[parte.get_slice(":", 0)] = parte.get_slice(":", 1) if parte.contains(":") else ""
+	_oficina = Control.new()
+	_oficina.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_oficina.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_oficina)
+	var fundo := ColorRect.new()
+	fundo.color = Color(0, 0, 0, 0.55)
+	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_oficina.add_child(fundo)
+	var papel := _papel(false)
+	papel.set_anchors_preset(Control.PRESET_CENTER)
+	papel.custom_minimum_size = Vector2(620, 0)
+	papel.position = Vector2(-310, -260)
+	_oficina.add_child(papel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", Tema.ESPACO_P)
+	papel.add_child(v)
+	var titulo := Label.new()
+	titulo.theme_type_variation = "Titulo"
+	titulo.add_theme_color_override("font_color", Tema.TINTA)
+	titulo.text = "Oficina · %s" % rs.equipamento(item_id).get("nome", item_id)
+	v.add_child(titulo)
+	var nota := Label.new()
+	nota.text = "Cada modificação sobe a categoria em I e não se repete (p.70)."
+	nota.theme_type_variation = "TextoPapel"
+	v.add_child(nota)
+	var resultado := Label.new()
+	resultado.theme_type_variation = "TextoPapel"
+	resultado.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var aplicar := Button.new()
+	var montar_id := func() -> String:
+		var partes := PackedStringArray([item_id])
+		for m in rs.lista_modificacoes():
+			if escolhidas.has(m.id):
+				partes.append(String(m.id) + (":" + String(escolhidas[m.id]) if String(escolhidas[m.id]) != "" else ""))
+		return "+".join(partes)
+	var atualizar := func():
+		var novo: String = montar_id.call()
+		var it := rs.equipamento(novo)
+		var resto: Array = a.equipamento.duplicate()
+		resto.erase(atual)
+		var motivo := "Essa combinação não existe no livro." if it.is_empty() else a.motivo_bloqueio(novo, resto)
+		resultado.text = ("Fica: %s · categoria %s · %d espaço(s)" % [it.nome, ["0", "I", "II", "III", "IV", "V"][mini(5, int(it.categoria))], int(it.get("espacos", 1))]) if not it.is_empty() else ""
+		resultado.text += ("\n" + motivo) if motivo != "" else ""
+		resultado.add_theme_color_override("font_color", Tema.SANGUE if motivo != "" else Tema.TINTA)
+		aplicar.disabled = motivo != "" or novo == atual
+	var grade := GridContainer.new()
+	grade.columns = 2
+	grade.add_theme_constant_override("h_separation", Tema.ESPACO_M)
+	grade.add_theme_constant_override("v_separation", Tema.ESPACO_P)
+	v.add_child(grade)
+	for m in rs.modificacoes_possiveis(item_id):
+		var chk := CheckBox.new()
+		chk.text = String(m.nome).capitalize() if String(m.nome).length() > 0 else String(m.id)
+		chk.add_theme_color_override("font_color", Tema.TINTA)
+		chk.add_theme_color_override("font_pressed_color", Tema.TINTA)
+		chk.add_theme_color_override("font_hover_color", Tema.SANGUE)
+		chk.add_theme_color_override("font_hover_pressed_color", Tema.SANGUE)
+		chk.button_pressed = escolhidas.has(m.id)
+		chk.tooltip_text = String(m.descricao) + (("\nAinda sem efeito no jogo: %s." % m.pendente) if m.has("pendente") else "")
+		grade.add_child(chk)
+		var desc := Label.new()
+		desc.text = String(m.descricao)
+		desc.theme_type_variation = "TextoPapel"
+		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc.custom_minimum_size = Vector2(380, 0)
+		var params := rs.parametros_da_modificacao(m)
+		var opt: OptionButton = null
+		if not params.is_empty():
+			var linha := HBoxContainer.new()
+			linha.add_child(desc)
+			opt = OptionButton.new()
+			for p in params:
+				opt.add_item(String(rs.pericia(p).get("nome", p)))
+				opt.set_item_metadata(opt.item_count - 1, p)
+				if String(escolhidas.get(m.id, "")) == p:
+					opt.select(opt.item_count - 1)
+			linha.add_child(opt)
+			grade.add_child(linha)
+		else:
+			grade.add_child(desc)
+		var mid := String(m.id)
+		chk.toggled.connect(func(v_):
+			if v_:
+				escolhidas[mid] = String(opt.get_item_metadata(maxi(0, opt.selected))) if opt != null else ""
+			else:
+				escolhidas.erase(mid)
+			atualizar.call())
+		if opt != null:
+			opt.item_selected.connect(func(i):
+				if escolhidas.has(mid):
+					escolhidas[mid] = String(opt.get_item_metadata(i))
+				atualizar.call())
+	v.add_child(resultado)
+	var botoes := HBoxContainer.new()
+	botoes.alignment = BoxContainer.ALIGNMENT_END
+	botoes.add_theme_constant_override("separation", Tema.ESPACO_M)
+	v.add_child(botoes)
+	var cancelar := Button.new()
+	cancelar.text = "Cancelar (Esc)"
+	cancelar.theme_type_variation = "BotaoPapel"
+	cancelar.pressed.connect(_fechar_oficina)
+	botoes.add_child(cancelar)
+	aplicar.text = "Aplicar"
+	aplicar.theme_type_variation = "BotaoPapel"
+	aplicar.pressed.connect(func():
+		var lista: Array = a.equipamento.duplicate()
+		lista[lista.find(atual)] = montar_id.call()
+		_fechar_oficina()
+		_aplicar_requisicao(lista))
+	botoes.add_child(aplicar)
+	atualizar.call()
+
+
+func _fechar_oficina() -> void:
+	if _oficina != null and is_instance_valid(_oficina):
+		_oficina.queue_free()
+	_oficina = null
 
 
 func _catalogo() -> Array:
@@ -691,12 +854,15 @@ func _atualizar_armas_requisicao() -> void:
 	_opt_arma.clear()
 	_opt_arma.add_item("Desarmado")
 	_opt_arma.set_item_metadata(0, "")
-	for item_id in _checks_itens:
-		if _selecionado != null and item_id in _selecionado.equipamento and carreira.ruleset.equipamento(item_id).tipo == "arma":
-			_opt_arma.add_item(carreira.ruleset.equipamento(item_id).nome)
-			_opt_arma.set_item_metadata(_opt_arma.item_count - 1, item_id)
-			if item_id == atual:
-				_opt_arma.select(_opt_arma.item_count - 1)
+	var vistos := {}
+	for item_id in (_selecionado.equipamento if _selecionado != null else []):
+		if vistos.has(item_id) or carreira.ruleset.equipamento(item_id).get("tipo", "") != "arma":
+			continue
+		vistos[item_id] = true
+		_opt_arma.add_item(carreira.ruleset.equipamento(item_id).nome)
+		_opt_arma.set_item_metadata(_opt_arma.item_count - 1, item_id)
+		if item_id == atual:
+			_opt_arma.select(_opt_arma.item_count - 1)
 
 
 ## Escolhas de NEX pendentes. `caixa`: onde montar (a Base, ou o papel da sala de
@@ -805,7 +971,7 @@ func _marcar_item(item_id: String, marcado: bool) -> void:
 	if _selecionado == null:
 		return
 	var lista: Array = _selecionado.equipamento.duplicate()
-	if marcado and not item_id in lista:
+	if marcado and _variantes(lista, item_id).is_empty():
 		var motivo := _selecionado.motivo_bloqueio(item_id, lista)
 		if motivo != "":
 			_lbl_aviso_arsenal.text = motivo
@@ -813,8 +979,7 @@ func _marcar_item(item_id: String, marcado: bool) -> void:
 			return
 		lista.append(item_id)
 	elif not marcado:
-		while item_id in lista:
-			lista.erase(item_id)
+		lista = lista.filter(func(i): return Ruleset.base_do_item(String(i)) != item_id)   # e as versões modificadas
 	_aplicar_requisicao(lista)
 
 
@@ -883,17 +1048,22 @@ func _atualizar_arsenal() -> void:
 		(_botoes_filtro[g] as Button).set_pressed_no_signal(g == _filtro_arsenal)
 	for item_id in _checks_itens:
 		var b: Button = _checks_itens[item_id]
-		var marcado: bool = item_id in a.equipamento
+		var variantes := _variantes(a.equipamento, item_id)
+		var marcado := not variantes.is_empty()
 		var motivo := "" if marcado else a.motivo_bloqueio(item_id, a.equipamento)
-		var aviso := a.aviso_item(item_id)
-		var qtd := a.equipamento.count(item_id)
+		var aviso := a.aviso_item(variantes[0] if marcado else item_id)
+		var qtd := variantes.size()
 		b.visible = String(b.get_meta("grupo", "")) == _filtro_arsenal or (_filtro_arsenal == "requisitado" and marcado)
 		if b.visible:
 			visiveis[b.get_parent()] = true
-		b.text = String(b.get_meta("texto", b.text)) + ("  ×%d" % qtd if qtd > 1 else "")
+		var modificado: bool = marcado and String(variantes[0]).contains("+")
+		b.text = (_texto_etiqueta(carreira.ruleset.equipamento(variantes[0])) if modificado else String(b.get_meta("texto", b.text))) + ("  ×%d" % qtd if qtd > 1 else "")
 		var botoes := b.get_node_or_null("Quantidade")
 		if botoes != null:
 			botoes.visible = marcado
+		var oficina := b.get_node_or_null("Oficina")
+		if oficina != null:
+			oficina.visible = marcado
 		b.set_pressed_no_signal(marcado)
 		b.disabled = motivo != ""
 		b.modulate = Color(1, 1, 1, 0.45) if motivo != "" else Color.WHITE
@@ -1450,6 +1620,10 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(evento: InputEvent) -> void:
+	if _oficina != null and evento is InputEventKey and evento.pressed and (evento as InputEventKey).keycode == KEY_ESCAPE:
+		_fechar_oficina()
+		get_viewport().set_input_as_handled()
+		return
 	if _sala_base == null or not _aba_planta.is_visible_in_tree() or TourGuiado.em_andamento() or TourGuiado.papel_aberto(get_tree()):
 		return
 	if not evento is InputEventKey or not evento.pressed or evento.echo:

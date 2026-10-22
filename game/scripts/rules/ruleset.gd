@@ -14,6 +14,7 @@ var dados: Dictionary = {}
 var _pericias: Dictionary = {}
 var _classes: Dictionary = {}
 var _armas: Dictionary = {}
+var _modificados: Dictionary = {}   ## "base+mod" -> item montado (ADR 0013)
 var _graus: Dictionary = {}
 var _origens: Dictionary = {}
 var _poderes: Dictionary = {}   ## classe_id -> {poder_id -> poder}
@@ -297,9 +298,14 @@ func lista_amaldicoados() -> Array:
 
 
 ## Qualquer equipamento pelo id, com "tipo": "arma" | "protecao" | "item". {} se não existir.
+## Itens modificados (p.70-74) vêm como "base+mod+mod" (ADR 0013).
 ## Itens amaldiçoados (p.154) são montados a partir da base: a primeira maldição soma II à
 ## categoria e as seguintes, I; o item recebe a lista "maldicoes".
 func equipamento(item_id: String) -> Dictionary:
+	if item_id.contains("+"):
+		if not _modificados.has(item_id):
+			_modificados[item_id] = _montar_modificado(item_id)
+		return (_modificados[item_id] as Dictionary).duplicate(true)
 	for am in lista_amaldicoados():
 		if am.id == item_id:
 			var base := equipamento(am.base)
@@ -338,6 +344,141 @@ func equipamento(item_id: String) -> Dictionary:
 			d["tipo"] = "item"
 			return d
 	return {}
+
+
+# --- Modificações (p.70-74, ADR 0013) -------------------------------------------
+
+func lista_modificacoes() -> Array:
+	return dados.get("equipamentos", {}).get("modificacoes", {}).get("lista", [])
+
+
+func modificacao(mod_id: String) -> Dictionary:
+	for m in lista_modificacoes():
+		if m.id == mod_id:
+			return m
+	return {}
+
+
+## O id do item sem as modificações ("pistola+certeira" -> "pistola").
+static func base_do_item(item_id: String) -> String:
+	return item_id.get_slice("+", 0)
+
+
+## As classes do item que as modificações conhecem: o tipo de ataque da arma, as balas,
+## proteção leve ou pesada, e o acessório que dá bônus em perícia.
+func classes_para_modificar(item: Dictionary) -> Array:
+	var t := String(item.get("tipo", ""))
+	if t == "arma":
+		return [] if String(item.get("id", "")) in ["desarmado", "coronhada"] else [String(item.get("ataque", "corpo_a_corpo"))]
+	if t == "protecao":
+		if item.get("escudo", false):
+			return ["protecao"]
+		return ["protecao", "protecao_pesada" if String(item.get("proficiencia", "")) == "protecoes_pesadas" else "protecao_leve"]
+	var m = item.get("municao")
+	if m is Dictionary and String(m.get("tipo", "")) in ["balas_curtas", "balas_longas"]:
+		return ["municao_balas"]
+	if String(item.get("grupo", "")) == "acessorio" and item.has("bonus_pericia"):
+		return ["acessorio"]
+	return []
+
+
+## As modificações que servem para o item (pelo tipo dele), menos as já feitas. O que uma
+## modificação pede ou proíbe ("exige", "exclui") é conferido ao montar o item.
+func modificacoes_possiveis(item_id: String) -> Array:
+	var item := equipamento(item_id)
+	var classes := classes_para_modificar(item)
+	var feitas: Array = Array(item.get("modificacoes", [])).map(func(x): return String(x.id))
+	var lista: Array = []
+	for m in lista_modificacoes():
+		if m.id in feitas or not Array(m.aplica).any(func(c): return c in classes):
+			continue
+		if m.has("exclui_se") and item.get(m.exclui_se, false):
+			continue   # ferrolho automático numa arma que já é automática
+		lista.append(m)
+	return lista
+
+
+## Parâmetros válidos de uma modificação: perícias para a função adicional (menos Luta e
+## Pontaria), perícias com kit para o instrumental.
+func parametros_da_modificacao(m: Dictionary) -> Array:
+	match String(m.get("parametro", "")):
+		"pericia":
+			return dados.pericias.pericias.filter(func(p): return not String(p.id) in ["luta", "pontaria"]).map(func(p): return String(p.id))
+		"kit":
+			return dados.pericias.pericias.filter(func(p): return p.get("kit", false)).map(func(p): return String(p.id))
+	return []
+
+
+## Monta "base+mod+mod:param": cada modificação sobe a categoria em I e soma o seu efeito.
+## {} se a base não existe, se uma modificação não cabe ou se repete.
+func _montar_modificado(item_id: String) -> Dictionary:
+	var partes := item_id.split("+")
+	var base := equipamento(partes[0])
+	if base.is_empty():
+		return {}
+	var d := base.duplicate(true)
+	if not d.has("base"):
+		d["base"] = partes[0]
+	d.id = item_id
+	var aplicadas: Array = []
+	var nomes := PackedStringArray()
+	var alcances := ["curto", "medio", "longo", "extremo"]
+	for k in range(1, partes.size()):
+		var mod_id := partes[k].get_slice(":", 0)
+		var param := partes[k].get_slice(":", 1) if partes[k].contains(":") else ""
+		var m := modificacao(mod_id)
+		if m.is_empty() or aplicadas.any(func(x): return x.id == mod_id) or not Array(m.aplica).any(func(c): return c in classes_para_modificar(d)):
+			return {}
+		if m.has("parametro") and not param in parametros_da_modificacao(m):
+			return {}
+		var ef: Dictionary = m.efeitos
+		d.categoria = int(d.get("categoria", 0)) + 1
+		d.espacos = maxi(0, int(d.get("espacos", 1)) + int(ef.get("espacos", 0)))
+		for chave in ["bonus_ataque", "bonus_dano", "defesa"]:
+			if ef.has(chave):
+				d[chave] = int(d.get(chave, 0)) + int(ef[chave])
+		if ef.has("margem"):
+			d.margem = int(d.get("margem", 20)) - int(ef.margem)
+		if ef.has("dados_dano"):
+			var dd := Dados.interpretar(String(d.dano))
+			d.dano = "%dd%d" % [int(dd.quantidade) + int(ef.dados_dano), int(dd.faces)] + ("+%d" % int(dd.bonus) if int(dd.bonus) > 0 else "")
+		for chave in ["automatica", "compensador", "ignora_camuflagem"]:
+			if ef.get(chave, false):
+				d[chave] = true
+		if ef.has("alcance_mais") and d.has("alcance"):
+			d.alcance = alcances[mini(alcances.size() - 1, alcances.find(String(d.alcance)) + int(ef.alcance_mais))]
+		if ef.has("multiplicador") or ef.has("dano_municao"):   # munição: vale na arma que a dispara
+			var em: Dictionary = d.get("efeitos_municao", {})
+			em["multiplicador"] = int(em.get("multiplicador", 0)) + int(ef.get("multiplicador", 0))
+			if ef.has("dano_municao"):
+				em["dano_municao"] = ef.dano_municao
+			d["efeitos_municao"] = em
+		if ef.has("bonus_area"):
+			d["bonus_area"] = int(ef.bonus_area)
+		if ef.has("rd"):
+			for tipo in Ser.DANO_FISICO:
+				d.resistencias = d.get("resistencias", {})
+				d.resistencias[tipo] = maxi(int(d.resistencias.get(tipo, 0)), int(ef.rd))
+		if ef.has("bonus_pericia_para"):
+			for p in d.get("bonus_pericia", {}):
+				d.bonus_pericia[p] = maxi(int(d.bonus_pericia[p]), int(ef.bonus_pericia_para))
+		if ef.has("bonus_pericia_extra"):
+			var bp: Dictionary = d.get("bonus_pericia", {})
+			bp[param] = maxi(int(bp.get(param, 0)), int(ef.bonus_pericia_extra))
+			d["bonus_pericia"] = bp
+		if ef.get("kit", false):
+			d["kit"] = param
+		aplicadas.append({"id": mod_id, "nome": m.nome, "parametro": param})
+		nomes.append(String(m.nome) + (" (%s)" % pericia(param).get("nome", param) if param != "" else ""))
+	for x in aplicadas:   # o que uma pede ou proíbe vale para o item pronto, em qualquer ordem
+		var m := modificacao(x.id)
+		if (m.has("exige") and not d.get(m.exige, false)) or (m.has("exclui_se") and base.get(m.exclui_se, false)):
+			return {}
+		if Array(m.get("exclui", [])).any(func(e): return aplicadas.any(func(y): return y.id == e)):
+			return {}
+	d.modificacoes = aplicadas
+	d.nome = "%s %s" % [base.nome, ", ".join(nomes)]
+	return d
 
 
 ## Próximo grau de treinamento ("treinado" -> "veterano" -> "expert").

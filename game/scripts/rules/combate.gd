@@ -400,7 +400,7 @@ func chance_de_acerto(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: 
 	if pode_disparar(atacante, arma) != "":
 		return -1.0
 	var chance := Teste.chance_de_passar(dados_teste, bonus_teste + int(mods.bonus_ataque) + bonus_extra + int(aj.bonus), defesa, dados_extras)
-	if grade != null and grade.camuflado(alvo) and not (atacante is Agente and (atacante as Agente).ignora_camuflagem()):
+	if grade != null and grade.camuflado(alvo) and not arma.get("ignora_camuflagem", false) and not (atacante is Agente and (atacante as Agente).ignora_camuflagem()):
 		chance *= 0.8   # camuflagem leve: 20% de erro (p.89)
 	return chance
 
@@ -904,7 +904,7 @@ func _explodir_no_alvo(atacante: Ser, alvo: Ser, arma: Dictionary, dano: int) ->
 			continue
 		var res_p := String(ex.get("resistencia", "reflexos"))
 		var d := dano
-		if Teste.rolar(dados, x.dados_da_pericia(res_p), x.bonus_pericia(res_p), dt).sucesso:
+		if Teste.rolar(dados, x.dados_da_pericia(res_p), x.bonus_pericia(res_p) + x.bonus_contra(["area"], res_p), dt).sucesso:
 			d = 0 if _tem_evasao(x, res_p) else d / 2
 		textos.append("%s %d" % [x.nome, aplicar_dano(x, d, String(arma.get("tipo_dano", "impacto")), 0, atacante)])
 	if not textos.is_empty():
@@ -1207,7 +1207,7 @@ func _resistir_ritual(conjurador: Ser, ritual_id: String, r: Dictionary, alvo: S
 		elif ag.afinidade != "" and vantagem.get(r.elemento, "") == ag.afinidade:
 			mod -= int(cfg_af.get("dados_resistencia", 2))
 		bonus += ag._soma_efeitos("bonus_resistencia_rituais")   # Abascanta
-	bonus += alvo.bonus_contra(r.get("tags", []), pericia)   # máscara de gás contra miasmas (p.76)
+	bonus += alvo.bonus_contra(Array(r.get("tags", [])) + (["area"] if r.has("area") else []), pericia)   # máscara de gás, antibombas (p.72, p.76)
 	var t := Teste.rolar(dados, alvo.dados_da_pericia(pericia), bonus, conjurador.dt_ritual(ritual_id), mod)
 	if t.sucesso:
 		_ao_passar_resistencia(alvo)
@@ -2383,7 +2383,7 @@ func usar_granada(agente: Agente, item_id: String, celula: Vector2i) -> Dictiona
 	var rolagem := dados.rolar_expressao(String(ex.dano)) if ex.has("dano") else 0
 	var textos := PackedStringArray()
 	for x in atingidos:
-		var passou := ex.has("resistencia") and Teste.rolar(dados, x.dados_da_pericia(ex.resistencia), x.bonus_pericia(ex.resistencia), dt).sucesso
+		var passou := ex.has("resistencia") and Teste.rolar(dados, x.dados_da_pericia(ex.resistencia), x.bonus_pericia(ex.resistencia) + x.bonus_contra(["area"], String(ex.resistencia)), dt).sucesso
 		if ex.has("dano"):
 			var d := rolagem
 			if passou:
@@ -2901,7 +2901,7 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	if arma.get("recarga", false):
 		atacante.mods_cena["descarregada"] = String(arma.get("id", ""))
 	res.acertou = res.teste.sucesso
-	if res.acertou and grade != null and grade.camuflado(alvo) and not (agente != null and agente.ignora_camuflagem()) and dados.rolar(10) <= 2:
+	if res.acertou and grade != null and grade.camuflado(alvo) and not arma.get("ignora_camuflagem", false) and not (agente != null and agente.ignora_camuflagem()) and dados.rolar(10) <= 2:
 		res.acertou = false   # camuflagem leve: 1 ou 2 no d10 (p.89)
 		_log("O golpe de %s se perde: %s está encoberto." % [atacante.nome, alvo.nome])
 	if res.acertou and atacante.tem(Ser.CEGO) and dados.rolar(100) <= 50:
@@ -2968,6 +2968,8 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 			dano += dados.rolar_expressao("%dd6" % furtivo_dados)   # dados extras não multiplicam
 		for expr in String(mods.get("dados_dano_ritual", "")).split("+", false):
 			dano += dados.rolar_expressao(expr)   # Amaldiçoar Arma (não multiplica no crítico)
+		if arma.has("dano_municao"):
+			dano += dados.rolar_expressao(String(arma.dano_municao))   # munição explosiva (p.70)
 		if furtivo_amea != "":
 			dano += dados.rolar_expressao(furtivo_amea)   # ataque furtivo de ameaça (p.294)
 		for m in maldicoes_arma:
