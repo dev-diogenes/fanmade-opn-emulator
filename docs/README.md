@@ -53,6 +53,7 @@
 | [48-interludio.md](48-interludio.md) | Interlúdio pelo livro (p.92-93) no lugar do descanso de 25%: duas ações por agente no hex (dormir, relaxar, alimentar-se, exercitar-se, ler, revisar caso), recuperação pelo limite de PE |
 | [49-efeito-de-insanidade.md](49-efeito-de-insanidade.md) | Efeito de insanidade pelo livro (p.111-113): 1d20 na Tabela 5.1 na primeira vez que fica perturbado na cena, sem penalidade; dura até o fim da missão se enlouquecer; nota na tela e sussurros do efeito |
 | [50-reviravoltas-testemunhas-escolhas.md](50-reviravoltas-testemunhas-escolhas.md) | Mais conteúdo: 3 reviravoltas novas (próxima vítima, mandante, origem), 3 cenas com duas testemunhas (velório, delegacia, rodoviária) e 6 eventos de escolha moral com o cabeçalho ESCOLHA DIFÍCIL e o efeito `chefe` |
+| [51-critica-partida-ftk2-op.md](51-critica-partida-ftk2-op.md) | Crítica de design a partir de uma partida inteira, com For The King 2 e o livro (cap. 6) como régua: caso que se resolve em 5 turnos, mapa sem antecipação, miniaturas de fantasia, modais empilhados; prioridades |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.
