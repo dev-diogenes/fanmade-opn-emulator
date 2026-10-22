@@ -52,6 +52,10 @@ static func ficha_bbcode(a: Agente, completa: bool = true) -> String:
 		linhas.append("[color=#5b2a86]Rituais:[/color] " + ", ".join(rits))
 	if not a.lesoes.is_empty():
 		linhas.append("[color=#9a4a10]Lesões:[/color] " + ", ".join(PackedStringArray(a.lesoes)))
+	if not a.traumas.is_empty():   # docs/70
+		var fobias: Dictionary = DadosJogo.ler("traumas").get("fobias", {})
+		linhas.append("[color=#a51c1c]Traumas:[/color] %s%s" % [", ".join(PackedStringArray(a.traumas.map(func(t): return String(fobias.get(String(t.elemento), {}).get("nome", "fobia"))))),
+			"  ·  em tratamento" if a.em_tratamento else ""])
 	if not a.condicoes.is_empty():
 		linhas.append("[color=#a51c1c]Condições:[/color] " + ", ".join(PackedStringArray(a.condicoes.keys())))
 	return "\n".join(linhas)

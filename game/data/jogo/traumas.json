@@ -1,0 +1,13 @@
+{
+  "nota": "Traumas que ficam (docs/70). Camada do jogo, não do livro: o livro não tem regra de fobia. Quem termina a missão com um efeito de insanidade que durava até o fim dela (chegou a enlouquecer) testa Vontade; falhando, leva uma fobia do elemento do caso. Diante de uma criatura desse elemento, começa o combate abalado. Tratar na Enfermaria da Base deixa o agente fora da próxima missão; quando a missão termina sem ele, a fobia mais antiga passa.",
+  "dt_vontade": 20,
+  "condicao_em_combate": "abalado",
+  "elemento_sem_caso": "medo",
+  "fobias": {
+    "sangue": {"nome": "Fobia de Sangue", "descricao": "O cheiro de ferro e o som de carne fazem as mãos tremerem.", "frases": ["Tem sangue demais aqui.", "Não. De novo não."]},
+    "morte": {"nome": "Fobia de Morte", "descricao": "Relógios, cinzas e o lodo preto lembram que o tempo está acabando.", "frases": ["Está tudo apodrecendo.", "Quanto tempo ainda?"]},
+    "conhecimento": {"nome": "Fobia de Conhecimento", "descricao": "Sigilos e vozes que sabem demais fazem a cabeça doer.", "frases": ["Pare de ler isso.", "Eu não quero saber."]},
+    "energia": {"nome": "Fobia de Energia", "descricao": "Luzes que piscam e o zumbido da estática disparam o pânico.", "frases": ["Desliga isso!", "Está vindo pela tomada."]},
+    "medo": {"nome": "Fobia do Medo", "descricao": "Uma névoa que ninguém mais vê fecha o peito.", "frases": ["Vocês não estão vendo?", "Está na névoa."]}
+  }
+}

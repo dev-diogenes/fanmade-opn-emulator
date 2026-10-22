@@ -184,6 +184,8 @@ func validar_grupo(grupo: Array) -> Array[String]:
 			erros.append("%s não está no roster" % a.nome)
 		if not Progressao.pendencias(a).is_empty():
 			erros.append("%s tem escolhas de NEX pendentes" % a.nome)
+		if a.em_tratamento:
+			erros.append("%s está em tratamento na Enfermaria" % a.nome)
 		erros.append_array(a.validar_equipamento(a.equipamento))
 	return erros
 
@@ -335,8 +337,20 @@ func encerrar_missao() -> Dictionary:
 			linha.patente = a.patente().get("nome", "")
 			linha.promovido = linha.patente != patente_antes
 			linha.pendencias = Progressao.pendencias(a).size()
+			var trauma := _trauma_da_missao(a, m)
+			if trauma != "":
+				linha.trauma = trauma
 			_restaurar(a)
 		agentes_rel.append(linha)
+	# Quem ficou na Enfermaria durante a missão sai tratado (docs/70)
+	var cfg_t := DadosJogo.ler("traumas")
+	for a in roster:
+		if a.em_tratamento and not a in m.agentes_iniciais:
+			a.em_tratamento = false
+			if not a.traumas.is_empty():
+				var curado: Dictionary = a.traumas.pop_front()
+				var nome_fobia := String(cfg_t.fobias.get(String(curado.elemento), {}).get("nome", "fobia"))
+				linhas_pp.append("%s terminou o tratamento: a %s passou (+0)" % [a.nome, nome_fobia.to_lower()])
 	# A contenção e o laboratório (docs/63): presos para as celas livres, amostras das pistas a mais
 	var cfg_c: Dictionary = DadosJogo.ler("sinais").contencao
 	var presos_novos: Array = []
@@ -435,6 +449,31 @@ func analisar_sinal(sinal: Dictionary) -> Dictionary:
 
 
 ## Entre missões, na Base: recuperação total e fim de condições.
+## Traumas que ficam (docs/70): quem chegou a enlouquecer na missão (o efeito de insanidade
+## durava até o fim dela) testa Vontade; falhando, leva uma fobia do elemento do caso.
+func _trauma_da_missao(a: Agente, m: Missao) -> String:
+	if not a.efeitos_insanidade.any(func(e): return e.get("ate_o_fim", false)):
+		return ""
+	var cfg := DadosJogo.ler("traumas")
+	var elemento := m.caso.elemento if m.caso != null else String(cfg.get("elemento_sem_caso", "medo"))
+	if a.tem_fobia(elemento):
+		return ""
+	var t := a.testar(m.dados, "vontade", int(cfg.get("dt_vontade", 20)))
+	if t != null and t.sucesso:
+		return ""
+	a.traumas.append({"elemento": elemento, "missao": missoes_concluidas + 1})
+	return String(cfg.fobias.get(elemento, {}).get("nome", "Fobia"))
+
+
+## Enfermaria (docs/70): quem tem trauma pode ficar fora da próxima missão para se tratar
+## (de novo, desiste do tratamento).
+func tratar(a: Agente) -> bool:
+	if a.traumas.is_empty() or missao != null:
+		return false
+	a.em_tratamento = not a.em_tratamento
+	return true
+
+
 func _restaurar(a: Agente) -> void:
 	a.bonus_exercicio = 0   # os bônus do interlúdio valem até o fim da missão (p.93)
 	a.bonus_leitura = 0

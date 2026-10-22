@@ -71,6 +71,8 @@ var arma_id := ""                ## Arma empunhada ("" = desarmado)
 var equipamento: Array[String] = []   ## Ids requisitados para a missão (armas, proteção, itens)
 var municao_gasta: Dictionary = {}    ## tipo de munição -> cenas já gastas do pacote aberto (p.69)
 var cargas_gastas: Dictionary = {}    ## item de cargas (taser, spray, pistolas) -> cargas usadas
+var traumas: Array[Dictionary] = []   ## fobias que ficaram de missões (docs/70): [{"elemento", "missao"}]
+var em_tratamento := false            ## na Enfermaria da Base: fica fora da próxima missão
 var pe := 0
 var pe_temporario := 0           ## Gastos antes dos PE normais; somem no fim da cena
 var pe_maximo := 0
@@ -581,6 +583,11 @@ func usa_duas_maos(a: Dictionary) -> bool:
 	return pericia_v == "" or not grau(pericia_v) in ["veterano", "expert"]
 
 
+## Traumas (docs/70): tem fobia do elemento?
+func tem_fobia(elemento: String) -> bool:
+	return traumas.any(func(t): return String(t.get("elemento", "")) == elemento)
+
+
 ## Técnica Medicinal (Agente de Saúde, p.26): soma o Intelecto aos PV que cura.
 func bonus_cura() -> int:
 	var total := 0
@@ -802,6 +809,7 @@ func para_dicionario() -> Dictionary:
 		"transicao_mundano": transicao_mundano.duplicate(),
 		"pp": pp, "arma": arma_id, "equipamento": Array(equipamento),
 		"municao_gasta": municao_gasta.duplicate(), "cargas_gastas": cargas_gastas.duplicate(),
+		"traumas": traumas.duplicate(true), "em_tratamento": em_tratamento,
 		"rituais": Array(rituais), "san_perdida": san_perdida,
 		"poderes_paranormais": poderes_paranormais.duplicate(true), "afinidade": afinidade,
 		"afinidade_escolhida": afinidade_escolhida,
@@ -878,6 +886,9 @@ static func de_dicionario(p_ruleset: Ruleset, d: Dictionary) -> Agente:
 		a.municao_gasta[k] = int(d.municao_gasta[k])
 	for k in d.get("cargas_gastas", {}):
 		a.cargas_gastas[k] = int(d.cargas_gastas[k])
+	for t in d.get("traumas", []):
+		a.traumas.append({"elemento": String(t.get("elemento", "medo")), "missao": int(t.get("missao", 0))})
+	a.em_tratamento = bool(d.get("em_tratamento", false))
 	a.recalcular_maximos(true)
 	a.pv = int(d.get("pv", a.pv_maximo))
 	a.pe = int(d.get("pe", a.pe_maximo))

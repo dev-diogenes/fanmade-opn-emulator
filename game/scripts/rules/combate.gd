@@ -120,6 +120,7 @@ func iniciar(surpreendidos: Array = []) -> void:
 	for s in participantes:
 		if s is Agente:
 			(s as Agente).em_acao = true   # Encarar a Morte vale em cenas de ação
+	_fobias_no_inicio()
 	for s in participantes:
 		if s is Ameaca and (s as Ameaca).tem_hab("sempre_presente"):
 			_escolher_alvo_ocioso(s as Ameaca)
@@ -849,6 +850,26 @@ func pode_disparar(atacante: Ser, arma: Dictionary) -> String:
 		return ""
 	var a := acoes_restantes(atacante)
 	return "" if int(a.movimento) > 0 and int(a.padrao) > 0 else "Recarregar pede uma ação de movimento antes do disparo."
+
+
+## Traumas (docs/70): quem tem fobia do elemento de uma criatura em cena começa abalado.
+func _fobias_no_inicio() -> void:
+	var elementos: Array = []
+	for s in participantes:
+		if s is Ameaca and (s as Ameaca).criatura and (s as Ameaca).elemento != "":
+			elementos.append((s as Ameaca).elemento)
+	if elementos.is_empty():
+		return
+	var cfg := DadosJogo.ler("traumas")
+	for s in participantes:
+		if not s is Agente:
+			continue
+		for t in (s as Agente).traumas:
+			var el := String(t.get("elemento", ""))
+			if el in elementos:
+				s.aplicar_condicao(String(cfg.get("condicao_em_combate", Ser.ABALADO)))
+				_log("[color=#e0574a]%s: %s começa abalado.[/color]" % [String(cfg.fobias.get(el, {}).get("nome", "Fobia")), s.nome])
+				break
 
 
 # --- Rituais do lote de docs/69 ----------------------------------------------------

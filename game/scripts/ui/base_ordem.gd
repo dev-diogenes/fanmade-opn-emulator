@@ -813,7 +813,10 @@ func _atualizar_tudo() -> void:
 		var chk := CheckBox.new()
 		chk.text = a.nome
 		chk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		chk.button_pressed = _checks_grupo.size() < 3
+		chk.button_pressed = _checks_grupo.size() < 3 and not a.em_tratamento
+		if a.em_tratamento:   # na Enfermaria (docs/70)
+			chk.disabled = true
+			chk.text = "%s (em tratamento)" % a.nome
 		_checks_grupo[a] = chk
 		linha.add_child(chk)
 		var dono := OptionButton.new()
@@ -914,6 +917,8 @@ func _mostrar_relatorio() -> void:
 		var s := "%s: %s" % [ag.nome, ag.situacao]
 		if ag.has("pp"):
 			s += ", %+d PP, NEX %d%%→%d%%, %s%s" % [int(ag.pp), int(ag.nex_antes), int(ag.nex), ag.patente, " " + Tema.bb("(promovido!)", Tema.cor_sucesso(true)) if ag.promovido else ""]
+		if ag.has("trauma"):
+			s += " " + Tema.bb("— saiu com um trauma: %s (trate na Enfermaria)" % String(ag.trauma).to_lower(), Tema.AVISO)
 		linhas.append(s)
 	var camp: Dictionary = r.get("campanha", {})
 	if not camp.is_empty():
@@ -1559,7 +1564,7 @@ func _abrir_servico(id: String) -> void:
 		"contencao":
 			_sala_contencao(v)
 		"enfermaria":
-			_sala(v, "Enfermaria", "Quem volta, volta inteiro: PV, PE e Sanidade cheios, condições e efeitos de insanidade curados.", "", Callable())
+			_sala_enfermaria(v)
 		"ocultismo":
 			var b := _sala(v, "Sala de ocultismo", ("%d agente(s) com escolhas de NEX à espera." % pendentes.size()) if not pendentes.is_empty()
 				else "Nenhuma escolha de NEX à espera. Os sigilos dormem.", "Transcender", func():
@@ -1642,6 +1647,39 @@ func _unhandled_input(evento: InputEvent) -> void:
 
 
 ## Um cartão de sala: nome, o que faz e, se houver, o botão do serviço.
+## A Enfermaria (docs/70): cura o corpo de quem volta; os traumas pedem tratamento, e quem se
+## trata fica fora da próxima missão.
+func _sala_enfermaria(pai: Control) -> void:
+	var com_trauma := carreira.roster.filter(func(a): return not a.traumas.is_empty())
+	_sala(pai, "Enfermaria", "Quem volta, volta inteiro: PV, PE e Sanidade cheios, condições e efeitos de insanidade curados. %s" % (
+		"Os traumas não saram sozinhos: quem se trata fica fora da próxima missão." if not com_trauma.is_empty() else "Ninguém carrega trauma agora."), "", Callable())
+	var cfg := DadosJogo.ler("traumas")
+	for a in com_trauma:
+		var linha := HBoxContainer.new()
+		linha.add_theme_constant_override("separation", Tema.ESPACO_M)
+		var l := Label.new()
+		l.text = "%s: %s%s" % [a.nome, ", ".join(PackedStringArray(a.traumas.map(func(t): return String(cfg.fobias.get(String(t.elemento), {}).get("nome", "fobia"))))),
+			" (em tratamento)" if a.em_tratamento else ""]
+		l.theme_type_variation = "TextoPapel"
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size = Vector2(250, 0)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.tooltip_text = String(cfg.fobias.get(String(a.traumas[0].elemento), {}).get("descricao", ""))
+		linha.add_child(l)
+		var b := Button.new()
+		b.theme_type_variation = "BotaoPapel"
+		b.text = "Desistir" if a.em_tratamento else "Tratar"
+		b.tooltip_text = "Fica fora da próxima missão; quando ela terminar, a fobia mais antiga passa."
+		b.disabled = carreira.missao != null
+		b.pressed.connect(func():
+			carreira.tratar(a)
+			_salvar()
+			_atualizar_tudo()
+			_abrir_servico("enfermaria"))
+		linha.add_child(b)
+		pai.add_child(linha)
+
+
 func _sala(pai: Control, nome: String, texto: String, botao: String, acao: Callable) -> Button:
 	var p := _papel(false)
 	p.custom_minimum_size = Vector2(360, 150)

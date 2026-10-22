@@ -72,6 +72,7 @@
 | [67-arsenal-do-livro.md](67-arsenal-do-livro.md) | O equipamento do livro: as 34 armas da Tabela 3.3 com as regras delas (ágil, rajada, recarga, explosão, linha), munição por cena, escudo, itens de combate com cargas, a condição cego e o arsenal com filtros por grupo |
 | [68-modificacoes.md](68-modificacoes.md) | As modificações do livro para armas, munições, proteções e acessórios (cada uma sobe a categoria em I) e a Oficina no arsenal, que mostra como o item fica e se a patente deixa levar |
 | [69-rituais-e-poderes-do-livro.md](69-rituais-e-poderes-do-livro.md) | 20 rituais de combate, 9 rituais de mapa e de caso (pistas, covil, credencial) e 11 poderes de classe e de origem que ganharam efeito; o que ainda falta, ritual por ritual |
+| [70-traumas-e-fobias.md](70-traumas-e-fobias.md) | Quem enlouquece pode voltar com fobia do elemento do caso (Vontade DT 20): abalado diante da criatura desse elemento; a Enfermaria trata, com o agente fora da próxima missão. Camada do jogo, não do livro |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.
