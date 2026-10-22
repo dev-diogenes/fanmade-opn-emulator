@@ -26,6 +26,8 @@ var controles: ControleLocal = ControleLocal.padrao()
 var campanhas: Dictionary = {}
 ## Recrutas liberados pelas campanhas (fichas no formato de recrutas.json)
 var recrutas_extras: Array = []
+## A varredura malfeita do último covil (docs/62): a próxima missão começa com o eco dele.
+var eco_do_covil := false
 var _proximo_id := 1
 
 
@@ -180,12 +182,18 @@ func validar_grupo(grupo: Array) -> Array[String]:
 	return erros
 
 
-func iniciar_missao(grupo: Array, semente: int) -> Missao:
+func iniciar_missao(grupo: Array, semente: int, sinal: Dictionary = {}) -> Missao:
 	if missao != null or not validar_grupo(grupo).is_empty():
 		return null
 	for a in grupo:
 		_restaurar(a)
-	missao = Missao.nova(semente, ruleset, grupo.duplicate(), _opcoes_da_missao())
+	var op := _opcoes_da_missao()
+	if not sinal.is_empty():
+		op["sinal"] = sinal
+	missao = Missao.nova(semente, ruleset, grupo.duplicate(), op)
+	if eco_do_covil:
+		missao.plantar_eco_do_covil()
+		eco_do_covil = false
 	ultimo_relatorio = {}
 	return missao
 
@@ -261,11 +269,28 @@ func encerrar_missao() -> Dictionary:
 	var m := missao
 	var pp_base := 0
 	var linhas_pp: Array[String] = []
-	if m.caso_solucionado():
+	var cfg_sinais := DadosJogo.ler("sinais")
+	if m.alarme_confirmado:
+		# Alarme falso (docs/62): pouco prestígio, e o NEX não sobe (ninguém tocou o paranormal)
+		pp_base += int(cfg_sinais.get("alarme_falso_pp", 2))
+		linhas_pp.append("Alarme falso, não era paranormal: %+d" % int(cfg_sinais.get("alarme_falso_pp", 2)))
+	elif m.caso_solucionado():
 		pp_base += ruleset.pp_por_evento("solucao_do_caso")
 		linhas_pp.append("Solução do caso: %+d" % ruleset.pp_por_evento("solucao_do_caso"))
 	elif m.vitoria:   # só vale o que está na ficha (p.79)
 		linhas_pp.append("Caso em aberto: a ficha não responde o objetivo (+0)")
+	if m.vitoria and not m.alarme_confirmado and int(m.sinal.get("bonus_pp", 0)) > 0:
+		pp_base += int(m.sinal.bonus_pp)   # ninguém dava nada por esse sinal (docs/62)
+		linhas_pp.append("Sinal de confiança baixa, e era real: %+d" % int(m.sinal.bonus_pp))
+	match m.varredura:   # docs/62
+		"equipe":
+			pp_base -= 2
+			linhas_pp.append("Equipe de varredura: -2")
+		"limpa":
+			linhas_pp.append("Varredura limpa: nada ficou para trás (+0)")
+		"rastro":
+			eco_do_covil = true
+			linhas_pp.append("Varredura malfeita: algo ficou no covil (+0)")
 	# Pista adicional (Tabela 3.2): a que passa do que a ficha precisava (docs/43). Sem caso
 	# (missões antigas), valem as pistas reunidas, como antes.
 	var adicionais := m.caso.pistas_adicionais() if m.caso != null else m.pistas
@@ -295,7 +320,7 @@ func encerrar_missao() -> Dictionary:
 			a.pp = maxi(0, a.pp + pp_base)
 			linha.pp = pp_base
 			linha.nex_antes = a.nex
-			if m.vitoria and a.nex < 99:
+			if m.vitoria and not m.alarme_confirmado and a.nex < 99:
 				a.nex = 99 if a.nex >= 95 else a.nex + int(ruleset.dados.progressao_nex.nex_por_missao)
 			linha.nex = a.nex
 			linha.patente = a.patente().get("nome", "")
@@ -356,7 +381,7 @@ func para_dicionario() -> Dictionary:
 		"versao": VERSAO, "ruleset": ruleset.id, "proximo_id": _proximo_id,
 		"roster": roster.map(func(a): return a.para_dicionario()),
 		"memorial": memorial.duplicate(true), "opcoes": opcoes.duplicate(), "controles": controles.para_dicionario(),
-		"missoes_concluidas": missoes_concluidas, "ultimo_relatorio": ultimo_relatorio.duplicate(true),
+		"missoes_concluidas": missoes_concluidas, "ultimo_relatorio": ultimo_relatorio.duplicate(true), "eco_do_covil": eco_do_covil,
 		"campanhas": campanhas.duplicate(true), "recrutas_extras": recrutas_extras.duplicate(true),
 		"missao": missao.para_dicionario() if missao != null else {},
 		# Agentes que estão na missão mas saíram do roster (mortos aguardando o relatório)
@@ -389,6 +414,7 @@ static func de_dicionario(d: Dictionary, ruleset_: Ruleset = null) -> Carreira:
 	c.opcoes = d.get("opcoes", c.opcoes)
 	c.controles = ControleLocal.de_dicionario(d.get("controles", {}))
 	c.missoes_concluidas = int(d.get("missoes_concluidas", 0))
+	c.eco_do_covil = bool(d.get("eco_do_covil", false))
 	c.ultimo_relatorio = d.get("ultimo_relatorio", {})
 	c.campanhas = d.get("campanhas", {})
 	c.recrutas_extras = d.get("recrutas_extras", [])

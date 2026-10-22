@@ -143,8 +143,8 @@ func nova_missao(semente: int = -1) -> Missao:
 	return carreira.missao
 
 
-func iniciar_missao(grupo: Array, semente: int = -1) -> Missao:
-	var m := carreira.iniciar_missao(grupo, semente if semente >= 0 else randi() % 1000000)
+func iniciar_missao(grupo: Array, semente: int = -1, sinal: Dictionary = {}) -> Missao:
+	var m := carreira.iniciar_missao(grupo, semente if semente >= 0 else randi() % 1000000, sinal)
 	if m != null:
 		salvar()
 		_mandar_estado()

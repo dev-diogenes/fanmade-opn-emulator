@@ -130,6 +130,7 @@ func test_vitoria_da_pp_nex_e_promocao():
 		m.caso.pergunta(pid).respondida = true
 	m._preparar_encontro(m.mapa.encontrar("objetivo"), "covil", true)
 	m.concluir_encontro("agentes")
+	m.resolver_evento(0, 0)   # a varredura do covil (docs/62)
 	var r := c.encerrar_missao()
 	assert_true(r.vitoria)
 	assert_eq(r.pp, 10 + 2 * 5)
@@ -283,6 +284,7 @@ func test_sem_ficha_respondida_o_caso_fica_em_aberto():
 	m.inocentes_mortos = 1
 	m._preparar_encontro(m.mapa.encontrar("objetivo"), "covil", true)
 	m.concluir_encontro("agentes")
+	m.resolver_evento(0, 0)   # a varredura do covil (docs/62)
 	assert_true(m.vitoria)
 	assert_false(m.caso_solucionado(), "falta o quê na ficha")
 	var r := c.encerrar_missao()
@@ -303,5 +305,6 @@ func test_so_pistas_alem_das_necessarias_dao_pp():
 	assert_eq(m.caso.pistas_adicionais(), 0, "duas pistas por pergunta é o necessário")
 	m._preparar_encontro(m.mapa.encontrar("objetivo"), "covil", true)
 	m.concluir_encontro("agentes")
+	m.resolver_evento(0, 0)   # a varredura do covil (docs/62)
 	var r := c.encerrar_missao()
 	assert_eq(r.pp, 10, "só a solução do caso")

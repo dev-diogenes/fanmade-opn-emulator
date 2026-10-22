@@ -1,0 +1,67 @@
+{
+  "nota": "A rotina da Ordem (docs/62, OR1 e OR3 do relatório). Na wiki, a Ordem acha os casos por um programa que varre a internet atrás de padrões (posts, notas de jornal pequeno, desaparecimentos), às vezes manda recrutas só para saber se é mesmo paranormal, e marca encontros em lugares banais com pedido-senha. Aqui: três sinais na Base, cada um com uma fonte, um relato e um nível de confiança; alguns são alarmes falsos. O briefing acontece num local de fachada, com senha e resposta. Textos, fontes, lugares e senhas são nossos.",
+  "confianca": {
+    "baixa": {"rotulo": "baixa", "alarme_falso": 40, "bonus_pp": 2},
+    "media": {"rotulo": "média", "alarme_falso": 15, "bonus_pp": 0},
+    "alta": {"rotulo": "alta", "alarme_falso": 0, "bonus_pp": 0}
+  },
+  "alarme_falso_pp": 2,
+  "fontes": [
+    "Post viral",
+    "Nota no jornal da cidade",
+    "Boletim de ocorrência",
+    "Áudio de WhatsApp",
+    "Fórum de caçadores de fantasma",
+    "Ligação para a rádio local"
+  ],
+  "relatos": {
+    "sangue": [
+      "um açougue amanhece com o balcão lavado de sangue e o dono não aparece",
+      "cachorros da rua somem um por um, e alguém ouve rosnado dentro de uma casa vazia",
+      "um vídeo mostra gente brigando até sangrar numa festa, sem lembrar por quê depois"
+    ],
+    "morte": [
+      "todos os relógios de uma rua param no mesmo minuto, de madrugada",
+      "uma horta inteira apodrece numa noite, e o mato em volta fica cinza",
+      "moradores juram ver o mesmo vulto repetir o mesmo gesto na janela"
+    ],
+    "conhecimento": [
+      "pichações numa língua que ninguém conhece aparecem em muros recém-pintados",
+      "três pessoas da mesma rua acordam sem lembrar o próprio nome",
+      "um grupo de estudo da igreja passa a falar sussurrando, todos ao mesmo tempo"
+    ],
+    "energia": [
+      "postes acendem e apagam sozinhos, e os celulares da praça descarregam juntos",
+      "um rádio velho toca uma estação que não existe, e quem ouve fica rindo sem parar",
+      "gente com queimaduras sem nenhum fogo por perto dá entrada no posto de saúde"
+    ]
+  },
+  "explicacoes": {
+    "sangue": [
+      "Era um abatedouro clandestino, e o dono fugiu da fiscalização. A polícia cuida do resto.",
+      "Era uma briga de vizinhos por um cachorro, inflada por um grupo de bairro."
+    ],
+    "morte": [
+      "Era um transformador com defeito: cada pico de tensão parava os relógios da rua.",
+      "Era agrotóxico vencido despejado num terreno vizinho. A Vigilância Sanitária já foi chamada."
+    ],
+    "conhecimento": [
+      "Era um grafiteiro testando um alfabeto inventado para um videoclipe.",
+      "Era um vazamento de gás num porão: tontura, esquecimento e medo coletivo."
+    ],
+    "energia": [
+      "Era um adolescente com um projetor e um canal novo na internet.",
+      "Era uma antena pirata mal instalada, interferindo em tudo na praça."
+    ]
+  },
+  "fachadas": [
+    {"lugar": "um lava-rápido na saída da cidade", "senha": "Vim lavar o Fusca azul.", "resposta": "O azul só depois das seis."},
+    {"lugar": "uma padaria de bairro, no balcão do fundo", "senha": "Tem pão de ontem?", "resposta": "Pão de ontem é de graça."},
+    {"lugar": "uma sala comercial no décimo andar, Contabilidade Silva & Filhos", "senha": "Vim entregar a declaração atrasada.", "resposta": "Atrasada desde quando?"},
+    {"lugar": "uma borracharia de beira de estrada", "senha": "O estepe também furou.", "resposta": "Então vai ser o de três aros."},
+    {"lugar": "uma pizzaria de estrada", "senha": "Uma pizza meio a meio, sem a outra metade.", "resposta": "Sai em quarenta minutos."},
+    {"lugar": "uma farmácia 24 horas, no caixa dois", "senha": "A receita está no nome do meu avô.", "resposta": "O seu avô já passou aqui."},
+    {"lugar": "uma banca de jornal na praça", "senha": "Ainda tem o jornal de domingo passado?", "resposta": "Só o caderno de classificados."},
+    {"lugar": "um sebo de livros perto da rodoviária", "senha": "Procuro um dicionário sem a letra M.", "resposta": "Esse está no porão."}
+  ]
+}

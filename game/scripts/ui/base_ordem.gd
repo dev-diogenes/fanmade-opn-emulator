@@ -46,11 +46,19 @@ signal pendencias_mudaram(agente: Agente, erros: Array)
 ## Semente da próxima missão procedural: o briefing mostra a região que ela gera e o
 ## "Iniciar missão" usa a mesma (docs/23, C7).
 var semente_proxima := randi() % 1000000
+## Os sinais da rede (docs/62, OR1): três casos possíveis, um de cada confiança. Escolher um
+## troca a semente da próxima missão (e o briefing).
+var sinais: Array = []
+var sinal_escolhido := 0
+var _caixa_sinais: VBoxContainer
+var _botoes_sinais: Array[Button] = []
 
 
 func _ready() -> void:
 	_jogo = get_node_or_null("/root/Jogo")
 	carreira = _jogo.carregar_ou_criar() if _jogo != null else Carreira.nova()
+	sinais = Sinais.gerar(semente_proxima)
+	semente_proxima = int(sinais[0].semente)
 	_montar_interface()
 	if not carreira.roster.is_empty():
 		_selecionado = carreira.roster[0]
@@ -235,6 +243,26 @@ func _montar_interface() -> void:
 	_opt_missao.clip_text = true
 	_opt_missao.item_selected.connect(func(_i): _mostrar_missao())
 	c3.add_child(_opt_missao)
+	# Os sinais da rede (docs/62): só na missão procedural
+	_caixa_sinais = VBoxContainer.new()
+	_caixa_sinais.add_theme_constant_override("separation", Tema.ESPACO_P)
+	c3.add_child(_caixa_sinais)
+	_caixa_sinais.add_child(_titulo("Sinais da rede"))
+	var grupo_sinais := ButtonGroup.new()
+	for i in sinais.size():
+		var b := Button.new()
+		b.toggle_mode = true
+		b.button_group = grupo_sinais
+		b.button_pressed = i == sinal_escolhido
+		b.text = Sinais.resumo(sinais[i])
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		b.custom_minimum_size = Vector2(340, 0)
+		b.tooltip_text = "Confiança %s: %s" % [sinais[i].rotulo, {"baixa": "pode ser alarme falso; se for real, rende mais prestígio.",
+			"media": "às vezes é alarme falso.", "alta": "a Ordem tem certeza: é paranormal."}.get(String(sinais[i].confianca), "")]
+		b.pressed.connect(func(): _escolher_sinal(i))
+		_caixa_sinais.add_child(b)
+		_botoes_sinais.append(b)
 	c3.add_child(_titulo("Regras opcionais"))
 	_opt_modo = OptionButton.new()
 	_opt_modo.add_item("Normal (2 Reforços da Ordem)")
@@ -904,7 +932,7 @@ func _iniciar() -> void:
 		"comunidade":
 			_jogo.iniciar_missao_comunidade(grupo, op.definicao)
 		_:
-			_jogo.iniciar_missao(grupo, semente_proxima)   # a mesma região do briefing
+			_jogo.iniciar_missao(grupo, semente_proxima, sinais[sinal_escolhido] if not sinais.is_empty() else {})   # a região e o sinal do briefing
 
 
 # --- Lista de missões: procedural, campanha (Fase 7) e comunidade (Fase 6) ---------
@@ -939,9 +967,11 @@ func _mostrar_missao() -> void:
 	var op: Dictionary = _opcoes_missao[clampi(_opt_missao.selected, 0, _opcoes_missao.size() - 1)]
 	var d: Dictionary = op.definicao
 	var texto := ""
+	if _caixa_sinais != null:
+		_caixa_sinais.visible = String(op.tipo) == "procedural"
 	match String(op.tipo):
 		"procedural":
-			texto = briefing_procedural(Missao.previa(semente_proxima), _grupo())
+			texto = briefing_procedural(Missao.previa(semente_proxima), _grupo(), sinais[sinal_escolhido] if not sinais.is_empty() else {})
 		"campanha":
 			texto = _texto_da_campanha(d)
 		"comunidade":
@@ -953,13 +983,28 @@ func _mostrar_missao() -> void:
 	_txt_missao.text = texto
 
 
-## Arquivo do caso da missão procedural (docs/23, C7), em BBCode: número, região, o que se
-## sabe e o grupo designado. Estático para os testes.
-static func briefing_procedural(p: Dictionary, grupo: Array) -> String:
+## Escolhe um dos sinais da rede: a próxima missão passa a ser a dele.
+func _escolher_sinal(i: int) -> void:
+	sinal_escolhido = clampi(i, 0, sinais.size() - 1)
+	semente_proxima = int(sinais[sinal_escolhido].semente)
+	if sinal_escolhido < _botoes_sinais.size():
+		_botoes_sinais[sinal_escolhido].button_pressed = true   # o grupo desmarca os outros; "pressed" não dispara de novo
+	_mostrar_missao()
+
+
+## Arquivo do caso da missão procedural (docs/23, C7), em BBCode: número, o sinal que trouxe
+## o caso (docs/62), o ponto de encontro de fachada, a região, o que se sabe e o grupo.
+## Estático para os testes.
+static func briefing_procedural(p: Dictionary, grupo: Array, sinal: Dictionary = {}) -> String:
 	var linhas := PackedStringArray()
 	linhas.append("[b]ARQUIVO Nº %04d · OPERAÇÃO EM CAMPO[/b]" % int(p.numero))
 	linhas.append("[color=#8e1b22]CONFIDENCIAL[/color]")
 	linhas.append("")
+	if not sinal.is_empty():
+		linhas.append("[b]Sinal:[/b] %s, confiança %s. \"%s\"" % [sinal.fonte, sinal.rotulo, String(sinal.relato).left(1).to_upper() + String(sinal.relato).substr(1) + "."])
+		var f := Sinais.fachada(int(sinal.semente))
+		linhas.append("[b]Ponto de encontro:[/b] %s. Senha: \"%s\" Resposta: \"%s\"" % [f.lugar, f.senha, f.resposta])
+		linhas.append("")
 	linhas.append("[b]Região:[/b] %s, %d áreas no mapa." % [" e ".join(PackedStringArray(p.terrenos)), int(p.celulas)])
 	var ocupacao := PackedStringArray()
 	if int(p.cidades) > 0:

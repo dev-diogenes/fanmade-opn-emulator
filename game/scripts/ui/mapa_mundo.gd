@@ -681,6 +681,13 @@ func _mostrar_briefing() -> void:
 	if c != null:
 		var perguntas: Array = c.perguntas.map(func(q): return "  [ ] " + String(q.texto))
 		texto = "%s\n\nOBJETIVO: %s\n\nPERGUNTAS EM ABERTO:\n%s" % [c.resumo, c.objetivo, "\n".join(PackedStringArray(perguntas))]
+		# O sinal e o ponto de encontro de fachada (docs/62), na missão procedural
+		if missao.extras.is_empty():
+			var f := Sinais.fachada(missao.semente)
+			var topo := "PONTO DE ENCONTRO: %s.\nSenha: \"%s\" Resposta: \"%s\"\n\n" % [f.lugar, f.senha, f.resposta]
+			if not missao.sinal.is_empty():
+				topo += "SINAL: %s, confiança %s.\n\n" % [missao.sinal.fonte, missao.sinal.rotulo]
+			texto = topo + texto
 	else:
 		texto = "Uma ameaça paranormal foi detectada na região. Encontrem a origem e contenham-na."
 	DialogoPapel.perguntar(self, "Arquivo do caso", texto, "Iniciar operação", func(): pass, "Fechar", false)

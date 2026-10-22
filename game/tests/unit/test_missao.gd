@@ -127,6 +127,7 @@ func test_vencer_o_covil_cumpre_a_missao():
 	m._preparar_encontro(m.mapa.encontrar("objetivo"), "covil", true)
 	assert_eq(m.encontro_pendente.ameacas[0].nome, "Horror Carmesim")
 	m.concluir_encontro("agentes")
+	m.resolver_evento(0, 0)   # a varredura do covil (docs/62)
 	assert_true(m.encerrada)
 	assert_true(m.vitoria)
 

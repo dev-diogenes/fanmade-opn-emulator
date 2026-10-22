@@ -64,6 +64,7 @@
 | [59-memorial-aderecos-e-ajuda.md](59-memorial-aderecos-e-ajuda.md) | Apelido, cidade natal e objeto pessoal de cada agente; a parede de memória na Base (foto de luto, vela, último registro) e a despedida na cerimônia; a ajuda dos colegas nos eventos do mapa (p.86) |
 | [60-licenca-titulo-selo-e-avisos.md](60-licenca-titulo-selo-e-avisos.md) | A Licença da Comunidade: o título de trabalho "Membrana", o selo com o aviso de IA na capa, o aviso de conteúdo, a tela Sobre e a troca dos nomes que coincidiam com personagens do cânone |
 | [61-pesquisa-rumores-e-som.md](61-pesquisa-rumores-e-som.md) | Ligar para a Pesquisa (dicas em três camadas, cada uma mais cara), o mapa de rumores (fios das pistas até um "?" sobre a região do covil) e o som em duas camadas (piano da Realidade que some quando o Outro Lado cresce) |
+| [62-rotina-da-ordem.md](62-rotina-da-ordem.md) | A rotina da Ordem: três sinais da rede com confiança e alarme falso, o briefing num ponto de encontro de fachada com senha e a varredura do covil (o que fica para trás volta na missão seguinte) |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

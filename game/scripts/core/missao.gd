@@ -72,6 +72,12 @@ var testemunhas_vistas: Array = []
 var pesquisa: Dictionary = {}
 ## Mapa de rumores (docs/61, IN5): os hexes onde o grupo achou pista firme ([x, y]).
 var rumores: Array = []
+## A rotina da Ordem (docs/62): o sinal que trouxe o grupo (OR1) e, se ele era alarme falso,
+## quando isso se confirmou; e como o covil foi varrido (OR5: "limpa", "equipe" ou "rastro").
+var sinal: Dictionary = {}
+var alarme_falso := false
+var alarme_confirmado := false
+var varredura := ""
 
 
 const NOMES_TERRENO := {"campo": "campos abertos", "estrada": "estradas de terra", "floresta": "mata fechada",
@@ -94,10 +100,11 @@ static func previa(semente_: int) -> Dictionary:
 	ordem.sort_custom(func(a, b): return int(terrenos[a]) > int(terrenos[b]))
 	var principais: Array = ordem.slice(0, 2).map(func(t): return String(NOMES_TERRENO.get(t, t)))
 	var casos := DadosJogo.ler("casos")
+	var caso_ := Caso.gerar(Dados.new(semente_))   # o mesmo caso da missão: o resumo já com os sintomas
 	return {"numero": semente_ % 10000, "terrenos": principais, "cidades": int(terrenos.get("cidade", 0)),
 		"vilas": int(tipos.get("vila", 0)), "investigacoes": int(tipos.get("investigacao", 0)),
 		"eventos": int(tipos.get("evento", 0)), "celulas": mapa_.celulas.size(),
-		"sinais": String(casos.resumo), "objetivo": String(casos.objetivo)}
+		"sinais": caso_.resumo, "objetivo": String(casos.objetivo)}
 
 
 ## Nova missão. `grupo`: agentes da carreira (vazio = grupo padrão de demonstração).
@@ -110,10 +117,15 @@ static func nova(semente_: int, ruleset_: Ruleset = null, grupo: Array = [], opc
 	m.mapa = GeradorMapa.gerar(semente_)
 	m.membrana = Membrana.carregar_padrao()
 	for k in opcoes_:
-		m.opcoes[k] = opcoes_[k]
+		if k != "sinal":
+			m.opcoes[k] = opcoes_[k]
+	m.sinal = (opcoes_.get("sinal", {}) as Dictionary).duplicate()
+	m.alarme_falso = bool(m.sinal.get("alarme_falso", false))
 	m.reforcos = 2 if m.opcoes.get("modo_morte", "normal") == "normal" else 0
 	m.caso = Caso.gerar(m.dados)
 	m._ajustar_encontros_ao_elemento()
+	if m.alarme_falso:
+		m._tirar_o_paranormal()
 	m.covil_localizado = not bool(DadosJogo.ler("mapa").get("covil_selado", true))
 	var inicio := m.mapa.encontrar("inicio")
 	if grupo.is_empty():
@@ -239,6 +251,13 @@ func mover(destino: Vector2i) -> bool:
 
 func _entrar(a: Agente, h: Vector2i) -> void:
 	var c := mapa.conteudo(h)
+	if alarme_falso and not alarme_confirmado and String(c.get("tipo", "")) in ["evento", "investigacao"]:
+		# Alarme falso (docs/62): o primeiro lugar com pista mostra o que era de verdade
+		var ev := _evento("alarme_falso")
+		evento_pendente = {"hex": h, "evento": ev, "agente": a}
+		_log("[b]%s[/b]: %s" % [ev.titulo, ev.texto])
+		evento_aberto.emit(h, ev, a)
+		return
 	match c.get("tipo", ""):
 		"encontro":
 			_preparar_encontro(h, c.encontro, false)
@@ -443,8 +462,12 @@ func _evento(evento_id: String) -> Dictionary:
 		if e.id == evento_id:
 			return e
 	var d := DadosJogo.ler("eventos")
-	for e in d.eventos + d.get("eventos_medo", []):
+	for e in d.eventos + d.get("eventos_medo", []) + d.get("eventos_da_ordem", []):
 		if e.id == evento_id:
+			if evento_id == "alarme_falso":   # a explicação mundana do sinal (docs/62)
+				var copia: Dictionary = e.duplicate(true)
+				copia.texto = String(e.texto).replace("{explicacao}", String(sinal.get("explicacao", "Era outra coisa.")))
+				return copia
 			return e
 	return {}
 
@@ -646,6 +669,17 @@ func _aplicar_efeito(a: Agente, ef: Dictionary, h: Vector2i) -> Dictionary:
 			a.sofrer_dano(d)
 			_log("%s sofre %d de dano." % [a.nome, d])
 			return {"tipo": "dano", "valor": d, "texto": "−%d PV" % d}
+		"alarme_falso":   # docs/62: não era paranormal; a missão acaba, com pouco prestígio
+			alarme_confirmado = true
+			_log("[color=#7fd3c7][b]Alarme falso.[/b] A Ordem arquiva o sinal: não era paranormal.[/color]")
+			_encerrar(true)
+			return {"tipo": "alarme_falso", "texto": "Alarme falso"}
+		"varredura":   # docs/62: como o covil foi varrido
+			varredura = String(ef.get("valor", "rastro"))
+			_log("[color=#7fd3c7][b]Varredura:[/b] %s.[/color]" % {"limpa": "o covil está limpo", "equipe": "a equipe de varredura cuida de tudo",
+				"rastro": "algo ficou para trás"}.get(varredura, varredura))
+			_encerrar(true)
+			return {"tipo": "varredura", "texto": "Varredura: %s" % varredura}
 		"dano_mental":
 			var d := _valor(ef.valor)
 			a.sofrer_dano_mental(d)
@@ -927,6 +961,8 @@ func encontros_para_surgir(nivel: int, vivos: Array) -> Array:
 	var opcoes: Array = base.filter(func(e): return int(e.get("nivel", 0)) <= nivel and _vd_minimo(e) <= nex_total * 2)
 	if modo != "proprios":
 		var do_caso := opcoes.filter(func(e): return _encontro_do_caso(e))   # o elemento do caso (docs/52)
+		if alarme_falso:   # não é paranormal (docs/62): só gente e bicho
+			do_caso = opcoes.filter(func(e): return elemento_do_encontro(e) == "")
 		if not do_caso.is_empty():
 			opcoes = do_caso
 	if opcoes.is_empty() and modo != "proprios":
@@ -992,7 +1028,9 @@ func concluir_encontro(vencedor: String, rendidos: int = 0) -> void:
 				_log("%s é socorrido e volta com 1 PV." % a.nome)
 		mapa.limpar_conteudo(h)
 		_log("[color=#6fcf8e]Encontro vencido.[/color]")
-		if chefe:
+		if chefe and extras.get("covil", {}).is_empty() and caso != null:
+			_abrir_varredura(h, participantes)
+		elif chefe:
 			_encerrar(true)
 	else:
 		_log("[color=#e0574a]Os agentes caíram.[/color]")
@@ -1001,6 +1039,56 @@ func concluir_encontro(vencedor: String, rendidos: int = 0) -> void:
 				_tratar_queda(a)
 	_ajustar_indice()
 	_verificar_derrota()
+
+
+## A varredura do covil (docs/62, OR5): com o chefe no chão, o grupo varre o covil, paga uma
+## equipe ou vai embora. Vira um evento no hex do covil, para o painel de evento (e o piloto)
+## resolverem como os outros.
+func _abrir_varredura(h: Vector2i, participantes: Array) -> void:
+	var a := agente_atual()
+	if a == null or not a in participantes:
+		for x in participantes:
+			if not x.tem(Ser.MORTO) and not x.esta_fora_de_combate():
+				a = x
+				break
+	if a == null:
+		_encerrar(true)
+		return
+	var ev := _evento("varredura")
+	evento_pendente = {"hex": h, "evento": ev, "agente": a}
+	_log("[b]%s[/b]: %s" % [ev.titulo, ev.texto])
+	evento_aberto.emit(h, ev, a)
+
+
+## Alarme falso (docs/62): sem o paranormal no mapa. Encontros de criatura viram de gente ou
+## bicho, do mesmo nível ou menor; quem não tem troca sai do mapa.
+func _tirar_o_paranormal() -> void:
+	var mundanos: Array = DadosJogo.ler("encontros").encontros.filter(func(x): return elemento_do_encontro(x) == "")
+	for h in mapa.celulas:
+		var c := mapa.conteudo(h)
+		if String(c.get("tipo", "")) != "encontro":
+			continue
+		var e := _encontro(String(c.get("encontro", "")))
+		if elemento_do_encontro(e) == "":
+			continue
+		var teto := maxi(1, int(e.get("nivel", 0)))
+		var opcoes := mundanos.filter(func(x): return int(x.get("nivel", 0)) <= teto)
+		if opcoes.is_empty():
+			mapa.limpar_conteudo(h)
+		else:
+			mapa.definir_conteudo(h, {"tipo": "encontro", "encontro": String(opcoes[absi(hash(h)) % opcoes.size()].id)})
+
+
+## O que ficou no último covil (docs/62): a varredura malfeita volta como um evento de Medo
+## perto do início da missão seguinte, e a Membrana já começa um pouco mais fina.
+func plantar_eco_do_covil() -> void:
+	var inicio := mapa.encontrar("inicio")
+	var livres: Array = mapa.celulas.keys().filter(func(h): return Hex.distancia(h, inicio) in [2, 3] and mapa.conteudo(h).is_empty())
+	livres.sort()
+	if not livres.is_empty():
+		mapa.definir_conteudo(livres[absi(hash("%d|eco" % semente)) % livres.size()], {"tipo": "evento", "evento": "eco_do_covil"})
+	membrana.alterar(-5, "eco_do_covil")
+	_log("[color=#e0574a]O que ficou no último covil achou o caminho até aqui. A Membrana já está mais fina.[/color]")
 
 
 ## Agente morto ou caído num combate perdido. Modo Normal: gasta um Reforço da Ordem e o
@@ -1449,6 +1537,17 @@ func ligar_pesquisa() -> Dictionary:
 	var pid := String(p.pergunta)
 	var cfg: Dictionary = DadosJogo.ler("casos").get("pesquisa", {})
 	var texto := ""
+	if alarme_falso and not alarme_confirmado:
+		# Alarme falso (docs/62): a Pesquisa cruza os dados e nada bate com o paranormal
+		if not pode_agir_no_mapa():
+			return {"ok": false, "erro": "sem ação neste turno"}
+		acao_usada = true
+		texto = "A Pesquisa cruzou tudo: nada no sinal bate com o paranormal. Vale olhar com calma o que era."
+		_log("[color=#7fd3c7][b]Pesquisa:[/b] %s[/color]" % texto)
+		var ev := _evento("alarme_falso")
+		evento_pendente = {"hex": posicao(a), "evento": ev, "agente": a}
+		evento_aberto.emit(posicao(a), ev, a)
+		return {"ok": true, "camada": 1, "titulo": "Orientação", "texto": texto}
 	match int(p.camada):
 		1:
 			if not pode_agir_no_mapa():
@@ -1626,6 +1725,7 @@ func para_dicionario() -> Dictionary:
 			"semente": int(investigacao_pendente.semente)} if not investigacao_pendente.is_empty() else {},
 		"turnos_sem_surgimento": _turnos_sem_surgimento, "alivio": alivio, "testemunhas_vistas": testemunhas_vistas.duplicate(true),
 		"pesquisa": pesquisa.duplicate(), "rumores": rumores.duplicate(true),
+		"sinal": sinal.duplicate(), "alarme_confirmado": alarme_confirmado, "varredura": varredura,
 		"rastros": rastros.keys().map(func(h): return [h.x, h.y, int(rastros[h])]), "descansos": descansos, "revisaveis": revisaveis.duplicate(true),
 		"historico": historico.slice(maxi(0, historico.size() - 300)),
 		"encerrada": encerrada, "vitoria": vitoria, "extras": extras.duplicate(true),
@@ -1681,6 +1781,10 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 		m.pesquisa[String(k)] = int(d.pesquisa[k])
 	for r in d.get("rumores", []):
 		m.rumores.append([int(r[0]), int(r[1])])
+	m.sinal = (d.get("sinal", {}) as Dictionary).duplicate()
+	m.alarme_falso = bool(m.sinal.get("alarme_falso", false))
+	m.alarme_confirmado = bool(d.get("alarme_confirmado", false))
+	m.varredura = String(d.get("varredura", ""))
 	for r in d.get("rastros", []):
 		m.rastros[Vector2i(int(r[0]), int(r[1]))] = int(r[2])
 	for i in d.get("descansos", {}):
