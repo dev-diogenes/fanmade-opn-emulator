@@ -28,6 +28,7 @@ var ver_tudo := false
 
 var _env: Environment   ## noite do mapa (docs/22); a Membrana engrossa a névoa
 var _rastros: Dictionary = {}   ## Vector2i -> Node3D: por onde algo passou (docs/53)
+var _pressagios: Dictionary = {}   ## Vector2i (da criatura) -> Node3D no hex vizinho (docs/54)
 var _noite := false
 var _centro_mapa := Vector3.ZERO   ## as peças nascem viradas para cá (docs/30)
 
@@ -57,6 +58,36 @@ func mover_marcador(de: Vector2i, para: Vector2i) -> void:
 	_marcadores[para] = m
 	var tw := m.create_tween()
 	tw.tween_property(m, "position", posicao_hex(para), 0.9).set_trans(Tween.TRANS_SINE)
+
+
+## Presságios (docs/54): cada criatura paranormal deixa o sinal do seu elemento num hex revelado
+## vizinho, de onde o grupo o vê antes de dar de cara com ela. Some quando a criatura sai.
+func atualizar_pressagios(missao: Missao) -> void:
+	var vivos := {}
+	for h in mapa.celulas:
+		var c := mapa.conteudo(h)
+		if String(c.get("tipo", "")) != "encontro":
+			continue
+		var el := missao.elemento_de(String(c.get("encontro", "")))
+		if el == "":
+			continue
+		vivos[h] = true
+		if _pressagios.has(h):
+			continue
+		var vizinhos: Array = Hex.vizinhos(h).filter(func(v): return mapa.tem(v) and (ver_tudo or mapa.revelado(v)) and mapa.conteudo(v).is_empty())
+		if vizinhos.is_empty():
+			continue
+		vizinhos.sort()
+		var onde: Vector2i = vizinhos[absi(hash(h)) % vizinhos.size()]
+		var p := Pecas.pressagio(el)
+		p.position = posicao_hex(onde) + Vector3(0.25, 0, -0.2)
+		p.rotation.y = float(absi(hash(onde)) % 628) / 100.0
+		add_child(p)
+		_pressagios[h] = p
+	for h in _pressagios.keys():
+		if not vivos.has(h):
+			_pressagios[h].queue_free()
+			_pressagios.erase(h)
 
 
 ## Rastros nos hexes revelados por onde algo passou (docs/53), na cor do elemento do caso.

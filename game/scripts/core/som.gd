@@ -12,7 +12,8 @@ const VOZES := 8
 const EFEITOS := {"estatica": [-14.0, 0.0], "tecla": [-16.0, 0.12], "carimbo": [-6.0, 0.05], "papel": [-14.0, 0.15],
 	"hover": [-26.0, 0.1], "clique": [-18.0, 0.08], "pista": [-10.0, 0.0], "glitch": [-14.0, 0.2],
 	"golpe": [-8.0, 0.12], "erro": [-14.0, 0.1], "ritual": [-9.0, 0.05], "passo": [-20.0, 0.2], "encontro": [-8.0, 0.0],
-	"caixinha": [-16.0, 0.0]}
+	"caixinha": [-16.0, 0.0], "el_sangue": [-9.0, 0.03], "el_morte": [-10.0, 0.0], "el_conhecimento": [-11.0, 0.02],
+	"el_energia": [-12.0, 0.05], "el_medo": [-10.0, 0.0]}
 
 static var _instancia: Som
 static var _cache: Dictionary = {}
@@ -146,6 +147,11 @@ static func gerar(nome: String) -> AudioStreamWAV:
 		"ritual": amostras = _ritual()
 		"passo": amostras = _clique(0.08, 110.0, 0.9)
 		"encontro": amostras = _encontro()
+		"el_sangue": amostras = _el_sangue()
+		"el_morte": amostras = _el_morte()
+		"el_conhecimento": amostras = _el_conhecimento()
+		"el_energia": amostras = _el_energia()
+		"el_medo": amostras = _el_medo()
 		"caixinha":
 			amostras = _caixinha()
 			laco = true
@@ -298,6 +304,97 @@ static func _ritual() -> PackedFloat32Array:
 
 
 ## Encontro: duas notas graves que descem, dissonantes (algo te viu).
+# --- Assinaturas dos elementos (docs/54, pela trilha de cada elemento na wiki) -------------
+
+## Sangue: metal batido, grave, e uma respiração molhada por baixo.
+static func _el_sangue() -> PackedFloat32Array:
+	var d := 1.3
+	var n := int(d * TAXA)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	var y := 0.0
+	for i in n:
+		var t := float(i) / TAXA
+		var metal := (sin(TAU * 92.0 * t) + 0.6 * sin(TAU * 233.0 * t) + 0.4 * sin(TAU * 517.0 * t)) * exp(-t * 3.2)
+		y += 0.04 * (randf_range(-1.0, 1.0) - y)
+		var respira := y * 6.0 * (0.5 + 0.5 * sin(TAU * 1.6 * t)) * sin(PI * t / d)
+		a[i] = 0.42 * metal + 0.5 * respira
+	return a
+
+
+## Morte: uma nota que nasce do nada (invertida) e um tique-taque que não acerta o ritmo.
+static func _el_morte() -> PackedFloat32Array:
+	var d := 1.5
+	var n := int(d * TAXA)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	var tiques := [0.12, 0.41, 0.58, 1.02, 1.11]
+	for i in n:
+		var t := float(i) / TAXA
+		var invertida := sin(TAU * 196.0 * t) * pow(t / d, 2.2) * (0.6 + 0.4 * sin(TAU * 293.0 * t))
+		var tique := 0.0
+		for q in tiques:
+			var dt: float = t - q
+			if dt >= 0.0 and dt < 0.03:
+				tique += sin(TAU * 1800.0 * dt) * exp(-dt * 140.0)
+		a[i] = 0.5 * invertida + 0.35 * tique
+	return a
+
+
+## Conhecimento: um sino com eco e um sussurro em coro, de tom religioso.
+static func _el_conhecimento() -> PackedFloat32Array:
+	var d := 1.8
+	var n := int(d * TAXA)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	var y := 0.0
+	for i in n:
+		var t := float(i) / TAXA
+		var sino := 0.0
+		for eco in 3:
+			var te: float = t - eco * 0.33
+			if te >= 0.0:
+				sino += (sin(TAU * 523.0 * te) + 0.5 * sin(TAU * 1307.0 * te) + 0.3 * sin(TAU * 1876.0 * te)) * exp(-te * 2.6) * pow(0.45, eco)
+		y += 0.25 * (randf_range(-1.0, 1.0) - y)
+		var sussurro := y * 0.6 * sin(PI * t / d) * (0.6 + 0.4 * sin(TAU * 5.0 * t))
+		a[i] = 0.32 * sino + 0.35 * sussurro
+	return a
+
+
+## Energia: estática em rajadas e um zumbido de serra desafinado, estourado.
+static func _el_energia() -> PackedFloat32Array:
+	var d := 1.0
+	var n := int(d * TAXA)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	for i in n:
+		var t := float(i) / TAXA
+		var serra := fmod(t * 110.0, 1.0) * 2.0 - 1.0 + fmod(t * 113.7, 1.0) * 2.0 - 1.0
+		var rajada := 1.0 if fmod(t * 9.0, 1.0) < 0.35 else 0.1
+		var estatica := randf_range(-1.0, 1.0) * rajada
+		a[i] = clampf((0.35 * serra + 0.5 * estatica) * 1.6, -0.8, 0.8) * sin(PI * t / d)
+	return a
+
+
+## Medo: quase silêncio, e três notas de piano que não combinam (segunda menor).
+static func _el_medo() -> PackedFloat32Array:
+	var d := 2.2
+	var n := int(d * TAXA)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	var notas := [[0.0, 311.1], [0.55, 329.6], [1.3, 293.7]]
+	for i in n:
+		var t := float(i) / TAXA
+		var s := 0.0
+		for nt in notas:
+			var dt: float = t - nt[0]
+			if dt >= 0.0:
+				var f: float = nt[1]
+				s += (sin(TAU * f * dt) + 0.4 * sin(TAU * 2.0 * f * dt) + 0.15 * sin(TAU * 3.0 * f * dt)) * exp(-dt * 1.8)
+		a[i] = 0.3 * s
+	return a
+
+
 static func _encontro() -> PackedFloat32Array:
 	var d := 1.2
 	var n := int(d * TAXA)

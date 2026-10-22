@@ -24,6 +24,11 @@ const INFO := Color("7fd3c7")        ## online, investigação, pista
 const MESTRE := Color("f2c6a0")      ## painel e ações do mestre
 const ELEMENTO := {"sangue": Color("c0392b"), "morte": Color("6b6670"), "conhecimento": Color("e3b341"),
 	"energia": Color("a35ce0"), "medo": Color("e8eef5")}
+## No mundo 3D (docs/54, pela wiki): a Energia é um espectro neon (roxo de base, com rosa, ciano,
+## azul e verde), a Morte é lodo preto com cinza e o Medo não tem cor: é distorção e névoa (na
+## interface ele segue neutro, para ser legível).
+const ESPECTRO_ENERGIA := [Color("a35ce0"), Color("ff4fd8"), Color("3ff0ff"), Color("4f7bff"), Color("5dff8a")]
+const LODO_MORTE := Color("17141a")
 
 ## Materiais da Ordem (docs/09, 5.1): papel, tinta, cortiça e fio vermelho
 const PAPEL := Color("e8dcc0")

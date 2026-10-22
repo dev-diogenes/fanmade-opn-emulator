@@ -612,7 +612,8 @@ func _momento_do_turno() -> void:
 	tw.tween_interval(1.4)
 	tw.tween_property(faixa, "modulate:a", 0.0, 0.8)
 	tw.tween_callback(faixa.queue_free)
-	Som.tocar("estatica" if not virou else "encontro")
+	# A noite cai com o som do elemento do caso (docs/54)
+	Som.tocar("estatica" if not virou else ("el_" + missao.caso.elemento if missao.caso != null and noite else "encontro"))
 	Tema.pulso_vhs(_vista, 0.35 if not virou else 0.6, 0.6)
 
 
@@ -1017,6 +1018,7 @@ func _atualizar() -> void:
 		int(prog.firmes), int(prog.necessarias)]
 	_lbl_membrana.tooltip_text = "Caso: pistas firmes que contam para o relatório à Ordem (duas por pergunta em aberto)."
 	_desenhar_linha_tempo()
+	_mapa3d.atualizar_pressagios(missao)
 	_mapa3d.atualizar_rastros(missao.rastros, Tema.ELEMENTO.get(missao.caso.elemento if missao.caso != null else "sangue", Tema.SANGUE_CLARO))
 	if missao.turno_mundo != _turno_visto:
 		var primeiro := _turno_visto < 0

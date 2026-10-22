@@ -148,6 +148,15 @@ func iniciar_combate(semente: int) -> void:
 	combate.turno_perdido.connect(func(s, motivo): _registrar("%s perde o turno (%s)." % [s.nome, motivo]))
 	combate.lesao_sofrida.connect(func(a, attr): _registrar("[color=#eda64a]%s sofre uma lesão: −1 %s permanente.[/color]" % [a.nome, attr.to_upper()]))
 	fluxo.iniciar()
+	# A assinatura do elemento da criatura mais forte, ao começar (docs/54)
+	var el_combate := ""
+	var pv_max := 0
+	for s in combate.participantes:
+		if s is Ameaca and (s as Ameaca).elemento != "" and s.pv_maximo > pv_max:
+			pv_max = s.pv_maximo
+			el_combate = (s as Ameaca).elemento
+	if el_combate != "":
+		Som.tocar("el_" + el_combate)
 	for s in combate.participantes:
 		if s is Ameaca and (s as Ameaca).enigma_pendente():
 			_registrar("[color=#eda64a]Enigma de Medo — %s: %s Nada a fere até alguém decifrar (botão Decifrar).[/color]" % [s.nome, (s as Ameaca).enigma.get("texto", "")])

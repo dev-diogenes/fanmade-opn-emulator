@@ -409,6 +409,7 @@ func mover(ser: Ser, destino: Vector2i) -> bool:
 		limite = maxi(1, limite / 2)   # quem agarra anda metade, arrastando a vítima (p.85)
 	if not grade.alcancaveis(ser, limite).has(destino) or grade.ocupante(destino) != null:
 		return false
+	ser.mods_cena["moveu_na_rodada"] = rodada   # quem se mexe chama a atenção do Sangue cego (docs/54)
 	var purg := _purgatorio_de(ser)
 	if not purg.is_empty() and not destino in purg.celulas:
 		# Purgatório (p.149): sair dói (6d6 de Sangue) e, falhando em Fortitude, não se move

@@ -34,7 +34,46 @@ static func alvo_preferido(c: Combate, ser: Ser, padrao: Ser) -> Ser:
 			return dele
 		if am.tem_hab("multiplicacao_melodica") and c._melodia_quem != null and not c._melodia_quem.esta_fora_de_combate():
 			return c._melodia_quem
+		if am.criatura and padrao != null:
+			var do_elemento := alvo_do_elemento(c, am, padrao)
+			if do_elemento != null:
+				return do_elemento
 	return padrao
+
+
+## Cada elemento caça de um jeito (docs/54, da lore da wiki). É escolha de alvo, papel do mestre,
+## não regra nova: o Sangue é cego e vai em quem se mexeu; o Conhecimento mira a mente mais
+## frágil (a menor SAN); a Energia escolhe ao acaso; a Morte vai no mais próximo, mas em ritmo
+## errático (`parado_no_tempo`). O acaso sai de uma semente da rodada (igual no online).
+static func alvo_do_elemento(c: Combate, am: Ameaca, padrao: Ser) -> Ser:
+	var inimigos: Array = c.participantes.filter(func(x): return x.lado != am.lado and not x.esta_fora_de_combate() and (c.grade == null or c.grade.tem(x)))
+	if inimigos.is_empty():
+		return null
+	match am.elemento:
+		"sangue":
+			var mexeram: Array = inimigos.filter(func(x): return int(x.mods_cena.get("moveu_na_rodada", -9)) >= c.rodada - 1)
+			if mexeram.is_empty() or padrao in mexeram:
+				return padrao
+			if c.grade == null:
+				return mexeram[0]
+			mexeram.sort_custom(func(x, y): return c.grade.distancia_entre(am, x) < c.grade.distancia_entre(am, y))
+			return mexeram[0]
+		"conhecimento":
+			var mentes: Array = inimigos.filter(func(x): return x.tem_sanidade and x.san_maximo > 0)
+			if mentes.is_empty():
+				return padrao
+			mentes.sort_custom(func(x, y): return float(x.san) / x.san_maximo < float(y.san) / y.san_maximo)
+			return mentes[0]
+		"energia":
+			inimigos.sort_custom(func(x, y): return x.nome < y.nome)
+			return inimigos[absi(hash("%d|%s|energia" % [c.rodada, am.nome])) % inimigos.size()]
+	return null
+
+
+## A Morte acelera e para sem aviso (docs/54): numa rodada em cada três, a criatura de Morte que
+## não está ao lado de ninguém fica imóvel, como se o tempo tivesse falhado.
+static func parado_no_tempo(c: Combate, am: Ameaca) -> bool:
+	return am.criatura and am.elemento == "morte" and absi(hash("%d|%s|morte" % [c.rodada, am.nome])) % 3 == 0
 
 
 ## Usa habilidades e rituais antes de atacar. Retorna true se o turno já foi gasto.

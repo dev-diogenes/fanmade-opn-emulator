@@ -128,13 +128,112 @@ static func ameaca(ser: Ameaca, escala: float = 1.0) -> Node3D:
 	if ser.criatura or grande:   # a Aberração da arena de demonstração não vem marcada como criatura
 		var nome := "Skeleton_Warrior" if grande else "Skeleton_Minion"
 		var elemento: Color = Tema.ELEMENTO.get(ser.elemento, Tema.ELEMENTO.morte)
-		n = personagem(DIR_ESQUELETOS + nome + ".glb", nome + "_", elemento.darkened(0.3), escala * (1.25 if grande else 1.0),
-			elemento.lerp(Color.WHITE, 0.45))
+		var tinta := elemento.lerp(Color.WHITE, 0.45)
+		match ser.elemento:   # a cor de cada elemento no mundo (docs/54)
+			"morte": tinta = Tema.LODO_MORTE.lerp(elemento, 0.35)
+			"energia": tinta = Tema.ESPECTRO_ENERGIA[absi(hash(ser.nome)) % Tema.ESPECTRO_ENERGIA.size()].lightened(0.15)
+			"medo": tinta = Color(0.85, 0.88, 0.92)
+		n = personagem(DIR_ESQUELETOS + nome + ".glb", nome + "_", elemento.darkened(0.3), escala * (1.25 if grande else 1.0), tinta)
+		if n != null and ser.elemento == "medo":
+			for mi in n.find_children("*", "MeshInstance3D", true, false):
+				(mi as MeshInstance3D).transparency = 0.55   # o Medo distorce: quase transparente
+		if n != null and ser.elemento == "energia":
+			_neon(n)
 	else:
 		n = personagem(DIR_PERSONAGENS + "Rogue_Hooded.glb", "Rogue_", cor_base, escala, Color(0.62, 0.2, 0.22))
 	if n != null:
 		return n
 	return criatura(cor_base, escala * 1.2) if grande else figura(cor_base, escala)
+
+
+## A criatura de Energia pisca no espectro neon (docs/54): uma luz que troca de cor sem parar.
+static func _neon(n: Node3D) -> void:
+	var luz := OmniLight3D.new()
+	luz.light_color = Tema.ESPECTRO_ENERGIA[0]
+	luz.light_energy = 1.2
+	luz.omni_range = 1.4
+	luz.position = Vector3(0, 0.6, 0)
+	Qualidade.luz_extra(luz)
+	n.add_child(luz)
+	var tw := luz.create_tween().set_loops()
+	for cor in Tema.ESPECTRO_ENERGIA:
+		tw.tween_property(luz, "light_color", cor, 0.35)
+
+
+## Presságio do elemento no mapa (docs/54): o sinal que aparece num hex revelado vizinho a uma
+## criatura, antes de o grupo dar de cara com ela. Sangue: carcaça e mancha; Morte: relva cinza e
+## cinza em espiral; Conhecimento: corda e máscara num poste; Energia: poste com luz que pisca em
+## neon; Medo: névoa que não se mexe com o vento.
+static func pressagio(elemento: String) -> Node3D:
+	var n := Node3D.new()
+	match elemento:
+		"sangue":
+			var mancha := CylinderMesh.new()
+			mancha.top_radius = 0.28
+			mancha.bottom_radius = 0.3
+			mancha.height = 0.01
+			n.add_child(_malha(mancha, material(Color("4a0f12")), Vector3(0, 0.01, 0)))
+			var corpo := SphereMesh.new()
+			corpo.radius = 0.13
+			corpo.height = 0.14
+			n.add_child(_malha(corpo, material(Color("5a3a2e")), Vector3(0.05, 0.05, 0)))
+			for i in 3:
+				var costela := BoxMesh.new()
+				costela.size = Vector3(0.02, 0.09, 0.02)
+				var c := _malha(costela, material(Color("d8cfb8")), Vector3(-0.06 + i * 0.06, 0.1, 0.03))
+				c.rotation.z = 0.4
+				n.add_child(c)
+		"morte":
+			var relva := CylinderMesh.new()
+			relva.top_radius = 0.34
+			relva.bottom_radius = 0.34
+			relva.height = 0.01
+			n.add_child(_malha(relva, material(Color("5c5a5e")), Vector3(0, 0.01, 0)))
+			for i in 9:   # cinza em espiral
+				var a := i * 0.7
+				var cinza := BoxMesh.new()
+				cinza.size = Vector3(0.03, 0.015, 0.03)
+				n.add_child(_malha(cinza, material(Color("c9c4bc")), Vector3(cos(a) * 0.03 * i, 0.02, sin(a) * 0.03 * i)))
+		"conhecimento":
+			var poste := BoxMesh.new()
+			poste.size = Vector3(0.04, 0.6, 0.04)
+			n.add_child(_malha(poste, material(Color("3a2a1e")), Vector3(0, 0.3, 0)))
+			var corda := BoxMesh.new()
+			corda.size = Vector3(0.012, 0.22, 0.012)
+			n.add_child(_malha(corda, material(Color("b8a77a")), Vector3(0.06, 0.45, 0)))
+			var mascara := SphereMesh.new()
+			mascara.radius = 0.06
+			mascara.height = 0.08
+			n.add_child(_malha(mascara, material(Tema.ELEMENTO.conhecimento, false, 0.6), Vector3(0.06, 0.32, 0.02)))
+		"energia":
+			var poste := BoxMesh.new()
+			poste.size = Vector3(0.04, 0.7, 0.04)
+			n.add_child(_malha(poste, material(Color("2b2b33")), Vector3(0, 0.35, 0)))
+			var luz := OmniLight3D.new()
+			luz.light_color = Tema.ESPECTRO_ENERGIA[2]
+			luz.light_energy = 1.0
+			luz.omni_range = 1.1
+			luz.position = Vector3(0, 0.72, 0)
+			n.add_child(luz)
+			var tw := luz.create_tween().set_loops()
+			tw.tween_property(luz, "light_energy", 0.0, 0.07)
+			tw.tween_property(luz, "light_color", Tema.ESPECTRO_ENERGIA[1], 0.0)
+			tw.tween_property(luz, "light_energy", 1.3, 0.12)
+			tw.tween_interval(0.9)
+			tw.tween_property(luz, "light_energy", 0.0, 0.05)
+			tw.tween_property(luz, "light_color", Tema.ESPECTRO_ENERGIA[2], 0.0)
+			tw.tween_property(luz, "light_energy", 1.0, 0.1)
+			tw.tween_interval(1.4)
+		_:   # Medo: névoa parada
+			for i in 4:
+				var bola := SphereMesh.new()
+				bola.radius = 0.18 + 0.05 * (i % 2)
+				bola.height = bola.radius * 1.2
+				var m := material(Color(0.86, 0.88, 0.92))
+				m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+				m.albedo_color.a = 0.28
+				n.add_child(_malha(bola, m, Vector3(-0.2 + i * 0.13, 0.12, 0.05 * (i % 3))))
+	return n
 
 
 ## Personagem animado sobre uma base colorida (peça de tabuleiro). `prefixo`: só ficam

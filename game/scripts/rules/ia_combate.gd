@@ -36,6 +36,11 @@ static func jogar(c: Combate, ser: Ser, armas: Dictionary) -> void:
 				c.conjurar(ser, rid, alvo)
 				return
 	if not pode_atacar(c, ser, alvo, arma):
+		if ser is Ameaca and IaAmeaca.parado_no_tempo(c, ser as Ameaca):
+			if int(ser.mods_cena.get("parou_na_rodada", -1)) != c.rodada:
+				ser.mods_cena["parou_na_rodada"] = c.rodada
+				c._log("%s para, imóvel, como se o tempo tivesse falhado." % ser.nome)
+			return
 		var destino := c.grade.aproximar(ser, alvo, ser.deslocamento_quadrados())
 		if arma.get("ataque", "") != "corpo_a_corpo" and c.grade.em_alcance(ser, alvo, arma.get("alcance", "curto")) and c.grade.cobertura(ser, alvo) != "total":
 			destino = c.grade.posicao(ser)   # atirador já em alcance: não precisa andar (atrás de cobertura total, anda)

@@ -1185,9 +1185,14 @@ func _cacar() -> void:
 ## Encontro com criatura paranormal (o elemento de alguma ameaça), com cache por id.
 var _elemento_por_encontro: Dictionary = {}
 func _paranormal(encontro_id: String) -> bool:
+	return elemento_de(encontro_id) != ""
+
+
+## O elemento de um encontro pelo id ("" para gente e bichos), com cache.
+func elemento_de(encontro_id: String) -> String:
 	if not _elemento_por_encontro.has(encontro_id):
 		_elemento_por_encontro[encontro_id] = elemento_do_encontro(_encontro(encontro_id))
-	return String(_elemento_por_encontro[encontro_id]) != ""
+	return String(_elemento_por_encontro[encontro_id])
 
 
 ## O agente mais isolado (menos aliados por perto) a até `raio` hexes; fora de vilas e do ponto
