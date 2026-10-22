@@ -34,8 +34,8 @@ func test_testemunhas_ganham_nome_aparencia_e_jeito():
 
 func test_o_depoimento_comeca_por_quem_fala():
 	var c := _cena("velorio")
-	var mauro: Agente = c.agentes[0]
-	var texto := c._encontrar_pista(mauro, "viuva", false, -1, "diplomacia")
+	var cleber: Agente = c.agentes[0]
+	var texto := c._encontrar_pista(cleber, "viuva", false, -1, "diplomacia")
 	assert_true(texto.begins_with(String(c.testemunhas.viuva.nome)))
 	var achada: Dictionary = c.pistas_encontradas.back()
 	assert_eq(achada.pericia, "diplomacia")

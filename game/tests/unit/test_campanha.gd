@@ -126,11 +126,11 @@ func test_vitoria_avanca_e_libera_recruta():
 	assert_eq(m.extras.campanha.recrutas.size(), 1)
 	var rel := _vencer(c)
 	assert_eq(int(c.progresso_campanha(ID).etapa), 1)
-	assert_eq(rel.campanha.recrutas, ["Davi"])
-	assert_string_contains(rel.campanha.texto, "Davi")
-	assert_true(c.recrutas_disponiveis().any(func(r): return r.nome == "Davi"))
-	assert_not_null(c.recrutar("Davi"))
-	assert_false(c.recrutas_disponiveis().any(func(r): return r.nome == "Davi"), "recrutado sai da lista")
+	assert_eq(rel.campanha.recrutas, ["Gilson"])
+	assert_string_contains(rel.campanha.texto, "Gilson")
+	assert_true(c.recrutas_disponiveis().any(func(r): return r.nome == "Gilson"))
+	assert_not_null(c.recrutar("Gilson"))
+	assert_false(c.recrutas_disponiveis().any(func(r): return r.nome == "Gilson"), "recrutado sai da lista")
 
 
 func test_derrota_mantem_a_missao():

@@ -22,7 +22,7 @@ func test_estrela_so_com_cinquenta_por_cento():
 
 func _combate() -> Combate:
 	var c := Combate.new(rs, Dados.new(3))
-	c.adicionar(Agente.criar(rs, "Mauro", "combatente", {"agi": 2, "for": 3, "int": 1, "pre": 1, "vig": 2}, {"luta": "treinado"}))
+	c.adicionar(Agente.criar(rs, "Cléber", "combatente", {"agi": 2, "for": 3, "int": 1, "pre": 1, "vig": 2}, {"luta": "treinado"}))
 	c.adicionar(Agente.criar(rs, "Rita", "ocultista", {"agi": 1, "for": 1, "int": 3, "pre": 2, "vig": 1}, {"ocultismo": "treinado"}))
 	c.adicionar(Ameaca.criar(rs, "o Sacerdote Carmesim", FICHA))
 	c.iniciar()
@@ -70,7 +70,7 @@ func test_faixa_mostra_a_vez_e_as_cores():
 func test_nome_curto():
 	assert_eq(FaixaIniciativa.nome_curto("o Sacerdote Carmesim"), "Sacerdote Carmesim")
 	assert_eq(FaixaIniciativa.nome_curto("Cultista da Seita Dourada"), "Cultista da Seita…")
-	assert_eq(FaixaIniciativa.nome_curto("Mauro"), "Mauro")
+	assert_eq(FaixaIniciativa.nome_curto("Cléber"), "Cléber")
 
 
 func test_contorno_do_hex_e_um_anel():

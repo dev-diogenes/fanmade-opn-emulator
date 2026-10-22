@@ -106,7 +106,7 @@ func test_cerimonia_de_nex_uma_vez_por_missao():
 	assert_false(CerimoniaNex.tem_o_que_mostrar({}))
 	c.ultimo_relatorio = {"vitoria": true, "missao": 1, "agentes": [
 		{"nome": a.nome, "id": a.id, "situacao": "voltou", "pp": 4, "nex_antes": 5, "nex": 10, "patente": "Operador", "promovido": true, "pendencias": 2},
-		{"nome": "Tiago", "id": "x", "situacao": "morto"}]}
+		{"nome": "Ademir", "id": "x", "situacao": "morto"}]}
 	assert_true(CerimoniaNex.tem_o_que_mostrar(c.ultimo_relatorio))
 	var cer := CerimoniaNex.abrir(self, c)
 	assert_eq(cer._carimbos.size(), 1, "um carimbo PROMOVIDO")

@@ -129,7 +129,7 @@
       "id": "nave",
       "nome": "a nave da Igreja Matriz"
     },
-    "objetivo": "Descobrir como o padre Anselmo prendeu a Matriz e destruí-la antes que a chuva volte.",
+    "objetivo": "Descobrir como o padre Ezequiel prendeu a Matriz e destruí-la antes que a chuva volte.",
     "resumo": "São Bento do Vale está inteira fora d'água pela primeira vez desde 1979. A Igreja Matriz pulsa no alto da praça, e o Lodo das ruas anda sozinho."
   },
   "eventos": [
@@ -258,7 +258,7 @@
       "pontos": [
         {
           "id": "diario",
-          "nome": "Diário do padre Anselmo",
+          "nome": "Diário do padre Ezequiel",
           "pericias": {
             "religiao": 15,
             "investigacao": 20
@@ -441,7 +441,7 @@
           }
         ],
         "enigma": {
-          "texto": "Como o padre Anselmo prendeu a Matriz em 1979?",
+          "texto": "Como o padre Ezequiel prendeu a Matriz em 1979?",
           "pericias": [
             "religiao",
             "ocultismo",

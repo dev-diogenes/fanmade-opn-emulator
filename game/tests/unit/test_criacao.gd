@@ -21,7 +21,7 @@ func _ficha_bianca() -> Dictionary:
 
 func _ficha_combatente(nex: int = 5) -> Dictionary:
 	return {
-		"nome": "Mauro", "classe": "combatente", "origem": "lutador", "nex": nex,
+		"nome": "Cléber", "classe": "combatente", "origem": "lutador", "nex": nex,
 		"atributos": {"agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 3},
 		"pericias_classe": ["luta", "fortitude"],
 		# 1 + INT 1 + 1 (Luta veio da origem e da classe)

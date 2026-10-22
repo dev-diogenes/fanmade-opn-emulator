@@ -22,7 +22,7 @@ func _rituais_de_elementos_diferentes(n: int) -> Array:
 
 
 func test_tres_paginas_como_a_oficial():
-	var a := Agente.criar(rs, "Mauro", "combatente", {"agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 2}, {"luta": "treinado"})
+	var a := Agente.criar(rs, "Cléber", "combatente", {"agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 2}, {"luta": "treinado"})
 	var f := FichaAgente.new()
 	add_child_autofree(f)
 	f.mostrar(a)
@@ -33,7 +33,7 @@ func test_tres_paginas_como_a_oficial():
 
 
 func test_pericias_completas_e_defesa_com_a_conta():
-	var a := Agente.criar(rs, "Mauro", "combatente", {"agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 2}, {"luta": "treinado"})
+	var a := Agente.criar(rs, "Cléber", "combatente", {"agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 2}, {"luta": "treinado"})
 	var f := FichaAgente.new()
 	add_child_autofree(f)
 	f.mostrar(a)
@@ -64,7 +64,7 @@ func test_rituais_otimizados():
 
 
 func test_sem_rituais_explica():
-	var a := Agente.criar(rs, "Mauro", "combatente", {"agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 2})
+	var a := Agente.criar(rs, "Cléber", "combatente", {"agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 2})
 	var f := FichaAgente.new()
 	add_child_autofree(f)
 	f.mostrar(a)

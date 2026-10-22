@@ -2,21 +2,21 @@ extends GutTest
 ## Investigação (p.86, p.89-91): caso, cena, ações, urgência e integração com a missão.
 
 var m: Missao
-var mauro: Agente
+var cleber: Agente
 var bianca: Agente
 var rita: Agente
 
 
 func before_each():
 	m = Missao.nova(42)
-	mauro = m.agentes[0]
+	cleber = m.agentes[0]
 	bianca = m.agentes[1]
 	rita = m.agentes[2]
 
 
 func _cena(grupo: Array = [], urgencia: String = "medio", membrana: Membrana = null) -> CenaInvestigacao:
 	if grupo.is_empty():
-		grupo = [mauro, bianca, rita]
+		grupo = [cleber, bianca, rita]
 	return CenaInvestigacao.nova(m.ruleset, Dados.new(1), m.caso, "casa_abandonada", grupo, urgencia, membrana)
 
 
@@ -142,7 +142,7 @@ func test_relatorio_na_cena_vale_ao_sair():
 	var r := Comandos.aplicar_investigacao(c, Comandos.novo("investigacao", "relatar", {"respostas": _relatorio(m.caso)}))
 	assert_true(r.ok and r.relatorio.acertou)
 	assert_eq(c.resultado().perguntas.size(), 3, "os efeitos vão com o resultado da cena")
-	assert_eq(c.agente_atual(), mauro, "relatar não gasta a vez")
+	assert_eq(c.agente_atual(), cleber, "relatar não gasta a vez")
 
 
 func test_cada_cena_tem_um_ponto_firme_por_pergunta_e_uma_testemunha():
@@ -172,14 +172,14 @@ func test_cenas_novas_tem_ponto_para_cada_pergunta():
 
 
 func test_evento_com_pista_revela_um_traco():
-	var h := m.posicao(mauro)
+	var h := m.posicao(cleber)
 	var antes := m.caso.pistas.size()
-	var feito := m._aplicar_efeito(mauro, {"tipo": "pista", "pergunta": "onde"}, h)
+	var feito := m._aplicar_efeito(cleber, {"tipo": "pista", "pergunta": "onde"}, h)
 	assert_eq(feito.tipo, "pista")
 	assert_eq(m.caso.pistas.size(), antes + 1)
 	assert_true(m.caso.pistas.back().indicio in m.caso.local.indicios)
 	# Sem pergunta: vai para a aberta com menos pistas
-	feito = m._aplicar_efeito(mauro, {"tipo": "pista"}, h)
+	feito = m._aplicar_efeito(cleber, {"tipo": "pista"}, h)
 	assert_ne(m.caso.pistas.back().responde, "onde")
 
 
@@ -210,8 +210,8 @@ func test_urgencia_define_as_rodadas():
 
 func test_procurar_pista_com_sucesso():
 	var c := _cena()
-	assert_eq(c.agente_atual(), mauro)
-	c.dados.forcar([15])   # Mauro, Investigação destreinada (INT 1): 15 vs DT 15
+	assert_eq(c.agente_atual(), cleber)
+	c.dados.forcar([15])   # Cléber, Investigação destreinada (INT 1): 15 vs DT 15
 	var r := c.procurar("escrivaninha", "investigacao")
 	assert_true(r.sucesso)
 	assert_false("escrivaninha" in c.pontos_restantes)
@@ -223,13 +223,13 @@ func test_procurar_invalido_nao_gasta_a_vez():
 	var c := _cena()
 	assert_true(c.procurar("escrivaninha", "ocultismo").is_empty(), "perícia não aceita neste ponto")
 	assert_true(c.procurar("inexistente", "investigacao").is_empty())
-	assert_eq(c.agente_atual(), mauro)
+	assert_eq(c.agente_atual(), cleber)
 
 
 func test_tres_falhas_custam_uma_rodada():
 	var c := _cena()
 	c.dados.forcar([1, 1, 1, 1, 1, 1])
-	c.procurar("escrivaninha", "percepcao")     # Mauro
+	c.procurar("escrivaninha", "percepcao")     # Cléber
 	c.procurar("escrivaninha", "investigacao")  # Bianca (3 dados)
 	c.procurar("porao", "percepcao")            # Rita (2 dados)
 	assert_eq(c.falhas, 3)
@@ -239,7 +239,7 @@ func test_tres_falhas_custam_uma_rodada():
 
 func test_facilitar_da_mais_2_aos_aliados():
 	var c := _cena()
-	c.dados.forcar([15, 1, 1])   # Mauro: Atletismo (FOR 3) 15 + 5 = 20 vs DT 15
+	c.dados.forcar([15, 1, 1])   # Cléber: Atletismo (FOR 3) 15 + 5 = 20 vs DT 15
 	assert_true(c.facilitar("janelas", "atletismo").sucesso)
 	c.dados.forcar([8, 1, 1])    # Bianca: 8 + 5 + 2 = 15 vs DT 15 (sem o bônus, falharia)
 	var r := c.procurar("escrivaninha", "investigacao")
@@ -249,7 +249,7 @@ func test_facilitar_da_mais_2_aos_aliados():
 
 func test_ajudar():
 	var c := _cena()
-	c.dados.forcar([20])   # Mauro: Intimidação 20 + 5 = 25 vs DT 10 -> +1, +1 por 10 acima
+	c.dados.forcar([20])   # Cléber: Intimidação 20 + 5 = 25 vs DT 10 -> +1, +1 por 10 acima
 	var r := c.ajudar(bianca, "intimidacao")
 	assert_eq(r.bonus, 2)
 	c.dados.forcar([6, 1, 1])
@@ -295,18 +295,18 @@ func test_faro_para_pistas_so_ao_procurar():
 
 
 func test_incansavel_da_acao_extra_com_forca():
-	mauro.poderes.append("incansavel")
+	cleber.poderes.append("incansavel")
 	var c := _cena()
 	assert_true(c.acao_extra("incansavel"))
 	c.dados.forcar([1, 1, 15])   # usa FOR 3 em vez de INT 1
 	var r := c.procurar("escrivaninha", "investigacao")
 	assert_eq(r.teste.slots.size(), 3)
-	assert_eq(c.agente_atual(), mauro, "ainda tem a ação normal")
+	assert_eq(c.agente_atual(), cleber, "ainda tem a ação normal")
 	assert_false(c.acao_extra("incansavel"), "uma vez por cena")
 
 
 func test_distraido_perde_o_primeiro_turno():
-	mauro.desvantagens_idade.append("distraido")
+	cleber.desvantagens_idade.append("distraido")
 	var c := _cena()
 	assert_eq(c.agente_atual(), bianca)
 
@@ -325,7 +325,7 @@ func test_mapa_tem_investigacoes():
 
 func test_resultado_da_investigacao_na_missao():
 	m.caso.elemento = "sangue"   # o Covil Carmesim (docs/52)
-	var h := m.posicao(mauro)
+	var h := m.posicao(cleber)
 	m._preparar_investigacao(h, "casa_abandonada")
 	assert_true(m.ocupado())
 	assert_not_null(m.criar_cena_investigacao())
@@ -340,7 +340,7 @@ func test_resultado_da_investigacao_na_missao():
 
 func test_descobrir_quem_enfraquece_e_nomeia_o_chefe():
 	m.caso.elemento = "sangue"   # o Covil Carmesim (docs/52)
-	m._preparar_investigacao(m.posicao(mauro), "capela")
+	m._preparar_investigacao(m.posicao(cleber), "capela")
 	var quem := m.caso.pergunta("quem")
 	quem.respondida = true
 	m.concluir_investigacao({"pistas": [], "perguntas": [quem], "penalidade": {}})
@@ -351,7 +351,7 @@ func test_descobrir_quem_enfraquece_e_nomeia_o_chefe():
 
 
 func test_penalidade_de_encontro_deixa_ameaca_no_hex():
-	var h := m.posicao(mauro)
+	var h := m.posicao(cleber)
 	m._preparar_investigacao(h, "acampamento")
 	m.concluir_investigacao({"pistas": [], "perguntas": [], "penalidade": {"tipo": "encontro", "encontro": "emboscada"}})
 	assert_eq(m.mapa.conteudo(h).get("tipo", ""), "encontro")
@@ -381,21 +381,21 @@ func test_cena_de_investigacao_abre():
 
 func test_examinar_sem_treino_nao_pode():
 	var c := _cena()
-	assert_eq(c.agente_atual(), mauro)
-	assert_false(mauro.pericias.has("investigacao"))
-	assert_eq(c.custo_examinar(mauro, "escrivaninha", "investigacao"), -1, "sem treino, só procurando com teste")
+	assert_eq(c.agente_atual(), cleber)
+	assert_false(cleber.pericias.has("investigacao"))
+	assert_eq(c.custo_examinar(cleber, "escrivaninha", "investigacao"), -1, "sem treino, só procurando com teste")
 	assert_true(c.examinar("escrivaninha", "investigacao").is_empty())
-	assert_eq(c.agente_atual(), mauro, "pedido inválido não gasta a vez")
+	assert_eq(c.agente_atual(), cleber, "pedido inválido não gasta a vez")
 
 
 func test_examinar_na_dt_maior_custa_pe():
 	var c := _cena()
-	assert_true(mauro.pericias.has("percepcao"))
-	assert_eq(c.custo_examinar(mauro, "escrivaninha", "percepcao"), 1, "DT 20: 1 PE")
-	var pe := mauro.pe
+	assert_true(cleber.pericias.has("percepcao"))
+	assert_eq(c.custo_examinar(cleber, "escrivaninha", "percepcao"), 1, "DT 20: 1 PE")
+	var pe := cleber.pe
 	var r := c.examinar("escrivaninha", "percepcao")
 	assert_false(r.is_empty())
-	assert_eq(mauro.pe, pe - 1)
+	assert_eq(cleber.pe, pe - 1)
 	assert_false("escrivaninha" in c.pontos_restantes)
 	assert_eq(c.pistas_encontradas.size(), 1, "a pista central vem sem rolar dados")
 	assert_eq(c.agente_atual(), bianca, "examinar gasta a ação")
@@ -459,7 +459,7 @@ func test_testemunha_por_pouco_da_depoimento_incerto():
 	var c := _cena()
 	assert_true(c.ponto("vizinha").get("depoimento", false), "a vizinha é testemunha")
 	assert_false(c.ponto("escrivaninha").get("depoimento", false))
-	c._encontrar_pista(mauro, "vizinha", true, 1)   # sorte ímpar: enganada
+	c._encontrar_pista(cleber, "vizinha", true, 1)   # sorte ímpar: enganada
 	assert_true(c.caso.pistas.back().duvidosa)
 	assert_true(c.pistas_encontradas.back().duvidosa)
 	assert_false(c.caso.pistas.back().indicio in c.caso.acao.indicios, "a vizinha responde o quê; enganada, aponta outro plano")
@@ -518,7 +518,7 @@ func test_caso_ampliado_vai_e_volta_no_save():
 # --- Conclusão do caso (docs/37) -------------------------------------------------------
 
 func test_evento_de_inocente_morto():
-	var feito := m._aplicar_efeito(mauro, {"tipo": "inocente_morto"}, m.posicao(mauro))
+	var feito := m._aplicar_efeito(cleber, {"tipo": "inocente_morto"}, m.posicao(cleber))
 	assert_eq(feito.tipo, "inocente_morto")
 	assert_eq(m.inocentes_mortos, 1)
 	var por_id := {}
@@ -541,12 +541,12 @@ func test_caso_solucionado_exige_quem_e_o_que():
 func test_covil_selado_ate_saber_onde():
 	assert_false(m.covil_aberto(), "a missão procedural começa com o covil selado")
 	var obj := m.mapa.encontrar("objetivo")
-	m._entrar(mauro, obj)
+	m._entrar(cleber, obj)
 	assert_true(m.encontro_pendente.is_empty(), "sem saber onde, não há entrada nem luta")
 	_uma_pista_em_cada(m.caso)
 	assert_true(m.relatar(_relatorio(m.caso)).acertou)
 	assert_true(m.covil_aberto(), "acertar o onde abre o covil")
-	m._entrar(mauro, obj)
+	m._entrar(cleber, obj)
 	assert_false(m.encontro_pendente.is_empty(), "agora o confronto começa")
 
 
@@ -557,14 +557,14 @@ func test_membrana_rompida_abre_o_covil():
 
 
 func test_aliados_perto_conta_quem_entraria_na_luta():
-	var aqui := m.posicao(mauro)
-	assert_eq(m.aliados_perto(mauro, aqui), 2, "todos começam juntos")
+	var aqui := m.posicao(cleber)
+	assert_eq(m.aliados_perto(cleber, aqui), 2, "todos começam juntos")
 	var longe := aqui
 	for h in m.mapa.celulas:
 		if Hex.distancia(h, aqui) > 4:
 			longe = h
 			break
-	assert_eq(m.aliados_perto(mauro, longe), 0, "longe de todos")
+	assert_eq(m.aliados_perto(cleber, longe), 0, "longe de todos")
 
 
 # --- Mirante no alto da serra (docs/45) ---------------------------------------------------
@@ -586,12 +586,12 @@ func test_subir_ao_mirante_da_o_achado_e_esgota():
 			break
 	m.mapa.definir_conteudo(serra, {"tipo": "mirante", "achado": "movimento"})
 	var antes := m.caso.pistas.size()
-	m._entrar(mauro, serra)
+	m._entrar(cleber, serra)
 	assert_eq(m.caso.pistas.size(), antes + 1, "o movimento no vale vira pista")
 	assert_true(m.mapa.conteudo(serra).is_empty(), "o mirante se esgota")
 	m.mapa.definir_conteudo(serra, {"tipo": "mirante", "achado": "vista_covil"})
 	assert_false(m.covil_aberto())
-	m._entrar(mauro, serra)
+	m._entrar(cleber, serra)
 	assert_true(m.covil_aberto(), "ver o covil lá de cima o localiza")
 
 
@@ -604,14 +604,14 @@ func _no_inicio() -> void:
 
 func test_interludio_dorme_e_relaxa_pelo_limite_de_pe():
 	_no_inicio()
-	mauro.pv = 5
-	mauro.san = 2
+	cleber.pv = 5
+	cleber.san = 2
 	bianca.san = 2
-	var lim := m.ruleset.limite_pe(mauro.nex)
-	var r := m.interludio({mauro.id: {"acoes": ["dormir", "relaxar"]}, bianca.id: {"acoes": ["relaxar", "alimentar"], "prato": "favorito"}})
+	var lim := m.ruleset.limite_pe(cleber.nex)
+	var r := m.interludio({cleber.id: {"acoes": ["dormir", "relaxar"]}, bianca.id: {"acoes": ["relaxar", "alimentar"], "prato": "favorito"}})
 	assert_true(r.ok)
-	assert_eq(mauro.pv, 5 + lim, "dormir: limite de PE do NEX (descanso normal)")
-	assert_eq(mauro.san, 2 + lim + 2, "relaxar: +1 por agente que relaxou (Mauro e Bianca)")
+	assert_eq(cleber.pv, 5 + lim, "dormir: limite de PE do NEX (descanso normal)")
+	assert_eq(cleber.san, 2 + lim + 2, "relaxar: +1 por agente que relaxou (Cléber e Bianca)")
 	assert_eq(bianca.san, 2 + lim + 2 + 2, "prato favorito: +2 relaxando")
 	assert_false(m.pode_descansar(), "uma vez por visita")
 	assert_eq(m.movimento_restante, 0, "o interlúdio encerra o movimento")
@@ -619,18 +619,18 @@ func test_interludio_dorme_e_relaxa_pelo_limite_de_pe():
 
 func test_exercicio_guarda_um_d6_e_gasta_no_teste():
 	_no_inicio()
-	m.interludio({mauro.id: {"acoes": ["exercitar", "ler"]}})
-	assert_eq(mauro.bonus_exercicio, 1)
-	assert_eq(mauro.bonus_leitura, 1)
+	m.interludio({cleber.id: {"acoes": ["exercitar", "ler"]}})
+	assert_eq(cleber.bonus_exercicio, 1)
+	assert_eq(cleber.bonus_leitura, 1)
 	m.dados.forcar([10, 10, 10, 6])
-	var t := mauro.testar(m.dados, "atletismo", 15)
+	var t := cleber.testar(m.dados, "atletismo", 15)
 	assert_eq(t.dados_bonus.back(), 6, "+1d6 do exercício")
-	assert_eq(mauro.bonus_exercicio, 0, "gasto")
-	assert_eq(mauro.bonus_leitura, 1, "a leitura fica para INT/PRE")
+	assert_eq(cleber.bonus_exercicio, 0, "gasto")
+	assert_eq(cleber.bonus_leitura, 1, "a leitura fica para INT/PRE")
 
 
 func test_revisar_caso_acha_o_ponto_que_ficou():
-	var vizinho: Vector2i = Hex.vizinhos(m.posicao(mauro)).filter(func(h): return m.mapa.tem(h))[0]
+	var vizinho: Vector2i = Hex.vizinhos(m.posicao(cleber)).filter(func(h): return m.mapa.tem(h))[0]
 	m._preparar_investigacao(vizinho, "casa_abandonada")   # fora do ponto de encontro (a cena limpa o hex)
 	m.concluir_investigacao({"pistas": [], "perguntas": [], "penalidade": {}, "cena": "casa_abandonada", "restantes": ["escrivaninha"]})
 	assert_eq(m.pontos_revisaveis(), ["casa_abandonada:escrivaninha"])

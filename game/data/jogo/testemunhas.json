@@ -1,7 +1,7 @@
 {
   "nota": "Testemunhas com nome (docs/56), no formato do roteiro de NPC do livro (p.163: nome, função, um traço de aparência e um de personalidade), com listas próprias. A função é o ponto da cena. Gênero pelo nome do ponto ('genero' no ponto manda, se houver).",
-  "nomes_f": ["Lurdes", "Cida", "Rosângela", "Neide", "Jéssica", "Tânia", "Dalva", "Kelly", "Marlene", "Edileuza", "Fátima", "Suelen", "Zuleide", "Glória", "Ivone", "Rosa"],
-  "nomes_m": ["Tião", "Valdir", "Edson", "Wellington", "Juninho", "Raimundo", "Cleiton", "Josué", "Nivaldo", "Gilmar", "Zezinho", "Moacir", "Darci", "Wagner", "Ailton", "Edvaldo"],
+  "nomes_f": ["Lurdes", "Cida", "Rosângela", "Neide", "Denise", "Tânia", "Dalva", "Kelly", "Marlene", "Edileuza", "Odete", "Suelen", "Zuleide", "Glória", "Ivone", "Rosa"],
+  "nomes_m": ["Tião", "Valdir", "Edson", "Wellington", "Juninho", "Raimundo", "Cleiton", "Josué", "Nivaldo", "Gilmar", "Zezinho", "Moacir", "Darci", "Benedito", "Ailton", "Edvaldo"],
   "pronome_respeito": {"f": "Dona", "m": "Seu"},
   "aparencias": [
     "de chinelo e terço no pescoço",

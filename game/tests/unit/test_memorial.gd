@@ -23,11 +23,11 @@ func test_agentes_ganham_apelido_cidade_e_objeto():
 		assert_true(a.apelido in d.apelidos, a.nome)
 		assert_true(a.cidade in d.cidades, a.nome)
 		assert_true(a.objeto in d.objetos, a.nome)
-	var mauro := _por_nome(c, "Mauro")
+	var cleber := _por_nome(c, "Cléber")
 	assert_eq(Carreira.nova(rs).roster[0].apelido, c.roster[0].apelido, "pelo nome: o mesmo em toda máquina")
-	assert_eq(mauro.nome_com_apelido(), "Mauro “%s”" % mauro.apelido)
+	assert_eq(cleber.nome_com_apelido(), "Cléber “%s”" % cleber.apelido)
 	var volta := Carreira.de_dicionario(JSON.parse_string(JSON.stringify(c.para_dicionario())), rs)
-	assert_eq(_por_nome(volta, "Mauro").cidade, mauro.cidade, "vai no save")
+	assert_eq(_por_nome(volta, "Cléber").cidade, cleber.cidade, "vai no save")
 
 
 func test_save_antigo_ganha_os_aderecos():

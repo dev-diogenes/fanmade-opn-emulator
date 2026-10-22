@@ -540,7 +540,7 @@ func completar_pessoais() -> void:
 			set(par[0], String(lista[absi(hash(nome + "|" + String(par[0]))) % lista.size()]))
 
 
-## "Mauro “Prego”": o nome com o apelido, para a foto, o memorial e a despedida.
+## "Cléber “Prego”": o nome com o apelido, para a foto, o memorial e a despedida.
 func nome_com_apelido() -> String:
 	return "%s “%s”" % [nome, apelido] if apelido != "" else nome
 

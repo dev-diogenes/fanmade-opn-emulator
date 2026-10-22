@@ -114,9 +114,20 @@ static func _copiar_descricao(a: Agente, ficha: Dictionary) -> void:
 	a.completar_pessoais()   # apelido, cidade e objeto (docs/59)
 
 
+## Recrutas prontos que mudaram de nome (docs/60, ADR 0012): o nome coincidia com o de um
+## personagem do cânone, e a licença não deixa usá-los. Saves antigos trocam na carga.
+const RENOMEADOS := {"Mauro": "Cléber", "Joana": "Celeste", "Tiago": "Ademir"}
+
+
 ## Save de antes das descrições dos recrutas (docs/32): o recruta pronto sem conceito nem
 ## histórico ganha o de recrutas.json, se a classe e a origem ainda são as dele.
 static func _descricao_do_recruta(a: Agente) -> void:
+	if RENOMEADOS.has(a.nome):
+		var novo: String = RENOMEADOS[a.nome]
+		for r in DadosJogo.ler("recrutas").recrutas:
+			if r.nome == novo and r.classe == a.classe_id:
+				a.nome = novo
+				break
 	if a.conceito != "" or a.historico != "":
 		return
 	for r in DadosJogo.ler("recrutas").recrutas:

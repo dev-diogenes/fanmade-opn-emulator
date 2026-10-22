@@ -21,8 +21,25 @@ func _ready() -> void:
 	_montar_diorama()
 	_montar_menu()
 	Som.musica("caixinha")   # caixinha de música desafinada (docs/12)
-	if avisar_flashes and not Preferencias.aviso_flashes_visto() and not _capturando():
-		_avisar_flashes.call_deferred()
+	# Na primeira vez: o aviso de conteúdo (exigido pela licença, docs/60) e depois o de flashes
+	if avisar_flashes and not _capturando():
+		if not Preferencias.aviso_conteudo_visto():
+			_avisar_conteudo.call_deferred()
+		elif not Preferencias.aviso_flashes_visto():
+			_avisar_flashes.call_deferred()
+
+
+## Aviso de conteúdo sensível (docs/60): a licença pede aviso adequado para terror intenso e
+## violência. Aparece antes de tudo, uma vez por máquina; o texto fica também em Sobre.
+func _avisar_conteudo() -> void:
+	Preferencias.marcar_aviso_conteudo()
+	var d := DialogoPapel.perguntar(self, "Aviso de conteúdo", Licenca.AVISO_CONTEUDO + "\n\n" + Licenca.NAO_OFICIAL,
+		"Entendi", func(): pass, "Sair do jogo", true)
+	d.respondido.connect(func(ok: bool):
+		if not ok:
+			get_tree().quit()
+		elif not Preferencias.aviso_flashes_visto():
+			_avisar_flashes.call_deferred())
 
 
 ## Aviso de fotossensibilidade (docs/18, A5), uma vez por máquina. Esc ou "Desligar" tira os
@@ -149,13 +166,14 @@ func _montar_menu() -> void:
 	coluna.add_theme_constant_override("separation", Tema.ESPACO_G)
 	margem.add_child(coluna)
 
+	# O título de trabalho, sem a marca "Ordem Paranormal" (a licença não deixa usá-la no título)
 	var sobre := Label.new()
-	sobre.text = "UM CASO DA"
+	sobre.text = Licenca.SUBTITULO.to_upper()
 	sobre.theme_type_variation = "Subtitulo"
 	sobre.add_theme_constant_override("outline_size", 0)
 	coluna.add_child(sobre)
 	var logo := Label.new()
-	logo.text = "ORDEM\nPARANORMAL"
+	logo.text = Licenca.TITULO.to_upper()
 	logo.theme_type_variation = "Titulo"
 	logo.add_theme_font_size_override("font_size", Tema.FONTE_LOGO)
 	logo.add_theme_constant_override("line_spacing", -12)
@@ -178,7 +196,7 @@ func _montar_menu() -> void:
 	fio.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	coluna.add_child(fio)
 	var sub := Label.new()
-	sub.text = "Fanmade · não oficial"
+	sub.text = "Fanmade · não oficial · gratuito"
 	sub.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
 	coluna.add_child(sub)
 
@@ -204,16 +222,49 @@ func _montar_menu() -> void:
 		principal.custom_minimum_size.y = 66
 	_botao("Nova carreira", _pedir_nova_carreira)
 	_botao("Editor de missões", _editor)
+	_botao("Sobre e licença", func(): PainelSobre.abrir(self))
 	_botao("Sair", func(): get_tree().quit())
 	principal.grab_focus.call_deferred()
 
 	var rodape := Label.new()
-	rodape.text = "Baseado no sistema Ordem Paranormal RPG. Projeto de fã, gratuito e sem fins lucrativos."
+	rodape.text = Licenca.NAO_OFICIAL
+	rodape.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rodape.custom_minimum_size = Vector2(560, 0)
+	rodape.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	rodape.add_theme_font_size_override("font_size", Tema.FONTE_P)
-	rodape.add_theme_color_override("font_color", Color(Tema.TEXTO_SUAVE, 0.7))
+	rodape.add_theme_color_override("font_color", Color(Tema.TEXTO_SUAVE, 0.85))
 	rodape.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	rodape.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	coluna.add_child(rodape)
+	_montar_selo()
+
+
+## O selo da licença na "capa" (docs/60): no canto de baixo, à direita, com ao menos 10% da
+## largura da tela e opaco; junto dele, o aviso de IA (mesma posição, como a licença pede) e
+## a linha de conteúdo sensível.
+func _montar_selo() -> void:
+	var caixa := VBoxContainer.new()
+	caixa.name = "CaixaSelo"
+	caixa.alignment = BoxContainer.ALIGNMENT_END
+	caixa.add_theme_constant_override("separation", 4)
+	caixa.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 24)
+	caixa.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	caixa.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	caixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(caixa)
+	var largura := get_viewport_rect().size.x if is_inside_tree() else 1280.0
+	var selo := Licenca.selo(largura)
+	selo.size_flags_horizontal = Control.SIZE_SHRINK_END
+	caixa.add_child(selo)
+	for par in [[Licenca.AVISO_IA, Tema.PERGAMINHO], [Licenca.AVISO_CONTEUDO_CURTO, Tema.TEXTO_SUAVE]]:
+		var l := Label.new()
+		l.text = par[0]
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		l.add_theme_font_size_override("font_size", Tema.FONTE_P)
+		l.add_theme_color_override("font_color", par[1])
+		l.add_theme_constant_override("outline_size", 4)
+		l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+		caixa.add_child(l)
 
 
 

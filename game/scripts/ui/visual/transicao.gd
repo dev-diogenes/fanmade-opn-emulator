@@ -4,7 +4,7 @@ extends CanvasLayer
 ## O autoload Jogo cria uma quando uma cena nova entra na raiz; ela some sozinha.
 
 const LEGENDAS := {
-	"titulo": "", "base_ordem": "ORDEM DA REALIDADE · ARQUIVO CENTRAL", "mapa_mundo": "OPERAÇÃO EM CAMPO",
+	"titulo": "", "base_ordem": "ORDO REALITAS · ARQUIVO CENTRAL", "mapa_mundo": "OPERAÇÃO EM CAMPO",
 	"arena_teste": "CONFRONTO", "investigacao": "CENA DE INVESTIGAÇÃO", "editor_missao": "ARQUIVO DE MISSÕES",
 	"saguao": "SESSÃO ONLINE",
 }

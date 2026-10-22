@@ -14,7 +14,7 @@ func before_all():
 	rs = RulesetOp2022.carregar_padrao()
 
 
-func _combatente(nome := "Mauro") -> Agente:
+func _combatente(nome := "Cléber") -> Agente:
 	return Agente.criar(rs, nome, "combatente", {"agi": 2, "for": 3, "int": 1, "pre": 1, "vig": 2},
 		{"luta": "treinado", "fortitude": "treinado"})
 
@@ -52,30 +52,30 @@ func test_previsao_bate_com_o_teste_rolado():
 
 func test_chance_de_acerto_bate_com_o_ataque():
 	var c := Combate.new(rs, Dados.new(3))
-	var mauro := _combatente()
+	var cleber := _combatente()
 	var cultista := Ameaca.criar(rs, "Cultista", FICHA_CULTISTA)
-	var p := c.chance_de_acerto(mauro, cultista, rs.arma("machado"))
+	var p := c.chance_de_acerto(cleber, cultista, rs.arma("machado"))
 	assert_almost_eq(p, 1.0 - pow(1.0 - 14.0 / 20.0, 3), 0.001, "3 d20 de FOR, +5 contra Defesa 12")
 	var acertos := 0
 	var n := 1500
 	for i in n:
 		cultista.pv = 12
-		if c.atacar(mauro, cultista, rs.arma("machado")).acertou:
+		if c.atacar(cleber, cultista, rs.arma("machado")).acertou:
 			acertos += 1
 	assert_almost_eq(float(acertos) / n, p, 0.03)
-	assert_gt(c.chance_de_acerto(mauro, cultista, rs.arma("machado"), 0, 5), p - 0.0001, "Ataque Especial não piora")
+	assert_gt(c.chance_de_acerto(cleber, cultista, rs.arma("machado"), 0, 5), p - 0.0001, "Ataque Especial não piora")
 
 
 func test_chance_de_acerto_fora_de_alcance():
 	var c := Combate.new(rs, Dados.new(1))
 	c.grade = Grade.new(14, 9)
-	var mauro := _combatente()
+	var cleber := _combatente()
 	var cultista := Ameaca.criar(rs, "Cultista", FICHA_CULTISTA)
-	c.adicionar(mauro)
+	c.adicionar(cleber)
 	c.adicionar(cultista)
-	c.grade.colocar(mauro, Vector2i(0, 0))
+	c.grade.colocar(cleber, Vector2i(0, 0))
 	c.grade.colocar(cultista, Vector2i(5, 0))
-	assert_eq(c.chance_de_acerto(mauro, cultista, rs.arma("machado")), -1.0, "corpo a corpo longe")
+	assert_eq(c.chance_de_acerto(cleber, cultista, rs.arma("machado")), -1.0, "corpo a corpo longe")
 
 
 func test_investigacao_preve_com_o_bonus_do_facilitar():
@@ -101,7 +101,7 @@ func test_intencao_mira_o_mais_proximo():
 	c.grade = Grade.new(14, 9)
 	var cultista := Ameaca.criar(rs, "Cultista", FICHA_CULTISTA)
 	var perto := _combatente("Rita")
-	var longe := _combatente("Mauro")
+	var longe := _combatente("Cléber")
 	for s in [cultista, perto, longe]:
 		c.adicionar(s)
 	c.grade.colocar(cultista, Vector2i(0, 0))

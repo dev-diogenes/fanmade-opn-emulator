@@ -109,7 +109,7 @@ func test_primeira_pessoa_olha_para_onde_a_figura_olha():
 
 func test_retrato_da_vez_cresce():
 	var rs := RulesetOp2022.carregar_padrao()
-	var a := Agente.criar(rs, "Mauro", "combatente", {"agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 2})
+	var a := Agente.criar(rs, "Cléber", "combatente", {"agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 2})
 	var c := CartaoAgente.criar(a, Tema.CORES_JOGADORES[0])
 	add_child_autofree(c)
 	assert_eq(c.custom_minimum_size.x, CartaoAgente.LARGURA)

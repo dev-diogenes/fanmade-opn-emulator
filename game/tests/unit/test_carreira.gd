@@ -54,7 +54,7 @@ func test_recrutas_prontos_tem_descricao():
 
 
 func test_limite_de_itens_pela_patente():
-	var a := _por_nome(_carreira(), "Mauro")
+	var a := _por_nome(_carreira(), "Cléber")
 	assert_false(a.validar_equipamento(["machado", "protecao_leve", "cicatrizante"]).is_empty(), "recruta: 2 itens de categoria I")
 	assert_false(a.validar_equipamento(["protecao_pesada"]).is_empty(), "recruta não tem categoria II")
 	a.pp = 20
@@ -64,7 +64,7 @@ func test_limite_de_itens_pela_patente():
 
 
 func test_protecao_defesa_e_resistencia():
-	var a := _por_nome(_carreira(), "Mauro")
+	var a := _por_nome(_carreira(), "Cléber")
 	var sem := a.defesa()
 	a.equipamento.erase("protecao_leve")
 	assert_eq(a.defesa(), sem - 5)
@@ -102,10 +102,10 @@ func test_proficiencia_de_protecao():
 
 func test_requisitar():
 	var c := _carreira()
-	var mauro := _por_nome(c, "Mauro")
-	assert_false(c.requisitar(mauro, ["espada"], "machado").is_empty(), "arma fora do equipamento")
-	assert_true(c.requisitar(mauro, ["espada", "cicatrizante"], "espada").is_empty())
-	assert_eq(mauro.arma().id, "espada")
+	var cleber := _por_nome(c, "Cléber")
+	assert_false(c.requisitar(cleber, ["espada"], "machado").is_empty(), "arma fora do equipamento")
+	assert_true(c.requisitar(cleber, ["espada", "cicatrizante"], "espada").is_empty())
+	assert_eq(cleber.arma().id, "espada")
 
 
 # --- Missão e relatório --------------------------------------------------------
@@ -133,14 +133,14 @@ func test_vitoria_da_pp_nex_e_promocao():
 	var r := c.encerrar_missao()
 	assert_true(r.vitoria)
 	assert_eq(r.pp, 10 + 2 * 5)
-	var mauro := _por_nome(c, "Mauro")
-	assert_eq(mauro.pp, 20)
-	assert_eq(mauro.patente().id, "operador")
-	assert_eq(mauro.nex, 10)
+	var cleber := _por_nome(c, "Cléber")
+	assert_eq(cleber.pp, 20)
+	assert_eq(cleber.patente().id, "operador")
+	assert_eq(cleber.nex, 10)
 	assert_true(r.agentes[0].promovido)
 	assert_null(c.missao)
-	assert_eq(Progressao.pendencias(mauro)[0].tipo, "trilha")
-	assert_false(c.validar_grupo([mauro]).is_empty(), "precisa escolher a trilha antes de partir")
+	assert_eq(Progressao.pendencias(cleber)[0].tipo, "trilha")
+	assert_false(c.validar_grupo([cleber]).is_empty(), "precisa escolher a trilha antes de partir")
 
 
 func test_morte_vai_para_o_memorial():
@@ -166,24 +166,24 @@ func test_morte_vai_para_o_memorial():
 # --- Progressão ------------------------------------------------------------------
 
 func test_progressao_ate_nex_35():
-	var mauro := _por_nome(_carreira(), "Mauro")
-	mauro.nex = 35
-	var tipos := Progressao.pendencias(mauro).map(func(p): return p.tipo)
+	var cleber := _por_nome(_carreira(), "Cléber")
+	cleber.nex = 35
+	var tipos := Progressao.pendencias(cleber).map(func(p): return p.tipo)
 	assert_eq(tipos, ["trilha", "poder", "poder", "aumento", "grau"])
-	assert_false(Progressao.aplicar(mauro, "trilha", "inexistente").is_empty())
-	assert_eq(Progressao.aplicar(mauro, "trilha", "guerreiro"), [] as Array[String])
-	assert_eq(Progressao.aplicar(mauro, "poder", "golpe_pesado"), [] as Array[String])
-	assert_false(Progressao.aplicar(mauro, "poder", "treinamento_em_pericia").is_empty(), "faltam as perícias")
-	assert_eq(Progressao.aplicar(mauro, "poder", "treinamento_em_pericia", ["crime", "tatica"]), [] as Array[String])
-	assert_eq(mauro.grau("tatica"), "treinado")
-	assert_eq(Progressao.aplicar(mauro, "aumento", "vig"), [] as Array[String])
-	assert_eq(mauro.atributo("vig"), 4)
-	var grau: Dictionary = Progressao.pendencias(mauro)[0]
+	assert_false(Progressao.aplicar(cleber, "trilha", "inexistente").is_empty())
+	assert_eq(Progressao.aplicar(cleber, "trilha", "guerreiro"), [] as Array[String])
+	assert_eq(Progressao.aplicar(cleber, "poder", "golpe_pesado"), [] as Array[String])
+	assert_false(Progressao.aplicar(cleber, "poder", "treinamento_em_pericia").is_empty(), "faltam as perícias")
+	assert_eq(Progressao.aplicar(cleber, "poder", "treinamento_em_pericia", ["crime", "tatica"]), [] as Array[String])
+	assert_eq(cleber.grau("tatica"), "treinado")
+	assert_eq(Progressao.aplicar(cleber, "aumento", "vig"), [] as Array[String])
+	assert_eq(cleber.atributo("vig"), 4)
+	var grau: Dictionary = Progressao.pendencias(cleber)[0]
 	assert_eq(grau.tipo, "grau")
 	assert_eq(grau.quantidade, 3)   # 2 + INT 1
-	assert_eq(Progressao.aplicar(mauro, "grau", ["luta", "fortitude", "atletismo"]), [] as Array[String])
-	assert_eq(mauro.grau("luta"), "veterano")
-	assert_true(Progressao.pendencias(mauro).is_empty())
+	assert_eq(Progressao.aplicar(cleber, "grau", ["luta", "fortitude", "atletismo"]), [] as Array[String])
+	assert_eq(cleber.grau("luta"), "veterano")
+	assert_true(Progressao.pendencias(cleber).is_empty())
 
 
 # --- Salvar e carregar -------------------------------------------------------------
@@ -196,12 +196,12 @@ func test_salvar_e_carregar_carreira_com_missao():
 	m.rolar_movimento()
 	var destino: Vector2i = m.destinos().keys()[0] if not m.destinos().is_empty() else m.posicao(m.agente_atual())
 	m.mover(destino)
-	_por_nome(c, "Mauro").pp = 33
+	_por_nome(c, "Cléber").pp = 33
 	assert_eq(c.salvar(caminho), OK)
 	var c2 := Carreira.carregar(caminho)
 	assert_not_null(c2)
 	assert_eq(c2.roster.size(), 3)
-	assert_eq(_por_nome(c2, "Mauro").pp, 33)
+	assert_eq(_por_nome(c2, "Cléber").pp, 33)
 	assert_eq(_por_nome(c2, "Bianca").equipamento, _por_nome(c, "Bianca").equipamento)
 	var m2 := c2.missao
 	assert_not_null(m2)
@@ -258,14 +258,14 @@ func test_cena_da_base_abre():
 
 func test_criar_agente_pela_ficha():
 	var c := Carreira.nova()
-	var ficha := {"nome": "Joana", "classe": "especialista", "origem": "academico", "nex": 5,
+	var ficha := {"nome": "Celeste", "classe": "especialista", "origem": "academico", "nex": 5,
 		"atributos": {"agi": 2, "for": 0, "int": 3, "pre": 3, "vig": 1},
 		"pericias_livres": ["percepcao", "intuicao", "furtividade", "tecnologia", "medicina", "atualidades", "diplomacia", "reflexos", "vontade", "ocultismo"],
 		"perito": ["investigacao", "ciencias"]}
 	var res := c.recrutar_ficha(ficha)
 	assert_eq(res.erros, [], "ficha válida")
 	assert_not_null(res.agente)
-	assert_eq(res.agente.nome, "Joana")
+	assert_eq(res.agente.nome, "Celeste")
 	assert_true(res.agente in c.roster)
 	assert_false(res.agente.equipamento.is_empty(), "recebe o kit da classe")
 	var de_novo := c.recrutar_ficha(ficha)

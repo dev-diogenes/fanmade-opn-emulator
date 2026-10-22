@@ -1,7 +1,7 @@
 {
   "nota": "Grupo padrão da fatia vertical (fichas no formato de CriacaoAgente). A escolha livre de agentes entra na Base da Ordem (Fase 2.3).",
   "agentes": [
-    {"nome": "Mauro", "classe": "combatente", "origem": "lutador", "nex": 5, "atributos": {"agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 3}, "pericias_classe": ["luta", "fortitude"], "pericias_livres": ["atletismo", "intimidacao", "percepcao"], "arma": "machado", "equipamento": ["machado"]},
+    {"nome": "Cléber", "classe": "combatente", "origem": "lutador", "nex": 5, "atributos": {"agi": 1, "for": 3, "int": 1, "pre": 1, "vig": 3}, "pericias_classe": ["luta", "fortitude"], "pericias_livres": ["atletismo", "intimidacao", "percepcao"], "arma": "machado", "equipamento": ["machado"]},
     {"nome": "Bianca", "classe": "especialista", "origem": "investigador", "nex": 5, "atributos": {"agi": 2, "for": 0, "int": 3, "pre": 3, "vig": 1}, "pericias_livres": ["atualidades", "ciencias", "diplomacia", "intuicao", "medicina", "pilotagem", "pontaria", "tecnologia", "vontade", "reflexos"], "perito": ["ciencias", "investigacao"], "arma": "pistola", "equipamento": ["pistola"]},
     {"nome": "Rita", "classe": "ocultista", "origem": "policial", "nex": 5, "atributos": {"agi": 2, "for": 1, "int": 2, "pre": 2, "vig": 2}, "pericias_livres": ["luta", "reflexos", "fortitude", "atletismo", "intuicao"], "arma": "revolver", "rituais": ["eletrocussao", "cicatrizacao", "armadura_de_sangue"], "equipamento": ["revolver", "cicatrizante", "componentes_energia", "componentes_morte", "componentes_sangue"]}
   ]

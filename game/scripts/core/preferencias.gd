@@ -152,6 +152,17 @@ static func definir_flashes(v: String) -> void:
 
 
 ## Se o aviso de fotossensibilidade já apareceu nesta máquina.
+## Aviso de conteúdo sensível (docs/60, exigido pela licença): uma vez por máquina.
+static func aviso_conteudo_visto() -> bool:
+	return bool(ler().get("aviso_conteudo_visto", false))
+
+
+static func marcar_aviso_conteudo() -> void:
+	var d := ler()
+	d["aviso_conteudo_visto"] = true
+	gravar(d)
+
+
 static func aviso_flashes_visto() -> bool:
 	return bool(ler().get("aviso_flashes_visto", false))
 

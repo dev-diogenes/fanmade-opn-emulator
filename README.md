@@ -1,8 +1,8 @@
-# Ordem Paranormal: Fanmade RPG (WIP)
+# Membrana: casos da Ordo Realitas (WIP)
 
-RPG eletrônico **fanmade e gratuito** ambientado em *Ordem Paranormal*, com o estilo de jogo de *For The King* / *For The King II*: mapa hexagonal 3D low poly, grupo de até 4 agentes, combate por turnos em grade e testes de d20 mostrados como slots.
+RPG eletrônico **de fã e gratuito**, com o estilo de jogo de *For The King* / *For The King II*: mapa hexagonal 3D low poly, grupo de até 4 agentes da Ordo Realitas no Brasil de hoje, combate por turnos em grade e testes de d20 mostrados como slots. "Membrana" é título de trabalho.
 
-> ⚠️ Projeto **não oficial**, sem afiliação com Cellbit ou Jambô. *Ordem Paranormal* pertence aos seus detentores. Veja [docs/03-legal-e-conteudo.md](docs/03-legal-e-conteudo.md).
+> ⚠️ Conteúdo **não oficial**, publicado sob a Licença da Comunidade de Ordem Paranormal (v1.0). Sem parceria, aprovação ou supervisão do titular dos direitos. Contém material gerado por inteligência artificial. Contém terror, violência e morte. Veja [docs/03-legal-e-conteudo.md](docs/03-legal-e-conteudo.md) e o [ADR 0012](docs/adr/0012-licenca-da-comunidade.md).
 
 ## Versões
 

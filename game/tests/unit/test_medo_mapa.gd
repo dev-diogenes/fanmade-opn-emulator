@@ -49,8 +49,8 @@ func test_a_noite_a_ameaca_anda_ate_o_isolado_e_deixa_rastro():
 	assert_false(par.is_empty())
 	var x: Vector2i = par[0]
 	var y: Vector2i = par[1]
-	var mauro := m.agentes[0]
-	m.posicoes[mauro] = x
+	var cleber := m.agentes[0]
+	m.posicoes[cleber] = x
 	m.mapa.definir_conteudo(y, {"tipo": "encontro", "encontro": "cria_solitaria", "caca": true})
 	m._cacar()
 	assert_false(m.mapa.conteudo(y).is_empty(), "de dia, fica onde está")
@@ -69,18 +69,18 @@ func test_alcancar_comeca_o_encontro_e_o_combate_da_respiro():
 	var par := _par_livre(1)
 	var x: Vector2i = par[0]
 	var y: Vector2i = par[1]
-	var mauro := m.agentes[0]
-	m.posicoes[mauro] = x
+	var cleber := m.agentes[0]
+	m.posicoes[cleber] = x
 	m.mapa.definir_conteudo(y, {"tipo": "encontro", "encontro": "cria_solitaria", "caca": true})
 	_noite()
 	m._cacar()
 	assert_false(m.encontro_pendente.is_empty(), "alcançou: começa o encontro")
 	assert_eq(m.encontro_pendente.hex, x)
-	assert_true(mauro in m.encontro_pendente.agentes)
+	assert_true(cleber in m.encontro_pendente.agentes)
 	m.concluir_encontro("agentes")
 	assert_eq(m.alivio, 1, "depois do pico, um turno de respiro")
 	var par2 := _par_livre(3)
-	m.posicoes[mauro] = par2[0]
+	m.posicoes[cleber] = par2[0]
 	m.mapa.definir_conteudo(par2[1], {"tipo": "encontro", "encontro": "cria_solitaria", "caca": true})
 	m._cacar()
 	assert_false(m.mapa.conteudo(par2[1]).is_empty(), "no turno de alívio, nada caça")
@@ -127,10 +127,10 @@ func test_rumo_do_caso_aponta_a_nevoa():
 
 func test_covil_selado_avisa_uma_vez_por_turno():
 	var obj := m.mapa.encontrar("objetivo")
-	var mauro := m.agentes[0]
-	m._entrar(mauro, obj)
+	var cleber := m.agentes[0]
+	m._entrar(cleber, obj)
 	var n := m.historico.size()
-	m._entrar(mauro, obj)
+	m._entrar(cleber, obj)
 	assert_eq(m.historico.size(), n, "o mesmo aviso não se repete no turno")
 
 

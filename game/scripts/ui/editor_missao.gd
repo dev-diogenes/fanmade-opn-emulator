@@ -142,6 +142,13 @@ func _montar_interface() -> void:
 	dica.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	dica.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
 	esquerda.add_child(dica)
+	# Termos da comunidade (docs/03, ADR 0012): o que a Licença da Comunidade não deixa usar
+	var termos := Label.new()
+	termos.text = "Ao compartilhar: escreva com palavras suas. Nada de texto copiado do livro, arte oficial ou personagens do cânone."
+	termos.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	termos.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	termos.add_theme_color_override("font_color", Tema.AVISO)
+	esquerda.add_child(termos)
 	var linha_f := HBoxContainer.new()
 	esquerda.add_child(linha_f)
 	_opt_ferramenta = OptionButton.new()

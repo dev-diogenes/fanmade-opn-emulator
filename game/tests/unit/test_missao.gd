@@ -17,7 +17,7 @@ func test_missao_comeca_com_o_grupo_no_inicio():
 
 func test_rolar_movimento_conta_slots_acima_da_dt():
 	var m := _missao()
-	var mauro := m.agente_atual()   # AGI 1 + 2 extras -> 3 slots
+	var cleber := m.agente_atual()   # AGI 1 + 2 extras -> 3 slots
 	m.dados.forcar([15, 3, 11])
 	var r := m.rolar_movimento()
 	assert_eq(r.slots, [15, 3, 11])
@@ -29,7 +29,7 @@ func test_rolar_movimento_conta_slots_acima_da_dt():
 	m.dados.forcar([3, 12, 20, 1, 5])
 	assert_eq(m.rolar_movimento(1).total, 4)
 	assert_eq(bianca.pe, bianca.pe_maximo - 1)
-	assert_ne(mauro, bianca)
+	assert_ne(cleber, bianca)
 
 
 func test_mover_gasta_movimento_e_revela():
@@ -56,7 +56,7 @@ func test_evento_aplica_efeitos_e_some_do_mapa():
 	assert_true(m.mover(h))
 	assert_false(m.evento_pendente.is_empty())
 	assert_true(m.ocupado())
-	m.dados.forcar([1, 4, 1, 1])   # Atletismo: Mauro (FOR 3) rola 3 slots -> 4 + 5 = 9 < 12; 1d6 de dano = 1
+	m.dados.forcar([1, 4, 1, 1])   # Atletismo: Cléber (FOR 3) rola 3 slots -> 4 + 5 = 9 < 12; 1d6 de dano = 1
 	var pv := a.pv
 	var r := m.resolver_evento()
 	assert_false(r.sucesso)

@@ -38,7 +38,7 @@ func _init(texto_botao: String = "Continuar") -> void:
 	v.add_theme_constant_override("separation", Tema.ESPACO_G)
 	papel.add_child(v)
 	var cab := Label.new()
-	cab.text = "ORDEM DA REALIDADE — RELATÓRIO DE OPERAÇÃO"
+	cab.text = "ORDO REALITAS — RELATÓRIO DE OPERAÇÃO"
 	cab.add_theme_color_override("font_color", Color(Tema.TINTA, 0.75))
 	cab.add_theme_font_size_override("font_size", Tema.FONTE_P)
 	v.add_child(cab)

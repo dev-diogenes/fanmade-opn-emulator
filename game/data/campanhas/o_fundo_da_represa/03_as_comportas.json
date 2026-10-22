@@ -118,7 +118,7 @@
   "caso": {
     "sujeito": {
       "id": "sarmento",
-      "nome": "Otávio Sarmento, o engenheiro-chefe da usina",
+      "nome": "Osmar Sarmento, o engenheiro-chefe da usina",
       "chefe_titulo": "Sarmento, o Engenheiro"
     },
     "acao": {
@@ -367,7 +367,7 @@
       "nome": "Homem de Capacete Branco",
       "nivel": 2,
       "chefe": true,
-      "descricao": "Otávio Sarmento, engenheiro-chefe da Usina do Jequiri e neto de uma família de São Bento. Conjura rituais de Morte e anda com um revólver de serviço.",
+      "descricao": "Osmar Sarmento, engenheiro-chefe da Usina do Jequiri e neto de uma família de São Bento. Conjura rituais de Morte e anda com um revólver de serviço.",
       "ficha": {
         "pv": 70,
         "defesa": 18,

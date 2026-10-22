@@ -238,7 +238,7 @@
       "pontos": [
         {
           "id": "barraco",
-          "nome": "Barraco do Seu Joaquim",
+          "nome": "Barraco do Seu Belmiro",
           "pericias": {
             "investigacao": 15,
             "percepcao": 15
@@ -254,7 +254,7 @@
             "intuicao": 15
           },
           "responde": "quem",
-          "pista": "Dona Zélia jura que viu Seu Joaquim na beira d'água três noites depois de sumir, chamando os companheiros pelo nome."
+          "pista": "Dona Zélia jura que viu Seu Belmiro na beira d'água três noites depois de sumir, chamando os companheiros pelo nome."
         },
         {
           "id": "cordas",
@@ -294,7 +294,7 @@
             "atualidades": 20
           },
           "responde": "onde",
-          "pista": "A última anotação no caderno de Seu Joaquim: \"Tem luz no cais velho de novo. Vou ver quem é.\""
+          "pista": "A última anotação no caderno de Seu Belmiro: \"Tem luz no cais velho de novo. Vou ver quem é.\""
         }
       ],
       "facilitar": [

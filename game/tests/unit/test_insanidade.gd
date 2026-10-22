@@ -114,10 +114,10 @@ func test_o_registro_do_combate_e_do_mapa_contam_o_efeito():
 	assert_eq(linhas.size(), 1)
 	assert_string_contains(String(linhas[0]), "efeito de insanidade")
 	var m := Missao.nova(42)
-	var mauro: Agente = m.agentes[0]
-	assert_eq(mauro.semente_insanidade, 42, "a semente da missão")
-	mauro.sofrer_dano_mental(mauro.san_maximo / 2 + 1)
-	assert_string_contains(String(m.historico.back()), mauro.nome)
+	var cleber: Agente = m.agentes[0]
+	assert_eq(cleber.semente_insanidade, 42, "a semente da missão")
+	cleber.sofrer_dano_mental(cleber.san_maximo / 2 + 1)
+	assert_string_contains(String(m.historico.back()), cleber.nome)
 
 
 func test_frases_e_nota_na_tela():

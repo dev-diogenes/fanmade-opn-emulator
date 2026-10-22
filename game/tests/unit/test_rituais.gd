@@ -123,7 +123,7 @@ func test_criatura_do_elemento_oprimido_resiste_pior():
 func test_cicatrizacao_cura():
 	var c := _combate()
 	var a := _ocultista(["cicatrizacao"])
-	var aliado := Agente.criar(rs, "Mauro", "combatente", ATTRS)
+	var aliado := Agente.criar(rs, "Cléber", "combatente", ATTRS)
 	aliado.sofrer_dano(15)
 	c.dados.forcar([20, 20, 1, 2, 3])   # 3d8+3 = 9
 	var r := c.conjurar(a, "cicatrizacao", aliado)
@@ -219,7 +219,7 @@ func test_descarnar_causa_hemorragia():
 func test_arma_atroz_sustentada():
 	var c := _combate()
 	var a := _ocultista(["arma_atroz"])
-	var guerreiro := Agente.criar(rs, "Mauro", "combatente", ATTRS)
+	var guerreiro := Agente.criar(rs, "Cléber", "combatente", ATTRS)
 	c.adicionar(a)
 	c.adicionar(guerreiro)
 	c.adicionar(_alvo())   # com um só lado em campo, o combate acabaria na hora

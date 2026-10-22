@@ -53,7 +53,7 @@ func _montar(carreira: Carreira) -> void:
 	v.add_theme_constant_override("separation", Tema.ESPACO_M)
 	_papel.add_child(v)
 	var cab := Label.new()
-	cab.text = "ORDEM DA REALIDADE — RELATÓRIO DE PROGRESSÃO · MISSÃO %d" % int(r.get("missao", 0))
+	cab.text = "ORDO REALITAS — RELATÓRIO DE PROGRESSÃO · MISSÃO %d" % int(r.get("missao", 0))
 	cab.add_theme_color_override("font_color", Color(Tema.TINTA, 0.75))
 	v.add_child(cab)
 	var t := Label.new()

@@ -10,8 +10,8 @@ config_version=5
 
 [application]
 
-config/name="Ordem Paranormal: Fanmade (WIP)"
-config/description="RPG fanmade de Ordem Paranormal no estilo For The King. Não oficial."
+config/name="Membrana (fanmade, não oficial)"
+config/description="RPG de fã, gratuito e não oficial, no estilo For The King, publicado sob a Licença da Comunidade de Ordem Paranormal."
 run/main_scene="res://scenes/titulo.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 
