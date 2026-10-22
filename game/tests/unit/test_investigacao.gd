@@ -553,3 +553,51 @@ func test_subir_ao_mirante_da_o_achado_e_esgota():
 	assert_false(m.covil_aberto())
 	m._entrar(mauro, serra)
 	assert_true(m.covil_aberto(), "ver o covil lá de cima o localiza")
+
+
+# --- Interlúdio (p.92-93, docs/48) ----------------------------------------------------------
+
+func _no_inicio() -> void:
+	# Todos começam no ponto de encontro: interlúdio disponível
+	assert_true(m.pode_descansar())
+
+
+func test_interludio_dorme_e_relaxa_pelo_limite_de_pe():
+	_no_inicio()
+	mauro.pv = 5
+	mauro.san = 2
+	bianca.san = 2
+	var lim := m.ruleset.limite_pe(mauro.nex)
+	var r := m.interludio({mauro.id: {"acoes": ["dormir", "relaxar"]}, bianca.id: {"acoes": ["relaxar", "alimentar"], "prato": "favorito"}})
+	assert_true(r.ok)
+	assert_eq(mauro.pv, 5 + lim, "dormir: limite de PE do NEX (descanso normal)")
+	assert_eq(mauro.san, 2 + lim + 2, "relaxar: +1 por agente que relaxou (Mauro e Bianca)")
+	assert_eq(bianca.san, 2 + lim + 2 + 2, "prato favorito: +2 relaxando")
+	assert_false(m.pode_descansar(), "uma vez por visita")
+	assert_eq(m.movimento_restante, 0, "o interlúdio encerra o movimento")
+
+
+func test_exercicio_guarda_um_d6_e_gasta_no_teste():
+	_no_inicio()
+	m.interludio({mauro.id: {"acoes": ["exercitar", "ler"]}})
+	assert_eq(mauro.bonus_exercicio, 1)
+	assert_eq(mauro.bonus_leitura, 1)
+	m.dados.forcar([10, 10, 10, 6])
+	var t := mauro.testar(m.dados, "atletismo", 15)
+	assert_eq(t.dados_bonus.back(), 6, "+1d6 do exercício")
+	assert_eq(mauro.bonus_exercicio, 0, "gasto")
+	assert_eq(mauro.bonus_leitura, 1, "a leitura fica para INT/PRE")
+
+
+func test_revisar_caso_acha_o_ponto_que_ficou():
+	var vizinho: Vector2i = Hex.vizinhos(m.posicao(mauro)).filter(func(h): return m.mapa.tem(h))[0]
+	m._preparar_investigacao(vizinho, "casa_abandonada")   # fora do ponto de encontro (a cena limpa o hex)
+	m.concluir_investigacao({"pistas": [], "perguntas": [], "penalidade": {}, "cena": "casa_abandonada", "restantes": ["escrivaninha"]})
+	assert_eq(m.pontos_revisaveis(), ["casa_abandonada:escrivaninha"])
+	_no_inicio()
+	var antes := m.caso.pistas.size()
+	m.dados.forcar([20, 20, 20])
+	var r := m.interludio({bianca.id: {"acoes": ["revisar"], "revisar": "casa_abandonada:escrivaninha"}})
+	assert_true(r.ok)
+	assert_eq(m.caso.pistas.size(), antes + 1, "a pista da escrivaninha entra no caso")
+	assert_true(m.pontos_revisaveis().is_empty())

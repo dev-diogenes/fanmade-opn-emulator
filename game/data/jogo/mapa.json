@@ -100,8 +100,18 @@
     "descricao": "Depois que todos os agentes jogam, o mundo age: a Membrana enfraquece e, conforme o estado dela, novas ameaças surgem perto do grupo.",
     "surgimento_a_cada_turnos": 2
   },
-  "descanso": {
-    "descricao": "Numa cidade, o agente pode descansar uma vez por visita: recupera parte dos PV, PE e SAN.",
-    "fracao": 0.25
+  "interludio": {
+    "ref": "p.92-93",
+    "descricao": "Numa vila ou no ponto de encontro, o grupo faz um interlúdio (docs/48): cada agente no hex escolhe até duas ações. Uma vez por visita.",
+    "acoes_por_agente": 2,
+    "condicao_por_lugar": {"vila": "normal", "inicio": "normal"},
+    "multiplicador": {"precaria": 0.5, "normal": 1, "confortavel": 2, "luxuosa": 3},
+    "passo_seguinte": {"precaria": "normal", "normal": "confortavel", "confortavel": "luxuosa", "luxuosa": "luxuosa"},
+    "pratos": {
+      "favorito": {"nome": "Prato favorito", "texto": "Relaxando, +2 de Sanidade."},
+      "nutritivo": {"nome": "Prato nutritivo", "texto": "Dormindo, a recuperação de PV sobe um passo."},
+      "energetico": {"nome": "Prato energético", "texto": "Dormindo, a recuperação de PE sobe um passo."},
+      "rapido": {"nome": "Prato rápido", "texto": "+5 no teste de Revisar Caso."}
+    }
   }
 }

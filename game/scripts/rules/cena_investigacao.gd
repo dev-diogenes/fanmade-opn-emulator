@@ -478,4 +478,5 @@ func _estourar_urgencia() -> void:
 
 func resultado() -> Dictionary:
 	return {"pistas": pistas_encontradas.duplicate(true), "perguntas": perguntas_respondidas.duplicate(true),
-		"urgencia_estourada": urgencia_estourada, "penalidade": penalidade, "motivo": motivo_fim}
+		"urgencia_estourada": urgencia_estourada, "penalidade": penalidade, "motivo": motivo_fim,
+		"cena": String(cena.get("id", "")), "restantes": pontos_restantes.duplicate()}   # Revisar Caso (docs/48)

@@ -6,7 +6,7 @@ extends RefCounted
 ## `participantes`; agentes da investigação, pelo índice na cena; hexes e células, como [x, y].
 ## Números chegam da rede como float: tudo passa por int() aqui.
 
-const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar", "deduzir"]
+const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar", "deduzir", "interludio"]
 const ACOES_INVESTIGACAO := ["examinar", "procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair", "deduzir"]
 const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair",
 	"socorrer", "acalmar", "manobra", "levantar", "pegar_arma"]
@@ -55,6 +55,9 @@ static func aplicar_mapa(m: Missao, cmd: Dictionary) -> Dictionary:
 			var alvo := _agente_da_missao(m, cmd.get("alvo", ""))
 			var r := m.conjurar_no_mapa(String(cmd.get("ritual", "")), String(cmd.get("forma", "")), alvo) if alvo != null else {}
 			return {"ok": not r.is_empty(), "resultado": r}
+		"interludio":
+			var esc = cmd.get("escolhas", {})
+			return m.interludio(esc if esc is Dictionary else {})
 		"deduzir":
 			var r := m.deduzir(String(cmd.get("pergunta", "")), String(cmd.get("candidato", "")))
 			return {"ok": r.get("ok", false), "deducao": r}

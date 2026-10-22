@@ -425,3 +425,22 @@ func test_loucura_cresce_quando_a_sanidade_cai():
 	add_child_autofree(c)
 	c.atualizar(true)
 	assert_eq(c._barras["san"].titulo.text, "SAN!", "perturbado não depende só da cor")
+
+
+
+func test_painel_de_interludio_por_selecao():
+	var m := Missao.nova(42)
+	var enviadas := []
+	var p := PainelInterludio.abrir(self, m, func(e): enviadas.append(e))
+	assert_true(p._encerrar.disabled, "sem ação, não encerra")
+	var a: Agente = m.agentes[0]
+	p._alternar(a, "dormir")
+	p._alternar(a, "alimentar")
+	p._alternar(a, "ler")
+	assert_eq(p.escolhas[a.id].acoes.size(), 2, "no máximo duas ações")
+	assert_true(p._encerrar.disabled, "falta o prato")
+	p.escolhas[a.id].prato = "nutritivo"
+	p._atualizar_encerrar()
+	assert_false(p._encerrar.disabled)
+	p._encerrar.pressed.emit()
+	assert_eq(enviadas[0][a.id].acoes, ["dormir", "alimentar"])

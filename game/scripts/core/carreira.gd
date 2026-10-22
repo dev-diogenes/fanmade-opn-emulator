@@ -311,6 +311,8 @@ func _avancar_campanha(m: Missao) -> Dictionary:
 
 ## Entre missões, na Base: recuperação total e fim de condições.
 func _restaurar(a: Agente) -> void:
+	a.bonus_exercicio = 0   # os bônus do interlúdio valem até o fim da missão (p.93)
+	a.bonus_leitura = 0
 	a.condicoes.clear()
 	a.encerrar_cena()
 	a.recalcular_maximos(true)

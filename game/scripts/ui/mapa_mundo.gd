@@ -148,8 +148,14 @@ func _rolar() -> void:
 	_enviar("rolar_movimento", {"foco": _foco.consumir()})
 
 
+## Interlúdio (docs/48): a folha com quem está no hex; as escolhas viram o comando `interludio`.
 func _descansar() -> void:
-	_enviar("descansar")
+	if missao.pode_descansar() and not _interludio_aberto():
+		PainelInterludio.abrir(self, missao, func(escolhas): _enviar("interludio", {"escolhas": escolhas}))
+
+
+func _interludio_aberto() -> bool:
+	return not find_children("*", "PainelInterludio", true, false).is_empty()
 
 
 func _encerrar_turno() -> void:
@@ -762,8 +768,8 @@ func _montar_interface() -> void:
 	_btn_rolar = _botao("Rolar movimento", _rolar)
 	_btn_rolar.theme_type_variation = "BotaoPrincipal"
 	_btn_rolar.tooltip_text = "1 d20 por ponto de Agilidade; cada 11+ vale um passo"
-	_btn_descansar = _botao("Descansar", _descansar)
-	_btn_descansar.tooltip_text = "Só numa vila, uma vez por visita"
+	_btn_descansar = _botao("Interlúdio", _descansar)
+	_btn_descansar.tooltip_text = "Numa vila ou no ponto de encontro, uma vez por visita"
 	_btn_encerrar = _botao("Encerrar", _encerrar_turno)
 	_btn_encerrar.tooltip_text = "Encerrar o turno: a vez passa ao próximo agente"
 	_btn_acao = _botao("Ação", _abrir_acao)
@@ -931,7 +937,7 @@ func _motivos_mapa(a: Agente, ocupado: bool) -> void:
 	_btn_rolar.tooltip_text = "1 d20 por ponto de Agilidade, mais 2; cada 11+ vale um passo." if not _btn_rolar.disabled else \
 		(evento if evento != "" else "O movimento deste turno já foi rolado.")
 	var tipo := String(missao.mapa.conteudo(missao.posicao(a)).get("tipo", "")) if a != null else ""
-	_btn_descansar.tooltip_text = "Recupera parte dos PV, PE e SAN." if not _btn_descansar.disabled else \
+	_btn_descansar.tooltip_text = "Dormir, relaxar, comer, treinar, ler ou revisar o caso: duas ações por agente (p.92)." if not _btn_descansar.disabled else \
 		(evento if evento != "" else ("Já descansou aqui nesta visita." if tipo in ["vila", "inicio"] else "Só dá para descansar numa vila ou no ponto de encontro."))
 	var sem_recurso := a != null and missao.itens_fora_de_combate(a).is_empty() and missao.rituais_fora_de_combate(a).is_empty()
 	_btn_acao.tooltip_text = "Usar um item de cura ou um ritual de cura (uma vez por turno)." if not _btn_acao.disabled else \

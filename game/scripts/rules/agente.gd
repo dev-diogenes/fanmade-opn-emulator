@@ -13,7 +13,12 @@ var atributos: Dictionary = {}   ## {"agi": 2, "for": 1, ...} — já com aument
 var pericias: Dictionary = {}    ## {"luta": "treinado", ...}
 var poderes: Array[String] = []  ## Poderes de classe escolhidos (podem repetir se "repetivel")
 var perito: Array[String] = []   ## Perícias da habilidade Perito (especialista)
-var escolhas: Dictionary = {}    ## Escolhas de poderes, ex.: {"ferramenta_de_trabalho": "machado"}
+var escolhas: Dictionary = {}
+## Interlúdio (p.93, docs/48): bônus de +1d6 guardados até o fim da missão. Exercício vale em
+## testes de Agilidade, Força ou Vigor (até Vigor bônus); leitura, de Intelecto ou Presença (até
+## Intelecto). Um por teste, gasto sozinho no próximo teste que servir.
+var bonus_exercicio := 0
+var bonus_leitura := 0    ## Escolhas de poderes, ex.: {"ferramenta_de_trabalho": "machado"}
 var lesoes: Array[String] = []   ## Atributos perdidos por Lesões (regra opcional)
 var idade := ""                  ## Faixa etária (regra opcional Idade Variada); "" = sem a regra
 var desvantagens_idade: Array[String] = []
@@ -516,6 +521,7 @@ func para_dicionario() -> Dictionary:
 		"nome": nome, "classe": classe_id, "origem": origem_id, "trilha": trilha_id, "nex": nex,
 		"atributos": atributos.duplicate(), "pericias": pericias.duplicate(),
 		"poderes": Array(poderes), "perito": Array(perito), "escolhas": escolhas.duplicate(),
+		"bonus_exercicio": bonus_exercicio, "bonus_leitura": bonus_leitura,
 		"lesoes": Array(lesoes), "idade": idade, "desvantagens_idade": Array(desvantagens_idade),
 		"trilha_versatil": trilha_versatil, "sem_poder_origem": sem_poder_origem,
 		"transicao_mundano": transicao_mundano.duplicate(),
@@ -552,6 +558,8 @@ static func de_dicionario(p_ruleset: Ruleset, d: Dictionary) -> Agente:
 	for x in d.get("perito", []):
 		a.perito.append(x)
 	a.escolhas = d.get("escolhas", {}).duplicate()
+	a.bonus_exercicio = int(d.get("bonus_exercicio", 0))
+	a.bonus_leitura = int(d.get("bonus_leitura", 0))
 	for x in d.get("lesoes", []):
 		a.lesoes.append(x)
 	a.idade = d.get("idade", "")
@@ -733,6 +741,17 @@ func testar(dados: Dados, pericia_id: String, dt: int, pe_foco: int = 0, opcoes:
 		var extra := dados.rolar_expressao(plano.dado_perito)
 		r.dados_bonus.append(extra)
 		r.somar_bonus(extra)
+	var attr_teste: String = plano.atributo_base if plano.atributo_base != "" else ruleset.atributo_da_pericia(pericia_id)
+	if attr_teste in ["agi", "for", "vig"] and bonus_exercicio > 0:
+		bonus_exercicio -= 1
+		var d6 := dados.rolar(6)
+		r.dados_bonus.append(d6)
+		r.somar_bonus(d6)   # exercício do interlúdio
+	elif attr_teste in ["int", "pre"] and bonus_leitura > 0:
+		bonus_leitura -= 1
+		var d6 := dados.rolar(6)
+		r.dados_bonus.append(d6)
+		r.somar_bonus(d6)   # leitura do interlúdio
 	if pericia_id == "reflexos" and esta_indefeso():
 		r.sucesso = false   # indefeso falha automaticamente em Reflexos (p.320)
 	# Percepção Paranormal: ao procurar pistas, sem nenhum dado acima de 9, rola de novo o pior

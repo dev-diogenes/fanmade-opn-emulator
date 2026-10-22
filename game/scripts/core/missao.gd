@@ -55,7 +55,9 @@ var historico: Array[String] = []
 var extras: Dictionary = {}
 
 var _cfg: Dictionary
-var _descansou: Dictionary = {}          ## Agente -> hex onde já descansou nesta visita
+var _descansou: Dictionary = {}          ## Agente -> hex onde já fez interlúdio nesta visita
+## Pontos de cenas já vistas que ficaram para trás: [{"cena", "pontos": [ids]}] (Revisar Caso, docs/48)
+var revisaveis: Array = []
 var _turnos_sem_surgimento := 0
 
 
@@ -110,6 +112,8 @@ static func nova(semente_: int, ruleset_: Ruleset = null, grupo: Array = [], opc
 			novo.arma_id = ficha.arma
 			grupo.append(novo)
 	for a in grupo:
+		if a.id == "":   # grupo de demonstração: ids para os comandos que apontam agentes (docs/48)
+			a.id = "demo%d" % m.agentes.size()
 		m.agentes.append(a)
 		m.agentes_iniciais.append(a)
 		m.armas[a] = a.arma()
@@ -238,20 +242,142 @@ func pode_descansar() -> bool:
 	return tipo in ["vila", "inicio"] and not _descansou.has(a)
 
 
-## Descanso numa cidade: recupera uma fração dos máximos e encerra o movimento do turno.
+## Descanso rápido (piloto e saves antigos): um interlúdio só do agente da vez, dormindo e
+## relaxando.
 func descansar() -> bool:
 	if not pode_descansar():
 		return false
-	var a := agente_atual()
-	var f := float(_cfg.descanso.fracao)
-	a.curar(maxi(1, int(a.pv_maximo * f)))
-	a.recuperar_pe(maxi(1, int(a.pe_maximo * f)))
-	a.recuperar_sanidade(maxi(1, int(a.san_maximo * f)))
-	_descansou[a] = posicao(a)
+	return interludio({agente_atual().id: {"acoes": ["dormir", "relaxar"]}}).get("ok", false)
+
+
+# --- Interlúdio (p.92-93, docs/48) ------------------------------------------------------
+
+const ACOES_INTERLUDIO := ["dormir", "relaxar", "alimentar", "exercitar", "ler", "revisar"]
+
+
+## Quem participa: os agentes no hex do agente da vez que ainda não fizeram interlúdio aqui.
+func participantes_interludio() -> Array[Agente]:
+	var lista: Array[Agente] = []
+	if not pode_descansar():
+		return lista
+	var h := posicao(agente_atual())
+	for a in agentes:
+		if posicao(a) == h and not a.esta_fora_de_combate() and not _descansou.has(a):
+			lista.append(a)
+	return lista
+
+
+## Condição do descanso no lugar (precária, normal, confortável, luxuosa).
+func condicao_interludio() -> String:
+	var tipo: String = mapa.conteudo(posicao(agente_atual())).get("tipo", "") if agente_atual() != null else ""
+	return String(_cfg.interludio.condicao_por_lugar.get(tipo, "normal"))
+
+
+## Pontos que dá para revisar: ["cena:ponto"].
+func pontos_revisaveis() -> Array:
+	var lista: Array = []
+	for r in revisaveis:
+		for p in r.pontos:
+			lista.append("%s:%s" % [r.cena, p])
+	return lista
+
+
+## O interlúdio do grupo. `escolhas`: {agente_id: {"acoes": [...até 2], "prato": id, "revisar": "cena:ponto"}}.
+## Devolve {ok, linhas}. Encerra o movimento do agente da vez; cada participante só uma vez por visita.
+func interludio(escolhas: Dictionary) -> Dictionary:
+	var participantes := participantes_interludio()
+	if participantes.is_empty():
+		return {"ok": false, "erro": "não há interlúdio aqui agora"}
+	var cfg: Dictionary = _cfg.interludio
+	var cond := condicao_interludio()
+	var linhas: Array[String] = []
+	var relaxam := 0
+	for a in participantes:
+		var e: Dictionary = escolhas.get(a.id, {})
+		if "relaxar" in e.get("acoes", []):
+			relaxam += 1
+	for a in participantes:
+		var e: Dictionary = escolhas.get(a.id, {})
+		var acoes: Array = (e.get("acoes", []) as Array).filter(func(x): return x in ACOES_INTERLUDIO).slice(0, int(cfg.acoes_por_agente))
+		if acoes.is_empty():
+			continue
+		var prato := String(e.get("prato", "")) if "alimentar" in acoes else ""
+		var lim := ruleset.limite_pe(a.nex)
+		var feito: Array[String] = []
+		if prato != "":
+			feito.append(String(cfg.pratos.get(prato, {}).get("nome", prato)).to_lower())
+		if "dormir" in acoes:
+			var mult_pv := float(cfg.multiplicador[cfg.passo_seguinte[cond] if prato == "nutritivo" else cond])
+			var mult_pe := float(cfg.multiplicador[cfg.passo_seguinte[cond] if prato == "energetico" else cond])
+			var pv := maxi(1, int(lim * mult_pv))
+			var pe := maxi(1, int(lim * mult_pe))
+			a.curar(pv)
+			a.recuperar_pe(pe)
+			feito.append("dorme (+%d PV, +%d PE)" % [pv, pe])
+		if "relaxar" in acoes:
+			var san := maxi(1, int(lim * float(cfg.multiplicador[cond]))) + relaxam + (2 if prato == "favorito" else 0)
+			a.recuperar_sanidade(san)
+			feito.append("relaxa (+%d SAN)" % san)
+		if "exercitar" in acoes:
+			a.bonus_exercicio = mini(a.bonus_exercicio + 1, maxi(1, a.atributo("vig")))
+			feito.append("se exercita (+1d6 guardado em AGI/FOR/VIG)")
+		if "ler" in acoes:
+			a.bonus_leitura = mini(a.bonus_leitura + 1, maxi(1, a.atributo("int")))
+			feito.append("lê (+1d6 guardado em INT/PRE)")
+		if "revisar" in acoes:
+			feito.append(_revisar_caso(a, String(e.get("revisar", "")), prato == "rapido"))
+		_descansou[a] = posicao(a)
+		linhas.append("%s: %s." % [a.nome, ", ".join(PackedStringArray(feito))])
+	if linhas.is_empty():
+		return {"ok": false, "erro": "ninguém escolheu ações"}
 	movimento_restante = 0
 	movimento_rolado = true
-	_log("%s descansa (PV %d/%d, PE %d/%d, SAN %d/%d)." % [a.nome, a.pv, a.pv_maximo, a.pe, a.pe_maximo, a.san, a.san_maximo])
-	return true
+	_log("[color=#7fd3c7][b]Interlúdio[/b] (descanso %s).[/color]" % cond)
+	for l in linhas:
+		_log(l)
+	return {"ok": true, "linhas": linhas}
+
+
+## Revisar Caso (p.93): volta às anotações de um ponto que ficou para trás; teste com a melhor
+## perícia do ponto contra a DT dele. Passando, a pista entra no caso. Devolve o texto.
+func _revisar_caso(a: Agente, alvo: String, prato_rapido: bool) -> String:
+	var partes := alvo.split(":")
+	if partes.size() != 2:
+		return "revisa o caso, sem saber por onde começar"
+	var r_idx := -1
+	for i in revisaveis.size():
+		if revisaveis[i].cena == partes[0] and partes[1] in revisaveis[i].pontos:
+			r_idx = i
+	if r_idx < 0:
+		return "revisa o caso, sem achar nada novo"
+	var cena := cena_info(partes[0])
+	var ponto: Dictionary = {}
+	for p in cena.get("pontos", []):
+		if p.id == partes[1]:
+			ponto = p
+	if ponto.is_empty():
+		return "revisa o caso, sem achar nada novo"
+	var melhor := ""
+	var nota := -1000
+	for per in ponto.pericias:
+		var v: int = a.dados_da_pericia(per) * 5 + a.bonus_pericia(per) - int(ponto.pericias[per])
+		if v > nota:
+			nota = v
+			melhor = per
+	var dt := int(ponto.pericias[melhor])
+	var t := a.testar(dados, melhor, dt)
+	if t != null and prato_rapido:
+		t.somar_bonus(5)   # prato rápido (p.93)
+	if t == null or not t.sucesso:
+		return "revisa %s (%s), mas não vê nada novo" % [ponto.nome, ruleset.pericia(melhor).nome]
+	revisaveis[r_idx].pontos.erase(partes[1])
+	if (revisaveis[r_idx].pontos as Array).is_empty():
+		revisaveis.remove_at(r_idx)
+	var incerta: bool = ponto.get("depoimento", false) and t.total - dt < CenaInvestigacao.MARGEM_DEPOIMENTO_FIRME
+	var pista := caso.registrar_pista(String(ponto.pista), String(ponto.responde), partes[0], incerta,
+		absi(hash("%s|%s|%d" % [alvo, a.id, turno_mundo])))
+	pistas += 1
+	return "revisa %s e acha uma pista que tinha passado: %s" % [ponto.nome, pista.texto]
 
 
 func encerrar_turno() -> void:
@@ -783,6 +909,8 @@ func concluir_investigacao(resultado: Dictionary) -> void:
 	investigacao_pendente = {}
 	mapa.limpar_conteudo(h)
 	pistas += resultado.get("pistas", []).size()
+	if String(resultado.get("cena", "")) != "" and not resultado.get("restantes", []).is_empty():
+		revisaveis.append({"cena": String(resultado.cena), "pontos": (resultado.restantes as Array).duplicate()})
 	for p in resultado.get("perguntas", []):
 		_aplicar_efeito_pergunta(p)
 	var pen: Dictionary = resultado.get("penalidade", {})
@@ -953,7 +1081,7 @@ func para_dicionario() -> Dictionary:
 		"caso": caso.para_dicionario() if caso != null else {}, "modificador_chefe": modificador_chefe,
 		"investigacao_pendente": {"hex": [investigacao_pendente.hex.x, investigacao_pendente.hex.y], "cena": investigacao_pendente.cena,
 			"semente": int(investigacao_pendente.semente)} if not investigacao_pendente.is_empty() else {},
-		"turnos_sem_surgimento": _turnos_sem_surgimento, "descansos": descansos,
+		"turnos_sem_surgimento": _turnos_sem_surgimento, "descansos": descansos, "revisaveis": revisaveis.duplicate(true),
 		"historico": historico.slice(maxi(0, historico.size() - 300)),
 		"encerrada": encerrada, "vitoria": vitoria, "extras": extras.duplicate(true),
 	}
@@ -1000,6 +1128,7 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.reforcos = int(d.get("reforcos", 0))
 	m.pistas = int(d.get("pistas", 0))
 	m._turnos_sem_surgimento = int(d.get("turnos_sem_surgimento", 0))
+	m.revisaveis = (d.get("revisaveis", []) as Array).duplicate(true)
 	for i in d.get("descansos", {}):
 		if por_id.has(i):
 			var hx: Array = d.descansos[i]

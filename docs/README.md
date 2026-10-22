@@ -50,6 +50,7 @@
 | [45-mirante-da-serra.md](45-mirante-da-serra.md) | Mirante ▲ no alto de cada serra: um achado (ver o covil, pista, fôlego ou esconderijo) para quem sobe com um 20 |
 | [46-ameacas-manobram.md](46-ameacas-manobram.md) | Ameaças que são pessoas agarram quem atira ou conjura, derrubam com um aliado ao lado e fintam; o Cão de Guarda derruba ao morder; Retaliação do Ocioso não letal |
 | [47-escolhas-por-selecao.md](47-escolhas-por-selecao.md) | Escolhas de NEX por seleção (Base e sala de Transcender), sem campo de texto; como as regras filtram classe, poderes, rituais, perícias e itens |
+| [48-interludio.md](48-interludio.md) | Interlúdio pelo livro (p.92-93) no lugar do descanso de 25%: duas ações por agente no hex (dormir, relaxar, alimentar-se, exercitar-se, ler, revisar caso), recuperação pelo limite de PE |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.
