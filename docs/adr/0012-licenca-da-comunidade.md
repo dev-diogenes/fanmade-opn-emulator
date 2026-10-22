@@ -35,7 +35,8 @@ Antes desta fase, o jogo se chamava "Ordem Paranormal: Fanmade (WIP)", com o log
 - **Selo:**
   - na tela de título, no canto de baixo à direita, com ao menos 10% da largura da tela (`Licenca.FRACAO_SELO`), e também no Sobre;
   - **junto dele,** o aviso de IA e uma linha de conteúdo sensível;
-  - **sem o arquivo** oficial (`assets/licenca/selo.png`), a tela mostra um quadro do mesmo tamanho, que guarda o lugar.
+  - **o arquivo oficial** (`assets/licenca/selo.png`) foi baixado do site da licença, com a autorização do dono do projeto. Ele é preto com fundo transparente, então vai sobre um disco claro para ficar legível na capa escura;
+  - **sem o arquivo,** a tela mostra um quadro do mesmo tamanho, que guarda o lugar.
 - **Avisos:**
   - **conteúdo sensível:** um papel na primeira vez que o jogo abre, antes do aviso de flashes, com "Sair do jogo" como saída; o texto também fica no Sobre e numa linha da capa;
   - **conteúdo não oficial:** no rodapé da capa e no Sobre;
@@ -74,7 +75,7 @@ Antes desta fase, o jogo se chamava "Ordem Paranormal: Fanmade (WIP)", com o log
 
 ## Consequências
 
-- O jogo cumpre a licença no que dá para fazer sem o arquivo do selo. **Falta baixar o selo oficial** para `game/assets/licenca/selo.png`; baixar arquivos de fora pede a autorização do dono do projeto.
+- **O jogo cumpre o que a licença exige na capa:** o selo oficial, o aviso de IA, o aviso de conteúdo e a frase de conteúdo não oficial.
 - **O título "Membrana" é provisório.** Trocar é mexer em uma constante e em `project.godot`.
 - **Nomes de criaturas e rituais do livro continuam no jogo.** Se o titular entender que são "entidades" do cânone, eles mudam para nomes próprios.
 - **Os docs antigos** (docs/01 a docs/59) citam o Mauro e o título antigo como histórico. O jogo e os testes já usam os nomes novos.

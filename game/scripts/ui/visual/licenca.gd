@@ -34,15 +34,25 @@ static func tem_selo() -> bool:
 static func selo(largura_tela: float) -> Control:
 	var largura := ceilf(largura_tela * FRACAO_SELO) + 4.0
 	if tem_selo():
+		# O selo é preto com o fundo transparente: sobre a capa escura, o anel de fora sumia.
+		# Um disco claro atrás mantém o desenho inteiro legível, como a licença pede.
+		var fundo := PanelContainer.new()
+		fundo.name = "FundoSelo"
+		var margem := roundf(largura * 0.05)
+		fundo.add_theme_stylebox_override("panel", Tema.caixa(Color("f2ede2"), Color.TRANSPARENT, 0, int(largura), Vector2(margem, margem)))
+		fundo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		fundo.tooltip_text = "Selo da Licença da Comunidade (%s)" % LICENCA_URL
 		var t := TextureRect.new()
 		t.texture = load(SELO)
 		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		t.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS   # 1920 px reduzido sem serrilhar
 		var tam := (t.texture as Texture2D).get_size()
 		t.custom_minimum_size = Vector2(largura, largura * tam.y / maxf(1.0, tam.x))
 		t.name = "SeloLicenca"
 		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		return t
+		fundo.add_child(t)
+		return fundo
 	var p := PanelContainer.new()
 	p.name = "SeloLicenca"
 	p.custom_minimum_size = Vector2(largura, largura)

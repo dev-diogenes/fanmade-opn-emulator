@@ -26,7 +26,8 @@
 
 - **O selo:** no canto de baixo, à direita, com ao menos 10% da largura da tela, como a licença pede para a capa.
 - **Junto dele:** "Contém material gerado por inteligência artificial" e a linha de conteúdo sensível.
-- **Sem o arquivo oficial,** um quadro do mesmo tamanho guarda o lugar. Baixar o selo do site da licença ainda depende de autorização.
+- **O arquivo oficial** (`game/assets/licenca/selo.png`, 1920 × 1920) foi baixado do site da licença com a sua autorização. Ele é preto, com o fundo transparente; sobre a capa escura, o anel de fora sumia. Por isso vai sobre um disco claro, opaco e legível, como a licença pede. Os mipmaps evitam o serrilhado na redução.
+- **Sem o arquivo,** um quadro do mesmo tamanho guarda o lugar.
 
 ### O aviso de conteúdo
 
@@ -73,7 +74,6 @@ Você decidiu que só os personagens saem: ameaças, criaturas, elementos e ritu
 
 ## O que fica para depois
 
-- **Baixar o selo oficial** para `game/assets/licenca/selo.png`: precisa da sua autorização.
 - **Confirmar o título** ou escolher outro.
 - **Pedir ao titular a confirmação** de que um videogame de fã está coberto pela licença, pelo contato do site oficial.
 - **A capa da página de distribuição** (itch.io) com o selo e o aviso de IA.
@@ -98,5 +98,5 @@ Total: **633**. Arquivo novo, `test_licenca.gd`:
 - **Nomes:**
   - nenhum nome de gente do jogo coincide com os personagens principais do cânone;
   - um save antigo troca o nome do recruta.
-- **Capa:** o título não tem a marca; a capa mostra o título, o selo com 10% da largura, o aviso de IA, a frase de conteúdo não oficial e o botão Sobre.
+- **Capa:** o título não tem a marca; a capa mostra o título, o selo oficial (não o quadro reservado) com 10% da largura, o aviso de IA, a frase de conteúdo não oficial e o botão Sobre.
 - **Sobre:** mostra a licença, o aviso de conteúdo e o aviso de IA, e o tour espera por ele.

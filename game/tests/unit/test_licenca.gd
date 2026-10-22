@@ -75,6 +75,8 @@ func test_titulo_sem_a_marca_e_com_selo():
 	assert_true(textos.has(Licenca.NAO_OFICIAL))
 	var selo: Control = t.find_child("SeloLicenca", true, false)
 	assert_not_null(selo, "o selo na capa")
+	assert_true(Licenca.tem_selo(), "o arquivo oficial do selo está no projeto")
+	assert_true(selo is TextureRect and (selo as TextureRect).texture != null, "é o selo, não o quadro reservado")
 	assert_true(selo.custom_minimum_size.x >= 0.10 * t.get_viewport_rect().size.x, "com ao menos 10% da largura")
 	assert_true(t.find_children("*", "Button", true, false).any(func(b): return b.text == "Sobre e licença"))
 
