@@ -99,6 +99,8 @@ func _selo_efeito(ef: Dictionary) -> Label:
 		cor = Tema.cor_falha(true) if int(ef.get("valor", 0)) < 0 else Tema.cor_sucesso(true)
 	elif tipo == "inocente_morto":
 		cor = Tema.cor_falha(true)
+	elif tipo == "chefe":
+		cor = Tema.cor_falha(true) if int(ef.get("valor", 0)) > 0 else Tema.cor_sucesso(true)
 	elif tipo == "pista":
 		cor = Color("7a5a1e")   # o ouro escuro das pistas do quadro (docs/32)
 	l.add_theme_color_override("font_color", Color.WHITE)

@@ -34,7 +34,7 @@ func _jogar(perfil: String, semente: int) -> Dictionary:
 	var r := {"perfil": perfil, "semente": semente, "combates": 0, "vitorias_combate": 0, "investigacoes": 0, "eventos": 0,
 		"pistas_firmes": 0, "pistas_duvidosas": 0, "acusacoes_certas": 0, "acusacoes_erradas": 0, "ampliou": false,
 		"escaladas_possiveis": 0, "subiu_serra": 0, "descansos": 0, "inocentes": 0, "eventos_com_pista": 0,
-		"rodadas_investigacao": 0, "pistas_por_cena": [], "membrana_min": 100}
+		"rodadas_investigacao": 0, "pistas_por_cena": [], "membrana_min": 100, "eventos_morais": 0, "reviravolta": ""}
 	var passos := 0
 	var visitados := {}
 	while not m.encerrada and passos < 6000 and m.turno_mundo <= 80:
@@ -43,6 +43,8 @@ func _jogar(perfil: String, semente: int) -> Dictionary:
 		if not m.evento_pendente.is_empty():
 			var op := _melhor_opcao(m)
 			var antes := m.caso.pistas.size()
+			if m.evento_pendente.evento.get("moral", false):
+				r.eventos_morais += 1   # escolhas morais (docs/50)
 			Comandos.aplicar_mapa(m, Comandos.novo("mapa", "resolver_evento", {"opcao": op}))
 			r.eventos += 1
 			if m.caso.pistas.size() > antes:
@@ -107,6 +109,7 @@ func _jogar(perfil: String, semente: int) -> Dictionary:
 	r.inocentes = m.inocentes_mortos
 	r.solucionado = m.caso_solucionado()
 	r.ampliou = m.caso.ampliada
+	r.reviravolta = m.caso.ampliacao_id
 	r.perguntas = m.caso.perguntas.map(func(q): return "%s:%s(%d)" % [q.id, "ok" if q.respondida else "-", int(q.encontradas)])
 	for p in m.caso.pistas:
 		if p.get("duvidosa", false):

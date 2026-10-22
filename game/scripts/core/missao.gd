@@ -628,6 +628,12 @@ func _aplicar_efeito(a: Agente, ef: Dictionary, h: Vector2i) -> Dictionary:
 			covil_localizado = true
 			_log("O objetivo foi revelado no mapa.")
 			return {"tipo": "revelar_objetivo", "valor": 1, "texto": "Covil revelado"}
+		"chefe":
+			# Escolhas do mapa que mexem com o covil (docs/50): +10 = o chefe começa com 10% a mais de PV
+			var v := _valor(ef.valor)
+			modificador_chefe += v / 100.0
+			_log("[color=#e0574a]O chefe do covil vai começar com %+d%% de PV.[/color]" % v if v > 0 else "[color=#6fcf8e]O chefe do covil vai começar com %d%% a menos de PV.[/color]" % -v)
+			return {"tipo": "chefe", "valor": v, "texto": "Chefe %+d%% PV" % v}
 		"inocente_morto":
 			var n := int(ef.get("valor", 1))
 			inocentes_mortos += n

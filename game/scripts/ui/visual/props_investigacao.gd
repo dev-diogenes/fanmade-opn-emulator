@@ -7,16 +7,19 @@ extends RefCounted
 
 const PALAVRAS := [
 	["tela", ["computador", "radio", "rádio", "camera", "câmera", "painel"]],
-	["pessoa", ["vizinha", "zelador", "operario", "operário", "ferido", "testemunha", "morador", "merendeira", "caminhoneiro"]],
-	["alcapao", ["porao", "porão", "jazigo", "cofre", "armario", "armário", "alçapão", "alcapao", "banheiro", "ralo"]],
-	["lousa", ["quadro_negro", "quadro-negro", "lousa"]],
+	["pessoa", ["vizinha", "zelador", "operario", "operário", "ferido", "testemunha", "morador", "merendeira", "caminhoneiro",
+		"viuva", "viúva", "funerario", "funerário", "escrivao", "escrivão", "preso", "bilheteira", "engraxate"]],
+	["caixao", ["caixao", "caixão"]],
+	["coroa", ["coroa"]],
+	["alcapao", ["porao", "porão", "jazigo", "cofre", "armario", "armário", "alçapão", "alcapao", "banheiro", "ralo", "bagageiro", "mala"]],
+	["lousa", ["quadro_negro", "quadro-negro", "lousa", "quadro_horarios", "horários"]],
 	["altar", ["altar", "oratorio", "oratório"]],
 	["lapides", ["covas", "inscric", "inscriç", "parede", "tumulo", "túmulo"]],
 	["fogueira", ["fogueira"]],
 	["barraca", ["barraca", "tenda"]],
 	["rastros", ["rastro", "pegada", "marca"]],
 	["mesa", ["escrivaninha", "mesa", "livro", "registro", "diario", "diário", "relatorio", "relatório",
-		"bilhete", "foto", "planta", "escala", "obito", "óbito", "cantina", "caixa"]],
+		"bilhete", "foto", "planta", "escala", "obito", "óbito", "cantina", "caixa", "boletim", "boletins", "guiche", "guichê"]],
 ]
 
 
@@ -41,7 +44,48 @@ static func criar(ponto_id: String, nome: String) -> Node3D:
 		"barraca": return barraca()
 		"rastros": return rastros()
 		"lousa": return lousa()
+		"caixao": return caixao()
+		"coroa": return coroa()
 	return null
+
+
+## Caixão fechado sobre dois cavaletes, com uma vela em cada ponta (docs/50).
+static func caixao() -> Node3D:
+	var n := Node3D.new()
+	for x in [-0.4, 0.4]:
+		_caixa(n, Vector3(0.08, 0.45, 0.4), Vector3(x, 0.22, 0), Color("3a2a1e"))
+	_caixa(n, Vector3(1.25, 0.3, 0.5), Vector3(0, 0.6, 0), Color("4a2e22"))
+	_caixa(n, Vector3(1.3, 0.05, 0.55), Vector3(0, 0.77, 0), Color("5a3a2a"))
+	_caixa(n, Vector3(0.05, 0.02, 0.3), Vector3(0, 0.8, 0), Color("c9b27a"))   # a cruz de metal da tampa
+	_caixa(n, Vector3(0.2, 0.02, 0.05), Vector3(-0.08, 0.8, 0), Color("c9b27a"))
+	for x in [-0.75, 0.75]:
+		_caixa(n, Vector3(0.06, 0.5, 0.06), Vector3(x, 0.25, 0.1), Color("e8dcc0"))
+		_caixa(n, Vector3(0.03, 0.05, 0.03), Vector3(x, 0.53, 0.1), Color("ffb04a"), 3.0)
+	return n
+
+
+## Coroa de flores num tripé, com a faixa caída (docs/50).
+static func coroa() -> Node3D:
+	var n := Node3D.new()
+	for i in 3:
+		var perna := _caixa(n, Vector3(0.04, 1.0, 0.04), Vector3(cos(i * TAU / 3) * 0.18, 0.5, sin(i * TAU / 3) * 0.18), Color("2b2622"))
+		perna.rotation.z = 0.1 * (i - 1)
+	var anel := MeshInstance3D.new()
+	var toro := TorusMesh.new()
+	toro.inner_radius = 0.28
+	toro.outer_radius = 0.42
+	anel.mesh = toro
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color("5a6b3a")
+	anel.material_override = m
+	anel.rotation.x = PI / 2
+	anel.position = Vector3(0, 1.05, 0.05)
+	n.add_child(anel)
+	for i in 8:
+		var a := i * TAU / 8
+		_caixa(n, Vector3(0.09, 0.09, 0.09), Vector3(cos(a) * 0.35, 1.05 + sin(a) * 0.35, 0.12), Color("e8e0d0") if i % 2 == 0 else Color("8e1b22"))
+	_caixa(n, Vector3(0.12, 0.55, 0.01), Vector3(0.1, 0.65, 0.14), Color("d8cfb8"))   # a faixa sem nome
+	return n
 
 
 ## Quadro-negro de escola num cavalete, com a frase repetida em giz (docs/32).

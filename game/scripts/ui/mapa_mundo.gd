@@ -31,6 +31,7 @@ var _barra_membrana: ProgressBar
 var _lbl_membrana: Label
 var _painel_evento: PanelContainer
 var _lbl_evento: Label
+var _lbl_tipo_evento: Label   ## "EVENTO" ou, nas escolhas morais (docs/50), "ESCOLHA DIFÍCIL"
 var _btn_testar: Button
 var _btn_acao: Button
 var _caso: PanelContainer
@@ -791,13 +792,13 @@ func _montar_interface() -> void:
 	var ve := VBoxContainer.new()
 	ve.add_theme_constant_override("separation", Tema.ESPACO_M)
 	_painel_evento.add_child(ve)
-	var te := Label.new()
-	te.text = "EVENTO"
-	te.theme_type_variation = "TextoPapel"
+	_lbl_tipo_evento = Label.new()
+	_lbl_tipo_evento.text = "EVENTO"
+	_lbl_tipo_evento.theme_type_variation = "TextoPapel"
 	var f := Tema.fonte_titulo()
 	if f != null:
-		te.add_theme_font_override("font", f)
-	ve.add_child(te)
+		_lbl_tipo_evento.add_theme_font_override("font", f)
+	ve.add_child(_lbl_tipo_evento)
 	_lbl_evento = Label.new()
 	_lbl_evento.theme_type_variation = "TextoPapel"
 	_lbl_evento.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -918,6 +919,14 @@ func _atualizar() -> void:
 	_painel_evento.visible = not ev.is_empty()
 	if not ev.is_empty():
 		_lbl_evento.text = "%s\n\n%s" % [ev.evento.titulo, ev.evento.texto]
+		# Escolha moral (docs/50): o cabeçalho avisa que nenhuma saída é de graça
+		var moral: bool = ev.evento.get("moral", false)
+		_lbl_tipo_evento.text = "ESCOLHA DIFÍCIL" if moral else "EVENTO"
+		if moral:
+			_lbl_tipo_evento.add_theme_color_override("font_color", Tema.SANGUE)
+			_lbl_evento.text += "\n\nNenhuma saída é segura: estão em jogo vidas, tempo, Sanidade ou um covil mais forte."
+		else:
+			_lbl_tipo_evento.remove_theme_color_override("font_color")
 		if abriu:
 			Som.tocar("papel")
 			Tema.datilografar(_lbl_evento)

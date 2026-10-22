@@ -419,6 +419,106 @@
     "multidao": {
       "rotulo": "Multidão",
       "texto": "Um panfleto de evento público, com a praça cheia desenhada à caneta."
+    },
+    "missa": {
+      "rotulo": "Saída da missa",
+      "texto": "Fotos tiradas de longe, sempre na porta da igreja, depois da missa."
+    },
+    "sozinho": {
+      "rotulo": "Mora sozinho",
+      "texto": "A planta de uma casa com uma cama só marcada e a hora em que a luz apaga."
+    },
+    "sangue_raro": {
+      "rotulo": "Sangue raro",
+      "texto": "Uma ficha de doação de sangue com o tipo sublinhado duas vezes."
+    },
+    "comercio": {
+      "rotulo": "Atrás do balcão",
+      "texto": "Notas de compra de um mesmo armazém, todas na hora de fechar as portas."
+    },
+    "nome_publico": {
+      "rotulo": "Nome conhecido",
+      "texto": "Recortes do jornal da cidade sobre a mesma pessoa, com o nome sublinhado."
+    },
+    "jovem": {
+      "rotulo": "Alguém jovem",
+      "texto": "Um boletim escolar recortado, com a média circulada a caneta."
+    },
+    "bicicleta": {
+      "rotulo": "De bicicleta",
+      "texto": "Marcas de pneu fino na terra, seguidas até a mesma porteira em várias manhãs."
+    },
+    "gabinete": {
+      "rotulo": "Papel timbrado",
+      "texto": "Um envelope de papel timbrado de gabinete, sem assinatura e sem remetente."
+    },
+    "favores": {
+      "rotulo": "Favores devidos",
+      "texto": "Uma lista de favores, cada um com o nome de quem ficou devendo."
+    },
+    "discurso": {
+      "rotulo": "Palavras ensaiadas",
+      "texto": "Um texto para ser lido em público, com as palavras do ritual escondidas nas frases."
+    },
+    "terras": {
+      "rotulo": "Escritura de terras",
+      "texto": "Uma escritura com as divisas redesenhadas a lápis, engolindo os vizinhos."
+    },
+    "caminhonete": {
+      "rotulo": "Caminhonete",
+      "texto": "Marcas de pneu largo de caminhonete, com barro vermelho de lavoura."
+    },
+    "leilao": {
+      "rotulo": "Catálogo de leilão",
+      "texto": "Um catálogo de leilão com peças antigas marcadas a caneta e valores altos."
+    },
+    "capital": {
+      "rotulo": "Vem da capital",
+      "texto": "Canhotos de pedágio da estrada da capital, ida e volta no mesmo dia."
+    },
+    "luvas": {
+      "rotulo": "Luvas brancas",
+      "texto": "Luvas de algodão de manusear peças antigas, com manchas de sangue seco."
+    },
+    "estudio": {
+      "rotulo": "Estúdio de TV",
+      "texto": "Uma fita de programa com o logotipo de uma emissora e um intervalo cortado."
+    },
+    "fuligem": {
+      "rotulo": "Fuligem",
+      "texto": "Um objeto antigo coberto de fuligem, guardado como relíquia numa caixa forrada."
+    },
+    "ingresso": {
+      "rotulo": "Ingressos velhos",
+      "texto": "Canhotos de ingresso de uma única sessão, todos do mesmo dia."
+    },
+    "sirene": {
+      "rotulo": "Sirene",
+      "texto": "Uma gravação antiga com sirenes ao fundo e alguém contando nomes."
+    },
+    "lama": {
+      "rotulo": "Marca d'água",
+      "texto": "Uma linha de lama seca na parede, na altura do peito, que ninguém pintou por cima."
+    },
+    "radio_antigo": {
+      "rotulo": "Rádio parado",
+      "texto": "Um rádio de pilha parado na mesma estação, como no dia em que tudo aconteceu."
+    },
+    "onibus": {
+      "rotulo": "Ônibus escolar",
+      "texto": "Uma foto de turma na frente de um ônibus escolar, com alguns rostos riscados."
+    },
+    "chamada": {
+      "rotulo": "Lista de chamada",
+      "texto": "Uma lista de chamada antiga, com um nome a mais no fim, escrito por outra mão."
+    },
+    "pedra": {
+      "rotulo": "Pó de pedra",
+      "texto": "Pó branco de pedreira no fundo dos bolsos e nas dobras das roupas."
+    },
+    "dinamite": {
+      "rotulo": "Pavio velho",
+      "texto": "Um pavio de dinamite enrolado como lembrança, com uma data escrita na fita."
     }
   },
   "penalidade_palpite": {
@@ -581,6 +681,164 @@
             "sino",
             "fogos",
             "multidao"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vitima",
+      "revelacao": "A lista ainda não acabou: o culpado precisa de mais alguém, e as pistas dizem quem será.",
+      "pergunta": {
+        "id": "vitima",
+        "texto": "Quem será a próxima vítima?",
+        "curto": "Vítima?",
+        "pistas_necessarias": 2,
+        "efeito": {
+          "tipo": "membrana",
+          "valor": 10,
+          "texto": "A próxima vítima sai da cidade a tempo, e o ritual fica sem o que precisa: a Membrana se fortalece."
+        }
+      },
+      "candidatos": [
+        {
+          "id": "padre",
+          "nome": "o padre da paróquia",
+          "indicios": [
+            "missa",
+            "sozinho",
+            "sangue_raro"
+          ]
+        },
+        {
+          "id": "dono_armazem",
+          "nome": "o dono do armazém",
+          "indicios": [
+            "comercio",
+            "nome_publico",
+            "sozinho"
+          ]
+        },
+        {
+          "id": "filha_prefeito",
+          "nome": "a filha do prefeito",
+          "indicios": [
+            "jovem",
+            "nome_publico",
+            "missa"
+          ]
+        },
+        {
+          "id": "menino_jornal",
+          "nome": "o menino que entrega o jornal",
+          "indicios": [
+            "jovem",
+            "bicicleta",
+            "sangue_raro"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mandante",
+      "revelacao": "O culpado não age por conta própria: alguém que nunca aparece paga as contas e dá as ordens.",
+      "pergunta": {
+        "id": "mandante",
+        "texto": "Quem financia o culpado?",
+        "curto": "Mandante?",
+        "pistas_necessarias": 2,
+        "efeito": {
+          "tipo": "chefe_enfraquecido",
+          "texto": "Sem o dinheiro do mandante, o covil fica sem proteção nem reforço: o chefe começa mais fraco."
+        }
+      },
+      "candidatos": [
+        {
+          "id": "vereador",
+          "nome": "um vereador da cidade",
+          "indicios": [
+            "gabinete",
+            "favores",
+            "discurso"
+          ]
+        },
+        {
+          "id": "fazendeiro",
+          "nome": "um fazendeiro poderoso",
+          "indicios": [
+            "favores",
+            "terras",
+            "caminhonete"
+          ]
+        },
+        {
+          "id": "colecionador",
+          "nome": "um colecionador de antiguidades",
+          "indicios": [
+            "leilao",
+            "capital",
+            "luvas"
+          ]
+        },
+        {
+          "id": "apresentador",
+          "nome": "um apresentador de TV",
+          "indicios": [
+            "capital",
+            "discurso",
+            "estudio"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "origem",
+      "revelacao": "Isso já aconteceu antes. Anos atrás, a cidade abafou um primeiro caso, e é dele que tudo nasce.",
+      "pergunta": {
+        "id": "origem",
+        "texto": "Onde tudo começou?",
+        "curto": "Origem?",
+        "pistas_necessarias": 2,
+        "efeito": {
+          "tipo": "membrana",
+          "valor": 10,
+          "texto": "Sabendo da ferida antiga, os agentes a fecham de vez: a Membrana se fortalece."
+        }
+      },
+      "candidatos": [
+        {
+          "id": "incendio_cinema",
+          "nome": "o incêndio do cinema",
+          "indicios": [
+            "fuligem",
+            "ingresso",
+            "sirene"
+          ]
+        },
+        {
+          "id": "enchente",
+          "nome": "a grande enchente",
+          "indicios": [
+            "lama",
+            "sirene",
+            "radio_antigo"
+          ]
+        },
+        {
+          "id": "excursao",
+          "nome": "o sumiço da excursão escolar",
+          "indicios": [
+            "onibus",
+            "chamada",
+            "lama"
+          ]
+        },
+        {
+          "id": "pedreira",
+          "nome": "o desabamento na pedreira",
+          "indicios": [
+            "pedra",
+            "dinamite",
+            "radio_antigo"
           ]
         }
       ]

@@ -110,7 +110,7 @@ func test_deduzir_na_cena_vale_ao_sair():
 
 func test_cada_cena_tem_um_ponto_firme_por_pergunta_e_uma_testemunha():
 	# docs/44: duas pistas firmes da mesma pergunta pedem duas fontes (outra cena, evento,
-	# interrogatório); a testemunha pode errar
+	# interrogatório); a testemunha pode errar. As cenas de docs/50 têm duas testemunhas.
 	for c in DadosJogo.ler("cenas_investigacao").cenas:
 		var firmes: Array = []
 		var testemunhas := 0
@@ -121,7 +121,7 @@ func test_cada_cena_tem_um_ponto_firme_por_pergunta_e_uma_testemunha():
 				firmes.append(String(p.responde))
 		firmes.sort()
 		assert_eq(firmes, ["onde", "oque", "quem"], c.id)
-		assert_eq(testemunhas, 1, c.id)
+		assert_between(testemunhas, 1, 2, c.id)
 
 
 func test_cenas_novas_tem_ponto_para_cada_pergunta():
