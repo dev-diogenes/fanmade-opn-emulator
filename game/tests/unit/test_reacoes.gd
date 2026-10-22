@@ -392,6 +392,7 @@ func test_ia_de_pessoa_agarra_quem_atira_e_criatura_nao():
 	var atiradora := Agente.criar(rs, "Atiradora", "especialista",
 		{"agi": 2, "for": 1, "int": 2, "pre": 1, "vig": 1}, {"pontaria": "treinado"})
 	atiradora.equipamento.append("pistola")
+	atiradora.equipamento.append("balas_curtas")
 	atiradora.arma_id = "pistola"
 	var bandido := Ameaca.criar(rs, "Bandido", _ficha_de("bandido"))
 	bandido.lado = "ameacas"

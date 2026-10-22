@@ -1,6 +1,6 @@
 {
-  "ref": "p.72-75",
-  "nota": "Subconjunto inicial de proteções e equipamento geral. Descrições com palavras próprias.",
+  "ref": "p.69-77",
+  "nota": "Proteções, munições e equipamento geral do livro (Tabelas 3.4, 3.6, 3.8 e 3.10). Descrições com palavras próprias. 'grupo' organiza o arsenal; 'pendente' diz o que ainda não tem efeito no jogo.",
   "protecoes": [
     {
       "id": "protecao_leve",
@@ -9,7 +9,9 @@
       "espacos": 2,
       "defesa": 5,
       "proficiencia": "protecoes_leves",
-      "descricao": "Jaqueta reforçada ou colete de kevlar."
+      "descricao": "Jaqueta reforçada ou colete de kevlar.",
+      "ref": "p.72",
+      "grupo": "protecao"
     },
     {
       "id": "protecao_pesada",
@@ -25,7 +27,21 @@
         "perfuracao": 2
       },
       "penalidade_carga": -5,
-      "descricao": "Traje tático completo com capacete e várias camadas de kevlar. Atrapalha perícias de carga."
+      "descricao": "Traje tático completo com capacete e várias camadas de kevlar. Atrapalha perícias de carga.",
+      "ref": "p.72",
+      "grupo": "protecao"
+    },
+    {
+      "id": "escudo",
+      "nome": "Escudo",
+      "categoria": 1,
+      "espacos": 2,
+      "defesa": 2,
+      "escudo": true,
+      "proficiencia": "protecoes_pesadas",
+      "ref": "p.72",
+      "grupo": "protecao",
+      "descricao": "Escudo medieval ou de tropa de choque, numa mão: +2 na Defesa, somado ao da proteção. Com arma de duas mãos não protege."
     }
   ],
   "itens": [
@@ -40,7 +56,9 @@
         "cura": "2d8+2",
         "alcance": "adjacente"
       },
-      "descricao": "Spray de remédio: cura 2d8+2 PV em você ou em alguém adjacente (ação padrão, uso único)."
+      "descricao": "Spray de remédio: cura 2d8+2 PV em você ou em alguém adjacente (ação padrão, uso único).",
+      "grupo": "operacional",
+      "ref": "p.75"
     },
     {
       "id": "kit_medicina",
@@ -48,7 +66,9 @@
       "categoria": 0,
       "espacos": 1,
       "kit": "medicina",
-      "descricao": "Ferramentas para Medicina; sem ele, −5 no teste."
+      "descricao": "Ferramentas para Medicina; sem ele, −5 no teste.",
+      "grupo": "acessorio",
+      "ref": "p.73"
     },
     {
       "id": "kit_tecnologia",
@@ -56,7 +76,9 @@
       "categoria": 0,
       "espacos": 1,
       "kit": "tecnologia",
-      "descricao": "Ferramentas para Tecnologia; sem ele, −5 no teste."
+      "descricao": "Ferramentas para Tecnologia; sem ele, −5 no teste.",
+      "grupo": "acessorio",
+      "ref": "p.73"
     },
     {
       "id": "kit_crime",
@@ -64,7 +86,9 @@
       "categoria": 0,
       "espacos": 1,
       "kit": "crime",
-      "descricao": "Gazuas e afins para Crime; sem ele, −5 no teste."
+      "descricao": "Gazuas e afins para Crime; sem ele, −5 no teste.",
+      "grupo": "acessorio",
+      "ref": "p.73"
     },
     {
       "id": "binoculos",
@@ -75,7 +99,9 @@
         "percepcao": 5
       },
       "condicao": "observar à distância",
-      "descricao": "+5 em Percepção para observar coisas distantes."
+      "descricao": "+5 em Percepção para observar coisas distantes.",
+      "grupo": "operacional",
+      "ref": "p.75"
     },
     {
       "id": "equipamento_sobrevivencia",
@@ -85,7 +111,9 @@
       "bonus_pericia": {
         "sobrevivencia": 5
       },
-      "descricao": "+5 em Sobrevivência para acampar e se orientar."
+      "descricao": "+5 em Sobrevivência para acampar e se orientar.",
+      "grupo": "operacional",
+      "ref": "p.75"
     },
     {
       "id": "smartphone",
@@ -95,7 +123,9 @@
       "bonus_pericia": {
         "atualidades": 2
       },
-      "descricao": "Utensílio: +2 em Atualidades."
+      "descricao": "Utensílio: +2 em Atualidades.",
+      "grupo": "acessorio",
+      "ref": "p.73"
     },
     {
       "id": "notebook",
@@ -105,7 +135,9 @@
       "bonus_pericia": {
         "tecnologia": 2
       },
-      "descricao": "Utensílio: +2 em Tecnologia."
+      "descricao": "Utensílio: +2 em Tecnologia.",
+      "grupo": "acessorio",
+      "ref": "p.73"
     },
     {
       "id": "lupa",
@@ -115,7 +147,9 @@
       "bonus_pericia": {
         "investigacao": 2
       },
-      "descricao": "Utensílio: +2 em Investigação."
+      "descricao": "Utensílio: +2 em Investigação.",
+      "grupo": "acessorio",
+      "ref": "p.73"
     },
     {
       "id": "botas_militares",
@@ -125,7 +159,9 @@
       "bonus_pericia": {
         "atletismo": 2
       },
-      "descricao": "Vestimenta: +2 em Atletismo."
+      "descricao": "Vestimenta: +2 em Atletismo.",
+      "grupo": "acessorio",
+      "ref": "p.73"
     },
     {
       "id": "manto_de_glifos",
@@ -135,7 +171,9 @@
       "bonus_pericia": {
         "ocultismo": 2
       },
-      "descricao": "Vestimenta: +2 em Ocultismo."
+      "descricao": "Vestimenta: +2 em Ocultismo.",
+      "grupo": "acessorio",
+      "ref": "p.73"
     },
     {
       "id": "componentes_sangue",
@@ -143,7 +181,9 @@
       "categoria": 0,
       "espacos": 1,
       "componentes": "sangue",
-      "descricao": "Materiais para conjurar rituais de Sangue (p.129)."
+      "descricao": "Materiais para conjurar rituais de Sangue (p.129).",
+      "grupo": "paranormal",
+      "ref": "p.76"
     },
     {
       "id": "componentes_morte",
@@ -151,7 +191,9 @@
       "categoria": 0,
       "espacos": 1,
       "componentes": "morte",
-      "descricao": "Materiais para conjurar rituais de Morte (p.129)."
+      "descricao": "Materiais para conjurar rituais de Morte (p.129).",
+      "grupo": "paranormal",
+      "ref": "p.76"
     },
     {
       "id": "componentes_conhecimento",
@@ -159,7 +201,9 @@
       "categoria": 0,
       "espacos": 1,
       "componentes": "conhecimento",
-      "descricao": "Materiais para conjurar rituais de Conhecimento (p.129)."
+      "descricao": "Materiais para conjurar rituais de Conhecimento (p.129).",
+      "grupo": "paranormal",
+      "ref": "p.76"
     },
     {
       "id": "componentes_energia",
@@ -167,15 +211,657 @@
       "categoria": 0,
       "espacos": 1,
       "componentes": "energia",
-      "descricao": "Materiais para conjurar rituais de Energia (p.129)."
+      "descricao": "Materiais para conjurar rituais de Energia (p.129).",
+      "grupo": "paranormal",
+      "ref": "p.76"
     },
-    {"id": "granada_de_fragmentacao", "nome": "Granada de fragmentação", "categoria": 1, "espacos": 1, "consumivel": true, "ref": "p.74", "explosivo": {"raio": 6, "alcance": "medio", "dano": "8d6", "tipo_dano": "perfuracao", "resistencia": "reflexos", "dt_atributo": "agi", "ao_passar": "metade"}, "descricao": "Ação padrão, alcance médio: 8d6 de perfuração em quem estiver a 6 m do ponto (Reflexos DT Agi: metade)."},
-    {"id": "granada_incendiaria", "nome": "Granada incendiária", "categoria": 1, "espacos": 1, "consumivel": true, "ref": "p.74", "explosivo": {"raio": 6, "alcance": "medio", "dano": "6d6", "tipo_dano": "fogo", "condicao": "em_chamas", "resistencia": "reflexos", "dt_atributo": "agi", "ao_passar": "metade"}, "descricao": "Ação padrão, alcance médio: 6d6 de fogo e em chamas num raio de 6 m (Reflexos DT Agi: metade e sem chamas)."},
-    {"id": "granada_de_atordoamento", "nome": "Granada de atordoamento", "categoria": 0, "espacos": 1, "consumivel": true, "ref": "p.74", "explosivo": {"raio": 6, "alcance": "medio", "condicao": "atordoado", "rodadas": 1, "resistencia": "fortitude", "dt_atributo": "agi", "ao_passar_condicao": "ofuscado"}, "descricao": "Ação padrão, alcance médio: quem estiver a 6 m fica atordoado por 1 rodada (Fortitude DT Agi: só ofuscado)."},
-    {"id": "fertilizante", "nome": "Fertilizante", "categoria": 0, "espacos": 1, "consumivel": true, "contra": "dama_de_sangue", "descricao": "Item do jogo: jogado na Dama de Sangue, murcha a flor rosa."},
-    {"id": "agrotoxico", "nome": "Agrotóxico", "categoria": 0, "espacos": 1, "consumivel": true, "contra": "dama_de_sangue", "descricao": "Item do jogo: jogado na Dama de Sangue, murcha a flor vermelha."},
-    {"id": "bulbo_de_bravo_purpulis", "nome": "Bulbo de bravo purpulis", "categoria": 0, "espacos": 1, "consumivel": true, "contra": "dama_de_sangue", "descricao": "Item do jogo: a planta roxa que cresce nas pedras; em contato com a Dama de Sangue, murcha a flor roxa."},
-    {"id": "galao_de_agua", "nome": "Galão de água", "categoria": 0, "espacos": 1, "consumivel": true, "contra": "dama_de_sangue", "descricao": "Item do jogo: água corrente sobre a Dama de Sangue murcha a flor verde."}
+    {
+      "id": "granada_de_fragmentacao",
+      "nome": "Granada de fragmentação",
+      "categoria": 1,
+      "espacos": 1,
+      "consumivel": true,
+      "ref": "p.74",
+      "explosivo": {
+        "raio": 6,
+        "alcance": "medio",
+        "dano": "8d6",
+        "tipo_dano": "perfuracao",
+        "resistencia": "reflexos",
+        "dt_atributo": "agi",
+        "ao_passar": "metade"
+      },
+      "descricao": "Ação padrão, alcance médio: 8d6 de perfuração em quem estiver a 6 m do ponto (Reflexos DT Agi: metade).",
+      "grupo": "explosivo"
+    },
+    {
+      "id": "granada_incendiaria",
+      "nome": "Granada incendiária",
+      "categoria": 1,
+      "espacos": 1,
+      "consumivel": true,
+      "ref": "p.74",
+      "explosivo": {
+        "raio": 6,
+        "alcance": "medio",
+        "dano": "6d6",
+        "tipo_dano": "fogo",
+        "condicao": "em_chamas",
+        "resistencia": "reflexos",
+        "dt_atributo": "agi",
+        "ao_passar": "metade"
+      },
+      "descricao": "Ação padrão, alcance médio: 6d6 de fogo e em chamas num raio de 6 m (Reflexos DT Agi: metade e sem chamas).",
+      "grupo": "explosivo"
+    },
+    {
+      "id": "granada_de_atordoamento",
+      "nome": "Granada de atordoamento",
+      "categoria": 0,
+      "espacos": 1,
+      "consumivel": true,
+      "ref": "p.74",
+      "explosivo": {
+        "raio": 6,
+        "alcance": "medio",
+        "condicao": "atordoado",
+        "rodadas": 1,
+        "resistencia": "fortitude",
+        "dt_atributo": "agi",
+        "ao_passar_condicao": "ofuscado"
+      },
+      "descricao": "Ação padrão, alcance médio: quem estiver a 6 m fica atordoado por 1 rodada (Fortitude DT Agi: só ofuscado).",
+      "grupo": "explosivo"
+    },
+    {
+      "id": "fertilizante",
+      "nome": "Fertilizante",
+      "categoria": 0,
+      "espacos": 1,
+      "consumivel": true,
+      "contra": "dama_de_sangue",
+      "descricao": "jogado na Dama de Sangue, murcha a flor rosa.",
+      "grupo": "contra_criatura",
+      "ref": "p.200"
+    },
+    {
+      "id": "agrotoxico",
+      "nome": "Agrotóxico",
+      "categoria": 0,
+      "espacos": 1,
+      "consumivel": true,
+      "contra": "dama_de_sangue",
+      "descricao": "jogado na Dama de Sangue, murcha a flor vermelha.",
+      "grupo": "contra_criatura",
+      "ref": "p.200"
+    },
+    {
+      "id": "bulbo_de_bravo_purpulis",
+      "nome": "Bulbo de bravo purpulis",
+      "categoria": 0,
+      "espacos": 1,
+      "consumivel": true,
+      "contra": "dama_de_sangue",
+      "descricao": "a planta roxa que cresce nas pedras; em contato com a Dama de Sangue, murcha a flor roxa.",
+      "grupo": "contra_criatura",
+      "ref": "p.200"
+    },
+    {
+      "id": "galao_de_agua",
+      "nome": "Galão de água",
+      "categoria": 0,
+      "espacos": 1,
+      "consumivel": true,
+      "contra": "dama_de_sangue",
+      "descricao": "água corrente sobre a Dama de Sangue murcha a flor verde.",
+      "grupo": "contra_criatura",
+      "ref": "p.200"
+    },
+    {
+      "id": "balas_curtas",
+      "nome": "Balas curtas",
+      "categoria": 0,
+      "espacos": 1,
+      "grupo": "municao",
+      "municao": {
+        "tipo": "balas_curtas",
+        "cenas": 2
+      },
+      "ref": "p.69",
+      "descricao": "Pacote para pistolas, revólveres e submetralhadoras. Dura duas cenas."
+    },
+    {
+      "id": "balas_longas",
+      "nome": "Balas longas",
+      "categoria": 1,
+      "espacos": 1,
+      "grupo": "municao",
+      "municao": {
+        "tipo": "balas_longas",
+        "cenas": 1
+      },
+      "ref": "p.69",
+      "descricao": "Pacote para fuzis e metralhadoras. Dura uma cena."
+    },
+    {
+      "id": "cartuchos",
+      "nome": "Cartuchos",
+      "categoria": 1,
+      "espacos": 1,
+      "grupo": "municao",
+      "municao": {
+        "tipo": "cartuchos",
+        "cenas": 1
+      },
+      "ref": "p.69",
+      "descricao": "Cartuchos de chumbo para espingarda. Duram uma cena."
+    },
+    {
+      "id": "combustivel",
+      "nome": "Combustível",
+      "categoria": 1,
+      "espacos": 1,
+      "grupo": "municao",
+      "municao": {
+        "tipo": "combustivel",
+        "cenas": 1
+      },
+      "ref": "p.69",
+      "descricao": "Tanque para o lança-chamas. Dura uma cena."
+    },
+    {
+      "id": "flechas",
+      "nome": "Flechas",
+      "categoria": 0,
+      "espacos": 1,
+      "grupo": "municao",
+      "municao": {
+        "tipo": "flechas",
+        "missao": true
+      },
+      "ref": "p.69",
+      "descricao": "Aljava para arcos e bestas. As flechas são recolhidas depois de cada luta: dura a missão inteira."
+    },
+    {
+      "id": "foguete",
+      "nome": "Foguete",
+      "categoria": 1,
+      "espacos": 1,
+      "grupo": "municao",
+      "municao": {
+        "tipo": "foguete",
+        "disparos": 1
+      },
+      "ref": "p.69",
+      "descricao": "Um foguete de bazuca: cada um é um disparo."
+    },
+    {
+      "id": "kit_enganacao",
+      "nome": "Kit de Enganação",
+      "categoria": 0,
+      "espacos": 1,
+      "kit": "enganacao",
+      "grupo": "acessorio",
+      "ref": "p.73",
+      "descricao": "Maquiagem, perucas e documentos falsos para disfarces; sem ele, −5 em Enganação para se disfarçar."
+    },
+    {
+      "id": "traje_elegante",
+      "nome": "Traje elegante (vestimenta)",
+      "categoria": 1,
+      "espacos": 1,
+      "bonus_pericia": {
+        "diplomacia": 2
+      },
+      "grupo": "acessorio",
+      "ref": "p.73",
+      "descricao": "Vestimenta: terno ou vestido de festa. +2 em Diplomacia."
+    },
+    {
+      "id": "granada_de_fumaca",
+      "nome": "Granada de fumaça",
+      "categoria": 0,
+      "espacos": 1,
+      "consumivel": true,
+      "grupo": "explosivo",
+      "ref": "p.74",
+      "explosivo": {
+        "raio": 6,
+        "alcance": "medio",
+        "condicao": "cego",
+        "rodadas": 2
+      },
+      "descricao": "Ação padrão, alcance médio: fumaça espessa num raio de 6 m; quem estiver nela fica cego por 2 rodadas."
+    },
+    {
+      "id": "mina_antipessoal",
+      "nome": "Mina antipessoal",
+      "categoria": 1,
+      "espacos": 1,
+      "consumivel": true,
+      "grupo": "explosivo",
+      "ref": "p.74",
+      "pendente": "instalar e detonar a mina ainda não existem no combate",
+      "descricao": "Instalada no chão (ação completa, Tática DT 15), detona por controle remoto: 12d6 de perfuração num cone de 6 m (Reflexos DT Int: metade)."
+    },
+    {
+      "id": "algemas",
+      "nome": "Algemas",
+      "categoria": 0,
+      "espacos": 1,
+      "pendente": "prender alguém exige agarrar; os rendidos já saem algemados",
+      "descricao": "Par de algemas de aço. Prender quem não está indefeso exige agarrar e vencer outro teste; escapar, Acrobacia DT 30.",
+      "grupo": "operacional",
+      "ref": "p.74"
+    },
+    {
+      "id": "arpeu",
+      "nome": "Arpéu",
+      "categoria": 0,
+      "espacos": 1,
+      "bonus_pericia": {
+        "atletismo": 5
+      },
+      "condicao": "escalar com corda",
+      "descricao": "Gancho de aço para a ponta da corda (Pontaria DT 15 para prender). Com a corda, +5 em Atletismo para escalar.",
+      "grupo": "operacional",
+      "ref": "p.75"
+    },
+    {
+      "id": "bandoleira",
+      "nome": "Bandoleira",
+      "categoria": 1,
+      "espacos": 1,
+      "pendente": "o jogo não cobra ação para sacar itens",
+      "descricao": "Cinto de bolsos e alças: uma vez por rodada, saca ou guarda um item como ação livre.",
+      "grupo": "operacional",
+      "ref": "p.75"
+    },
+    {
+      "id": "bloqueador_de_sinal",
+      "nome": "Bloqueador de sinal",
+      "categoria": 1,
+      "espacos": 1,
+      "pendente": "ainda não há celulares a bloquear nas cenas",
+      "descricao": "Aparelho que suja a frequência de celulares: nenhum conecta em alcance médio.",
+      "grupo": "operacional",
+      "ref": "p.75"
+    },
+    {
+      "id": "corda",
+      "nome": "Corda",
+      "categoria": 0,
+      "espacos": 1,
+      "bonus_pericia": {
+        "atletismo": 5
+      },
+      "condicao": "descer ou subir com corda",
+      "descricao": "Dez metros de corda resistente: +5 em Atletismo para descer buracos e prédios, e serve para amarrar.",
+      "grupo": "operacional",
+      "ref": "p.75"
+    },
+    {
+      "id": "lanterna_tatica",
+      "nome": "Lanterna tática",
+      "categoria": 1,
+      "espacos": 1,
+      "uso_combate": {
+        "acao": "movimento",
+        "alcance": "curto",
+        "condicao": "ofuscado",
+        "rodadas": 1,
+        "imune_na_cena": true
+      },
+      "descricao": "Ilumina um cone de 9 m. Ação de movimento: luz nos olhos de alguém em alcance curto, que fica ofuscado por 1 rodada (e se acostuma pelo resto da cena).",
+      "grupo": "operacional",
+      "ref": "p.75"
+    },
+    {
+      "id": "mascara_de_gas",
+      "nome": "Máscara de gás",
+      "categoria": 0,
+      "espacos": 1,
+      "bonus_resistencia": {
+        "fortitude": 10,
+        "contra": "respiracao"
+      },
+      "descricao": "Máscara com filtro que cobre o rosto: +10 em Fortitude contra o que se respira (gases, miasmas, nuvens).",
+      "grupo": "operacional",
+      "ref": "p.76"
+    },
+    {
+      "id": "mochila_militar",
+      "nome": "Mochila militar",
+      "categoria": 1,
+      "espacos": 0,
+      "carga_extra": 2,
+      "descricao": "Mochila leve e de qualidade: não ocupa espaço e aumenta a carga em 2 espaços.",
+      "grupo": "operacional",
+      "ref": "p.76"
+    },
+    {
+      "id": "oculos_visao_termica",
+      "nome": "Óculos de visão térmica",
+      "categoria": 1,
+      "espacos": 1,
+      "ignora_camuflagem": true,
+      "descricao": "Eliminam a penalidade por camuflagem: o alvo encoberto não faz o golpe se perder.",
+      "grupo": "operacional",
+      "ref": "p.76"
+    },
+    {
+      "id": "pe_de_cabra",
+      "nome": "Pé de cabra",
+      "categoria": 0,
+      "espacos": 1,
+      "bonus_teste_forca": {
+        "arrombar": 5
+      },
+      "pendente": "o bônus de arrombar ainda não aparece nas cenas; em combate, use o bastão",
+      "descricao": "Barra de ferro: +5 em Força para arrombar portas. Em combate, vale um bastão.",
+      "grupo": "operacional",
+      "ref": "p.76"
+    },
+    {
+      "id": "pistola_de_dardos",
+      "nome": "Pistola de dardos",
+      "categoria": 1,
+      "espacos": 1,
+      "cargas": 2,
+      "recarga_item": "dardos",
+      "uso_combate": {
+        "acao": "padrao",
+        "alcance": "curto",
+        "ataque": "pontaria",
+        "condicao": "inconsciente",
+        "ate_fim_da_cena": true,
+        "resistencia": "fortitude",
+        "dt_atributo": "agi",
+        "ao_passar_condicoes": [
+          "desprevenido",
+          "lento"
+        ]
+      },
+      "descricao": "Dispara dardos com sonífero em alcance curto: quem é acertado desmaia até o fim da cena (Fortitude DT Agi: só desprevenido e lento por 1 rodada). Vem com 2 dardos.",
+      "grupo": "operacional",
+      "ref": "p.76"
+    },
+    {
+      "id": "dardos",
+      "nome": "Caixa de dardos",
+      "categoria": 0,
+      "espacos": 1,
+      "recarga_de": "pistola_de_dardos",
+      "cargas": 2,
+      "descricao": "Mais 2 dardos para a pistola de dardos.",
+      "grupo": "operacional",
+      "ref": "p.76"
+    },
+    {
+      "id": "pistola_sinalizadora",
+      "nome": "Pistola sinalizadora",
+      "categoria": 0,
+      "espacos": 1,
+      "cargas": 2,
+      "recarga_item": "sinalizadores",
+      "uso_combate": {
+        "acao": "padrao",
+        "alcance": "curto",
+        "ataque": "pontaria",
+        "dano": "2d6",
+        "tipo_dano": "fogo"
+      },
+      "descricao": "Dispara um sinalizador luminoso para chamar ajuda. Como arma: alcance curto, 2d6 de fogo. Vem com 2 cargas.",
+      "grupo": "operacional",
+      "ref": "p.76"
+    },
+    {
+      "id": "sinalizadores",
+      "nome": "Caixa de sinalizadores",
+      "categoria": 0,
+      "espacos": 1,
+      "recarga_de": "pistola_sinalizadora",
+      "cargas": 2,
+      "descricao": "Mais 2 cargas para a pistola sinalizadora.",
+      "grupo": "operacional",
+      "ref": "p.76"
+    },
+    {
+      "id": "soqueira",
+      "nome": "Soqueira",
+      "categoria": 0,
+      "espacos": 1,
+      "soqueira": {
+        "bonus_dano": 1
+      },
+      "descricao": "Metal entre os dedos: +1 no dano desarmado, que passa a ser letal.",
+      "grupo": "operacional",
+      "ref": "p.76"
+    },
+    {
+      "id": "spray_de_pimenta",
+      "nome": "Spray de pimenta",
+      "categoria": 1,
+      "espacos": 1,
+      "cargas": 2,
+      "gasta_ao_esvaziar": true,
+      "uso_combate": {
+        "acao": "padrao",
+        "alcance": "adjacente",
+        "condicao": "cego",
+        "rodadas": "1d4",
+        "resistencia": "fortitude",
+        "dt_atributo": "agi"
+      },
+      "descricao": "Ação padrão contra alguém ao lado: cego por 1d4 rodadas (Fortitude DT Agi evita). Dura dois usos.",
+      "grupo": "operacional",
+      "ref": "p.76"
+    },
+    {
+      "id": "taser",
+      "nome": "Taser",
+      "categoria": 1,
+      "espacos": 1,
+      "cargas": 2,
+      "gasta_ao_esvaziar": true,
+      "uso_combate": {
+        "acao": "padrao",
+        "alcance": "adjacente",
+        "dano": "1d6",
+        "tipo_dano": "eletricidade",
+        "condicao": "atordoado",
+        "rodadas": 1,
+        "resistencia": "fortitude",
+        "dt_atributo": "agi"
+      },
+      "descricao": "Ação padrão contra alguém ao lado: 1d6 de eletricidade e atordoado por 1 rodada (Fortitude DT Agi evita o atordoamento). A bateria dura dois usos.",
+      "grupo": "operacional",
+      "ref": "p.76"
+    },
+    {
+      "id": "traje_hazmat",
+      "nome": "Traje hazmat",
+      "categoria": 1,
+      "espacos": 2,
+      "resistencias": {
+        "quimico": 10
+      },
+      "bonus_resistencia": {
+        "todas": 5,
+        "contra": "ambiente"
+      },
+      "descricao": "Roupa impermeável de corpo inteiro: resistência a químico 10 e +5 contra efeitos do ambiente.",
+      "grupo": "operacional",
+      "ref": "p.76"
+    },
+    {
+      "id": "amarras_sangue",
+      "nome": "Amarras de Sangue",
+      "categoria": 2,
+      "espacos": 1,
+      "elemento": "sangue",
+      "grupo": "paranormal",
+      "ref": "p.76",
+      "uso_combate": {
+        "acao": "padrao",
+        "alcance": "curto",
+        "pe": 1,
+        "so_criatura_do_elemento": true,
+        "condicao": "paralisado",
+        "resistencia": "vontade",
+        "dt_atributo": "agi",
+        "rodadas": 1
+      },
+      "pendente": "a armadilha de 3×3 m e manter a criatura presa (1 PE por rodada)",
+      "descricao": "Cordas ou correntes do elemento, para prender criaturas que o temem. Laçar: ação padrão e 1 PE, alcance curto; a criatura fica paralisada até o seu próximo turno (Vontade DT Agi evita)."
+    },
+    {
+      "id": "amarras_morte",
+      "nome": "Amarras de Morte",
+      "categoria": 2,
+      "espacos": 1,
+      "elemento": "morte",
+      "grupo": "paranormal",
+      "ref": "p.76",
+      "uso_combate": {
+        "acao": "padrao",
+        "alcance": "curto",
+        "pe": 1,
+        "so_criatura_do_elemento": true,
+        "condicao": "paralisado",
+        "resistencia": "vontade",
+        "dt_atributo": "agi",
+        "rodadas": 1
+      },
+      "pendente": "a armadilha de 3×3 m e manter a criatura presa (1 PE por rodada)",
+      "descricao": "Cordas ou correntes do elemento, para prender criaturas que o temem. Laçar: ação padrão e 1 PE, alcance curto; a criatura fica paralisada até o seu próximo turno (Vontade DT Agi evita)."
+    },
+    {
+      "id": "amarras_conhecimento",
+      "nome": "Amarras de Conhecimento",
+      "categoria": 2,
+      "espacos": 1,
+      "elemento": "conhecimento",
+      "grupo": "paranormal",
+      "ref": "p.76",
+      "uso_combate": {
+        "acao": "padrao",
+        "alcance": "curto",
+        "pe": 1,
+        "so_criatura_do_elemento": true,
+        "condicao": "paralisado",
+        "resistencia": "vontade",
+        "dt_atributo": "agi",
+        "rodadas": 1
+      },
+      "pendente": "a armadilha de 3×3 m e manter a criatura presa (1 PE por rodada)",
+      "descricao": "Cordas ou correntes do elemento, para prender criaturas que o temem. Laçar: ação padrão e 1 PE, alcance curto; a criatura fica paralisada até o seu próximo turno (Vontade DT Agi evita)."
+    },
+    {
+      "id": "amarras_energia",
+      "nome": "Amarras de Energia",
+      "categoria": 2,
+      "espacos": 1,
+      "elemento": "energia",
+      "grupo": "paranormal",
+      "ref": "p.76",
+      "uso_combate": {
+        "acao": "padrao",
+        "alcance": "curto",
+        "pe": 1,
+        "so_criatura_do_elemento": true,
+        "condicao": "paralisado",
+        "resistencia": "vontade",
+        "dt_atributo": "agi",
+        "rodadas": 1
+      },
+      "pendente": "a armadilha de 3×3 m e manter a criatura presa (1 PE por rodada)",
+      "descricao": "Cordas ou correntes do elemento, para prender criaturas que o temem. Laçar: ação padrão e 1 PE, alcance curto; a criatura fica paralisada até o seu próximo turno (Vontade DT Agi evita)."
+    },
+    {
+      "id": "scanner_sangue",
+      "nome": "Scanner de manifestação de Sangue",
+      "categoria": 2,
+      "espacos": 1,
+      "elemento": "sangue",
+      "grupo": "paranormal",
+      "ref": "p.77",
+      "pendente": "mostrar no mapa a direção das manifestações",
+      "descricao": "Aparelho ligado a objetos amaldiçoados: gastando 1 PE por rodada, aponta a direção de tudo que é do elemento em alcance longo."
+    },
+    {
+      "id": "scanner_morte",
+      "nome": "Scanner de manifestação de Morte",
+      "categoria": 2,
+      "espacos": 1,
+      "elemento": "morte",
+      "grupo": "paranormal",
+      "ref": "p.77",
+      "pendente": "mostrar no mapa a direção das manifestações",
+      "descricao": "Aparelho ligado a objetos amaldiçoados: gastando 1 PE por rodada, aponta a direção de tudo que é do elemento em alcance longo."
+    },
+    {
+      "id": "scanner_conhecimento",
+      "nome": "Scanner de manifestação de Conhecimento",
+      "categoria": 2,
+      "espacos": 1,
+      "elemento": "conhecimento",
+      "grupo": "paranormal",
+      "ref": "p.77",
+      "pendente": "mostrar no mapa a direção das manifestações",
+      "descricao": "Aparelho ligado a objetos amaldiçoados: gastando 1 PE por rodada, aponta a direção de tudo que é do elemento em alcance longo."
+    },
+    {
+      "id": "scanner_energia",
+      "nome": "Scanner de manifestação de Energia",
+      "categoria": 2,
+      "espacos": 1,
+      "elemento": "energia",
+      "grupo": "paranormal",
+      "ref": "p.77",
+      "pendente": "mostrar no mapa a direção das manifestações",
+      "descricao": "Aparelho ligado a objetos amaldiçoados: gastando 1 PE por rodada, aponta a direção de tudo que é do elemento em alcance longo."
+    },
+    {
+      "id": "camera_aura",
+      "nome": "Câmera de aura paranormal",
+      "categoria": 2,
+      "espacos": 1,
+      "ref": "p.76",
+      "pendente": "revelar auras na investigação",
+      "descricao": "Câmera amaldiçoada com sigilos: uma foto (ação padrão e 1 PE) revela auras paranormais em pessoas e objetos, na cor do elemento.",
+      "grupo": "paranormal"
+    },
+    {
+      "id": "emissor_de_pulsos",
+      "nome": "Emissor de pulsos paranormais",
+      "categoria": 2,
+      "espacos": 1,
+      "ref": "p.77",
+      "pendente": "atrair e afastar criaturas no mapa",
+      "descricao": "Caixa coberta de sigilos (ação completa e 1 PE): atrai criaturas do elemento escolhido e afasta as do elemento oposto (Vontade DT Pre evita).",
+      "grupo": "paranormal"
+    },
+    {
+      "id": "escuta_de_ruidos",
+      "nome": "Escuta de ruídos paranormais",
+      "categoria": 2,
+      "espacos": 1,
+      "ref": "p.77",
+      "pendente": "o +5 para identificar criaturas",
+      "descricao": "Microfone que grava ruídos do Outro Lado por 24 horas (ação completa e 2 PE). Ouvir dá +5 em Ocultismo para identificar a criatura.",
+      "grupo": "paranormal"
+    },
+    {
+      "id": "medidor_de_membrana",
+      "nome": "Medidor de estabilidade da Membrana",
+      "categoria": 2,
+      "espacos": 1,
+      "ref": "p.77",
+      "pendente": "ler a Membrana do lugar no mapa",
+      "descricao": "Conjunto de medidores de temperatura, campo e tempo. Treinado em Ocultismo, avalia a Membrana de um lugar: leituras instáveis indicam entidade.",
+      "grupo": "paranormal"
+    }
   ],
   "acessorios_base": [
     {
@@ -184,7 +870,9 @@
       "categoria": 1,
       "espacos": 1,
       "acessorio": true,
-      "descricao": "Base para maldições de acessório."
+      "descricao": "Base para maldições de acessório.",
+      "grupo": "acessorio",
+      "ref": "p.73"
     },
     {
       "id": "anel",
@@ -192,7 +880,9 @@
       "categoria": 1,
       "espacos": 1,
       "acessorio": true,
-      "descricao": "Base para maldições de acessório."
+      "descricao": "Base para maldições de acessório.",
+      "grupo": "acessorio",
+      "ref": "p.73"
     }
   ],
   "maldicoes": {

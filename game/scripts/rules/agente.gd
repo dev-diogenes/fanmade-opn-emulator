@@ -69,6 +69,8 @@ var _dano_massivo := false       ## Escapar da Morte não vale contra dano massi
 var san_perdida := 0             ## Sanidade máxima perdida para sempre (Custo do Paranormal, Medo)
 var arma_id := ""                ## Arma empunhada ("" = desarmado)
 var equipamento: Array[String] = []   ## Ids requisitados para a missão (armas, proteção, itens)
+var municao_gasta: Dictionary = {}    ## tipo de munição -> cenas já gastas do pacote aberto (p.69)
+var cargas_gastas: Dictionary = {}    ## item de cargas (taser, spray, pistolas) -> cargas usadas
 var pe := 0
 var pe_temporario := 0           ## Gastos antes dos PE normais; somem no fim da cena
 var pe_maximo := 0
@@ -301,9 +303,8 @@ func atributo(atributo_id: String) -> int:
 func dados_da_pericia(pericia_id: String) -> int:
 	var attr_base := ruleset.atributo_da_pericia(pericia_id)
 	var d := atributo(attr_base) - penalidade_dados_atributo(attr_base)
-	var prot := protecao()
-	if not prot.is_empty() and attr_base in ["for", "agi"] and not tem_proficiencia(prot.get("proficiencia", "")):
-		d -= 2   # proteção sem proficiência: −2 dados em Força e Agilidade (p.72)
+	if attr_base in ["for", "agi"] and [protecao(), escudo()].any(func(p): return not p.is_empty() and not proficiente_com(p)):
+		d -= 2   # proteção ou escudo sem proficiência: −2 dados em Força e Agilidade (p.72)
 	if pericia_id == "reflexos" and (tem(Ser.DESPREVENIDO) or tem(Ser.SURPREENDIDO)):
 		d -= 1   # desprevenido: −1 dado em Reflexos (p.320)
 	return d
@@ -446,21 +447,148 @@ func patente() -> Dictionary:
 	return ruleset.patente_por_pp(pp)
 
 
-## Arma empunhada (ou ataque desarmado).
+## Arma empunhada (ou ataque desarmado). Sem pacote de munição, a arma de fogo ou de
+## disparo só serve de coronhada (p.69).
 func arma() -> Dictionary:
 	if arma_id != "" and arma_id in equipamento:
 		var e := ruleset.equipamento(arma_id)
 		if e.get("tipo", "") == "arma":
-			return e
+			return e if tem_municao(e) else coronhada(e)
 	return ruleset.arma("desarmado")
+
+
+## Coronhada (p.69): bater com a arma. 1d4 de impacto com arma leve ou de uma mão, 1d6 com a
+## de duas mãos.
+func coronhada(arma_base: Dictionary) -> Dictionary:
+	var duas := String(arma_base.get("empunhadura", "")) == "duas_maos"
+	return {"id": "coronhada", "base": arma_base.get("id", ""), "nome": "Coronhada (%s sem munição)" % arma_base.get("nome", "arma"),
+		"categoria": 0, "dano": "1d6" if duas else "1d4", "margem": 20, "multiplicador": 2, "tipo_dano": "impacto",
+		"pericia": "luta", "soma_forca": true, "ataque": "corpo_a_corpo", "espacos": 0, "tipo": "arma"}
+
+
+## O pacote de munição que alimenta a arma ("" se ela não usa munição ou se acabou).
+func pacote_de_municao(arma_base: Dictionary) -> String:
+	var tipo := String(arma_base.get("municao", ""))
+	if tipo == "":
+		return ""
+	for item_id in equipamento:
+		var m = ruleset.equipamento(item_id).get("municao")
+		if m is Dictionary and String(m.get("tipo", "")) == tipo:
+			return item_id
+	return ""
+
+
+func tem_municao(arma_base: Dictionary) -> bool:
+	return String(arma_base.get("municao", "")) == "" or pacote_de_municao(arma_base) != ""
+
+
+## Um disparo (p.69): o foguete se gasta na hora; os outros pacotes contam a cena, gasta no fim dela.
+func registrar_disparo(arma_base: Dictionary) -> void:
+	var pacote := pacote_de_municao(arma_base)
+	if pacote == "":
+		return
+	var m: Dictionary = ruleset.equipamento(pacote).municao
+	if int(m.get("disparos", 0)) > 0:
+		equipamento.erase(pacote)
+		return
+	var disparos: Dictionary = mods_cena.get("disparos", {})
+	disparos[String(m.tipo)] = true
+	mods_cena["disparos"] = disparos
+
+
+## Fim da cena: cada munição usada gasta uma cena do pacote aberto; no fim do pacote, ele sai
+## do inventário. Flechas duram a missão (recolhidas depois de cada luta).
+func _gastar_municao_da_cena() -> void:
+	for tipo in mods_cena.get("disparos", {}):
+		var pacote := pacote_de_municao({"municao": tipo})
+		if pacote == "":
+			continue
+		var cenas := int(ruleset.equipamento(pacote).municao.get("cenas", 0))
+		if cenas <= 0:
+			continue
+		municao_gasta[tipo] = int(municao_gasta.get(tipo, 0)) + 1
+		if int(municao_gasta[tipo]) >= cenas:
+			equipamento.erase(pacote)
+			municao_gasta.erase(tipo)
+
+
+## Cargas (p.75-76): taser e spray duram dois usos e acabam; as pistolas de dardos e
+## sinalizadora vêm com duas e se recarregam com a caixa.
+func cargas_restantes(item_id: String) -> int:
+	var e := ruleset.equipamento(item_id)
+	if not e.has("cargas") or not tem_item(item_id):
+		return 0
+	var n := equipamento.count(item_id) * int(e.cargas) - int(cargas_gastas.get(item_id, 0))
+	var caixa := String(e.get("recarga_item", ""))
+	if caixa != "":
+		n += equipamento.count(caixa) * int(ruleset.equipamento(caixa).get("cargas", 0))
+	return n
+
+
+func usar_carga(item_id: String) -> bool:
+	if cargas_restantes(item_id) <= 0:
+		return false
+	var e := ruleset.equipamento(item_id)
+	var gastas := int(cargas_gastas.get(item_id, 0))
+	if gastas >= equipamento.count(item_id) * int(e.cargas):   # acabou a carga da arma: abre uma caixa
+		equipamento.erase(String(e.recarga_item))
+		gastas -= int(ruleset.equipamento(String(e.recarga_item)).get("cargas", 0))
+	gastas += 1
+	if e.get("gasta_ao_esvaziar", false) and gastas >= int(e.cargas):
+		equipamento.erase(item_id)   # a bateria acabou
+		gastas -= int(e.cargas)
+	if gastas > 0:
+		cargas_gastas[item_id] = gastas
+	else:
+		cargas_gastas.erase(item_id)
+	return true
 
 
 func protecao() -> Dictionary:
 	for item_id in equipamento:
 		var e := ruleset.equipamento(item_id)
-		if e.get("tipo", "") == "protecao":
+		if e.get("tipo", "") == "protecao" and not e.get("escudo", false):
 			return e
 	return {}
+
+
+## Escudo (p.72): numa mão, +2 na Defesa somado ao da proteção; conta como proteção pesada
+## para a proficiência.
+func escudo() -> Dictionary:
+	for item_id in equipamento:
+		var e := ruleset.equipamento(item_id)
+		if e.get("escudo", false):
+			return e
+	return {}
+
+
+## O escudo só protege com a outra mão livre: não com arma de duas mãos.
+func escudo_em_uso() -> bool:
+	return not escudo().is_empty() and not usa_duas_maos(arma())
+
+
+## A arma pede as duas mãos? A katana fica numa mão para quem é veterano em Luta (p.68).
+func usa_duas_maos(a: Dictionary) -> bool:
+	if String(a.get("empunhadura", "")) != "duas_maos":
+		return false
+	var pericia_v := String(a.get("uma_mao_se_veterano", ""))
+	return pericia_v == "" or not grau(pericia_v) in ["veterano", "expert"]
+
+
+## Óculos de visão térmica (p.76): a camuflagem não faz o golpe se perder.
+func ignora_camuflagem() -> bool:
+	return equipamento.any(func(i): return ruleset.equipamento(i).get("ignora_camuflagem", false))
+
+
+## Bônus de item em testes de resistência contra efeitos marcados (máscara de gás: o que se
+## respira; traje hazmat: o ambiente). Itens não acumulam: vale o maior.
+func bonus_contra(tags: Array, pericia_id: String) -> int:
+	var melhor := 0
+	for item_id in equipamento:
+		var b: Dictionary = ruleset.equipamento(item_id).get("bonus_resistencia", {})
+		if not b.is_empty() and String(b.get("contra", "")) in tags:
+			melhor = maxi(melhor, int(b.get(pericia_id, b.get("todas", 0))))
+	return melhor
 
 
 ## Espaços de carga: 5 por ponto de Força (2 com Força 0), p.63.
@@ -469,7 +597,10 @@ func capacidade_carga() -> int:
 	var forca := atributo("for")
 	for e in efeitos("carga_soma_atributo"):
 		forca += atributo(e.atributo)
-	return int(regra.get("espacos_com_forca_zero", 2)) if forca <= 0 else forca * int(regra.get("espacos_por_forca", 5))
+	var extra := 0
+	for item_id in equipamento:
+		extra = maxi(extra, int(ruleset.equipamento(item_id).get("carga_extra", 0)))   # mochila militar (p.76)
+	return extra + (int(regra.get("espacos_com_forca_zero", 2)) if forca <= 0 else forca * int(regra.get("espacos_por_forca", 5)))
 
 
 func espacos_usados() -> int:
@@ -495,7 +626,7 @@ func consumir_item(item_id: String) -> bool:
 	return true
 
 
-## Espaços que uma lista de itens ocupa (p.53).
+## Espaços que uma lista de itens ocupa (p.63).
 func espacos_de(lista: Array) -> int:
 	var total := 0
 	for item_id in lista:
@@ -504,14 +635,17 @@ func espacos_de(lista: Array) -> int:
 
 
 ## Por que este agente não pode pôr `item_id` numa requisição que já tem `lista` (docs/64,
-## p.51-53): a patente não libera a categoria, a cota da categoria acabou, passaria do dobro
+## p.61-63): a patente não libera a categoria, a cota da categoria acabou, passaria do dobro
 ## da carga, já tem uma proteção, ou é amaldiçoado antes de Agente Especial. "" = pode.
-func motivo_bloqueio(item_id: String, lista: Array) -> String:
+## `mais_uma`: pedir outra unidade de um item que já está na lista (munição, granadas, caixas).
+func motivo_bloqueio(item_id: String, lista: Array, mais_uma: bool = false) -> String:
 	var e := ruleset.equipamento(item_id)
 	if e.is_empty():
 		return "Item desconhecido."
-	if item_id in lista:
+	if item_id in lista and not mais_uma:
 		return ""
+	if item_id in lista and not Ruleset.empilhavel(e):
+		return "Basta um."
 	var cat := int(e.get("categoria", 0))
 	var romano: String = ["0", "I", "II", "III", "IV"][clampi(cat, 0, 4)]
 	if cat > 0:
@@ -523,27 +657,56 @@ func motivo_bloqueio(item_id: String, lista: Array) -> String:
 			return "Já leva %d de %d itens de categoria %s." % [usados, limite, romano]
 	if e.has("maldicoes") and pp < int(ruleset.cfg_maldicoes().get("patente_minima_pp", 50)):
 		return "Itens amaldiçoados só a partir de Agente Especial."
-	if e.get("tipo", "") == "protecao" and lista.any(func(i): return ruleset.equipamento(i).get("tipo", "") == "protecao"):
-		return "Só dá para vestir uma proteção."
+	var eh_escudo: bool = e.get("escudo", false)
+	if e.get("tipo", "") == "protecao" and lista.any(func(i): return ruleset.equipamento(i).get("tipo", "") == "protecao" and ruleset.equipamento(i).get("escudo", false) == eh_escudo):
+		return "Só dá para levar um escudo." if eh_escudo else "Só dá para vestir uma proteção."
 	var maximo := capacidade_carga() * int(ruleset.regra_carga().get("maximo_multiplicador", 2))
 	if espacos_de(lista) + int(e.get("espacos", 1)) > maximo:
 		return "Passaria da carga máxima (%d espaços)." % maximo
 	return ""
 
 
-## Aviso que não impede a requisição: arma ou proteção sem proficiência (p.53 e p.72).
-func aviso_item(item_id: String) -> String:
+## Avisos que não impedem a requisição: sem proficiência (p.63 e p.72) ou arma sem munição
+## na lista (p.69).
+func aviso_item(item_id: String, lista: Array = []) -> String:
 	var e := ruleset.equipamento(item_id)
-	var prof := String(e.get("proficiencia", ""))
+	var avisos := PackedStringArray()
+	if not proficiente_com(e):
+		avisos.append("Sem proficiência: −2 dados no ataque." if e.get("tipo", "") == "arma" else "Sem proficiência: −2 dados em Força e Agilidade.")
+	var tipo := String(e.get("municao", "")) if e.get("municao") is String else ""
+	if tipo != "" and not _lista_tem_municao(lista if not lista.is_empty() else Array(equipamento), tipo):
+		avisos.append("Sem %s na requisição: a arma só serve de coronhada." % String(ruleset.equipamento(tipo).get("nome", tipo)).to_lower())
+	return "\n".join(avisos)
+
+
+func _lista_tem_municao(lista: Array, tipo: String) -> bool:
+	for i in lista:
+		var m = ruleset.equipamento(i).get("municao")
+		if m is Dictionary and String(m.get("tipo", "")) == tipo:
+			return true
+	return false
+
+
+## Proficiência com um item (p.63): os poderes de "armas táticas de fogo" e "armas táticas
+## exceto de fogo" valem para as armas táticas certas.
+func proficiente_com(item: Dictionary) -> bool:
+	var prof := String(item.get("proficiencia", ""))
 	if prof == "" or tem_proficiencia(prof):
-		return ""
-	return "Sem proficiência: −2 dados no ataque." if e.get("tipo", "") == "arma" else "Sem proficiência: −2 dados em Força e Agilidade."
+		return true
+	if prof == "armas_taticas":
+		return tem_proficiencia("armas_taticas_fogo" if String(item.get("ataque", "")) == "fogo" else "armas_taticas_exceto_fogo")
+	return false
 
 
-## Arma sem proficiência (p.53): −2 dados nos testes de ataque com ela.
+## Arma sem proficiência (p.63): −2 dados nos testes de ataque com ela.
 func dados_sem_proficiencia(arma: Dictionary) -> int:
-	var prof := String(arma.get("proficiencia", ""))
-	return 0 if prof == "" or tem_proficiencia(prof) else 2
+	return 0 if proficiente_com(arma) else 2
+
+
+## Dados de uma perícia com outro atributo (arma ágil: Agilidade no lugar da Força, p.69).
+func dados_com_atributo(pericia_id: String, atributo_id: String) -> int:
+	var base := ruleset.atributo_da_pericia(pericia_id)
+	return dados_da_pericia(pericia_id) - (atributo(base) - penalidade_dados_atributo(base)) + (atributo(atributo_id) - penalidade_dados_atributo(atributo_id))
 
 
 ## Erros de uma requisição de equipamento para a patente atual (p.61-63).
@@ -553,6 +716,7 @@ func validar_equipamento(lista: Array) -> Array[String]:
 	var por_categoria: Dictionary = {}
 	var espacos := 0
 	var protecoes := 0
+	var escudos := 0
 	for item_id in lista:
 		var e := ruleset.equipamento(item_id)
 		if e.is_empty():
@@ -562,8 +726,10 @@ func validar_equipamento(lista: Array) -> Array[String]:
 		if cat > 0:
 			por_categoria[cat] = int(por_categoria.get(cat, 0)) + 1
 		espacos += int(e.get("espacos", 1))
-		if e.tipo == "protecao":
+		if e.tipo == "protecao" and not e.get("escudo", false):
 			protecoes += 1
+		if e.get("escudo", false):
+			escudos += 1
 		if e.has("maldicoes") and pp < int(ruleset.cfg_maldicoes().get("patente_minima_pp", 50)):
 			erros.append("Itens amaldiçoados só são liberados a partir de Agente Especial: %s" % e.nome)
 	for cat in por_categoria:
@@ -572,6 +738,8 @@ func validar_equipamento(lista: Array) -> Array[String]:
 			erros.append("A patente %s libera %d item(ns) de categoria %s (pediu %d)" % [patente().get("nome", "?"), limite, ["0", "I", "II", "III", "IV"][cat], por_categoria[cat]])
 	if protecoes > 1:
 		erros.append("Só dá para vestir uma proteção")
+	if escudos > 1:
+		erros.append("Só dá para levar um escudo")
 	var maximo := capacidade_carga() * int(ruleset.regra_carga().get("maximo_multiplicador", 2))
 	if espacos > maximo:
 		erros.append("Carga máxima é %d espaços (pediu %d)" % [maximo, espacos])
@@ -609,6 +777,7 @@ func para_dicionario() -> Dictionary:
 		"trilha_versatil": trilha_versatil, "sem_poder_origem": sem_poder_origem,
 		"transicao_mundano": transicao_mundano.duplicate(),
 		"pp": pp, "arma": arma_id, "equipamento": Array(equipamento),
+		"municao_gasta": municao_gasta.duplicate(), "cargas_gastas": cargas_gastas.duplicate(),
 		"rituais": Array(rituais), "san_perdida": san_perdida,
 		"poderes_paranormais": poderes_paranormais.duplicate(true), "afinidade": afinidade,
 		"afinidade_escolhida": afinidade_escolhida,
@@ -681,6 +850,10 @@ static func de_dicionario(p_ruleset: Ruleset, d: Dictionary) -> Agente:
 	a.arma_id = d.get("arma", "")
 	for x in d.get("equipamento", []):
 		a.equipamento.append(x)
+	for k in d.get("municao_gasta", {}):
+		a.municao_gasta[k] = int(d.municao_gasta[k])
+	for k in d.get("cargas_gastas", {}):
+		a.cargas_gastas[k] = int(d.cargas_gastas[k])
 	a.recalcular_maximos(true)
 	a.pv = int(d.get("pv", a.pv_maximo))
 	a.pe = int(d.get("pe", a.pe_maximo))
@@ -698,6 +871,8 @@ func defesa() -> int:
 	var d := ruleset.defesa_base(atributos) + _soma_efeitos("bonus_defesa") + ajustes_de_defesa()
 	# Armadura de Sangue não acumula com proteção: vale a maior (p.135)
 	d += maxi(int(protecao().get("defesa", 0)), efeito_ritual("defesa_ritual"))
+	if escudo_em_uso():
+		d += int(escudo().get("defesa", 0))   # escudo: soma com a proteção (p.72)
 	if sobrecarregado():
 		d += int(ruleset.regra_carga().get("sobrecarga", {}).get("defesa", 0))
 	if tem(Ser.MACHUCADO) and tem_habilidade("inquebravel"):
@@ -715,6 +890,12 @@ func resistencia(tipo_dano: String) -> int:
 	if tem(Ser.MACHUCADO) and tem_habilidade("inquebravel"):
 		total += 5   # Inquebrável: RD 5 contra qualquer dano enquanto machucado
 	total += int(protecao().get("resistencias", {}).get(tipo_dano, 0))
+	var do_item := 0
+	for item_id in equipamento:
+		var e := ruleset.equipamento(item_id)
+		if e.get("tipo", "") == "item":
+			do_item = maxi(do_item, int(e.get("resistencias", {}).get(tipo_dano, 0)))   # traje hazmat (p.76)
+	total += do_item
 	for e in efeitos("resistencia_todas"):
 		total += int(e.get("valor_pesada", e.valor)) if protecao().get("id", "") == "protecao_pesada" or protecao().get("base", "") == "protecao_pesada" else int(e.valor)
 	return total
@@ -797,6 +978,7 @@ func ganhar_pe_temporario(quantidade: int) -> void:
 
 
 func encerrar_cena() -> void:
+	_gastar_municao_da_cena()
 	_insanidade_na_cena = false
 	usos_na_cena.clear()
 	pe_temporario = 0
@@ -1056,13 +1238,30 @@ func modificar_ataque(arma: Dictionary, alvo: Ser) -> Dictionary:
 
 
 ## Arma ajustada por poderes (ex.: Artista Marcial muda o ataque desarmado).
+## Também: soqueira no desarmado (p.76), o dano de duas mãos das armas versáteis quando não há
+## escudo (p.68) e a Agilidade no lugar da Força nas armas ágeis, se ela for maior (p.69).
 func arma_efetiva(arma: Dictionary) -> Dictionary:
+	var a := arma
 	if arma.get("id", "") == "desarmado" and not efeitos("artista_marcial").is_empty():
-		var a := arma.duplicate()
+		a = arma.duplicate()
 		a.dano = "1d10" if nex >= 70 else ("1d8" if nex >= 35 else "1d6")
 		a.nao_letal = false
-		return a
-	return arma
+	if a.get("id", "") == "desarmado":
+		for item_id in equipamento:
+			var sq: Dictionary = ruleset.equipamento(item_id).get("soqueira", {})
+			if not sq.is_empty():
+				a = a.duplicate()
+				var d := Dados.interpretar(String(a.dano))
+				a.dano = "%dd%d+%d" % [int(d.quantidade), int(d.faces), int(d.bonus) + int(sq.get("bonus_dano", 1))]
+				a.nao_letal = false
+				break
+	if a.has("dano_duas_maos") and escudo().is_empty():
+		a = a.duplicate()
+		a.dano = a.dano_duas_maos
+	if a.get("agil", false) and atributo("agi") > atributo("for"):
+		a = a.duplicate()
+		a["atributo_ataque"] = "agi"
+	return a
 
 
 ## Custo e bônus do Ataque Especial (combatente) para `bonus_ataque` + `bonus_dano`.

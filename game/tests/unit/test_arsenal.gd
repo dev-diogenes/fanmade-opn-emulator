@@ -1,6 +1,6 @@
 extends GutTest
 ## Arsenal por agente (docs/64): o que cada um pode requisitar pela patente (itens por
-## categoria, p.52) e pela carga (5 espaços por Força, p.53), e a proficiência das armas.
+## categoria, p.62) e pela carga (5 espaços por Força, p.63), e a proficiência das armas.
 
 var rs: RulesetOp2022
 
@@ -26,7 +26,7 @@ func test_recruta_nao_tem_categoria_dois():
 	var a := _agente(2)
 	var item := _da_categoria(2)
 	assert_ne(item, "")
-	assert_string_contains(a.motivo_bloqueio(item, []), "ainda não libera", "Recruta: só categoria I (p.52)")
+	assert_string_contains(a.motivo_bloqueio(item, []), "ainda não libera", "Recruta: só categoria I (p.62)")
 	a.pp = 20   # Operador: um de categoria II
 	assert_eq(a.motivo_bloqueio(item, []), "")
 
@@ -44,7 +44,7 @@ func test_cota_da_categoria_um():
 
 func test_carga_pela_forca():
 	var fraco := _agente(0)
-	assert_eq(fraco.capacidade_carga(), 2, "Força 0: 2 espaços (p.53)")
+	assert_eq(fraco.capacidade_carga(), 2, "Força 0: 2 espaços (p.63)")
 	var forte := _agente(2)
 	assert_eq(forte.capacidade_carga(), 10)
 	var pesada := "protecao_pesada"   # 5 espaços, categoria II
@@ -71,5 +71,5 @@ func test_arma_sem_proficiencia_avisa_e_custa_dois_dados():
 	assert_string_contains(esp.aviso_item(tatica), "−2 dados", "especialista não é proficiente em armas táticas")
 	assert_eq(esp.dados_sem_proficiencia(rs.equipamento(tatica)), 2)
 	var comb := _agente(2, "combatente")
-	assert_eq(comb.aviso_item(tatica), "", "combatente é proficiente (p.53)")
+	assert_eq(comb.aviso_item(tatica), "", "combatente é proficiente (p.63)")
 	assert_eq(comb.dados_sem_proficiencia(rs.equipamento(tatica)), 0)

@@ -237,6 +237,11 @@ func itens_gerais() -> Array:
 	return dados.get("equipamentos", {}).get("itens", [])
 
 
+## Itens que se pede mais de uma unidade: munição, consumíveis e caixas de recarga.
+static func empilhavel(e: Dictionary) -> bool:
+	return e.get("consumivel", false) or e.get("municao") is Dictionary or e.has("recarga_de") or e.get("gasta_ao_esvaziar", false)
+
+
 func lista_armas() -> Array:
 	return dados.get("armas", {}).get("armas", []).filter(func(a): return a.id != "desarmado")
 

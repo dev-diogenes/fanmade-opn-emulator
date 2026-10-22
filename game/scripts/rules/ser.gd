@@ -40,7 +40,10 @@ const ASFIXIADO := "asfixiado"  ## Afogar em Sangue (Mulher Afogada)
 const EM_CHAMAS := "em_chamas"  ## p.320: 1d6 de fogo no início do turno; ação padrão para apagar
 const FASCINADO := "fascinado"  ## p.321: não age (no jogo, enquanto estiver agarrado pelo anjo)
 const CONFUSO := "confuso"      ## p.320: age de modo aleatório (no jogo: perde o turno, exceto com 6 no 1d6)
-const LENTO := "lento"
+const LENTO := "lento"           ## p.321: deslocamento pela metade
+## p.320: desprevenido e lento, −OO em Agilidade e Força, e seus alvos têm camuflagem total
+## (spray de pimenta, granada de fumaça)
+const CEGO := "cego"
 const PARALISADO_ := "paralisado"           ## Imortalidade (esqueleto de Lodo, enraizado): desfeito, mas volta
 ## Condições mentais e de medo (p.320-321): criaturas paranormais são imunes (p.190)
 const CONDICOES_MENTAIS := ["abalado", "apavorado", "alquebrado", "atordoado", "confuso", "esmorecido", "fascinado", "frustrado", "pasmo"]
@@ -128,7 +131,8 @@ func deslocamento_m() -> float:
 func deslocamento_quadrados() -> int:
 	if tem(CAIDO):
 		return mini(1, int(deslocamento_m() / 1.5))   # caído: 1,5 m (p.310)
-	return int(deslocamento_m() / 1.5)
+	var q := int(deslocamento_m() / 1.5)
+	return maxi(1, q / 2) if tem(LENTO) and q > 0 else q   # lento: metade (p.321)
 
 
 ## Ajustes comuns a todos os seres: temporários, de cena e condições (p.89, p.320).
@@ -166,6 +170,8 @@ func penalidade_dados_atributo(atributo_id: String) -> int:
 		p += 2
 	elif tem(ABALADO):
 		p += 1
+	if tem(CEGO) and atributo_id in ["agi", "for"]:
+		p += 2   # cego: −OO em Agilidade e Força (p.320)
 	return p + int(mods_cena.get("penalidade_aura", 0))   # Aura Manifestada (lembrado)
 
 
@@ -198,6 +204,11 @@ func aplicar_condicao(condicao: String, rodadas: int = 0) -> void:
 	condicoes[condicao] = true
 	if rodadas > 0:
 		duracoes[condicao] = rodadas
+
+
+## Bônus de equipamento em testes de resistência contra efeitos marcados ("respiracao", "ambiente").
+func bonus_contra(_tags: Array, _pericia_id: String) -> int:
+	return 0
 
 
 func esta_indefeso() -> bool:
@@ -247,7 +258,9 @@ func resistencia(tipo_dano: String) -> int:
 # --- Estado ----------------------------------------------------------------
 
 func tem(condicao: String) -> bool:
-	return condicoes.has(condicao)
+	if condicoes.has(condicao):
+		return true
+	return condicoes.has(CEGO) and (condicao == DESPREVENIDO or condicao == LENTO)   # cego (p.320)
 
 
 func esta_fora_de_combate() -> bool:
@@ -374,7 +387,7 @@ func encerrar_cena() -> void:
 	mods_cena.clear()
 	defesa_temporaria = 0
 	penalidade_ataque_temporaria = 0
-	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL, FATIGADO, ATORDOADO, PASMO, ABALADO, APAVORADO, ENJOADO, AGARRADO, CAIDO, OFUSCADO, SEM_CURA, SANGRANDO, EM_CHAMAS, CONFUSO, ASFIXIADO]:
+	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL, FATIGADO, ATORDOADO, PASMO, ABALADO, APAVORADO, ENJOADO, AGARRADO, CAIDO, OFUSCADO, SEM_CURA, SANGRANDO, EM_CHAMAS, CONFUSO, ASFIXIADO, CEGO, LENTO]:
 		condicoes.erase(c)   # condições terminam no fim da cena (p.321)
 	duracoes.clear()
 	rituais_ativos.clear()

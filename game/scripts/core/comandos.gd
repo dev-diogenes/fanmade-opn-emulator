@@ -8,7 +8,7 @@ extends RefCounted
 
 const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar", "deduzir", "interludio", "relatar", "pesquisa"]
 const ACOES_INVESTIGACAO := ["examinar", "procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair", "deduzir", "relatar"]
-const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair",
+const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "usar", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair",
 	"socorrer", "acalmar", "manobra", "levantar", "pegar_arma"]
 ## Modo Mestre (Fase 8.3): valem em qualquer tela, só do peer do mestre
 const ACOES_MESTRE := ["narrar", "membrana", "revelar", "encontro", "evento", "limpar", "curar", "ferir", "sanidade"]
@@ -214,6 +214,11 @@ static func aplicar_combate(c: Combate, armas: Dictionary, cmd: Dictionary) -> D
 				return {"ok": false, "erro": "alvo inválido"}
 			var cura := c.usar_item(ator as Agente, String(cmd.item), alvo)
 			return {"ok": cura >= 0, "cura": cura, "alvo": alvo}
+		"usar":   # itens de combate do livro: taser, spray, lanterna, dardos… (docs/67)
+			var alvo_u := ser(c, cmd.get("alvo", -1))
+			if not ator is Agente:
+				return {"ok": false, "erro": "só agentes usam itens"}
+			return c.usar_item_combate(ator as Agente, String(cmd.get("item", "")), alvo_u)
 		"decifrar":
 			var criatura := ser(c, cmd.get("alvo", -1))
 			if not ator is Agente or not criatura is Ameaca:

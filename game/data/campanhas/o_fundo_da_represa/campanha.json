@@ -64,7 +64,8 @@
       ],
       "equipamento": [
         "pistola",
-        "kit_medicina"
+        "kit_medicina",
+        "balas_curtas"
       ],
       "arma": "pistola"
     }

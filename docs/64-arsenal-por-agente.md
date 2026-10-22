@@ -1,16 +1,16 @@
 # Arsenal por agente
 
 > Status: **v0.1**, 22/10/2026. Pedido do dono do projeto: cada agente só requisita o que a patente e a carga deixam, pelo livro. As regras do livro:
-> - **Patente:** itens por categoria, Tabela 3.1 (p.52).
-> - **Capacidade de carga:** espaços de itens (p.53).
-> - **Proficiência:** armas (p.53) e proteções (p.72).
+> - **Patente:** itens por categoria, Tabela 3.1 (p.62).
+> - **Capacidade de carga:** espaços de itens (p.63).
+> - **Proficiência:** armas (p.63) e proteções (p.72).
 
 ## O problema
 
 - **Tudo para todos:** a aba Arsenal mostrava o catálogo inteiro para todos.
 - **O agente:** quem se equipava era escolhido em outra aba.
 - **O limite:** só aparecia como erro depois de clicar em Requisitar.
-- **A proficiência:** atacar com arma sem proficiência não custava nada, mas o livro pede −2 dados (p.53).
+- **A proficiência:** atacar com arma sem proficiência não custava nada, mas o livro pede −2 dados (p.63).
 
 ## O que mudou
 
@@ -20,7 +20,7 @@
 
 **À direita:**
 - **Cotas da patente** (Tabela 3.1): "Cat. I 1/2", "Cat. II —"…
-- **Carga** (p.53):
+- **Carga** (p.63):
   - **capacidade:** 5 espaços por ponto de Força, ou 2 com Força 0;
   - **na barra:** fica âmbar quando passa da capacidade, com o aviso "sobrecarregado: −5 Defesa, −3 m";
   - **teto:** o dobro da capacidade.
@@ -44,12 +44,12 @@
 
 ### A proficiência no combate
 
-Atacar com uma arma sem proficiência agora custa **−2 dados** (p.53), no ataque e na chance mostrada nos alvos. Exemplo: um especialista com arma tática. A penalidade da proteção sem proficiência (p.72) já existia.
+Atacar com uma arma sem proficiência agora custa **−2 dados** (p.63), no ataque e na chance mostrada nos alvos. Exemplo: um especialista com arma tática. A penalidade da proteção sem proficiência (p.72) já existia.
 
 ## O que fica para depois
 
 - **O catálogo completo do livro:** as armas, as munições, o equipamento geral e os itens paranormais. Faz parte da revisão de itens, rituais e habilidades pelo livro, a próxima tarefa deste pedido.
-- **Mãos:** empunhar no máximo dois itens (p.53), mostrado na ficha.
+- **Mãos:** empunhar no máximo dois itens (p.63), mostrado na ficha.
 
 ## Onde está
 

@@ -266,6 +266,7 @@ func test_lancinante_dano_extra():
 func test_predadora_dobra_a_margem():
 	var a := _agente()
 	a.equipamento.append("pistola_predadora")
+	a.equipamento.append("balas_curtas")
 	a.arma_id = "pistola_predadora"
 	var c := Combate.new(rs, Dados.new(1))
 	c.dados.forcar([15, 1, 3, 3])   # pistola margem 18 -> 15: crítico com 15

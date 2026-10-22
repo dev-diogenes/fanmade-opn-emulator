@@ -66,9 +66,10 @@
 | [61-pesquisa-rumores-e-som.md](61-pesquisa-rumores-e-som.md) | Ligar para a Pesquisa (dicas em três camadas, cada uma mais cara), o mapa de rumores (fios das pistas até um "?" sobre a região do covil) e o som em duas camadas (piano da Realidade que some quando o Outro Lado cresce) |
 | [62-rotina-da-ordem.md](62-rotina-da-ordem.md) | A rotina da Ordem: três sinais da rede com confiança e alarme falso, o briefing num ponto de encontro de fachada com senha e a varredura do covil (o que fica para trás volta na missão seguinte) |
 | [63-credencial-contencao-e-planta.md](63-credencial-contencao-e-planta.md) | A credencial de fachada da Delegacia de Ocorrências Atípicas (+5 e depoimento firme, queima no terceiro uso), os cultistas na contenção (interrogatório vale uma pista na missão seguinte) e a planta da Base com nove salas, laboratório incluído |
-| [64-arsenal-por-agente.md](64-arsenal-por-agente.md) | O arsenal de cada agente: cotas da patente por categoria, carga pela Força (5 espaços por ponto), itens bloqueados com o motivo e −2 dados para arma sem proficiência (p.52-53) |
+| [64-arsenal-por-agente.md](64-arsenal-por-agente.md) | O arsenal de cada agente: cotas da patente por categoria, carga pela Força (5 espaços por ponto), itens bloqueados com o motivo e −2 dados para arma sem proficiência (p.62-63) |
 | [65-base-caminhavel.md](65-base-caminhavel.md) | A Base como lugar: o bar de fachada em 3D com WASD, nove seções que levam às abas ou abrem o bilhete do serviço (laboratório, contenção, enfermaria, ocultismo), a partir de uma crítica de design |
 | [66-simbolos-dos-testes.md](66-simbolos-dos-testes.md) | Um símbolo para cada atributo e perícia: no cabeçalho da rolagem (a perícia e o atributo) e no canto de cada d20 e dos slots do último teste |
+| [67-arsenal-do-livro.md](67-arsenal-do-livro.md) | O equipamento do livro: as 34 armas da Tabela 3.3 com as regras delas (ágil, rajada, recarga, explosão, linha), munição por cena, escudo, itens de combate com cargas, a condição cego e o arsenal com filtros por grupo |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

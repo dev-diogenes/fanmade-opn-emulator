@@ -51,6 +51,7 @@ var _btn_apagar: Button
 var _btn_socorrer: Button
 var _btn_manobra: MenuButton
 var _chk_nl: Button
+var _chk_rajada: Button   ## armas automáticas (p.69): −1 dado no ataque, +1 dado de dano
 var _btn_levantar: Button
 var _btn_pegar: Button
 var _manobra_sel := ""   ## "agarrar", "derrubar", "desarmar" ou "empurrar" (docs/39)
@@ -389,6 +390,11 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 		"contra":
 			if not res.ok:
 				_registrar("[color=#eda64a]Precisa estar ao lado da criatura (e de uma ação padrão).[/color]")
+		"usar":
+			if not res.get("ok", false):
+				_registrar("[color=#eda64a]Não deu: %s[/color]" % res.get("erro", "?"))
+			elif res.has("teste"):
+				_ultimo_teste = res.teste
 		"item":
 			var nome_item: String = ruleset.equipamento(String(cmd.get("item", ""))).get("nome", "item")
 			if res.ok:
@@ -459,6 +465,9 @@ func _clicar_celula(celula: Vector2i) -> void:
 	elif _modo == "contra" and agente != null and alvo is Ameaca:
 		_modo = ""
 		_enviar("contra", {"alvo": Comandos.ref(combate, alvo), "item": _item_sel})
+	elif _modo == "usar" and agente != null and alvo != null:
+		_modo = ""
+		_enviar("usar", {"alvo": Comandos.ref(combate, alvo), "item": _item_sel})
 	elif _modo == "ritual_area" and agente != null:
 		var escolha: Array = _ritual_sel
 		_conjurar(agente, escolha[0], escolha[1], alvo, {"celula": celula})
@@ -481,6 +490,9 @@ func _clicar_celula(celula: Vector2i) -> void:
 		if _chk_nl.visible and _chk_nl.button_pressed:
 			opcoes["nao_letal"] = String(agente.arma().get("id", "")) != "desarmado"   # inverte o padrão
 			_chk_nl.button_pressed = false
+		if _chk_rajada.visible and _chk_rajada.button_pressed:
+			opcoes["rajada"] = true
+			_chk_rajada.button_pressed = false
 		_modo = ""
 		_chk_ae.button_pressed = false
 		_close(alvo, opcoes.has("ataque_especial"))
@@ -779,6 +791,11 @@ func _montar_interface() -> void:
 	_chk_nl.toggle_mode = true
 	_chk_nl.tooltip_text = "Desacordar em vez de matar. Pessoas rendidas são interrogadas depois do combate e dão uma pista."
 	extras.add_child(_chk_nl)
+	_chk_rajada = Button.new()
+	_chk_rajada.toggle_mode = true
+	_chk_rajada.text = "Rajada −1 dado"
+	_chk_rajada.tooltip_text = "Arma automática (p.69): dispara uma rajada. −1 dado no ataque e +1 dado de dano."
+	extras.add_child(_chk_rajada)
 	_btn_enigma = _botao("Decifrar enigma", _decifrar)
 	_btn_soltar = _botao("Soltar-se", _soltar)
 	_btn_apagar = _botao("Apagar chamas", _apagar)
@@ -922,16 +939,18 @@ func _rituais_disponiveis(agente: Agente) -> Array:
 	return lista
 
 
-## [item_id, texto] dos itens de combate (explosivos e itens contra criaturas).
+## [item_id, texto] dos itens de combate: explosivos, itens contra criaturas e os de uso do
+## livro (taser, spray, lanterna, pistolas de dardos e sinalizadora, amarras; docs/67).
 func _itens_de_combate(agente: Agente) -> Array:
 	var lista: Array = []
 	var vistos := {}
 	for item_id in agente.equipamento:
 		var info := ruleset.equipamento(item_id)
-		if vistos.has(item_id) or not (info.has("explosivo") or info.get("contra", "") != ""):
+		if vistos.has(item_id) or not (info.has("explosivo") or info.get("contra", "") != "" or info.has("uso_combate")):
 			continue
 		vistos[item_id] = true
-		lista.append([item_id, "%s (%d)" % [info.nome, agente.equipamento.count(item_id)]])
+		var qtd := "%d cargas" % agente.cargas_restantes(item_id) if info.has("cargas") else str(agente.equipamento.count(item_id))
+		lista.append([item_id, "%s (%s)" % [info.nome, qtd] if info.has("cargas") or not info.has("uso_combate") else info.nome])
 	return lista
 
 
@@ -1048,8 +1067,8 @@ func _modo_item() -> void:
 	if agente == null or _item_sel == "":
 		return
 	var info := ruleset.equipamento(_item_sel)
-	_modo = "granada" if info.has("explosivo") else "contra"
-	_registrar("Escolha %s para %s." % ["o ponto" if _modo == "granada" else "a criatura", info.nome])
+	_modo = "granada" if info.has("explosivo") else ("usar" if info.has("uso_combate") else "contra")
+	_registrar("Escolha %s para %s." % [{"granada": "o ponto", "usar": "o alvo"}.get(_modo, "a criatura"), info.nome])
 	_atualizar()
 
 
@@ -1168,6 +1187,7 @@ func _atualizar() -> void:
 	_chk_ae.visible = agente != null and agente.classe_id == "combatente"
 	var arma_cac: bool = agente != null and agente.arma().get("ataque", "corpo_a_corpo") == "corpo_a_corpo"
 	_chk_nl.visible = arma_cac
+	_chk_rajada.visible = agente != null and agente.arma().get("automatica", false)
 	if arma_cac:
 		_chk_nl.text = "Letal −5" if String(agente.arma().get("id", "")) == "desarmado" else "Não letal −5"
 	_barra_membrana.value = membrana.valor

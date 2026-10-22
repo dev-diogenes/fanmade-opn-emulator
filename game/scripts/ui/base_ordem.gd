@@ -21,7 +21,14 @@ var _barra_carga: ProgressBar
 var _lbl_carga: Label
 var _lbl_aviso_arsenal: Label
 var _cabecalhos_cat: Dictionary = {}   ## categoria -> Label
+var _fluxos_cat: Dictionary = {}       ## categoria -> HFlowContainer das etiquetas
 var _checks_itens: Dictionary = {}     ## item_id -> Button (etiqueta que liga e desliga)
+## O catálogo do livro (docs/67) passa de cem itens: o arsenal mostra um grupo por vez
+const GRUPOS_ARSENAL := [["arma", "Armas"], ["municao", "Munição"], ["protecao", "Proteções"], ["acessorio", "Acessórios"],
+	["explosivo", "Explosivos"], ["operacional", "Operacionais"], ["paranormal", "Paranormais"], ["amaldicoado", "Amaldiçoados"],
+	["contra_criatura", "Contra criaturas"], ["requisitado", "Na requisição"]]
+var _filtro_arsenal := "arma"
+var _botoes_filtro: Dictionary = {}   ## grupo -> Button do filtro
 var _opt_arma: OptionButton
 var _lbl_requisicao: Label
 var _caixa_grupo: VBoxContainer
@@ -210,7 +217,7 @@ func _montar_interface() -> void:
 	_caixa_pendencia.theme = Tema.tema_papel()
 	_papel_pendencia.add_child(_caixa_pendencia)
 
-	# --- Aba Arsenal (docs/64): a requisição de cada agente, pela patente e pela carga (p.51-53)
+	# --- Aba Arsenal (docs/64): a requisição de cada agente, pela patente e pela carga (p.61-63)
 	var arsenal := HBoxContainer.new()
 	arsenal.name = "Arsenal"
 	arsenal.add_theme_constant_override("separation", Tema.ESPACO_GG)
@@ -258,6 +265,21 @@ func _montar_interface() -> void:
 	_lbl_aviso_arsenal.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_lbl_aviso_arsenal.add_theme_color_override("font_color", Tema.AVISO)
 	linha_arma.add_child(_lbl_aviso_arsenal)
+	var filtros := HFlowContainer.new()
+	filtros.add_theme_constant_override("h_separation", Tema.ESPACO_P)
+	direita_a.add_child(filtros)
+	var grupo_filtros := ButtonGroup.new()
+	for g in GRUPOS_ARSENAL:
+		var fb := Button.new()
+		fb.toggle_mode = true
+		fb.button_group = grupo_filtros
+		fb.text = g[1]
+		fb.button_pressed = g[0] == _filtro_arsenal
+		fb.pressed.connect(func():
+			_filtro_arsenal = g[0]
+			_atualizar_arsenal())
+		filtros.add_child(fb)
+		_botoes_filtro[g[0]] = fb
 	var rolagem := ScrollContainer.new()
 	rolagem.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	rolagem.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -266,7 +288,7 @@ func _montar_interface() -> void:
 	_caixa_requisicao.add_theme_constant_override("separation", Tema.ESPACO_P)
 	rolagem.add_child(_caixa_requisicao)
 	direita_a.add_child(rolagem)
-	# Os itens por categoria (p.53): a 0 é livre; as outras, pela patente
+	# Os itens por categoria (p.63): a 0 é livre; as outras, pela patente
 	var catalogo := _catalogo()
 	for cat in 5:
 		var do_cat := catalogo.filter(func(it): return clampi(int(it.get("categoria", 0)), 0, 4) == cat)
@@ -280,10 +302,15 @@ func _montar_interface() -> void:
 		fluxo.add_theme_constant_override("h_separation", Tema.ESPACO_M)
 		fluxo.add_theme_constant_override("v_separation", Tema.ESPACO_P)
 		_caixa_requisicao.add_child(fluxo)
+		_fluxos_cat[cat] = fluxo
 		for item in do_cat:
 			var chk := _etiqueta_item(item)
 			var id := String(item.id)
 			chk.toggled.connect(func(v): _marcar_item(id, v))
+			chk.set_meta("grupo", _grupo_do_item(item))
+			chk.set_meta("texto", chk.text)
+			if Ruleset.empilhavel(item):
+				_botoes_quantidade(chk, id)
 			_checks_itens[id] = chk
 			fluxo.add_child(chk)
 
@@ -464,8 +491,9 @@ func _etiqueta_item(item: Dictionary) -> Button:
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 	var cat: String = ["0", "I", "II", "III", "IV", "V"][mini(5, int(item.get("categoria", 0)))]
+	var resumo := IconeItem.resumo(item, carreira.ruleset)
 	b.text = "%s%s
-cat. %s · %d esp." % ["☠ " if amaldicoado else "", item.nome, cat, int(item.get("espacos", 1))]
+cat. %s · %d esp.%s" % ["☠ " if amaldicoado else "", item.nome, cat, int(item.get("espacos", 1)), (" · " + resumo) if resumo != "" else ""]
 	var efeito := IconeItem.efeito(item, carreira.ruleset)
 	if amaldicoado:
 		b.tooltip_text = "%s\nMaldições: %s" % [efeito, ", ".join(PackedStringArray(item.maldicoes.map(func(m): return "%s (%s) — %s" % [m.nome, m.elemento, m.descricao])))]
@@ -482,7 +510,7 @@ cat. %s · %d esp." % ["☠ " if amaldicoado else "", item.nome, cat, int(item.g
 	var titulo := Tema.fonte_titulo()
 	if titulo != null:
 		carimbo.add_theme_font_override("font", titulo)
-	carimbo.position = Vector2(250, 40)
+	carimbo.position = Vector2(250, 48) if Ruleset.empilhavel(item) else Vector2(250, 40)   # longe do − e +
 	carimbo.rotation_degrees = -8
 	carimbo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	carimbo.visible = false
@@ -540,6 +568,48 @@ func _botao(texto: String, acao: Callable) -> Button:
 	b.text = texto
 	b.pressed.connect(acao)
 	return b
+
+
+func _grupo_do_item(item: Dictionary) -> String:
+	if item.has("maldicoes"):
+		return "amaldicoado"
+	if String(item.get("tipo", "")) in ["arma", "protecao"]:
+		return String(item.tipo)
+	return String(item.get("grupo", "operacional"))
+
+
+## "−" e "+" na etiqueta de munição, granadas e caixas: mais de uma unidade (p.69).
+func _botoes_quantidade(etiqueta: Button, item_id: String) -> void:
+	var linha := HBoxContainer.new()
+	linha.name = "Quantidade"
+	linha.add_theme_constant_override("separation", 2)
+	linha.position = Vector2(300, 6)
+	for par in [["−", -1], ["+", 1]]:
+		var b := Button.new()
+		b.text = par[0]
+		b.custom_minimum_size = Vector2(28, 24)
+		b.focus_mode = Control.FOCUS_NONE
+		b.tooltip_text = "Uma unidade a menos" if par[1] < 0 else "Mais uma unidade (conta na cota e na carga)"
+		var delta: int = par[1]
+		b.pressed.connect(func(): _mudar_quantidade(item_id, delta))
+		linha.add_child(b)
+	linha.visible = false
+	etiqueta.add_child(linha)
+
+
+func _mudar_quantidade(item_id: String, delta: int) -> void:
+	if _selecionado == null:
+		return
+	var lista: Array = _selecionado.equipamento.duplicate()
+	if delta > 0:
+		var motivo := _selecionado.motivo_bloqueio(item_id, lista, true)
+		if motivo != "":
+			_lbl_aviso_arsenal.text = motivo
+			return
+		lista.append(item_id)
+	else:
+		lista.erase(item_id)
+	_aplicar_requisicao(lista)
 
 
 func _catalogo() -> Array:
@@ -743,7 +813,8 @@ func _marcar_item(item_id: String, marcado: bool) -> void:
 			return
 		lista.append(item_id)
 	elif not marcado:
-		lista.erase(item_id)
+		while item_id in lista:
+			lista.erase(item_id)
 	_aplicar_requisicao(lista)
 
 
@@ -794,7 +865,7 @@ func _atualizar_arsenal() -> void:
 		chip.text = "Cat. %s  %s" % [["", "I", "II", "III", "IV"][cat], ("%d/%d" % [usados, limite]) if limite > 0 else "—"]
 		chip.add_theme_stylebox_override("normal", Tema.caixa(Color(Tema.PEDRA, 0.9), Tema.OURO if limite > 0 else Tema.OURO_ESCURO, 1, 4, Vector2(8, 2)))
 		chip.add_theme_color_override("font_color", Tema.OURO_CLARO if limite > 0 else Tema.TEXTO_SUAVE)
-		chip.tooltip_text = "Categoria %s: a patente %s libera %d por missão (p.52)." % [["", "I", "II", "III", "IV"][cat], a.patente().get("nome", "?"), limite]
+		chip.tooltip_text = "Categoria %s: a patente %s libera %d por missão (p.62)." % [["", "I", "II", "III", "IV"][cat], a.patente().get("nome", "?"), limite]
 		_cotas_arsenal.add_child(chip)
 	var cap := a.capacidade_carga()
 	var usado := a.espacos_usados()
@@ -807,17 +878,31 @@ func _atualizar_arsenal() -> void:
 		var limite := int(lim.get(str(cat), 0))
 		(_cabecalhos_cat[cat] as Label).text = "Categoria 0 · livre, só conta a carga" if cat == 0 else \
 			("Categoria %s · %d por missão" % [["", "I", "II", "III", "IV"][cat], limite] if limite > 0 else "Categoria %s · a patente ainda não libera" % ["", "I", "II", "III", "IV"][cat])
+	var visiveis := {}
+	for g in _botoes_filtro:
+		(_botoes_filtro[g] as Button).set_pressed_no_signal(g == _filtro_arsenal)
 	for item_id in _checks_itens:
 		var b: Button = _checks_itens[item_id]
 		var marcado: bool = item_id in a.equipamento
 		var motivo := "" if marcado else a.motivo_bloqueio(item_id, a.equipamento)
 		var aviso := a.aviso_item(item_id)
+		var qtd := a.equipamento.count(item_id)
+		b.visible = String(b.get_meta("grupo", "")) == _filtro_arsenal or (_filtro_arsenal == "requisitado" and marcado)
+		if b.visible:
+			visiveis[b.get_parent()] = true
+		b.text = String(b.get_meta("texto", b.text)) + ("  ×%d" % qtd if qtd > 1 else "")
+		var botoes := b.get_node_or_null("Quantidade")
+		if botoes != null:
+			botoes.visible = marcado
 		b.set_pressed_no_signal(marcado)
 		b.disabled = motivo != ""
 		b.modulate = Color(1, 1, 1, 0.45) if motivo != "" else Color.WHITE
 		var base_dica := String(b.get_meta("dica", b.tooltip_text))
 		b.set_meta("dica", base_dica)
 		b.tooltip_text = base_dica + ("\n\nBloqueado: " + motivo if motivo != "" else "") + ("\n" + aviso if aviso != "" else "")
+	for cat in _cabecalhos_cat:   # some a categoria sem etiqueta no grupo escolhido
+		(_cabecalhos_cat[cat] as Label).visible = visiveis.has(_fluxos_cat[cat])
+		(_fluxos_cat[cat] as Control).visible = visiveis.has(_fluxos_cat[cat])
 	_atualizar_armas_requisicao()
 
 

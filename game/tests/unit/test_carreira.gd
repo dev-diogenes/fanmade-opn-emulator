@@ -76,6 +76,7 @@ func test_protecao_defesa_e_resistencia():
 
 func test_kit_de_pericia():
 	var bianca := _por_nome(_carreira(), "Bianca")
+	bianca.equipamento.append("kit_medicina")
 	assert_eq(bianca.bonus_pericia("medicina"), 5, "treinada, com kit")
 	bianca.equipamento.erase("kit_medicina")
 	assert_eq(bianca.bonus_pericia("medicina"), 0, "sem kit: −5")
@@ -229,6 +230,7 @@ func test_agente_ida_e_volta():
 
 func test_cicatrizante():
 	var rita := _por_nome(_carreira(), "Rita")
+	rita.equipamento.append("cicatrizante")
 	var c := Combate.new(rs, Dados.new(1))
 	var monstro := Ameaca.criar(rs, "M", {"pv": 10})
 	c.adicionar(rita)

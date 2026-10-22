@@ -389,20 +389,33 @@ func chance_de_acerto(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: 
 		defesa += -5 if corpo_a_corpo else 5   # caído (p.310)
 	var pericia_id: String = arma.get("pericia", "luta")
 	var dados_teste := atacante.dados_da_pericia(pericia_id)
+	if atacante is Agente and arma.has("atributo_ataque"):
+		dados_teste = (atacante as Agente).dados_com_atributo(pericia_id, String(arma.atributo_ataque))   # arma ágil
 	var bonus_teste := atacante.bonus_pericia(pericia_id)
 	if arma.has("teste"):
 		dados_teste = int(arma.teste.dados) - atacante.penalidade_dados_atributo(ruleset.atributo_da_pericia(pericia_id))
 		bonus_teste = int(arma.teste.bonus)
-	var chance := Teste.chance_de_passar(dados_teste, bonus_teste + int(mods.bonus_ataque) + bonus_extra, defesa, dados_extras)
-	if grade != null and grade.camuflado(alvo):
+	var aj := _ajuste_da_arma(atacante, arma, alvo, false)
+	dados_extras += int(aj.dados)
+	if pode_disparar(atacante, arma) != "":
+		return -1.0
+	var chance := Teste.chance_de_passar(dados_teste, bonus_teste + int(mods.bonus_ataque) + bonus_extra + int(aj.bonus), defesa, dados_extras)
+	if grade != null and grade.camuflado(alvo) and not (atacante is Agente and (atacante as Agente).ignora_camuflagem()):
 		chance *= 0.8   # camuflagem leve: 20% de erro (p.89)
 	return chance
 
 
 func agredir(atacante: Ser, alvo: Ser, arma: Dictionary, pe_foco: int = 0, opcoes: Dictionary = {}) -> ResultadoAtaque:
-	if atacante.mods_cena.has("prendendo") or not gastar_acao(atacante, "padrao"):
+	if atacante.mods_cena.has("prendendo") or pode_disparar(atacante, arma) != "" or acoes_restantes(atacante).padrao <= 0:
 		return _ataque_invalido(atacante, alvo, arma)
+	if String(atacante.mods_cena.get("descarregada", "")) == String(arma.get("id", "")) and arma.get("recarga", false):
+		gastar_acao(atacante, "movimento")   # recarregar a besta, a balestra ou a bazuca (p.68)
+		atacante.mods_cena.erase("descarregada")
+		_log("%s recarrega %s." % [atacante.nome, arma.get("nome", "a arma")])
+	gastar_acao(atacante, "padrao")
 	var res := atacar(atacante, alvo, arma, pe_foco, opcoes)
+	if arma.get("linha", false) and res.teste != null:
+		_atingir_linha(atacante, alvo, arma, res)
 	var vezes := int(arma.get("vezes", 1))
 	if atacante is Ameaca and (atacante as Ameaca).tem_hab("instinto_mortal") and atacante.tem(Ser.MACHUCADO):
 		vezes += 1   # Instinto Mortal (carniçal)
@@ -498,6 +511,86 @@ func usar_item(ser: Agente, item_id: String, alvo: Ser) -> int:
 	return cura
 
 
+## Itens de combate do livro (p.75-77): taser, spray de pimenta, lanterna tática, pistolas de
+## dardos e sinalizadora, amarras. O "uso_combate" do item diz a ação, o alcance, se há teste de
+## ataque (contra a Defesa), o dano, a condição e o teste de resistência que a evita.
+func usar_item_combate(agente: Agente, item_id: String, alvo: Ser) -> Dictionary:
+	var info := ruleset.equipamento(item_id)
+	var uso: Dictionary = info.get("uso_combate", {})
+	var motivo := motivo_item_combate(agente, item_id, alvo)
+	if motivo != "":
+		return {"ok": false, "erro": motivo}
+	if acoes.has(agente) and not gastar_acao(agente, String(uso.get("acao", "padrao"))):
+		return {"ok": false, "erro": "sem ação"}
+	if int(uso.get("pe", 0)) > 0:
+		agente.gastar_pe(int(uso.pe))
+	if info.has("cargas"):
+		agente.usar_carga(item_id)
+	var res := {"ok": true, "acertou": true, "textos": []}
+	if uso.has("ataque"):
+		var per := String(uso.ataque)
+		var t := Teste.rolar(dados, agente.dados_da_pericia(per), agente.bonus_pericia(per), alvo.defesa())
+		t.pericia = per
+		t.atributo_id = ruleset.atributo_da_pericia(per)
+		res["teste"] = t
+		res.acertou = t.sucesso
+		if not t.sucesso:
+			_log("%s dispara %s e erra %s." % [agente.nome, info.nome, alvo.nome])
+			return res
+	if uso.has("dano"):
+		var d := aplicar_dano(alvo, dados.rolar_expressao(String(uso.dano)), String(uso.get("tipo_dano", "")), 0, agente)
+		res.textos.append("%d de dano" % d)
+	if uso.has("condicao") and not alvo.tem(Ser.MORTO):
+		var passou := false
+		if uso.has("resistencia"):
+			var rp := String(uso.resistencia)
+			passou = Teste.rolar(dados, alvo.dados_da_pericia(rp), alvo.bonus_pericia(rp), agente.dt_habilidade(String(uso.get("dt_atributo", "agi")))).sucesso
+		if passou:
+			var leves: Array = uso.get("ao_passar_condicoes", [])
+			for c in leves:
+				alvo.aplicar_condicao(String(c), 1)
+			res.textos.append(("%s resiste" % alvo.nome) if leves.is_empty() else ("%s fica %s" % [alvo.nome, " e ".join(PackedStringArray(leves))]))
+		else:
+			var rod = uso.get("rodadas", 0)
+			var n := 0 if uso.get("ate_fim_da_cena", false) else (dados.rolar_expressao(String(rod)) if rod is String else int(rod))
+			alvo.aplicar_condicao(String(uso.condicao), n)
+			if String(uso.condicao) == Ser.INCONSCIENTE and alvo is Ameaca and not (alvo as Ameaca).criatura:
+				alvo.mods_cena["rendido"] = true   # dormiu: a Ordem interroga depois (docs/40)
+			res.textos.append("%s fica %s" % [alvo.nome, String(uso.condicao).replace("_", " ")])
+	if uso.get("imune_na_cena", false):
+		alvo.mods_cena["imune_" + item_id] = true   # a lanterna: os olhos se acostumam
+	_log("[color=#eda64a]%s usa %s em %s:[/color] %s." % [agente.nome, info.nome, alvo.nome, ", ".join(PackedStringArray(res.textos))])
+	_verificar_fim()
+	return res
+
+
+## Por que o item de combate não pode ser usado neste alvo agora ("" = pode).
+func motivo_item_combate(agente: Agente, item_id: String, alvo: Ser) -> String:
+	var info := ruleset.equipamento(item_id)
+	var uso: Dictionary = info.get("uso_combate", {})
+	if uso.is_empty() or not agente.tem_item(item_id):
+		return "Sem esse item."
+	if alvo == null or alvo == agente or alvo.lado == agente.lado or alvo.esta_fora_de_combate():
+		return "Escolha um inimigo."
+	if info.has("cargas") and agente.cargas_restantes(item_id) <= 0:
+		return "Sem cargas."
+	if uso.get("so_criatura_do_elemento", false) and not (alvo is Ameaca and (alvo as Ameaca).criatura and String(info.get("elemento", "")) in (alvo as Ameaca).vulnerabilidades):
+		return "As amarras só prendem criaturas que temem esse elemento."
+	if uso.get("imune_na_cena", false) and alvo.mods_cena.get("imune_" + item_id, false):
+		return "%s já se acostumou à luz." % alvo.nome
+	if grade != null and grade.tem(agente) and grade.tem(alvo):
+		var alc := String(uso.get("alcance", "adjacente"))
+		if (alc == "adjacente" and not grade.estao_adjacentes(agente, alvo)) or (alc != "adjacente" and not grade.em_alcance(agente, alvo, alc)):
+			return "Fora de alcance."
+	if int(uso.get("pe", 0)) > agente.pe_disponivel_no_turno():
+		return "PE insuficientes."
+	if acoes.has(agente):
+		var a := acoes_restantes(agente)
+		if (String(uso.get("acao", "padrao")) == "padrao" and int(a.padrao) <= 0) or int(a.padrao) + int(a.movimento) <= 0:
+			return "Sem ação."
+	return ""
+
+
 ## Primeiros Socorros (Medicina, DT 20, p.46): um aliado adjacente morrendo perde as condições
 ## morrendo e inconsciente e fica com 1 PV. Ação padrão. A DT sobe +5 por vez que ele já foi
 ## estabilizado na cena. Devolve o teste (null se não dá para tentar).
@@ -590,7 +683,8 @@ func manobra(atacante: Ser, alvo: Ser, tipo: String) -> Dictionary:
 	if motivo != "":
 		return {"ok": false, "erro": motivo}
 	gastar_acao(atacante, "padrao")
-	var dif := _teste_de_manobra(atacante, alvo)
+	var bonus_arma := int((atacante as Agente).arma().get("bonus_manobra", {}).get(tipo, 0)) if atacante is Agente else 0   # corrente (p.68)
+	var dif := _teste_de_manobra(atacante, alvo, 0, bonus_arma)
 	var res := {"ok": true, "tipo": tipo, "venceu": dif > 0, "diferenca": dif, "textos": []}
 	if dif <= 0:
 		res.textos.append("%s resiste." % alvo.nome)
@@ -723,12 +817,98 @@ func rendidos() -> Array:
 	return participantes.filter(func(s): return s is Ameaca and not (s as Ameaca).criatura and s.mods_cena.get("rendido", false) and not s.tem(Ser.MORTO))
 
 
-## A arma de verdade no ataque: quem teve a arma derrubada luta desarmado até pegá-la.
+## A arma de verdade no ataque: quem teve a arma derrubada luta desarmado até pegá-la; sem
+## munição (o último foguete), sobra a coronhada (p.69).
 func arma_em_maos(atacante: Ser, arma: Dictionary) -> Dictionary:
 	var caida := String(atacante.mods_cena.get("arma_caida", ""))
 	if caida != "" and String(arma.get("id", "")) == caida:
 		return ruleset.arma("desarmado")
+	if atacante is Agente and String(arma.get("id", "")) in (atacante as Agente).equipamento and not (atacante as Agente).tem_municao(arma):
+		return (atacante as Agente).coronhada(arma)
 	return arma
+
+
+## Por que o ser não pode atacar com a arma agora ("" = pode). Armas de recarga disparadas
+## pedem uma ação de movimento antes do próximo tiro (p.68).
+func pode_disparar(atacante: Ser, arma: Dictionary) -> String:
+	if not arma.get("recarga", false) or String(atacante.mods_cena.get("descarregada", "")) != String(arma.get("id", "")):
+		return ""
+	if not acoes.has(atacante):
+		return ""
+	var a := acoes_restantes(atacante)
+	return "" if int(a.movimento) > 0 and int(a.padrao) > 0 else "Recarregar pede uma ação de movimento antes do disparo."
+
+
+## Ajustes da própria arma no ataque (p.68-69): motosserra desajeitada (−1 dado), metralhadora
+## sem Força 4 (−5) e fuzil de precisão mirado por veterano em Pontaria (+5 na margem).
+func _ajuste_da_arma(atacante: Ser, arma: Dictionary, alvo: Ser, mirando: bool) -> Dictionary:
+	var aj := {"dados": int(arma.get("dados_ataque", 0)), "bonus": 0, "margem": 0}
+	var fm: Dictionary = arma.get("forca_minima", {})
+	if not fm.is_empty() and atacante.atributo("for") < int(fm.valor):
+		aj.bonus += int(fm.penalidade)
+	var mv: Dictionary = arma.get("mira_veterano", {})
+	if mirando and not mv.is_empty() and atacante is Agente and (atacante as Agente).grau(String(mv.pericia)) in ["veterano", "expert"]:
+		aj.margem += int(mv.margem)
+	return aj
+
+
+## Dados que explodem (motosserra, p.68): cada resultado no gatilho rola mais um dado.
+func _rolar_explosivo(qtd: int, faces: int, gatilho: int) -> int:
+	var total := 0
+	var restantes := qtd
+	var guarda := 0
+	while restantes > 0 and guarda < 100:
+		var r := dados.rolar(faces)
+		total += r
+		restantes -= 1
+		if r >= gatilho:
+			restantes += 1
+		guarda += 1
+	return total
+
+
+## Lança-chamas (p.68): o mesmo teste de ataque vale contra todos na linha até o alcance curto;
+## quem é atingido sofre o dano e fica em chamas.
+func _atingir_linha(atacante: Ser, alvo: Ser, arma: Dictionary, res: ResultadoAtaque) -> void:
+	if res.acertou and not alvo.tem(Ser.MORTO):
+		alvo.aplicar_condicao(String(arma.get("condicao", Ser.EM_CHAMAS)))
+	if grade == null or not grade.tem(atacante) or not grade.tem(alvo):
+		return
+	var metros := float(Grade.ALCANCES.get(String(arma.get("alcance", "curto")), 6)) * Grade.METROS_POR_QUADRADO
+	var textos := PackedStringArray()
+	for x in grade.seres_em(grade.celulas_da_area("linha", grade.posicao(atacante), grade.posicao(alvo), metros)):
+		if x == atacante or x == alvo or x.esta_fora_de_combate():
+			continue
+		if res.teste.total < x.defesa():
+			textos.append("%s escapa" % x.nome)
+			continue
+		var d := aplicar_dano(x, dados.rolar_expressao(String(arma.dano)), String(arma.get("tipo_dano", "fogo")), 0, atacante)
+		x.aplicar_condicao(String(arma.get("condicao", Ser.EM_CHAMAS)))
+		textos.append("%s %d e em chamas" % [x.nome, d])
+	if not textos.is_empty():
+		_log("[color=#eda64a]As chamas varrem a linha:[/color] %s" % ", ".join(textos))
+	_verificar_fim()
+
+
+## Bazuca (p.68): o foguete explode no alvo; quem está a 3 m dele sofre o mesmo dano
+## (Reflexos DT Agi do atirador: metade).
+func _explodir_no_alvo(atacante: Ser, alvo: Ser, arma: Dictionary, dano: int) -> void:
+	var ex: Dictionary = arma.explosao
+	if grade == null or not grade.tem(alvo):
+		return
+	var dt := (atacante as Agente).dt_habilidade(String(ex.get("dt_atributo", "agi"))) if atacante is Agente else 15
+	var pos := grade.posicao(alvo)
+	var textos := PackedStringArray()
+	for x in grade.seres_em(grade.celulas_da_area("esfera", pos, pos, float(ex.get("raio", 3)))):
+		if x == alvo or (x.esta_fora_de_combate() and not x.tem(Ser.POCA)):
+			continue
+		var res_p := String(ex.get("resistencia", "reflexos"))
+		var d := dano
+		if Teste.rolar(dados, x.dados_da_pericia(res_p), x.bonus_pericia(res_p), dt).sucesso:
+			d = 0 if _tem_evasao(x, res_p) else d / 2
+		textos.append("%s %d" % [x.nome, aplicar_dano(x, d, String(arma.get("tipo_dano", "impacto")), 0, atacante)])
+	if not textos.is_empty():
+		_log("[color=#eda64a]A explosão atinge:[/color] %s" % ", ".join(textos))
 
 
 ## Levantar-se do chão: ação de movimento (p.84).
@@ -1027,6 +1207,7 @@ func _resistir_ritual(conjurador: Ser, ritual_id: String, r: Dictionary, alvo: S
 		elif ag.afinidade != "" and vantagem.get(r.elemento, "") == ag.afinidade:
 			mod -= int(cfg_af.get("dados_resistencia", 2))
 		bonus += ag._soma_efeitos("bonus_resistencia_rituais")   # Abascanta
+	bonus += alvo.bonus_contra(r.get("tags", []), pericia)   # máscara de gás contra miasmas (p.76)
 	var t := Teste.rolar(dados, alvo.dados_da_pericia(pericia), bonus, conjurador.dt_ritual(ritual_id), mod)
 	if t.sucesso:
 		_ao_passar_resistencia(alvo)
@@ -1834,7 +2015,7 @@ func usar_habilidade(amea: Ameaca, hab_id: String, alvo: Ser = null, celula = nu
 			pen = int(h.get("penalidade_adjacente", 0))
 		var passou := false
 		if h.has("resistencia"):
-			passou = Teste.rolar(dados, x.dados_da_pericia(h.resistencia), x.bonus_pericia(h.resistencia), int(h.dt), -pen).sucesso
+			passou = Teste.rolar(dados, x.dados_da_pericia(h.resistencia), x.bonus_pericia(h.resistencia) + x.bonus_contra(h.get("tags", []), String(h.resistencia)), int(h.dt), -pen).sucesso
 		if h.has("dano"):
 			var d := rolagem
 			if passou:
@@ -2202,7 +2383,7 @@ func usar_granada(agente: Agente, item_id: String, celula: Vector2i) -> Dictiona
 	var rolagem := dados.rolar_expressao(String(ex.dano)) if ex.has("dano") else 0
 	var textos := PackedStringArray()
 	for x in atingidos:
-		var passou := Teste.rolar(dados, x.dados_da_pericia(ex.resistencia), x.bonus_pericia(ex.resistencia), dt).sucesso
+		var passou := ex.has("resistencia") and Teste.rolar(dados, x.dados_da_pericia(ex.resistencia), x.bonus_pericia(ex.resistencia), dt).sucesso
 		if ex.has("dano"):
 			var d := rolagem
 			if passou:
@@ -2599,6 +2780,14 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	if mirando:
 		margem_extra += int(mira.margem)
 		_miras.erase(atacante)
+	var aj := _ajuste_da_arma(atacante, arma, alvo, mirando)
+	dados_extras += int(aj.dados)
+	bonus_ataque += int(aj.bonus)
+	margem_extra += int(aj.margem)
+	if opcoes.get("rajada", false) and arma.get("automatica", false):
+		if not arma.get("compensador", false):
+			dados_extras -= 1   # rajada: −1 dado no ataque, +1 dado de dano (p.69)
+		mods.dados_dano_extra = int(mods.dados_dano_extra) + 1
 
 	# Opções pagas
 	if opcoes.has("ataque_especial"):
@@ -2697,17 +2886,27 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 				amea.mods_cena.erase("assassinar")
 	var pericia_id: String = arma.get("pericia", "luta")
 	var dados_teste := atacante.dados_da_pericia(pericia_id)
+	if agente != null and arma.has("atributo_ataque"):
+		dados_teste = agente.dados_com_atributo(pericia_id, String(arma.atributo_ataque))   # arma ágil (p.69)
 	var bonus_teste := atacante.bonus_pericia(pericia_id)
 	if arma.has("teste"):   # ataque de ficha de ameaça: "TESTE 2O+5" já inclui tudo
 		dados_teste = int(arma.teste.dados) - atacante.penalidade_dados_atributo(ruleset.atributo_da_pericia(pericia_id)) + atacante.efeito_ritual("dados_testes") - int(atacante.mods_cena.get("menos_dados", {}).get(pericia_id, 0))
 		bonus_teste = int(arma.teste.bonus) + atacante.efeito_ritual("pericias")
 	res.teste = Teste.rolar(dados, dados_teste, bonus_teste + bonus_ataque, defesa, dados_extras)
+	res.teste.pericia = pericia_id
+	res.teste.atributo_id = String(arma.get("atributo_ataque", ruleset.atributo_da_pericia(pericia_id)))
 	if agente != null:
 		agente.sofrer_dano_por_teste(dados, ruleset.atributo_da_pericia(pericia_id))   # Gota, Pulmão Ruim
+		agente.registrar_disparo(arma)   # munição (p.69)
+	if arma.get("recarga", false):
+		atacante.mods_cena["descarregada"] = String(arma.get("id", ""))
 	res.acertou = res.teste.sucesso
-	if res.acertou and grade != null and grade.camuflado(alvo) and dados.rolar(10) <= 2:
+	if res.acertou and grade != null and grade.camuflado(alvo) and not (agente != null and agente.ignora_camuflagem()) and dados.rolar(10) <= 2:
 		res.acertou = false   # camuflagem leve: 1 ou 2 no d10 (p.89)
 		_log("O golpe de %s se perde: %s está encoberto." % [atacante.nome, alvo.nome])
+	if res.acertou and atacante.tem(Ser.CEGO) and dados.rolar(100) <= 50:
+		res.acertou = false   # cego: todo alvo tem camuflagem total (p.320)
+		_log("%s, cego, golpeia o vazio." % atacante.nome)
 	var invisivel_para_ele := false
 	if alvo is Ameaca:
 		var aa_ := alvo as Ameaca
@@ -2755,11 +2954,16 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 		var dano := 0
 		if res.critico and tipo_ataque == "fogo" and agente != null and agente.tem_habilidade("atirar_para_matar"):
 			dano = qtd * mult * int(e.faces) + int(e.bonus)   # dano máximo, sem rolar
+		elif arma.has("explode"):
+			dano = _rolar_explosivo(qtd * mult, int(e.faces), int(arma.explode)) + int(e.bonus)   # motosserra (p.68)
 		else:
 			dano = dados.rolar_expressao("%dd%d+%d" % [qtd, e.faces, e.bonus], mult)
+		if arma.has("meio_dano_alem_de") and grade != null and grade.tem(atacante) and grade.tem(alvo) \
+				and grade.faixa_de_alcance(atacante, alvo, String(arma.meio_dano_alem_de)) != "ok":
+			dano /= 2   # espingarda além do alcance curto (p.68)
 		dano += bonus_dano
 		if arma.get("soma_forca", false):
-			dano += atacante.atributo("for")
+			dano += atacante.atributo(String(arma.get("atributo_ataque", "for")))
 		if furtivo_dados > 0:
 			dano += dados.rolar_expressao("%dd6" % furtivo_dados)   # dados extras não multiplicam
 		for expr in String(mods.get("dados_dano_ritual", "")).split("+", false):
@@ -2784,6 +2988,8 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 				if h.has("contra_condicoes") and not alvo.tem(Ser.MORTO) and h.contra_condicoes.any(func(cond): return alvo.tem(cond)):
 					res.dano += aplicar_dano(alvo, dados.rolar_expressao(String(h.dano)), String(h.tipo_dano), 0, atacante)
 		_ao_acertar(atacante, alvo, arma, res)
+		if arma.has("explosao"):
+			_explodir_no_alvo(atacante, alvo, arma, res.dano_bruto)
 		if eh_corpo_a_corpo and agente != null and agente.tem_habilidade("gladiador_paranormal"):
 			_gladiador_paranormal(agente)
 	if not res.acertou:

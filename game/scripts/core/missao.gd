@@ -787,6 +787,8 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool, semente_s
 			var chefe_am: Dictionary = ameacas[0]
 			var sobra := int(orcamento * float(_cfg.get("dificuldade_covil", 1.5))) - int(chefe_am.get("vd", 0))
 			ameacas = [chefe_am] + escolher_por_vd(ameacas.slice(1), sobra, false)
+	for a in participantes:
+		armas[a] = a.arma()   # a arma de cada um agora: sem munição, vira coronhada (docs/67)
 	encontro_pendente = {
 		"hex": h, "nome": info.nome, "chefe": chefe, "terreno": mapa.terreno(h),
 		"agentes": participantes, "armas": armas, "ameacas": ameacas, "encontro": encontro_id,

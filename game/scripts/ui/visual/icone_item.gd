@@ -1,7 +1,7 @@
 class_name IconeItem
 extends RefCounted
 ## Ícone desenhado por código para as etiquetas do Arsenal (docs/23, C5): lâmina, arma de
-## fogo, proteção, kit, frasco, componente ritual, granada e pacote. Traço de tinta, como
+## fogo, proteção, kit, frasco, componente ritual, granada, munição e pacote. Traço de tinta, como
 ## carimbo de inventário. Amaldiçoados usam o mesmo ícone em vermelho-sangue.
 
 
@@ -9,15 +9,17 @@ extends RefCounted
 static func tipo(item: Dictionary) -> String:
 	var id := String(item.get("id", ""))
 	var t := String(item.get("tipo", ""))
-	if id.contains("granada") or id.contains("explosiv"):
+	if id.contains("granada") or id.contains("explosiv") or item.has("explosivo"):
 		return "granada"
+	if item.get("municao") is Dictionary:
+		return "municao"
 	if t == "arma" and (id.contains("arco") or id.contains("besta")):
 		return "arco"
 	if t == "arma":
 		return "lamina" if String(item.get("ataque", "corpo_a_corpo")) == "corpo_a_corpo" else "fogo"
 	if t == "protecao" or item.has("defesa"):
 		return "protecao"
-	if id.begins_with("componentes") or item.has("elemento"):
+	if id.begins_with("componentes") or item.has("elemento") or String(item.get("grupo", "")) == "paranormal":
 		return "componente"
 	if item.has("kit") or id.begins_with("kit"):
 		return "kit"
@@ -26,18 +28,48 @@ static func tipo(item: Dictionary) -> String:
 	return "pacote"
 
 
-## Resumo do efeito para o tooltip: a descrição do item ou, para armas, os números.
+## Os números na etiqueta, depois da categoria e dos espaços: o dano e o crítico da arma, a
+## Defesa da proteção, quanto dura a munição, as cargas, o bônus em perícia.
+static func resumo(item: Dictionary, ruleset: Ruleset = null) -> String:
+	if String(item.get("tipo", "")) == "arma":
+		var partes := PackedStringArray(["%s %d/x%d" % [item.get("dano", "?"), int(item.get("margem", 20)), int(item.get("multiplicador", 2))]])
+		for chave in [["agil", "ágil"], ["automatica", "automática"], ["recarga", "recarga"]]:
+			if item.get(chave[0], false):
+				partes.append(chave[1])
+		return " · ".join(partes)
+	if item.has("defesa"):
+		return "Defesa +%d" % int(item.defesa)
+	var m = item.get("municao")
+	if m is Dictionary:
+		if m.get("missao", false):
+			return "a missão"
+		return "%d cena%s" % [int(m.cenas), "s" if int(m.cenas) > 1 else ""] if m.has("cenas") else "1 disparo"
+	if item.has("cargas"):
+		return "%d cargas" % int(item.cargas)
+	var bonus: Dictionary = item.get("bonus_pericia", {})
+	if not bonus.is_empty():
+		var p: String = bonus.keys()[0]
+		return "+%d %s" % [int(bonus[p]), String(ruleset.pericia(p).get("nome", p)) if ruleset != null else p.capitalize()]
+	return ""
+
+
+## Resumo do efeito para o tooltip: a descrição do item ou, para armas, os números e a regra
+## da descrição (p.68). O que ainda não tem efeito no jogo vem dito no fim.
 static func efeito(item: Dictionary, ruleset: Ruleset) -> String:
+	var texto := String(item.get("descricao", ""))
 	if String(item.get("tipo", "")) == "arma" or item.has("dano"):
 		var partes := PackedStringArray()
-		partes.append("Dano %s" % item.get("dano", "?"))
+		partes.append("Dano %s" % item.get("dano", "?") + (" (%s com as duas mãos)" % item.dano_duas_maos if item.has("dano_duas_maos") else ""))
 		partes.append("crítico %d/x%d" % [int(item.get("margem", 20)), int(item.get("multiplicador", 2))])
 		partes.append("corpo a corpo" if String(item.get("ataque", "corpo_a_corpo")) == "corpo_a_corpo" else "alcance %s" % item.get("alcance", "curto"))
 		partes.append(String(ruleset.pericia(String(item.get("pericia", "luta"))).get("nome", "Luta")))
-		return " · ".join(partes)
-	if item.has("defesa"):
-		return "Defesa +%d. %s" % [int(item.defesa), String(item.get("descricao", ""))]
-	return String(item.get("descricao", ""))
+		partes.append({"leve": "leve", "uma_mao": "uma mão", "duas_maos": "duas mãos"}.get(String(item.get("empunhadura", "")), ""))
+		texto = " · ".join(partes.slice(0, partes.size() if partes[-1] != "" else partes.size() - 1)) + ("\n" + texto if texto != "" else "")
+	elif item.has("defesa"):
+		texto = "Defesa +%d. %s" % [int(item.defesa), texto]
+	if item.has("pendente"):
+		texto += "\nAinda sem efeito no jogo: %s." % item.pendente
+	return texto
 
 
 static func desenhar(ci: CanvasItem, t: String, centro: Vector2, r: float, cor: Color) -> void:
@@ -78,6 +110,11 @@ static func desenhar(ci: CanvasItem, t: String, centro: Vector2, r: float, cor: 
 				tri.append(centro + Vector2.UP.rotated(TAU * k / 3.0) * r * 0.7)
 			ci.draw_polyline(tri, cor, w * 0.8, true)
 			ci.draw_circle(centro, r * 0.12, cor)
+		"municao":
+			for k in 3:
+				var x := centro.x + (k - 1) * r * 0.55
+				ci.draw_rect(Rect2(Vector2(x - r * 0.16, centro.y - r * 0.35), Vector2(r * 0.32, r * 0.95)), cor, false, w * 0.8)
+				ci.draw_arc(Vector2(x, centro.y - r * 0.35), r * 0.16, PI, TAU, 8, cor, w * 0.8, true)
 		"granada":
 			ci.draw_arc(centro + Vector2(0, r * 0.2), r * 0.6, 0, TAU, 16, cor, w, true)
 			ci.draw_rect(Rect2(centro + Vector2(-r * 0.2, -r * 0.65), Vector2(r * 0.4, r * 0.25)), cor)
