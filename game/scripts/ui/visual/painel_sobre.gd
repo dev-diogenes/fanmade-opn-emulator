@@ -63,6 +63,10 @@ func _montar() -> void:
 	if ft != null:
 		t.add_theme_font_override("font", ft)
 	titulos.add_child(t)
+	var desc := Label.new()
+	desc.text = Licenca.DESCRICAO + "."
+	desc.add_theme_color_override("font_color", Tema.TINTA)
+	titulos.add_child(desc)
 	var nao := Label.new()
 	nao.text = Licenca.NAO_OFICIAL
 	nao.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

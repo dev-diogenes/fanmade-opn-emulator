@@ -70,6 +70,7 @@ func test_titulo_sem_a_marca_e_com_selo():
 	await get_tree().process_frame
 	var textos: Array = t.find_children("*", "Label", true, false).map(func(l): return l.text)
 	assert_true(textos.has(Licenca.TITULO.to_upper()))
+	assert_true(textos.has(Licenca.DESCRICAO), "a descrição embaixo do título, fora do nome")
 	assert_false(textos.any(func(x): return String(x).contains("ORDEM\nPARANORMAL")))
 	assert_true(textos.has(Licenca.AVISO_IA), "o aviso de IA junto do selo")
 	assert_true(textos.has(Licenca.NAO_OFICIAL))

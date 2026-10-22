@@ -9,6 +9,9 @@ extends RefCounted
 ## em project.godot (config/name).
 const TITULO := "Membrana"
 const SUBTITULO := "Casos da Ordo Realitas"
+## A linha que descreve o jogo, escolhida pelo dono do projeto. Vai embaixo do título, em letra
+## de texto, e não como parte do nome: a licença não deixa a marca no título (ADR 0012).
+const DESCRICAO := "Um jogo inspirado no sistema de Ordem Paranormal"
 
 const NAO_OFICIAL := "Conteúdo não oficial, publicado sob a Licença da Comunidade de Ordem Paranormal. " + \
 	"Sem parceria, aprovação ou supervisão do titular dos direitos."

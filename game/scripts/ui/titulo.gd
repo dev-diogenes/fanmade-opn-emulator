@@ -195,6 +195,11 @@ func _montar_menu() -> void:
 	fio.custom_minimum_size = Vector2(320, 3)
 	fio.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	coluna.add_child(fio)
+	# A descrição (docs/60): em letra de texto, abaixo do traço; não faz parte do nome
+	var desc := Label.new()
+	desc.text = Licenca.DESCRICAO
+	desc.add_theme_color_override("font_color", Tema.PERGAMINHO)
+	coluna.add_child(desc)
 	var sub := Label.new()
 	sub.text = "Fanmade · não oficial · gratuito"
 	sub.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)

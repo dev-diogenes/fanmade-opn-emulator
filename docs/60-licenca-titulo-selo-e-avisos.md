@@ -14,6 +14,9 @@
 
 - **"Membrana"**, com "Casos da Ordo Realitas" acima. A licença libera os dois termos.
 - **Título provisório,** numa constante só (`Licenca.TITULO`) e em `project.godot`.
+- **A descrição, escolhida por você:** "Um jogo inspirado no sistema de Ordem Paranormal".
+  - **Onde aparece:** embaixo do título, em letra de texto; no Sobre; na descrição do projeto; no README.
+  - **Onde não aparece:** no nome (janela, logo e `config/name`), porque a licença não deixa a marca no título.
 - **A frase de conteúdo não oficial** fica no rodapé: "Conteúdo não oficial, publicado sob a Licença da Comunidade de Ordem Paranormal. Sem parceria, aprovação ou supervisão do titular dos direitos."
 - **Nos cabeçalhos,** "Ordem da Realidade" virou **Ordo Realitas**, a organização que a licença libera pelo nome:
   - no relatório de progressão;
@@ -74,7 +77,6 @@ Você decidiu que só os personagens saem: ameaças, criaturas, elementos e ritu
 
 ## O que fica para depois
 
-- **Confirmar o título** ou escolher outro.
 - **Pedir ao titular a confirmação** de que um videogame de fã está coberto pela licença, pelo contato do site oficial.
 - **A capa da página de distribuição** (itch.io) com o selo e o aviso de IA.
 

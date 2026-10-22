@@ -31,6 +31,7 @@ Antes desta fase, o jogo se chamava "Ordem Paranormal: Fanmade (WIP)", com o log
 
 - **Título de trabalho: "Membrana", com "Casos da Ordo Realitas" acima.** A licença libera Membrana e Ordo Realitas como termos do universo.
   - O título fica numa constante (`Licenca.TITULO`) e em `project.godot`.
+  - **A descrição** "Um jogo inspirado no sistema de Ordem Paranormal" foi escolhida pelo dono do projeto (22/10/2026). Ela vai embaixo do título, em letra de texto, e na descrição do projeto, mas não no nome: na janela, no logo e no `config/name`, o nome é só "Membrana". Se o dono quiser a frase dentro do nome, a decisão é dele, contra a Parte 4 da licença.
   - A marca só aparece no nome da própria licença, na frase de conteúdo não oficial.
 - **Selo:**
   - na tela de título, no canto de baixo à direita, com ao menos 10% da largura da tela (`Licenca.FRACAO_SELO`), e também no Sobre;
