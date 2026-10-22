@@ -153,10 +153,21 @@ func test_planta_da_base():
 	add_child_autofree(base)
 	await wait_frames(2)
 	assert_eq(base._abas.get_tab_title(0), "Base")
-	var titulos: Array = base._aba_planta.find_children("*", "Label", true, false).map(func(l): return l.text)
-	for sala in ["BAR DE FACHADA", "ESCRITÓRIO", "CENTRAL DE SINAIS", "BALCÃO DE EQUIPAMENTOS", "SALA DE OCULTISMO",
-			"ENFERMARIA", "LABORATÓRIO", "CONTENÇÃO", "MEMORIAL"]:
-		assert_true(titulos.has(sala), sala)
+	assert_not_null(base._sala_base, "a Base é um lugar: a sala 3D do bar (docs/65)")
+	assert_eq(SalaBase.ESTACOES.size(), 9)
+	var nomes: Array = SalaBase.ESTACOES.map(func(e): return e.nome)
+	for sala in ["Bar de fachada", "Escritório", "Central de sinais", "Balcão de equipamentos", "Sala de ocultismo",
+			"Enfermaria", "Laboratório", "Contenção", "Memorial"]:
+		assert_true(sala in nomes, sala)
+	base._entrar_estacao(base._sala_base.ir_para("balcao"))
+	assert_eq(base._abas.get_tab_title(base._abas.current_tab), "Arsenal", "o balcão leva ao arsenal")
+	assert_eq(base._sala_base.estacao_proxima().id, "balcao", "o agente foi até a seção")
+	base._entrar_estacao(base._sala_base.ir_para("laboratorio"))
+	assert_true(base._bilhete_servico.visible, "o laboratório abre o bilhete por cima da cena")
+	var textos: Array = base._bilhete_servico.find_children("*", "Label", true, false).map(func(l): return l.text)
+	assert_true(textos.has("LABORATÓRIO"))
+	base._fechar_servico()
+	assert_false(base._bilhete_servico.visible)
 	base.ir_para_aba("Arsenal")
 	assert_eq(base._abas.get_tab_title(base._abas.current_tab), "Arsenal")
 	jogo.carreira = antes

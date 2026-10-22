@@ -67,6 +67,7 @@
 | [62-rotina-da-ordem.md](62-rotina-da-ordem.md) | A rotina da Ordem: três sinais da rede com confiança e alarme falso, o briefing num ponto de encontro de fachada com senha e a varredura do covil (o que fica para trás volta na missão seguinte) |
 | [63-credencial-contencao-e-planta.md](63-credencial-contencao-e-planta.md) | A credencial de fachada da Delegacia de Ocorrências Atípicas (+5 e depoimento firme, queima no terceiro uso), os cultistas na contenção (interrogatório vale uma pista na missão seguinte) e a planta da Base com nove salas, laboratório incluído |
 | [64-arsenal-por-agente.md](64-arsenal-por-agente.md) | O arsenal de cada agente: cotas da patente por categoria, carga pela Força (5 espaços por ponto), itens bloqueados com o motivo e −2 dados para arma sem proficiência (p.52-53) |
+| [65-base-caminhavel.md](65-base-caminhavel.md) | A Base como lugar: o bar de fachada em 3D com WASD, nove seções que levam às abas ou abrem o bilhete do serviço (laboratório, contenção, enfermaria, ocultismo), a partir de uma crítica de design |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

@@ -30,7 +30,14 @@ var _donos_grupo: Dictionary = {}      ## Agente -> OptionButton (dono no co-op 
 var _caixa_jogadores: VBoxContainer
 var _caixa_online: VBoxContainer
 var _aba_memorial: ScrollContainer
-var _aba_planta: ScrollContainer
+var _aba_planta: Control
+## A Base como lugar (docs/65): a sala 3D, o aviso da seção e o bilhete do serviço
+var _sala_base: SalaBase
+var _agente_na_sala: Agente
+var _aviso_estacao: PanelContainer
+var _lbl_estacao: Label
+var _bilhete_servico: PanelContainer
+var _servico_aberto := ""
 var _opt_interrogador: OptionButton
 var _lbl_servico: Label   ## o que a última sala fez (laboratório, contenção)
 var _memorial_visto := -1   ## quantas entradas a parede mostra (só remonta quando muda)
@@ -153,10 +160,10 @@ func _montar_interface() -> void:
 	_abas.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	corpo.add_child(_abas)
 
-	# --- Aba Base (docs/63, OR2): a planta, com as salas que prestam serviços
-	_aba_planta = ScrollContainer.new()
+	# --- Aba Base (docs/63, docs/65): o bar de fachada em 3D, com as salas da Ordem nos fundos
+	_aba_planta = Control.new()
 	_aba_planta.name = "Base"
-	_aba_planta.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_aba_planta.clip_contents = true
 	_abas.add_child(_aba_planta)
 
 	# --- Aba Agentes: pastas à esquerda, a ficha como documento à direita
@@ -1203,55 +1210,176 @@ func ir_para_aba(nome: String) -> void:
 
 # --- A planta da Base (docs/63, OR2) --------------------------------------------------
 
-## As salas da Base, pela wiki: um bar velho de fachada e, lá dentro, salas que funcionam
-## como serviços. Cada cartão diz o que a sala faz e leva até ela; o laboratório e a
-## contenção têm serviço próprio aqui.
+## A Base como lugar (docs/65): o bar de fachada em 3D, com WASD. Cada seção leva a uma aba
+## do menu (que continua no topo) ou abre o bilhete do serviço por cima da cena: laboratório,
+## contenção, enfermaria e sala de ocultismo. Monta a sala uma vez; depois só o bilhete.
 func _montar_planta() -> void:
 	if _aba_planta == null:
 		return
-	for f in _aba_planta.get_children():
-		_aba_planta.remove_child(f)
+	if _sala_base == null:
+		_construir_sala_base()
+	if _servico_aberto != "":
+		_abrir_servico(_servico_aberto)
+
+
+func _construir_sala_base() -> void:
+	var vista := SubViewportContainer.new()
+	vista.stretch = true
+	vista.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vista.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	Tema.veu(vista)
+	_aba_planta.add_child(vista)
+	var vp := SubViewport.new()
+	Qualidade.vista(vp)
+	vista.add_child(vp)
+	_sala_base = SalaBase.new()
+	vp.add_child(_sala_base)
+	_sala_base.construir(_selecionado if _selecionado != null else (carreira.roster[0] if not carreira.roster.is_empty() else null))
+	_agente_na_sala = _selecionado
+	# A dica de controles, no alto
+	var dica := Label.new()
+	dica.text = "Ande com WASD ou as setas · E ou Enter para entrar · 1 a 9 levam direto a cada seção"
+	dica.position = Vector2(16, 10)
+	dica.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+	dica.add_theme_constant_override("outline_size", 6)
+	dica.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	_aba_planta.add_child(dica)
+	# O aviso da seção ao alcance, embaixo no centro
+	_aviso_estacao = PanelContainer.new()
+	_aviso_estacao.add_theme_stylebox_override("panel", Tema.caixa(Color(Tema.PEDRA, 0.92), Tema.OURO, 2, 6, Vector2(16, 8)))
+	_aviso_estacao.anchor_left = 0.5
+	_aviso_estacao.anchor_right = 0.5
+	_aviso_estacao.anchor_top = 1.0
+	_aviso_estacao.anchor_bottom = 1.0
+	_aviso_estacao.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_aviso_estacao.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_aviso_estacao.offset_bottom = -16
+	_aviso_estacao.visible = false
+	_aba_planta.add_child(_aviso_estacao)
+	_lbl_estacao = Label.new()
+	_lbl_estacao.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_aviso_estacao.add_child(_lbl_estacao)
+	# O bilhete do serviço, à direita
+	_bilhete_servico = PanelContainer.new()
+	_bilhete_servico.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(14, 12)))
+	_bilhete_servico.theme = Tema.tema_papel()
+	_bilhete_servico.anchor_left = 1.0
+	_bilhete_servico.anchor_right = 1.0
+	_bilhete_servico.offset_left = -440
+	_bilhete_servico.offset_right = -16
+	_bilhete_servico.offset_top = 40
+	_bilhete_servico.rotation_degrees = -0.6
+	_bilhete_servico.visible = false
+	_aba_planta.add_child(_bilhete_servico)
+
+
+## O agente chegou (ou foi levado) a uma seção e entrou: abre a aba ou o serviço dela.
+func _entrar_estacao(e: Dictionary) -> void:
+	if e.is_empty():
+		return
+	Som.tocar("papel")
+	var destino := String(e.destino)
+	if destino in ["Jogadores", "Agentes", "Missão", "Arsenal", "Memorial"]:
+		_fechar_servico()
+		ir_para_aba(destino)
+	else:
+		_abrir_servico(destino)
+
+
+## O bilhete do serviço por cima da cena (docs/65): laboratório, contenção, enfermaria e
+## sala de ocultismo, com o resultado da última ação embaixo.
+func _abrir_servico(id: String) -> void:
+	_servico_aberto = id
+	var texto_antes := _lbl_servico.text if _lbl_servico != null else ""
+	for f in _bilhete_servico.get_children():
+		_bilhete_servico.remove_child(f)
 		f.queue_free()
-	var margem := MarginContainer.new()
-	margem.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for lado in ["left", "right", "top", "bottom"]:
-		margem.add_theme_constant_override("margin_" + lado, Tema.ESPACO_M)
-	_aba_planta.add_child(margem)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", Tema.ESPACO_M)
-	margem.add_child(v)
-	var sub := Label.new()
-	sub.text = "Por fora, um bar velho de bairro. Por dentro, as salas da Ordem."
-	sub.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
-	v.add_child(sub)
-	var grade := GridContainer.new()
-	grade.columns = 3
-	grade.add_theme_constant_override("h_separation", Tema.ESPACO_M)
-	grade.add_theme_constant_override("v_separation", Tema.ESPACO_M)
-	v.add_child(grade)
+	v.add_theme_constant_override("separation", Tema.ESPACO_P)
+	_bilhete_servico.add_child(v)
 	var pendentes := carreira.roster.filter(func(a): return not Progressao.pendencias(a).is_empty())
-	_sala(grade, "Bar de fachada", "Quem entra pede uma cerveja e uma senha. É aqui que os jogadores se juntam.",
-		"Mesa dos jogadores", func(): ir_para_aba("Jogadores"))
-	_sala(grade, "Escritório", "As pastas dos agentes, as fichas e o quadro de fios vermelhos.",
-		"Abrir as pastas", func(): ir_para_aba("Agentes"))
-	_sala(grade, "Central de sinais", "A rede varre posts, jornais e boletins atrás de padrões. Há %d sinais esperando." % sinais.size(),
-		"Ver os sinais", func(): ir_para_aba("Missão"))
-	_sala(grade, "Balcão de equipamentos", "Requisição por patente: o que cada agente leva para a missão.",
-		"Ir ao balcão", func(): ir_para_aba("Arsenal"))
-	var b_oc := _sala(grade, "Sala de ocultismo", ("%d agente(s) com escolhas de NEX à espera." % pendentes.size()) if not pendentes.is_empty()
-		else "Nenhuma escolha de NEX à espera. Os sigilos dormem.", "Transcender", func():
-			if not pendentes.is_empty():
-				Transcender.abrir(self, pendentes[0]))
-	b_oc.disabled = pendentes.is_empty()
-	_sala(grade, "Enfermaria", "Quem volta, volta inteiro: PV, PE e Sanidade cheios, condições e efeitos de insanidade curados.", "", Callable())
-	_sala_laboratorio(grade)
-	_sala_contencao(grade)
-	_sala(grade, "Memorial", "%d agente(s) na parede, cada um com a sua vela." % carreira.memorial.size(),
-		"Ver a parede", func(): ir_para_aba("Memorial"))
+	match id:
+		"laboratorio":
+			_sala_laboratorio(v)
+		"contencao":
+			_sala_contencao(v)
+		"enfermaria":
+			_sala(v, "Enfermaria", "Quem volta, volta inteiro: PV, PE e Sanidade cheios, condições e efeitos de insanidade curados.", "", Callable())
+		"ocultismo":
+			var b := _sala(v, "Sala de ocultismo", ("%d agente(s) com escolhas de NEX à espera." % pendentes.size()) if not pendentes.is_empty()
+				else "Nenhuma escolha de NEX à espera. Os sigilos dormem.", "Transcender", func():
+					if not pendentes.is_empty():
+						Transcender.abrir(self, pendentes[0]))
+			b.disabled = pendentes.is_empty()
 	_lbl_servico = Label.new()
 	_lbl_servico.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_lbl_servico.add_theme_color_override("font_color", Tema.OURO_CLARO)
+	_lbl_servico.add_theme_color_override("font_color", Tema.SANGUE)
+	_lbl_servico.text = texto_antes
 	v.add_child(_lbl_servico)
+	var fechar := Button.new()
+	fechar.text = "Fechar (Esc)"
+	fechar.theme_type_variation = "BotaoPapel"
+	fechar.size_flags_horizontal = Control.SIZE_SHRINK_END
+	fechar.pressed.connect(_fechar_servico)
+	v.add_child(fechar)
+	# Do lado oposto ao agente, para não cobrir a seção onde ele está
+	var a_direita := _sala_base != null and _sala_base.figura.position.x > 0.5
+	_bilhete_servico.anchor_left = 0.0 if a_direita else 1.0
+	_bilhete_servico.anchor_right = 0.0 if a_direita else 1.0
+	_bilhete_servico.offset_left = 16.0 if a_direita else -440.0
+	_bilhete_servico.offset_right = 440.0 if a_direita else -16.0
+	_bilhete_servico.visible = true
+
+
+func _fechar_servico() -> void:
+	_servico_aberto = ""
+	if _bilhete_servico != null:
+		_bilhete_servico.visible = false
+	if _lbl_servico != null:
+		_lbl_servico.text = ""
+
+
+## O agente da Base anda quando a aba Base está à mostra e nada está aberto por cima.
+func _process(delta: float) -> void:
+	if _sala_base == null or not _aba_planta.is_visible_in_tree() or TourGuiado.em_andamento() or TourGuiado.papel_aberto(get_tree()):
+		return
+	if _selecionado != null and _selecionado != _agente_na_sala:
+		_agente_na_sala = _selecionado
+		_sala_base.trocar_agente(_selecionado)
+	var entrada := Vector2.ZERO
+	if not get_viewport().gui_get_focus_owner() is LineEdit:
+		if Atalhos.segurando("mover_cima"): entrada.y -= 1
+		if Atalhos.segurando("mover_baixo"): entrada.y += 1
+		if Atalhos.segurando("mover_esquerda"): entrada.x -= 1
+		if Atalhos.segurando("mover_direita"): entrada.x += 1
+	var dir := Vector3.ZERO
+	if entrada != Vector2.ZERO:
+		var g := _sala_base.rig.giro
+		dir = Vector3(cos(g), 0, -sin(g)) * entrada.x + Vector3(-sin(g), 0, -cos(g)) * -entrada.y
+	_sala_base.mover(dir, delta)
+	_sala_base.rig.alvo = _sala_base.figura.position.lerp(Vector3(0, 0, 0.2), 0.6)   # o salão quase inteiro à vista
+	var e := _sala_base.estacao_proxima()
+	_aviso_estacao.visible = not e.is_empty()
+	if not e.is_empty():
+		_lbl_estacao.text = "E · Entrar: %s\n%s" % [e.nome, e.texto]
+
+
+func _unhandled_input(evento: InputEvent) -> void:
+	if _sala_base == null or not _aba_planta.is_visible_in_tree() or TourGuiado.em_andamento() or TourGuiado.papel_aberto(get_tree()):
+		return
+	if not evento is InputEventKey or not evento.pressed or evento.echo:
+		return
+	var k: int = (evento as InputEventKey).keycode
+	if k == KEY_ESCAPE and _servico_aberto != "":
+		_fechar_servico()
+	elif k == KEY_E or k == KEY_ENTER or k == KEY_KP_ENTER:
+		_entrar_estacao(_sala_base.estacao_proxima())
+	elif k >= KEY_1 and k <= KEY_9:
+		var est: Dictionary = SalaBase.ESTACOES[k - KEY_1]
+		_entrar_estacao(_sala_base.ir_para(String(est.id)))
+	else:
+		return
+	get_viewport().set_input_as_handled()
 
 
 ## Um cartão de sala: nome, o que faz e, se houver, o botão do serviço.
@@ -1339,12 +1467,10 @@ func _sala_contencao(pai: Control) -> void:
 		caixa.add_child(b)
 
 
-## Remonta a planta no fim do quadro (o botão que chamou ainda está na árvore).
+## Remonta o bilhete no fim do quadro (o botão que chamou ainda está na árvore).
 func _montar_planta_depois() -> void:
-	var texto := _lbl_servico.text if _lbl_servico != null else ""
 	await get_tree().process_frame
 	_montar_planta()
-	_lbl_servico.text = texto
 
 
 ## O texto dos botões de sinal na aba Missão, com o resultado do laboratório.
