@@ -1,0 +1,44 @@
+{
+  "nota": "Testemunhas com nome (docs/56), no formato do roteiro de NPC do livro (p.163: nome, função, um traço de aparência e um de personalidade), com listas próprias. A função é o ponto da cena. Gênero pelo nome do ponto ('genero' no ponto manda, se houver).",
+  "nomes_f": ["Lurdes", "Cida", "Rosângela", "Neide", "Jéssica", "Tânia", "Dalva", "Kelly", "Marlene", "Edileuza", "Fátima", "Suelen", "Zuleide", "Glória", "Ivone", "Rosa"],
+  "nomes_m": ["Tião", "Valdir", "Edson", "Wellington", "Juninho", "Raimundo", "Cleiton", "Josué", "Nivaldo", "Gilmar", "Zezinho", "Moacir", "Darci", "Wagner", "Ailton", "Edvaldo"],
+  "pronome_respeito": {"f": "Dona", "m": "Seu"},
+  "aparencias": [
+    "de chinelo e terço no pescoço",
+    "ainda com o uniforme da padaria",
+    "de óculos remendados com fita",
+    "com a mão enfaixada",
+    "de boné desbotado do time da cidade",
+    "com o cabelo ainda molhado",
+    "de avental sujo de graxa",
+    "com uma sacola de feira na mão",
+    "de pijama por baixo do casaco",
+    "com um cigarro apagado entre os dedos",
+    "de roupa de domingo, fora de hora",
+    "com o celular de tela trincada na mão"
+  ],
+  "jeitos": [
+    "fala baixo, olhando para a janela",
+    "fala rápido, querendo ir embora",
+    "cruza os braços antes de responder",
+    "chora antes da primeira palavra",
+    "ri de nervoso no meio das frases",
+    "repete a mesma pergunta duas vezes",
+    "só fala depois de ver se ninguém ouve",
+    "responde com outra pergunta",
+    "não tira os olhos de vocês",
+    "aperta as mãos até os dedos ficarem brancos"
+  ],
+  "sumico": {
+    "nota": "Terror indireto (p.163): numa noite, uma testemunha que falou com o grupo some. Narrativo, com um custo pequeno de Membrana (o medo se espalha). Sem PP: ninguém podia impedir.",
+    "chance_em": 3,
+    "membrana": -2
+  },
+  "lentes": {
+    "percepcao": "a lanterna", "investigacao": "o caderno de campo", "tecnologia": "a câmera modificada", "ocultismo": "o pó de sigilos",
+    "medicina": "as luvas e a pinça", "ciencias": "o kit de amostras", "crime": "as ferramentas", "atletismo": "a força dos braços",
+    "sobrevivencia": "o olho de quem rastreia", "religiao": "a reza certa", "atualidades": "a memória dos jornais", "artes": "o olho para detalhe",
+    "profissao": "o ofício", "diplomacia": "a conversa", "intimidacao": "a pressão", "enganacao": "a mentira certa", "intuicao": "o faro",
+    "pilotagem": "o carro", "fortitude": "a teimosia", "vontade": "a calma", "furtividade": "o silêncio"
+  }
+}

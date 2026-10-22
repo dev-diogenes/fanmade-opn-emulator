@@ -91,7 +91,11 @@ func _process(delta: float) -> void:
 	_tempo += delta
 	_andar(delta)
 	if _visao != null and cena != null:
-		_visao.atualizar_rotulos(cena.agente_atual(), _ponto)
+		if _closeup:   # no close-up da pista, os nomes dos pontos não tampam a tela (docs/56)
+			for r in _visao._rotulos_pontos.values():
+				r.visible = false
+		else:
+			_visao.atualizar_rotulos(cena.agente_atual(), _ponto)
 	if _rec != null:
 		var s := int(_tempo)
 		_rec.text = "%s REC   00:%02d:%02d" % ["●" if int(_tempo * 2.0) % 2 == 0 else "  ", s / 60, s % 60]
@@ -245,6 +249,30 @@ func abrir_deducao(pergunta_id: String = "") -> PainelDeducao:
 		_enviar("deduzir", {"pergunta": q, "candidato": c}),
 		func(respostas: Dictionary):
 			_enviar("relatar", {"respostas": respostas, "sem_contagem": String(missao.opcoes.get("modo_morte", "normal")) != "normal"}))
+
+
+## O momento da pista (docs/56): a câmera chega perto do objeto e o bilhete em close-up mostra o
+## achado; ao fechar, o quadro abre e prende a foto, como antes.
+var _closeup := false
+func _mostrar_pista() -> void:
+	if cena.pistas_encontradas.is_empty() or not is_inside_tree():
+		_avisar_pista()
+		return
+	var achada: Dictionary = cena.pistas_encontradas.back()
+	var prop: Node3D = _visao._props.get(String(achada.get("ponto", "")))
+	var antes := _visao.rig.distancia
+	if prop != null:
+		_closeup = true
+		_visao.rig.focar(prop.position)
+		_visao.rig.distancia = maxf(_visao.rig.distancia_min, antes * 0.55)
+	await get_tree().create_timer(1.1).timeout   # a rolagem no centro sai primeiro
+	if not is_inside_tree():
+		return
+	CloseupPista.mostrar(self, cena.detalhes_da_pista(achada), func():
+		_closeup = false
+		if _visao != null and _visao.rig != null:
+			_visao.rig.distancia = antes
+		_avisar_pista())
 
 
 ## Pista nova com o quadro fechado (docs/23, C6): o botão pulsa e avisa; o quadro abre sozinho
@@ -692,7 +720,7 @@ func _andar(delta: float) -> void:
 	var direita := Vector3(cos(g), 0, -sin(g))
 	_visao.mover_agente(a, direita * entrada.x + frente * -entrada.y, delta)
 	var f := _visao.figura(a)
-	if f != null:
+	if f != null and not _closeup:
 		_visao.rig.alvo = f.position
 		if _visao.rig.seguir != f:
 			_visao.rig.seguir = f
@@ -835,7 +863,7 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 					"Sem dados: o treino em %s basta%s" % [missao.ruleset.pericia(per).get("nome", per), "" if int(ex.custo) == 0 else " (%d PE)" % int(ex.custo)], [], true)
 				Tema.pulso_vhs(_vista, 0.8, 0.6)
 				Som.tocar("pista")
-				_avisar_pista()
+				_mostrar_pista()
 			else:
 				_log.append_text(Tema.bb("Não dá para examinar: falta treino ou PE.", Tema.AVISO) + "\n")
 		"procurar":
@@ -844,7 +872,7 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 			elif String(res.teste.get("pista", "")) != "":
 				Tema.pulso_vhs(_vista, 0.8, 0.6)   # o paranormal "aparece" na fita
 				Som.tocar("pista")
-				_avisar_pista()
+				_mostrar_pista()
 			elif not res.teste.get("sucesso", true):
 				Tema.pulso_vhs(_vista, 0.35, 0.3)
 		"facilitar":

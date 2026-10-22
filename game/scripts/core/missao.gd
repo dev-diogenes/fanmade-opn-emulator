@@ -65,6 +65,9 @@ var rastros: Dictionary = {}
 var alivio := 0
 var passos_da_caca: Array = []   ## [{"de": Vector2i, "para": Vector2i}]
 var _covil_selado_avisado := -1
+## Testemunhas que falaram com o grupo (docs/56): [{nome, papel, cena, sumiu}]. Numa noite, uma
+## delas pode sumir: o terror indireto do livro (p.163).
+var testemunhas_vistas: Array = []
 
 
 const NOMES_TERRENO := {"campo": "campos abertos", "estrada": "estradas de terra", "floresta": "mata fechada",
@@ -1002,6 +1005,8 @@ func concluir_investigacao(resultado: Dictionary) -> void:
 	investigacao_pendente = {}
 	mapa.limpar_conteudo(h)
 	pistas += resultado.get("pistas", []).size()
+	for t in resultado.get("testemunhas", []):
+		testemunhas_vistas.append({"nome": String(t.nome), "papel": String(t.papel), "cena": String(t.get("cena", "")), "sumiu": false})
 	if String(resultado.get("cena", "")) != "" and not resultado.get("restantes", []).is_empty():
 		revisaveis.append({"cena": String(resultado.cena), "pontos": (resultado.restantes as Array).duplicate()})
 	for p in resultado.get("perguntas", []):
@@ -1121,6 +1126,8 @@ func _turno_do_mundo() -> void:
 		_log("[color=#e0574a][b]A Membrana se rompe.[/b] O covil se abre sozinho e chama os agentes.[/color]")
 	if eh_noite() != eh_noite(turno_mundo - 1):
 		_log("[color=#8fa3d9][b]%s[/b][/color]" % ("A noite cai. Algo começa a se mexer lá fora." if eh_noite() else "Amanhece. O que caçava volta para a névoa."))
+		if eh_noite():
+			_sumir_testemunha()
 	_turnos_sem_surgimento += 2 if eh_noite() else 1   # à noite, duas vezes mais rápido (docs/53)
 	if _turnos_sem_surgimento >= int(_cfg.mundo.surgimento_a_cada_turnos) and membrana.nivel_ameaca() >= 1:
 		_turnos_sem_surgimento = 0
@@ -1130,6 +1137,24 @@ func _turno_do_mundo() -> void:
 
 
 # --- Medo no mapa (docs/53) ---------------------------------------------------------
+
+## Terror indireto (p.163, docs/56): quando a noite cai e o caso ainda não está fechado, uma das
+## testemunhas que falaram com o grupo pode sumir (uma chance em três). A semente sai da missão e
+## do turno: igual no online. Custa um pouco de Membrana; não custa PP, ninguém podia impedir.
+func _sumir_testemunha() -> void:
+	var cfg: Dictionary = DadosJogo.ler("testemunhas").get("sumico", {})
+	var vivas: Array = testemunhas_vistas.filter(func(t): return not t.get("sumiu", false))
+	if vivas.is_empty() or cfg.is_empty() or (caso != null and caso.elemento_confirmado()):
+		return
+	var s := absi(hash("%d|%d|sumico" % [semente, turno_mundo]))
+	if s % int(cfg.get("chance_em", 3)) != 0:
+		return
+	var t: Dictionary = vivas[(s / 5) % vivas.size()]
+	t.sumiu = true
+	membrana.alterar(int(cfg.get("membrana", -2)), "testemunha_sumiu")
+	_log("[color=#e0574a][b]%s[/b], %s que falou com vocês em %s, não volta para casa esta noite. Na porta, só um sinal que ninguém da cidade sabe ler.[/color]" % [
+		t.nome, String(t.papel).to_lower(), String(t.cena).to_lower()])
+
 
 ## Noite no turno `t` do mundo: 3 de dia, 2 de noite (mapa.json, mundo.ciclo).
 func eh_noite(t: int = -1) -> bool:
@@ -1411,7 +1436,7 @@ func para_dicionario() -> Dictionary:
 		"caso": caso.para_dicionario() if caso != null else {}, "modificador_chefe": modificador_chefe,
 		"investigacao_pendente": {"hex": [investigacao_pendente.hex.x, investigacao_pendente.hex.y], "cena": investigacao_pendente.cena,
 			"semente": int(investigacao_pendente.semente)} if not investigacao_pendente.is_empty() else {},
-		"turnos_sem_surgimento": _turnos_sem_surgimento, "alivio": alivio,
+		"turnos_sem_surgimento": _turnos_sem_surgimento, "alivio": alivio, "testemunhas_vistas": testemunhas_vistas.duplicate(true),
 		"rastros": rastros.keys().map(func(h): return [h.x, h.y, int(rastros[h])]), "descansos": descansos, "revisaveis": revisaveis.duplicate(true),
 		"historico": historico.slice(maxi(0, historico.size() - 300)),
 		"encerrada": encerrada, "vitoria": vitoria, "extras": extras.duplicate(true),
@@ -1462,6 +1487,7 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m._turnos_sem_surgimento = int(d.get("turnos_sem_surgimento", 0))
 	m.revisaveis = (d.get("revisaveis", []) as Array).duplicate(true)
 	m.alivio = int(d.get("alivio", 0))
+	m.testemunhas_vistas = (d.get("testemunhas_vistas", []) as Array).duplicate(true)
 	for r in d.get("rastros", []):
 		m.rastros[Vector2i(int(r[0]), int(r[1]))] = int(r[2])
 	for i in d.get("descansos", {}):

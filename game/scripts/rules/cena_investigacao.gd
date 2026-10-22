@@ -21,6 +21,8 @@ var falhas := 0
 var indice := 0
 var pontos_restantes: Array[String] = []
 var pistas_encontradas: Array[Dictionary] = []
+## Testemunhas com nome (docs/56): ponto_id -> {nome, papel, aparencia, jeito}.
+var testemunhas: Dictionary = {}
 var perguntas_respondidas: Array[Dictionary] = []
 var encerrada := false
 var motivo_fim := ""
@@ -48,9 +50,10 @@ static func nova(ruleset_: Ruleset, dados_: Dados, caso_: Caso, cena_id: String,
 	c._cfg = ruleset_.dados.get("investigacao", {})
 	for cn in cenas_extras + DadosJogo.ler("cenas_investigacao").cenas:
 		if cn.id == cena_id:
-			c.cena = cn
+			c.cena = cn.duplicate(true)   # cópia: os nomes das testemunhas entram nela
 			break
 	assert(not c.cena.is_empty(), "Cena de investigação desconhecida: %s" % cena_id)
+	c._nomear_testemunhas()
 	for a in grupo:
 		if not a.esta_fora_de_combate():
 			c.agentes.append(a)
@@ -71,6 +74,42 @@ static func nova(ruleset_: Ruleset, dados_: Dados, caso_: Caso, cena_id: String,
 
 func _log(texto: String) -> void:
 	registro.emit(texto)
+
+
+## Dá nome, aparência e jeito às testemunhas da cena (docs/56, roteiro de NPC da p.163). A
+## semente sai do caso, da cena e do ponto: igual no online, sem gastar dados.
+func _nomear_testemunhas() -> void:
+	var d := DadosJogo.ler("testemunhas")
+	if d.is_empty():
+		return
+	var base := "%s|%s|%s" % [caso.sujeito.get("id", "") if caso != null else "", caso.acao.get("id", "") if caso != null else "", caso.local.get("id", "") if caso != null else ""]
+	for p in cena.pontos:
+		if not p.get("depoimento", false):
+			continue
+		var papel := String(p.nome)
+		var genero := String(p.get("genero", "f" if papel.split(" ")[0].ends_with("a") else "m"))
+		var nomes: Array = d.get("nomes_" + genero, d.nomes_m)
+		var s := absi(hash("%s|%s|%s" % [base, cena.id, p.id]))
+		var nome := String(nomes[s % nomes.size()])
+		if (s / 3) % 3 == 0:   # um em cada três é "Dona" ou "Seu"
+			nome = "%s %s" % [String(d.get("pronome_respeito", {}).get(genero, "")), nome]
+		testemunhas[p.id] = {"nome": nome.strip_edges(), "papel": papel,
+			"aparencia": String(d.aparencias[(s / 7) % d.aparencias.size()]), "jeito": String(d.jeitos[(s / 11) % d.jeitos.size()])}
+		p.nome = "%s · %s" % [nome.strip_edges(), papel]
+
+
+## O que o close-up da pista mostra (docs/56): a lente pela perícia, o sentido pelo elemento do
+## caso (e, na Morte, a assinatura canônica que aquela lente revela).
+func detalhes_da_pista(achada: Dictionary) -> Dictionary:
+	var pericia := String(achada.get("pericia", ""))
+	var lentes: Dictionary = DadosJogo.ler("testemunhas").get("lentes", {})
+	var el: Dictionary = DadosJogo.ler("casos").get("elementos", {}).get(caso.elemento if caso != null else "", {})
+	var sentido := String(el.get("assinaturas", {}).get(pericia, el.get("sentido", "")))
+	var p := ponto(String(achada.get("ponto", "")))
+	var ind := String(achada.get("indicio", ""))
+	return {"titulo": String(p.get("nome", "")), "lente": String(lentes.get(pericia, "")), "sentido": sentido,
+		"texto": String(achada.get("texto", "")), "rotulo": String(Caso.indicio(ind).get("rotulo", "")) if ind != "" else "",
+		"duvidosa": achada.get("duvidosa", false)}
 
 
 # --- Turnos ---------------------------------------------------------------------
@@ -246,7 +285,7 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 	if teste.sucesso:
 		# Depoimento passado por pouco (docs/35): a testemunha hesita e pode estar enganada
 		var incerta: bool = p.get("depoimento", false) and teste.total - dt < MARGEM_DEPOIMENTO_FIRME
-		resultado.pista = _encontrar_pista(a, ponto_id, incerta)
+		resultado.pista = _encontrar_pista(a, ponto_id, incerta, -1, pericia)
 		resultado.incerta = incerta
 		var t: Dictionary = _trilha.get_or_add(a, {"sucessos": 0, "dados": 0})
 		t.sucessos += 1
@@ -268,15 +307,19 @@ const MARGEM_DEPOIMENTO_FIRME := 10
 
 ## Anota a pista do ponto e tira o ponto da cena. Devolve o texto da pista.
 ## `incerta`: depoimento aos tropeços; os dados da cena decidem se a testemunha acertou.
-func _encontrar_pista(a: Agente, ponto_id: String, incerta: bool = false, sorte: int = -1) -> String:
+func _encontrar_pista(a: Agente, ponto_id: String, incerta: bool = false, sorte: int = -1, pericia: String = "") -> String:
 	var p := ponto(ponto_id)
 	pontos_restantes.erase(ponto_id)
 	if sorte < 0:   # a sorte da testemunha: da cena, do ponto e do momento, sem rolar dados
 		sorte = absi(hash("%s|%s|%d|%d" % [cena.id, ponto_id, rodada, caso.pistas.size()]))
-	var pista := caso.registrar_pista(p.pista, p.responde, cena.id, incerta, sorte)
+	var original := String(p.pista)
+	if testemunhas.has(ponto_id):   # quem fala, como no roteiro de NPC (docs/56)
+		var t: Dictionary = testemunhas[ponto_id]
+		original = "%s, %s, %s. %s" % [t.nome, t.aparencia, t.jeito, original]
+	var pista := caso.registrar_pista(original, p.responde, cena.id, incerta, sorte)
 	var texto := String(pista.texto)
 	pistas_encontradas.append({"ponto": ponto_id, "texto": texto, "responde": p.responde, "agente": a.nome,
-		"indicio": pista.indicio, "duvidosa": incerta})
+		"indicio": pista.indicio, "duvidosa": incerta, "pericia": pericia})
 	var rotulo := String(Caso.indicio(pista.indicio).get("rotulo", "")) if pista.indicio != "" else ""
 	if incerta:
 		_log("[color=#eda64a]Depoimento incerto:[/color] %s%s [i](a testemunha hesita; pode estar enganada)[/i]" % [texto, "  [color=#e3c27a][?%s][/color]" % rotulo.to_upper() if rotulo != "" else ""])
@@ -367,7 +410,7 @@ func examinar(ponto_id: String, pericia: String) -> Dictionary:
 	var p := ponto(ponto_id)
 	_log("%s examina [b]%s[/b] com o treino em %s%s: pista central, sem teste." % [a.nome, p.nome, ruleset.pericia(pericia).nome,
 		"" if custo == 0 else " (%d PE)" % custo])
-	var texto := _encontrar_pista(a, ponto_id)
+	var texto := _encontrar_pista(a, ponto_id, false, -1, pericia)
 	var t: Dictionary = _trilha.get_or_add(a, {"sucessos": 0, "dados": 0})
 	t.sucessos += 1
 	_acao_concluida()
@@ -500,4 +543,15 @@ func _estourar_urgencia() -> void:
 func resultado() -> Dictionary:
 	return {"pistas": pistas_encontradas.duplicate(true), "perguntas": perguntas_respondidas.duplicate(true),
 		"urgencia_estourada": urgencia_estourada, "penalidade": penalidade, "motivo": motivo_fim,
-		"cena": String(cena.get("id", "")), "restantes": pontos_restantes.duplicate()}   # Revisar Caso (docs/48)
+		"cena": String(cena.get("id", "")), "restantes": pontos_restantes.duplicate(),   # Revisar Caso (docs/48)
+		"testemunhas": testemunhas_ouvidas()}
+
+
+## As testemunhas que o grupo ouviu nesta cena (docs/56): [{nome, papel, cena}].
+func testemunhas_ouvidas() -> Array:
+	var lista: Array = []
+	for pid in testemunhas:
+		if not pid in pontos_restantes:
+			var t: Dictionary = testemunhas[pid]
+			lista.append({"nome": t.nome, "papel": t.papel, "cena": String(cena.get("nome", ""))})
+	return lista

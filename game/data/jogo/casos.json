@@ -776,23 +776,33 @@
     ],
     "nota": "Só vale o que está na ficha (p.79): o caso é solucionado quando a ameaça cai e a ficha responde quem está por trás e o que pretende (o objetivo do caso). Sem isso, a Ordem não paga a solução do caso (Tabela 3.2)."
   },
-  "elementos_nota": "O elemento do caso (docs/52) sai de uma semente do próprio caso. O briefing só descreve os sintomas; responder 'o quê' confirma o elemento na ficha. Sinais tirados da wiki de cada elemento, com palavras próprias.",
+  "elementos_nota": "O elemento do caso (docs/52) sai de uma semente do próprio caso. O briefing só descreve os sintomas; responder 'o quê' confirma o elemento na ficha. Sinais tirados da wiki de cada elemento, com palavras próprias. 'sentido' e 'assinaturas' (docs/56): o que o close-up da pista mostra; só as da Morte são da wiki, as outras sensações são do jogo.",
   "elementos": {
     "sangue": {
       "nome": "Sangue",
-      "sintomas": "Desaparecimentos, marcas de sangue seco e animais achados mortos sem uma gota de sangue."
+      "sintomas": "Desaparecimentos, marcas de sangue seco e animais achados mortos sem uma gota de sangue.",
+      "sentido": "Cheiro de carne podre, doce e enjoativo, que gruda na garganta."
     },
     "morte": {
       "nome": "Morte",
-      "sintomas": "Gente que envelheceu de um dia para o outro, relógios parados na mesma hora e uma poeira cinza que se junta em espirais."
+      "sintomas": "Gente que envelheceu de um dia para o outro, relógios parados na mesma hora e uma poeira cinza que se junta em espirais.",
+      "sentido": "Cheiro de cinza, enxofre e mofo; o ar esfria de repente.",
+      "assinaturas": {
+        "tecnologia": "Na câmera modificada, um vulto cinzento repete o mesmo gesto, sem parar.",
+        "percepcao": "No chão, um pó branco se junta em espirais perfeitas.",
+        "ciencias": "O termômetro cai vários graus perto do que foi achado.",
+        "ocultismo": "No rádio de bolso, um eco chega antes do som."
+      }
     },
     "conhecimento": {
       "nome": "Conhecimento",
-      "sintomas": "Moradores repetindo frases que não sabem de onde vêm, símbolos dourados riscados nos muros e gente que esqueceu o próprio nome."
+      "sintomas": "Moradores repetindo frases que não sabem de onde vêm, símbolos dourados riscados nos muros e gente que esqueceu o próprio nome.",
+      "sentido": "Um sussurro que só quem examina ouve, numa língua que não existe."
     },
     "energia": {
       "nome": "Energia",
-      "sintomas": "Aparelhos que ligam sozinhos, quedas de luz em sequência e gente com queimaduras sem nenhum fogo por perto."
+      "sintomas": "Aparelhos que ligam sozinhos, quedas de luz em sequência e gente com queimaduras sem nenhum fogo por perto.",
+      "sentido": "Um zumbido elétrico que arrepia os pelos do braço."
     }
   },
   "relatorio_nota": "Confirmação em lote (docs/52, como em Return of the Obra Dinn): quem, o quê e onde vão juntos num relatório à Ordem. Errar custa Membrana uma vez; no modo normal, a Ordem diz quantas respostas se sustentam, no hardcore, nada. A reviravolta é confirmada à parte."
