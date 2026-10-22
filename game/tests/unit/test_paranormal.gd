@@ -314,3 +314,68 @@ func test_preco_da_maldicao():
 	d.forcar([1, 1])
 	a.testar(d, "intuicao", 30)
 	assert_eq(a.san, san - 2, "Presença não é atributo de Sangue")
+
+
+# --- Escolha de NEX por seleção (docs/47) ------------------------------------------------
+
+func _escolher(e: EscolhaNex, opcao) -> void:
+	(e._botoes[opcao] as Button).pressed.emit()
+
+
+## Aperta o botão de uma escolha a mais pelo texto.
+func _extra(e: EscolhaNex, texto: String) -> void:
+	for b in e._caixa_extra.find_children("*", "Button", true, false):
+		if (b as Button).text == texto and not b.is_queued_for_deletion():
+			(b as Button).pressed.emit()
+			return
+	fail_test("sem botão '%s'" % texto)
+
+
+func test_escolha_nex_so_mostra_poderes_da_classe():
+	var a := _agente(15, "ocultista")
+	var p := {"tipo": "poder", "opcoes": Progressao.poderes_possiveis(a)}
+	var ids_combatente: Array = rs.dados.poderes_classe.poderes.combatente.map(func(x): return x.id)
+	for o in p.opcoes:
+		assert_true(rs.tem_poder("ocultista", o), "%s é de ocultista" % o)
+	assert_false(p.opcoes.any(func(o): return o in ids_combatente and not rs.tem_poder("ocultista", o)), "nenhum poder só de combatente")
+
+
+func test_treinamento_em_pericia_por_selecao():
+	var a := _agente(15)
+	var feitas := []
+	var e := EscolhaNex.criar(a, {"tipo": "poder", "opcoes": Progressao.poderes_possiveis(a)}, func(t, esc, ex): feitas.append([t, esc, ex]))
+	add_child_autofree(e)
+	_escolher(e, "treinamento_em_pericia")
+	assert_true(e._confirmar.disabled, "falta escolher as perícias")
+	assert_false(e.pericias_para_treinamento().has("luta"), "luta já é treinada: em NEX 15 não sobe")
+	_extra(e, rs.pericia("atletismo").nome)
+	_extra(e, rs.pericia("medicina").nome)
+	assert_false(e._confirmar.disabled)
+	e._confirmar.pressed.emit()
+	assert_eq(feitas[0][2], ["atletismo", "medicina"])
+	assert_eq(Progressao.aplicar(a, feitas[0][0], feitas[0][1], feitas[0][2]), [] as Array[String])
+	assert_eq(a.pericias.get("medicina", ""), "treinado")
+
+
+func test_transcender_escolhe_o_poder_e_o_elemento_por_selecao():
+	var a := _agente(15)
+	var feitas := []
+	var e := EscolhaNex.criar(a, {"tipo": "poder", "opcoes": Progressao.poderes_possiveis(a)}, func(t, esc, ex): feitas.append([t, esc, ex]))
+	add_child_autofree(e)
+	_escolher(e, "transcender")
+	_extra(e, rs.poder_paranormal("resistir_a_elemento").nome)
+	assert_true(e._confirmar.disabled, "Resistir a Elemento ainda pede o elemento")
+	await wait_frames(1)
+	_extra(e, "Sangue")
+	assert_false(e._confirmar.disabled)
+	e._confirmar.pressed.emit()
+	assert_eq(feitas[0][2], ["resistir_a_elemento", "sangue"])
+	assert_eq(Progressao.aplicar(a, "poder", "transcender", feitas[0][2]), [] as Array[String])
+	assert_eq(a.resistencia("sangue"), 10)
+
+
+func test_especialista_em_elemento_guarda_a_escolha():
+	var a := _agente(15, "ocultista")
+	assert_false(Progressao.aplicar(a, "poder", "especialista_em_elemento", []).is_empty(), "sem elemento, não dá")
+	assert_eq(Progressao.aplicar(a, "poder", "especialista_em_elemento", ["energia"]), [] as Array[String])
+	assert_eq(a.escolhas.especialista_em_elemento, "energia", "a escolha fica guardada (antes se perdia)")

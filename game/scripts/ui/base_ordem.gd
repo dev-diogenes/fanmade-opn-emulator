@@ -553,62 +553,14 @@ func _montar_pendencia(a: Agente, caixa: VBoxContainer = null) -> void:
 		sala.tooltip_text = "Entre na sala do agente, ande até o sigilo (WASD) e faça as escolhas do novo NEX ali."
 		caixa.add_child(sala)
 	var p: Dictionary = pend[0]
-	var rs := carreira.ruleset
 	var titulos := {"trilha": "Escolha a trilha (NEX 10%)", "poder": "Escolha um poder de classe", "aumento": "Aumente um atributo", "ritual": "Aprenda um ritual",
 		"poder_paranormal": "Escolha um poder paranormal", "afinidade": "Elemento da afinidade (NEX 50%): ela se firma no próximo Transcender",
 		"grau": "Grau de Treinamento: escolha %d perícias" % int(p.get("quantidade", 0)), "versatilidade": "Versatilidade (NEX 50%)"}
 	var lbl := _titulo("[%d pendente(s)] %s" % [pend.size(), titulos[p.tipo]])
 	lbl.add_theme_color_override("font_color", Tema.SANGUE)
 	caixa.add_child(lbl)
-	if p.tipo == "grau":
-		var lista := ItemList.new()
-		lista.select_mode = ItemList.SELECT_MULTI
-		lista.custom_minimum_size = Vector2(0, 90)
-		for per in p.opcoes:
-			lista.add_item(rs.pericia(per).nome)
-		caixa.add_child(lista)
-		caixa.add_child(_botao("Confirmar", func():
-			var escolhidas: Array = []
-			for i in lista.get_selected_items():
-				escolhidas.append(p.opcoes[i])
-			_aplicar(a, "grau", escolhidas)))
-		return
-	var opt := OptionButton.new()
-	for o in p.opcoes:
-		var nome := String(o)
-		match p.tipo:
-			"trilha": nome = rs.trilha(a.classe_id, o).nome
-			"poder": nome = rs.poder(a.classe_id, o).nome + ("" if rs.poder(a.classe_id, o).get("implementado", false) else " *")
-			"aumento": nome = String(o).to_upper()
-			"ritual": nome = "%s (%dº, %s)%s" % [rs.ritual(o).nome, int(rs.ritual(o).circulo), rs.ritual(o).elemento, "" if rs.ritual(o).get("implementado", false) else " *"]
-			"poder_paranormal": nome = "%s (%s)%s" % [rs.poder_paranormal(o).nome, rs.poder_paranormal(o).elemento, "" if rs.poder_paranormal(o).get("implementado", false) else " *"]
-			"afinidade": nome = String(o).capitalize()
-		opt.add_item(nome)
-	caixa.add_child(opt)
-	# Transcender pede um poder paranormal; outras escolhas usam o campo de texto
-	var opt_para := OptionButton.new()
-	if p.tipo == "poder":
-		opt_para.add_item("(para Transcender) escolha o poder paranormal")
-		opt_para.set_item_metadata(0, "")
-		for pid in Progressao.poderes_paranormais_possiveis(a):
-			opt_para.add_item(rs.poder_paranormal(pid).nome)
-			opt_para.set_item_metadata(opt_para.item_count - 1, pid)
-		caixa.add_child(opt_para)
-	var extra := LineEdit.new()
-	extra.placeholder_text = "Escolha extra: perícias (Treinamento) · ritual/elemento/classe:poder (poderes paranormais)"
-	caixa.add_child(extra)
-	caixa.add_child(_botao("Confirmar", func():
-		var escolha = p.opcoes[opt.selected]
-		var pares: Array = []
-		if p.tipo == "poder" and escolha == "transcender":
-			pares.append(opt_para.get_item_metadata(opt_para.selected) if opt_para.selected >= 0 else "")
-			pares.append(extra.text.strip_edges())
-		elif p.tipo == "poder_paranormal":
-			pares.append(extra.text.strip_edges())
-		else:
-			for t in extra.text.split(",", false):
-				pares.append(t.strip_edges())
-		_aplicar(a, p.tipo, escolha, pares)))
+	# Tudo por seleção (docs/47): as opções e as escolhas a mais vêm das regras, nada se digita
+	caixa.add_child(EscolhaNex.criar(a, p, func(tipo, escolha, extra): _aplicar(a, tipo, escolha, extra), not na_base))
 
 
 func _aplicar(a: Agente, tipo: String, escolha, extra: Array = []) -> void:

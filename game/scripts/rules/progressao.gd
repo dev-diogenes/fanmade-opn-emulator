@@ -201,6 +201,15 @@ static func aplicar(a: Agente, tipo: String, escolha, extra: Array = []) -> Arra
 					if not e2.is_empty():
 						a.poderes.erase(escolha)
 						erros.append_array(e2)
+			elif escolha in ["especialista_em_elemento", "ritual_predileto"]:
+				# A escolha do poder vai em `escolhas` (docs/47): elemento, ou um ritual conhecido
+				var x := String(extra[0]) if not extra.is_empty() else ""
+				var valido := x in ["conhecimento", "energia", "morte", "sangue", "medo"] if escolha == "especialista_em_elemento" else x in a.rituais
+				if not valido:
+					erros.append("Escolha %s" % ("o elemento" if escolha == "especialista_em_elemento" else "um ritual que o agente conhece"))
+				else:
+					a.poderes.append(escolha)
+					a.escolhas[escolha] = x
 			elif escolha == "treinamento_em_pericia":
 				if extra.size() != 2:
 					erros.append("Treinamento em Perícia exige escolher 2 perícias")
