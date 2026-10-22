@@ -542,7 +542,8 @@ func _montar_interface() -> void:
 	add_child(Alucinacoes.criar(_vista, _tab3d, func(): return _agente_da_vez(),
 		func():
 			var ag := _agente_da_vez()
-			return _tab3d.posicao(grade.posicao(ag)) if ag != null and grade != null and grade.tem(ag) else Vector3.ZERO))
+			return _tab3d.posicao(grade.posicao(ag)) if ag != null and grade != null and grade.tem(ag) else Vector3.ZERO,
+		func(): return combate.participantes.filter(func(s): return s is Agente) if combate != null else []))
 
 	# Topo à esquerda: rodada, vez e a ficha do ser escolhido
 	var topo := PanelContainer.new()

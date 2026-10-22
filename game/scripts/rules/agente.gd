@@ -3,6 +3,9 @@ extends Ser
 ## Agente da Ordem controlado por um jogador.
 ## Para criar com validação completa (origem, classe, poderes, trilha), use CriacaoAgente.
 
+## Um efeito de insanidade novo (p.111, docs/49): {"id": 1-20, "ate_o_fim": bool}.
+signal ganhou_insanidade(agente: Agente, efeito: Dictionary)
+
 var ruleset: Ruleset
 var id := ""                     ## Identificador único na carreira (para salvar)
 var classe_id := ""
@@ -13,12 +16,19 @@ var atributos: Dictionary = {}   ## {"agi": 2, "for": 1, ...} — já com aument
 var pericias: Dictionary = {}    ## {"luta": "treinado", ...}
 var poderes: Array[String] = []  ## Poderes de classe escolhidos (podem repetir se "repetivel")
 var perito: Array[String] = []   ## Perícias da habilidade Perito (especialista)
-var escolhas: Dictionary = {}
+var escolhas: Dictionary = {}    ## Escolhas de poderes, ex.: {"ferramenta_de_trabalho": "machado"}
 ## Interlúdio (p.93, docs/48): bônus de +1d6 guardados até o fim da missão. Exercício vale em
 ## testes de Agilidade, Força ou Vigor (até Vigor bônus); leitura, de Intelecto ou Presença (até
 ## Intelecto). Um por teste, gasto sozinho no próximo teste que servir.
 var bonus_exercicio := 0
-var bonus_leitura := 0    ## Escolhas de poderes, ex.: {"ferramenta_de_trabalho": "machado"}
+var bonus_leitura := 0
+## Efeitos de insanidade (p.111-113, docs/49): [{"id": 1-20, "ate_o_fim": bool}]. Só de
+## interpretação, sem penalidade. O temporário some quando o agente deixa de estar perturbado;
+## enlouquecer o fixa até o fim da missão.
+var efeitos_insanidade: Array[Dictionary] = []
+var semente_insanidade := 0      ## a semente da missão: o 1d20 sai dela (igual no online, sem gastar dados)
+var rolagens_insanidade := 0
+var _insanidade_na_cena := false
 var lesoes: Array[String] = []   ## Atributos perdidos por Lesões (regra opcional)
 var idade := ""                  ## Faixa etária (regra opcional Idade Variada); "" = sem a regra
 var desvantagens_idade: Array[String] = []
@@ -522,6 +532,8 @@ func para_dicionario() -> Dictionary:
 		"atributos": atributos.duplicate(), "pericias": pericias.duplicate(),
 		"poderes": Array(poderes), "perito": Array(perito), "escolhas": escolhas.duplicate(),
 		"bonus_exercicio": bonus_exercicio, "bonus_leitura": bonus_leitura,
+		"insanidade": efeitos_insanidade.duplicate(true), "rolagens_insanidade": rolagens_insanidade,
+		"semente_insanidade": semente_insanidade,
 		"lesoes": Array(lesoes), "idade": idade, "desvantagens_idade": Array(desvantagens_idade),
 		"trilha_versatil": trilha_versatil, "sem_poder_origem": sem_poder_origem,
 		"transicao_mundano": transicao_mundano.duplicate(),
@@ -560,6 +572,10 @@ static func de_dicionario(p_ruleset: Ruleset, d: Dictionary) -> Agente:
 	a.escolhas = d.get("escolhas", {}).duplicate()
 	a.bonus_exercicio = int(d.get("bonus_exercicio", 0))
 	a.bonus_leitura = int(d.get("bonus_leitura", 0))
+	for e in d.get("insanidade", []):
+		a.efeitos_insanidade.append({"id": int(e.id), "ate_o_fim": bool(e.get("ate_o_fim", false))})
+	a.rolagens_insanidade = int(d.get("rolagens_insanidade", 0))
+	a.semente_insanidade = int(d.get("semente_insanidade", 0))
 	for x in d.get("lesoes", []):
 		a.lesoes.append(x)
 	a.idade = d.get("idade", "")
@@ -706,10 +722,71 @@ func ganhar_pe_temporario(quantidade: int) -> void:
 
 
 func encerrar_cena() -> void:
+	_insanidade_na_cena = false
 	usos_na_cena.clear()
 	pe_temporario = 0
 	em_acao = false
 	super.encerrar_cena()
+
+
+# --- Insanidade (p.111-113, docs/49) ------------------------------------------
+
+## Na primeira vez que fica perturbado numa cena, rola 1d20 na Tabela 5.1. Deixando de estar
+## perturbado, os efeitos temporários somem. O mesmo número outra vez não traz nada novo.
+func _mudou_perturbado(agora: bool) -> void:
+	if not agora:
+		var fixos: Array[Dictionary] = []
+		for e in efeitos_insanidade:
+			if e.ate_o_fim:
+				fixos.append(e)
+		efeitos_insanidade = fixos
+		return
+	if _insanidade_na_cena or ruleset == null or ruleset.efeitos_insanidade().is_empty():
+		return
+	_insanidade_na_cena = true
+	var d20 := absi(hash("%d|%s|%d" % [semente_insanidade, id if id != "" else nome, rolagens_insanidade])) % 20 + 1
+	rolagens_insanidade += 1
+	for e in efeitos_insanidade:
+		if int(e.id) == d20:
+			return
+	var efeito := {"id": d20, "ate_o_fim": false}
+	efeitos_insanidade.append(efeito)
+	ganhou_insanidade.emit(self, efeito)
+
+
+## Enlouquecendo: mesmo que seja acalmado, o efeito que era temporário dura até o fim da missão.
+func _comecou_a_enlouquecer() -> void:
+	for e in efeitos_insanidade:
+		e.ate_o_fim = true
+
+
+## No mapa, cada turno do agente é uma cena nova para a insanidade.
+func nova_cena_de_insanidade() -> void:
+	_insanidade_na_cena = false
+
+
+## Os efeitos que valem agora, com nome, texto e frases da tabela, e "ate_o_fim".
+func insanidades() -> Array[Dictionary]:
+	var lista: Array[Dictionary] = []
+	for e in efeitos_insanidade:
+		var info: Dictionary = ruleset.efeito_insanidade(int(e.id)).duplicate()
+		info["ate_o_fim"] = e.ate_o_fim
+		lista.append(info)
+	return lista
+
+
+## A linha do registro para um efeito novo (mapa e combate).
+func linha_insanidade(efeito: Dictionary) -> String:
+	var info := ruleset.efeito_insanidade(int(efeito.id))
+	return "[color=#c98aa0]Sanidade abaixo da metade: %s rola um efeito de insanidade (1d20: %d), [b]%s[/b]. %s[/color]" % [
+		nome, int(efeito.id), String(info.get("nome", "?")), String(info.get("texto", ""))]
+
+
+## Fim da missão: os efeitos acabam.
+func limpar_insanidade() -> void:
+	efeitos_insanidade.clear()
+	rolagens_insanidade = 0
+	_insanidade_na_cena = false
 
 
 # --- Testes ----------------------------------------------------------------

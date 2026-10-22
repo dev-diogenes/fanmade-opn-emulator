@@ -7,7 +7,11 @@ extends Node
 ## - de tempos em tempos, um vulto aparece perto do grupo e some;
 ## - frases soltas surgem datilografadas e se apagam.
 ## A intensidade vai de 0 (SAN na metade) a 1 (SAN zerada). Só apresenta: as regras não mudam.
-##   var al := Alucinacoes.criar(_vista, _mapa3d, func(): return missao.agente_atual(), func(): return centro_3d)
+## Efeito de insanidade (p.111, docs/49): quando um agente rola um, a NotaInsanidade aparece; na
+## vez de quem tem efeito, as frases vêm do efeito (e o dos olhos nas sombras chama mais vultos).
+## O efeito que dura até o fim da missão mantém um pouco de loucura mesmo com a SAN de volta.
+##   var al := Alucinacoes.criar(_vista, _mapa3d, func(): return missao.agente_atual(), func(): return centro_3d,
+##       func(): return missao.agentes)
 
 const FRASES := ["Você não devia ter aberto aquela porta.", "Eles sabem o seu nome.", "Olhe para trás.",
 	"Isso não é real. É?", "Alguém está contando os seus passos.", "Volte. Volte. Volte.",
@@ -18,6 +22,9 @@ var vista: SubViewportContainer
 var raiz3d: Node3D
 var obter_agente: Callable    ## -> Agente (ou null)
 var obter_centro: Callable    ## -> Vector3 (onde o vulto aparece em volta)
+var obter_agentes: Callable   ## -> Array de Agente (para avisar o efeito de insanidade novo)
+var _vigiados: Array[Agente] = []
+var _proxima_vigia := 0.0
 var loucura := 0.0
 var _proximo_vulto := 4.0
 var _proxima_frase := 6.0
@@ -25,13 +32,15 @@ var _camada: CanvasLayer
 var _frase: Label
 
 
-static func criar(p_vista: SubViewportContainer, p_raiz3d: Node3D, p_agente: Callable, p_centro: Callable) -> Alucinacoes:
+static func criar(p_vista: SubViewportContainer, p_raiz3d: Node3D, p_agente: Callable, p_centro: Callable,
+		p_agentes: Callable = Callable()) -> Alucinacoes:
 	var a := Alucinacoes.new()
 	a.name = "Alucinacoes"
 	a.vista = p_vista
 	a.raiz3d = p_raiz3d
 	a.obter_agente = p_agente
 	a.obter_centro = p_centro
+	a.obter_agentes = p_agentes
 	return a
 
 
@@ -41,7 +50,25 @@ static func intensidade(ag: Agente) -> float:
 		return 0.0
 	if ag.tem(Ser.ENLOUQUECENDO) or ag.tem(Ser.INSANO):
 		return 1.0
-	return clampf((0.5 - float(ag.san) / ag.san_maximo) / 0.5, 0.0, 1.0)
+	var minimo := 0.3 if not ag.efeitos_insanidade.is_empty() else 0.0
+	return clampf((0.5 - float(ag.san) / ag.san_maximo) / 0.5, minimo, 1.0)
+
+
+## As frases do efeito de insanidade de quem está na vez (vazio sem efeito).
+static func frases_do_efeito(ag: Agente) -> Array:
+	var lista := []
+	if ag != null:
+		for e in ag.insanidades():
+			lista.append_array(e.get("frases", []))
+	return lista
+
+
+static func _vultos_do_efeito(ag: Agente) -> float:
+	var m := 1.0
+	if ag != null:
+		for e in ag.insanidades():
+			m = maxf(m, float(e.get("vultos", 1.0)))
+	return m
 
 
 func _ready() -> void:
@@ -68,6 +95,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_proxima_vigia -= delta
+	if _proxima_vigia <= 0.0:
+		_proxima_vigia = 1.0
+		_vigiar()
 	var ag: Agente = obter_agente.call() if obter_agente.is_valid() else null
 	var alvo := intensidade(ag)
 	loucura = move_toward(loucura, alvo, delta * 0.5)   # entra e sai devagar
@@ -78,7 +109,7 @@ func _process(delta: float) -> void:
 	if loucura <= 0.05:
 		return
 	Som.ambiente(maxf(loucura, 0.4))   # os sussurros sobem com a loucura
-	_proximo_vulto -= delta * (0.5 + loucura)
+	_proximo_vulto -= delta * (0.5 + loucura) * _vultos_do_efeito(ag)
 	_proxima_frase -= delta * (0.5 + loucura)
 	if _proximo_vulto <= 0.0:
 		_proximo_vulto = randf_range(5.0, 10.0)
@@ -110,8 +141,32 @@ func _vulto() -> void:
 	tw.tween_callback(v.queue_free)
 
 
+## Liga o aviso do efeito de insanidade em quem entrou na cena (o combate monta os agentes depois).
+func _vigiar() -> void:
+	if not obter_agentes.is_valid():
+		return
+	for a in obter_agentes.call():
+		if a is Agente and not a in _vigiados:
+			_vigiados.append(a)
+			a.ganhou_insanidade.connect(_ao_ganhar_insanidade)
+
+
+func _ao_ganhar_insanidade(a: Agente, efeito: Dictionary) -> void:
+	NotaInsanidade.mostrar(get_parent(), a, efeito)
+	Tema.pulso_vhs(vista, 0.6, 0.5)
+
+
+func _exit_tree() -> void:
+	for a in _vigiados:
+		if is_instance_valid(a) and a.ganhou_insanidade.is_connected(_ao_ganhar_insanidade):
+			a.ganhou_insanidade.disconnect(_ao_ganhar_insanidade)
+	_vigiados.clear()
+
+
 func _sussurrar() -> void:
-	_frase.text = FRASES[randi() % FRASES.size()]
+	var do_efeito := frases_do_efeito(obter_agente.call() if obter_agente.is_valid() else null)
+	var fonte: Array = do_efeito if not do_efeito.is_empty() and randf() < 0.7 else FRASES
+	_frase.text = String(fonte[randi() % fonte.size()])
 	_frase.modulate.a = 1.0
 	_frase.position.x += randf_range(-30, 30)
 	Tema.datilografar(_frase, 0.05, 2.0)

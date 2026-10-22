@@ -1,0 +1,26 @@
+{
+  "ref": "p.111-113",
+  "nota": "Tabela 5.1 (efeitos de insanidade), com descrições e frases escritas para o jogo. Na primeira vez que fica perturbado numa cena, o agente rola 1d20 aqui. O efeito é só de interpretação, sem penalidade: dura enquanto estiver perturbado, ou até o fim da missão se chegar a enlouquecer (docs/49).",
+  "efeitos": [
+    {"id": 1, "nome": "Sede de dor", "texto": "Procura a dor, seja para sentir, seja para causar.", "frases": ["Doeu? Que bom.", "Mais uma vez. Só para sentir."]},
+    {"id": 2, "nome": "Rostos misturados", "texto": "Todo rosto aparece deformado, com pedaços de bicho e de monstro.", "frases": ["Esse não é o rosto dele.", "Tem dentes demais nesse sorriso."]},
+    {"id": 3, "nome": "Vozes de criatura", "texto": "Toda voz chega torta, como se uma criatura estivesse falando.", "frases": ["Quem fala com essa voz?", "Isso não é uma voz humana."]},
+    {"id": 4, "nome": "A voz que acusa", "texto": "Uma voz dentro da cabeça repete que você está mentindo.", "frases": ["Mentiroso.", "Você sabe que não é verdade.", "Conta a verdade."]},
+    {"id": 5, "nome": "Sangue quente", "texto": "O sangue parece ferver e querer sair do corpo.", "frases": ["Está quente aqui dentro.", "Deixa sair."]},
+    {"id": 6, "nome": "Olhos nas sombras", "texto": "De cada sombra, rostos humanos e monstruosos ficam encarando.", "frases": ["Eles não piscam.", "Tem alguém no canto. Sempre."], "vultos": 2.0},
+    {"id": 7, "nome": "Fome sem fundo", "texto": "Uma fome que nada sacia toma conta do corpo.", "frases": ["Ainda com fome.", "Nada enche."]},
+    {"id": 8, "nome": "Gosto de ferro", "texto": "A boca tem sempre gosto de sangue.", "frases": ["Gosto de moeda velha.", "De quem é esse sangue?"]},
+    {"id": 9, "nome": "Luz que queima", "texto": "A claridade fere os olhos; a vontade é escondê-los o tempo todo.", "frases": ["Apaga essa luz.", "Fecha os olhos. Fecha."]},
+    {"id": 10, "nome": "Boca alheia", "texto": "Falar fica quase impossível, como se outra coisa escolhesse as palavras.", "frases": ["Não fui eu que disse isso.", "Quieto. Deixa que eu falo."]},
+    {"id": 11, "nome": "Coceira nos olhos", "texto": "Os olhos coçam sem trégua, uma coceira que parece não ter fim.", "frases": ["Coça. Coça muito.", "Só mais um pouco e passa."]},
+    {"id": 12, "nome": "Memória furada", "texto": "O que aconteceu há mais de uma hora começa a se apagar.", "frases": ["Quando foi isso mesmo?", "Você já esteve aqui?"]},
+    {"id": 13, "nome": "Emoções trocadas", "texto": "O que alegra dá raiva, e o que dói dá alegria.", "frases": ["Por que você está sorrindo?", "Isso foi engraçado."]},
+    {"id": 14, "nome": "Narrador grotesco", "texto": "Sente a necessidade de contar cada gesto do jeito mais nojento possível.", "frases": ["Conta com detalhes.", "Repara no barulho que fez."]},
+    {"id": 15, "nome": "Vermes", "texto": "Tem certeza de que vermes correm pelas veias e por baixo da pele.", "frases": ["Sente eles andando?", "Embaixo da pele. Agora."]},
+    {"id": 16, "nome": "Falso poder", "texto": "Acredita estar sob um ritual que o deixa mais poderoso.", "frases": ["Nada pode te tocar.", "O ritual ainda está ativo."]},
+    {"id": 17, "nome": "Mãos furadas", "texto": "Acha que as mãos estão furadas e que as coisas caem dos bolsos.", "frases": ["Cadê? Estava aqui.", "Caiu de novo."]},
+    {"id": 18, "nome": "Tudo é sorte", "texto": "Acredita que só a sorte decide e deixa as escolhas para o acaso.", "frases": ["Cara ou coroa.", "Deixa o dado decidir."]},
+    {"id": 19, "nome": "Dor que agrada", "texto": "Tudo parece ferver, e a dor agrada.", "frases": ["Está fervendo.", "Arde. Que bom."]},
+    {"id": 20, "nome": "Celebrar o fim", "texto": "Só o fim das coisas merece festa, e você sente que precisa trazê-lo.", "frases": ["Tudo acaba.", "Seja você o fim."]}
+  ]
+}

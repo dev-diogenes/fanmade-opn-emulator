@@ -118,6 +118,8 @@ static func nova(semente_: int, ruleset_: Ruleset = null, grupo: Array = [], opc
 		m.agentes_iniciais.append(a)
 		m.armas[a] = a.arma()
 		m.posicoes[a] = inicio
+		a.semente_insanidade = semente_
+		m._vincular(a)
 	m._iniciar_turno_do_agente()
 	return m
 
@@ -125,6 +127,15 @@ static func nova(semente_: int, ruleset_: Ruleset = null, grupo: Array = [], opc
 func _log(texto: String) -> void:
 	historico.append(texto)
 	registro.emit(texto)
+
+
+func _vincular(a: Agente) -> void:
+	if not a.ganhou_insanidade.is_connected(_ao_ganhar_insanidade):
+		a.ganhou_insanidade.connect(_ao_ganhar_insanidade)
+
+
+func _ao_ganhar_insanidade(a: Agente, efeito: Dictionary) -> void:
+	_log(a.linha_insanidade(efeito))
 
 
 # --- Turno dos agentes -----------------------------------------------------
@@ -401,6 +412,7 @@ func _iniciar_turno_do_agente() -> void:
 	ultimo_movimento = {}
 	var a := agente_atual()
 	if a != null:
+		a.nova_cena_de_insanidade()
 		a.iniciar_turno()   # zera o PE do turno e conta "enlouquecendo" também no mapa
 		turno_mudou.emit(a)
 
@@ -1115,6 +1127,7 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 		if por_id.has(i):
 			m.resgatados.append(por_id[i])
 	for a in m.agentes_iniciais:
+		m._vincular(a)
 		m.armas[a] = a.arma()
 		var p: Array = d.posicoes.get(a.id, [0, 0])
 		m.posicoes[a] = Vector2i(int(p[0]), int(p[1]))

@@ -51,6 +51,7 @@
 | [46-ameacas-manobram.md](46-ameacas-manobram.md) | Ameaças que são pessoas agarram quem atira ou conjura, derrubam com um aliado ao lado e fintam; o Cão de Guarda derruba ao morder; Retaliação do Ocioso não letal |
 | [47-escolhas-por-selecao.md](47-escolhas-por-selecao.md) | Escolhas de NEX por seleção (Base e sala de Transcender), sem campo de texto; como as regras filtram classe, poderes, rituais, perícias e itens |
 | [48-interludio.md](48-interludio.md) | Interlúdio pelo livro (p.92-93) no lugar do descanso de 25%: duas ações por agente no hex (dormir, relaxar, alimentar-se, exercitar-se, ler, revisar caso), recuperação pelo limite de PE |
+| [49-efeito-de-insanidade.md](49-efeito-de-insanidade.md) | Efeito de insanidade pelo livro (p.111-113): 1d20 na Tabela 5.1 na primeira vez que fica perturbado na cena, sem penalidade; dura até o fim da missão se enlouquecer; nota na tela e sussurros do efeito |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

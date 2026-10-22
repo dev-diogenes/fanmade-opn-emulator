@@ -264,6 +264,18 @@ func poder_paranormal(poder_id: String) -> Dictionary:
 	return {}
 
 
+## Tabela 5.1, efeitos de insanidade (p.113): [{id 1-20, nome, texto, frases}].
+func efeitos_insanidade() -> Array:
+	return dados.get("insanidade", {}).get("efeitos", [])
+
+
+func efeito_insanidade(efeito_id: int) -> Dictionary:
+	for e in efeitos_insanidade():
+		if int(e.id) == efeito_id:
+			return e
+	return {}
+
+
 func cfg_maldicoes() -> Dictionary:
 	return dados.get("equipamentos", {}).get("maldicoes", {})
 

@@ -397,12 +397,28 @@ func _atualizar_pv() -> void:
 
 
 func _atualizar_san() -> void:
+	var era_perturbado := tem(PERTURBADO)
+	var enlouquecia := tem(ENLOUQUECENDO)
 	if san * 2 < san_maximo:
 		condicoes[PERTURBADO] = true
 	else:
 		condicoes.erase(PERTURBADO)
 	if san == 0 and not tem(INSANO):
 		condicoes[ENLOUQUECENDO] = true
+	if tem(PERTURBADO) != era_perturbado:
+		_mudou_perturbado(tem(PERTURBADO))
+	if tem(ENLOUQUECENDO) and not enlouquecia:
+		_comecou_a_enlouquecer()
+
+
+## Ganchos da insanidade (p.111): o Agente rola o efeito ao ficar perturbado e o fixa até o fim
+## da missão ao enlouquecer. Ameaças não têm efeito de insanidade.
+func _mudou_perturbado(_agora: bool) -> void:
+	pass
+
+
+func _comecou_a_enlouquecer() -> void:
+	pass
 
 
 func _morrer() -> void:

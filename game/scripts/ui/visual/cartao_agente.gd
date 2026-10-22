@@ -96,6 +96,8 @@ func atualizar(da_vez: bool) -> void:
 	_barras["san"].titulo.add_theme_color_override("font_color", Tema.SANGUE_CLARO.lightened(0.25) if perturbado else Tema.TEXTO_SUAVE)
 	var ficha := Atalhos.com_tecla("Ficha e inventário", "ficha")
 	tooltip_text = ("%s está perturbado: Sanidade abaixo da metade. %s" % [agente.nome, ficha]) if perturbado else ficha
+	for e in agente.insanidades():   # efeitos de insanidade (docs/49)
+		tooltip_text += "\nEfeito de insanidade: %s. %s (%s)" % [e.nome, e.texto, "até o fim da missão" if e.ate_o_fim else "enquanto perturbado"]
 	_nome.add_theme_color_override("font_color", Tema.SANGUE_CLARO.lightened(0.2) if perturbado else (Tema.OURO_CLARO if da_vez else Tema.PERGAMINHO))
 	_tremer = perturbado and not caido
 	_valor("pv", agente.pv, agente.pv_maximo)

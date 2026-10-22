@@ -119,7 +119,8 @@ func _montar_interface() -> void:
 	add_child(Alucinacoes.criar(_vista, _visao, func(): return cena.agente_atual(),
 		func():
 			var f := _visao.figura(cena.agente_atual()) if cena.agente_atual() != null else null
-			return f.position if f != null else Vector3.ZERO))
+			return f.position if f != null else Vector3.ZERO,
+		func(): return cena.agentes))
 
 	add_child(_Enquadramento.new())
 	_montar_topo()

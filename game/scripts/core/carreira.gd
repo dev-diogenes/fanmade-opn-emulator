@@ -313,6 +313,7 @@ func _avancar_campanha(m: Missao) -> Dictionary:
 func _restaurar(a: Agente) -> void:
 	a.bonus_exercicio = 0   # os bônus do interlúdio valem até o fim da missão (p.93)
 	a.bonus_leitura = 0
+	a.limpar_insanidade()   # o efeito de insanidade dura no máximo até o fim da missão (p.111)
 	a.condicoes.clear()
 	a.encerrar_cena()
 	a.recalcular_maximos(true)

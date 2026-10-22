@@ -71,6 +71,12 @@ func _init(p_ruleset: Ruleset, p_dados: Dados, p_regras: Dictionary = {}) -> voi
 func adicionar(ser: Ser) -> void:
 	participantes.append(ser)
 	ser.morreu.connect(_ao_morrer)
+	if ser is Agente and not (ser as Agente).ganhou_insanidade.is_connected(_ao_ganhar_insanidade):
+		(ser as Agente).ganhou_insanidade.connect(_ao_ganhar_insanidade)
+
+
+func _ao_ganhar_insanidade(a: Agente, efeito: Dictionary) -> void:
+	_log(a.linha_insanidade(efeito))
 
 
 # --- Iniciativa e turnos ---------------------------------------------------
