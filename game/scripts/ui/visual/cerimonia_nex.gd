@@ -34,6 +34,7 @@ static func abrir(pai: Node, carreira: Carreira) -> CerimoniaNex:
 func _montar(carreira: Carreira) -> void:
 	layer = 89
 	name = "CerimoniaNex"
+	add_to_group("papel_modal")   # o tour do tutorial espera ele fechar (docs/57)
 	var r := carreira.ultimo_relatorio
 	var escuro := ColorRect.new()
 	escuro.color = Color(0.01, 0.01, 0.02, 0.82)

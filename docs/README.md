@@ -59,6 +59,7 @@
 | [54-elementos-no-mundo.md](54-elementos-no-mundo.md) | Cada elemento caça de um jeito (Sangue cego, Morte errática, Conhecimento na mente frágil, Energia ao acaso), cores da wiki (Energia neon, Medo sem cor), presságios no mapa e o som de cada elemento |
 | [55-gente-de-hoje.md](55-gente-de-hoje.md) | Agentes contemporâneos (sem elmo, chapéu nem capa; roupa de hoje por shader, tons de pele, acessórios nos ossos), cultistas de pano nos olhos, polícia, crime, bichos por código e criaturas sem elmo |
 | [56-testemunhas-e-o-momento-da-pista.md](56-testemunhas-e-o-momento-da-pista.md) | Testemunhas com nome, aparência e jeito (roteiro de NPC, p.163), a testemunha que some à noite (terror indireto) e o close-up da pista com lente, sentido do elemento e assinaturas da Morte |
+| [57-interface-fila-iniciativa-contorno.md](57-interface-fila-iniciativa-contorno.md) | Um papel por vez (o tour espera o briefing e a cerimônia), faixa de iniciativa no combate, botões que cabem a 1280 px, alcance do mapa por contorno e a ★ só com 50% ou mais |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

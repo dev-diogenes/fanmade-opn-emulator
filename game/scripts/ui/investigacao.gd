@@ -514,6 +514,7 @@ func _opcoes_procurar(a: Agente) -> void:
 	for per in pt.pericias:
 		previsoes.append(cena.prever_procurar(_ponto, per, _foco, _opcoes_selos(a, per)))
 	var melhor := LinhaTeste.melhor(previsoes)
+	var estrela := LinhaTeste.recomendada(previsoes)
 	# Perícia que só vale treinada não fica escolhida: começa pela de maior chance (docs/23)
 	var chaves: Array = pt.pericias.keys()
 	if LinhaTeste.bloqueada(previsoes[chaves.find(_pericia)]) and melhor >= 0:
@@ -522,7 +523,7 @@ func _opcoes_procurar(a: Agente) -> void:
 	for per in pt.pericias:
 		var prev: Dictionary = previsoes[i]
 		var texto := LinhaTeste.texto(missao.ruleset.pericia(per).nome, prev, int(prev.get("dt", pt.pericias[per]))) + \
-			("  ★" if i == melhor and pt.pericias.size() > 1 else "")
+			("  ★" if i == estrela and pt.pericias.size() > 1 else "")
 		var b := _botao_papel(_caixa_bilhete, texto, per == _pericia, func(): _pericia = per; _montar_opcoes())
 		b.disabled = LinhaTeste.bloqueada(prev)
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

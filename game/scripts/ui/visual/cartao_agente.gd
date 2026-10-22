@@ -15,6 +15,9 @@ const ICONE_CLASSE := {"combatente": "⚔", "especialista": "✦", "ocultista": 
 
 var agente: Agente
 var cor := Color.WHITE
+## Larguras normal e da vez; a arena usa o tamanho compacto para não encostar nas cartas (docs/57)
+var largura := LARGURA
+var largura_vez := LARGURA_VEZ
 var _nome: Label
 var _barras: Dictionary = {}   ## "pv" | "pe" | "san" -> ProgressBar
 var _estilo: StyleBoxFlat
@@ -126,7 +129,7 @@ func _crescer(da_vez: bool) -> void:
 		(_barras[chave].titulo as Label).add_theme_font_size_override("font_size", Tema.FONTE_P + (1 if da_vez else 0))
 	if _crescendo != null:
 		_crescendo.kill()
-	var alvo := Vector2(LARGURA_VEZ if da_vez else LARGURA, 0)
+	var alvo := Vector2(largura_vez if da_vez else largura, 0)
 	if not is_inside_tree():
 		custom_minimum_size = alvo
 		return

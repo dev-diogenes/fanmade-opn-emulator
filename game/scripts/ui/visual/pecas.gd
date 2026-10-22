@@ -630,6 +630,27 @@ static func prisma_hex(raio: float, altura: float, cor: Color) -> MeshInstance3D
 	return _malha(m, material(cor), Vector3(0, altura / 2.0, 0))
 
 
+## Contorno de hexágono (docs/57): um anel achatado, nos mesmos cantos do `prisma_hex`, para
+## marcar alcance sem pintar o hex inteiro. `largura` é a espessura da borda.
+static func contorno_hex(raio: float, largura: float, cor: Color) -> MeshInstance3D:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var dentro := maxf(0.0, raio - largura)
+	for i in 6:
+		var a0 := i * TAU / 6.0
+		var a1 := (i + 1) * TAU / 6.0
+		var o0 := Vector3(sin(a0), 0, cos(a0)) * raio
+		var o1 := Vector3(sin(a1), 0, cos(a1)) * raio
+		var n0 := Vector3(sin(a0), 0, cos(a0)) * dentro
+		var n1 := Vector3(sin(a1), 0, cos(a1)) * dentro
+		for v in [o0, o1, n0, n0, o1, n1]:
+			st.set_normal(Vector3.UP)
+			st.add_vertex(v)
+	var mat := material(cor, true, 0.0).duplicate() as StandardMaterial3D
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return _malha(st.commit(), mat)
+
+
 static func arvore(altura: float, cor: Color = Color("2e5e34")) -> Node3D:
 	var n := Node3D.new()
 	var tronco := CylinderMesh.new()

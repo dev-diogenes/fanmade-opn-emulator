@@ -23,6 +23,7 @@ static func perguntar(pai: Node, titulo: String, texto: String, sim: String, ao_
 
 func _montar(titulo: String, texto: String, sim: String, nao: String, perigoso: bool) -> void:
 	layer = 95
+	add_to_group("papel_modal")   # o tour do tutorial espera ele fechar (docs/57)
 	var escuro := ColorRect.new()
 	escuro.color = Color(0.01, 0.01, 0.02, 0.78)
 	escuro.set_anchors_preset(Control.PRESET_FULL_RECT)

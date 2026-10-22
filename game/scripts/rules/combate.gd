@@ -167,6 +167,28 @@ func ser_atual() -> Ser:
 	return ordem[_indice] if _indice >= 0 and _indice < ordem.size() else null
 
 
+## Os próximos `n` a agir, a começar por quem está na vez (faixa de iniciativa, docs/57):
+## [{ser, nova_rodada}]. Pula os mortos; `nova_rodada` marca quem já age na rodada seguinte.
+func proximos(n: int) -> Array:
+	var lista: Array = []
+	if ordem.is_empty():
+		return lista
+	var inicio := maxi(_indice, 0)
+	var virou := false
+	for k in ordem.size():
+		var i := inicio + k
+		var ser := ordem[i % ordem.size()]
+		if ser.tem(Ser.MORTO):
+			continue
+		var nova := i >= ordem.size() and not virou
+		if nova:
+			virou = true
+		lista.append({"ser": ser, "nova_rodada": nova})
+		if lista.size() >= n:
+			break
+	return lista
+
+
 ## Avança para o próximo ser que pode agir e inicia o turno dele.
 ## Seres morrendo ou enlouquecendo também "iniciam turno" (é aí que a contagem avança).
 func proximo_turno() -> Ser:

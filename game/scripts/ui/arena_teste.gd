@@ -77,6 +77,7 @@ var _ritual_sel: Array = []
 var _item_sel := ""
 var _barra_membrana: ProgressBar
 var _lbl_membrana: Label
+var _faixa: FaixaIniciativa
 var _log: RelatorioCampo
 var _painel_fim: RelatorioFim
 var _lbl_fim: Label
@@ -631,6 +632,11 @@ func _montar_interface() -> void:
 	_lbl_membrana = Label.new()
 	_lbl_membrana.add_theme_font_size_override("font_size", Tema.FONTE_P)
 	vm.add_child(_lbl_membrana)
+	# Logo abaixo: a faixa de iniciativa, quem age agora e quem vem depois (docs/57)
+	_faixa = FaixaIniciativa.new()
+	_faixa.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 104)
+	_faixa.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	add_child(_faixa)
 
 	# Grupo embaixo à esquerda
 	_grupo = HBoxContainer.new()
@@ -712,16 +718,17 @@ func _montar_interface() -> void:
 	extras.offset_top = _mao.offset_top - 48
 	extras.offset_bottom = _mao.offset_top - 10
 	extras.alignment = BoxContainer.ALIGNMENT_END
-	extras.add_theme_constant_override("separation", Tema.ESPACO_M)
+	extras.grow_horizontal = Control.GROW_DIRECTION_BEGIN   # cresce para a esquerda: nada sai da tela (docs/57)
+	extras.add_theme_constant_override("separation", Tema.ESPACO_P)
 	add_child(extras)
 	var caixa_foco := PanelContainer.new()
 	extras.add_child(caixa_foco)
 	_foco = PassoFoco.criar()
 	caixa_foco.add_child(_foco)
 	_chk_ae = Button.new()
-	_chk_ae.text = "✦ Ataque Especial (+5, 2 PE)"
+	_chk_ae.text = "✦ Especial +5"
 	_chk_ae.toggle_mode = true
-	_chk_ae.tooltip_text = "Combatente: +5 no ataque por 2 PE"
+	_chk_ae.tooltip_text = "Ataque Especial (combatente): +5 no ataque por 2 PE"
 	extras.add_child(_chk_ae)
 	# Foco e Ataque Especial mudam a chance mostrada nos alvos (docs/21, C2)
 	_foco.mudou.connect(func(_v): _atualizar_3d())
@@ -1121,12 +1128,17 @@ func _atualizar() -> void:
 	var arma_cac: bool = agente != null and agente.arma().get("ataque", "corpo_a_corpo") == "corpo_a_corpo"
 	_chk_nl.visible = arma_cac
 	if arma_cac:
-		_chk_nl.text = "Golpe letal (−5)" if String(agente.arma().get("id", "")) == "desarmado" else "Golpe não letal (−5)"
+		_chk_nl.text = "Letal −5" if String(agente.arma().get("id", "")) == "desarmado" else "Não letal −5"
 	_barra_membrana.value = membrana.valor
 	Tema.membrana_na_tela(_vista, membrana.valor)
 	if _tab3d != null:
 		_tab3d.clima_membrana(membrana.valor)
 	_lbl_membrana.text = "%d — %s" % [membrana.valor, membrana.estado().get("nome", "")]
+	if _faixa != null:
+		var cores := {}
+		for s in _cartoes:
+			cores[s] = (_cartoes[s] as CartaoAgente).cor
+		_faixa.atualizar(combate, cores)
 	_atualizar_mestre()
 	_desenhar_slots()
 	_atualizar_grupo()
@@ -1147,7 +1159,11 @@ func _atualizar_grupo() -> void:
 		if c == null:
 			c = CartaoAgente.criar(s, Tema.CORES_JOGADORES[i % Tema.CORES_JOGADORES.size()])
 			c.escolhido.connect(func(ag): DossieAgente.abrir(self, ag))
-			c.custom_minimum_size.x = 150
+			# Compacto (docs/57): com a escala da interface acima de 1, o retrato da vez crescido
+			# encostava nas cartas de ação
+			c.largura = 150.0
+			c.largura_vez = 190.0
+			c.custom_minimum_size.x = c.largura
 			_grupo.add_child(c)
 			_cartoes[s] = c
 		c.visible = not s.tem(Ser.MORTO)
@@ -1167,7 +1183,7 @@ func _montar_faixa_vez() -> void:
 	_faixa_vez = PanelContainer.new()
 	_faixa_vez.anchor_left = 0.5
 	_faixa_vez.anchor_right = 0.5
-	_faixa_vez.offset_top = 104
+	_faixa_vez.offset_top = 142   # abaixo da faixa de iniciativa (docs/57)
 	_faixa_vez.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_faixa_vez.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_faixa_vez.visible = false

@@ -183,7 +183,7 @@ func _montar_opcoes_evento() -> void:
 	var previsoes: Array = []
 	for o in ops:
 		previsoes.append({} if o.get("sem_teste", false) or a == null else a.prever_teste(String(o.pericia), int(o.dt), _foco.valor))
-	var melhor := LinhaTeste.melhor(previsoes)
+	var melhor := LinhaTeste.recomendada(previsoes)
 	for i in ops.size():
 		var o: Dictionary = ops[i]
 		var b: Button = _btn_testar if i == 0 else Button.new()
@@ -682,8 +682,7 @@ func _mostrar_briefing() -> void:
 		texto = "%s\n\nOBJETIVO: %s\n\nPERGUNTAS EM ABERTO:\n%s" % [c.resumo, c.objetivo, "\n".join(PackedStringArray(perguntas))]
 	else:
 		texto = "Uma ameaça paranormal foi detectada na região. Encontrem a origem e contenham-na."
-	var d := DialogoPapel.perguntar(self, "Arquivo do caso", texto, "Iniciar operação", func(): pass, "Fechar", false)
-	d.layer = 60   # o tour do tutorial (se abrir) fica por cima
+	DialogoPapel.perguntar(self, "Arquivo do caso", texto, "Iniciar operação", func(): pass, "Fechar", false)
 
 
 

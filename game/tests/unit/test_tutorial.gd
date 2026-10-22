@@ -210,3 +210,19 @@ func test_telas_tem_os_elementos_do_tour():
 		await _quadros(2)
 	jogo.carreira = carreira_antes
 	jogo.salvar_automaticamente = salvar_antes
+
+
+func test_tour_espera_o_papel_aberto_fechar():
+	# Um papel por vez (docs/57): o briefing ou a cerimônia ficam na frente; o tour vem depois.
+	var papel := DialogoPapel.perguntar(self, "Arquivo do caso", "Texto.", "Iniciar", func(): pass)
+	var t := _tour([{"titulo": "A", "texto": "1"}, {"titulo": "B", "texto": "2"}])
+	await _quadros(3)
+	assert_true(TourGuiado.papel_aberto(get_tree()))
+	assert_false(t.visible, "o tour espera escondido")
+	assert_eq(t._lbl_contador.text, "", "e não mostrou passo nenhum")
+	papel._responder(false)
+	await _quadros(3)
+	assert_true(t.visible, "o papel fechou: o tour aparece")
+	assert_eq(t._lbl_contador.text, "1 de 2")
+	t.pular_tour()
+	await _quadros(2)

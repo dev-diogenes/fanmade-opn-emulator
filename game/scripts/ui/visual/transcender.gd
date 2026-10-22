@@ -32,6 +32,7 @@ static func abrir(p_base: Node, a: Agente) -> Transcender:
 func _montar() -> void:
 	layer = 87
 	name = "Transcender"
+	add_to_group("papel_modal")   # o tour do tutorial espera ele fechar (docs/57)
 	var fundo := ColorRect.new()
 	fundo.color = Color.BLACK
 	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)

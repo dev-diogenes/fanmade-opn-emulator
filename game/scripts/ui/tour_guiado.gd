@@ -4,7 +4,8 @@ extends CanvasLayer
 ## com uma moldura, e explica numa caixa com Voltar / Pular / Próximo e o número do passo.
 ## Passo sem elemento (ou com o elemento escondido) aparece no centro. Teclado: Enter ou →
 ## avança, ← volta, Esc pula. Enquanto o tour está aberto, as telas ignoram os comandos de
-## jogo (veja `em_andamento()`).
+## jogo (veja `em_andamento()`). Um papel por vez (docs/57): se o briefing, a cerimônia de NEX ou
+## outro papel modal estiver aberto, o tour espera ele fechar para aparecer.
 
 signal terminou(concluido: bool, passo: int)
 
@@ -27,10 +28,19 @@ var _lbl_contador: Label
 var _btn_voltar: Button
 var _btn_proximo: Button
 var _encerrado := false
+var _esperando := false
 
 
 static func em_andamento() -> bool:
 	return _abertos > 0
+
+
+## Há um papel modal aberto (DialogoPapel, CerimoniaNex, Transcender: grupo "papel_modal")?
+static func papel_aberto(arvore: SceneTree) -> bool:
+	for n in arvore.get_nodes_in_group("papel_modal"):
+		if is_instance_valid(n) and not n.is_queued_for_deletion():
+			return true
+	return false
 
 
 func _init() -> void:
@@ -49,8 +59,14 @@ func iniciar(lista: Array) -> void:
 	passos = lista
 	_montar()
 	get_viewport().size_changed.connect(_reposicionar)
-	await get_tree().process_frame   # espera a tela terminar o layout
+	await get_tree().process_frame   # espera a tela terminar o layout (e o briefing adiado abrir)
+	while is_inside_tree() and papel_aberto(get_tree()):
+		_esperando = true
+		visible = false
+		await get_tree().process_frame
+	_esperando = false
 	if is_inside_tree():
+		visible = true
 		mostrar(0)
 
 
@@ -238,7 +254,7 @@ func _encerrar(concluido: bool) -> void:
 
 
 func _input(evento: InputEvent) -> void:
-	if not evento is InputEventKey or not evento.pressed or evento.echo:
+	if _esperando or not evento is InputEventKey or not evento.pressed or evento.echo:
 		return
 	match evento.keycode:
 		KEY_ENTER, KEY_KP_ENTER, KEY_RIGHT:

@@ -404,12 +404,16 @@ func atualizar(missao: Missao, destinos: Dictionary) -> void:
 	var sozinho_em := func(h: Vector2i) -> bool:
 		return a != null and missao.agentes.size() > 1 and missao.aliados_perto(a, h) == 0
 	for h in destinos:
-		# Longe do grupo (docs/42): âmbar em vez de azul
+		# Longe do grupo (docs/42): âmbar em vez de azul. Alcance por contorno (docs/57): a borda
+		# acesa e só um véu leve por dentro, para o terreno continuar legível.
 		var cor := COR_LONGE_DO_GRUPO if sozinho_em.call(h) else COR_DESTAQUE
-		var d := Pecas.prisma_hex(RAIO * 0.9, 0.04, cor)
-		d.material_override = Pecas.material(cor, true)
-		d.position = posicao_hex(h) + Vector3(0, 0.01, 0)
-		_destaques.add_child(d)
+		var borda := Pecas.contorno_hex(RAIO * 0.9, RAIO * 0.09, Color(cor, 0.95))
+		borda.position = posicao_hex(h) + Vector3(0, 0.03, 0)
+		_destaques.add_child(borda)
+		var veu := Pecas.prisma_hex(RAIO * 0.84, 0.02, Color(cor, 0.12))
+		veu.material_override = Pecas.material(Color(cor, 0.12), true)
+		veu.position = posicao_hex(h) + Vector3(0, 0.01, 0)
+		_destaques.add_child(veu)
 	_atualizar_agentes(missao)
 
 

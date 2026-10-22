@@ -67,7 +67,20 @@ static func explicar(a: Agente, pericia_id: String, previsao: Dictionary) -> Str
 	return "\n".join(linhas)
 
 
-## Índice da escolha com a maior chance (para o selo "melhor para <agente>").
+## A ★ de recomendação (docs/57) só vai numa escolha que dá para passar: 50% ou mais.
+const CHANCE_RECOMENDADA := 0.5
+
+
+## Índice da escolha que leva a ★: a de maior chance, se ela for de 50% ou mais; senão, -1
+## (recomendar 20% contra 15% é recomendar um erro).
+static func recomendada(previsoes: Array) -> int:
+	var i := melhor(previsoes)
+	if i < 0 or float(previsoes[i].get("chance", 0.0)) < CHANCE_RECOMENDADA:
+		return -1
+	return i
+
+
+## Índice da escolha com a maior chance (a perícia que já vem escolhida).
 static func melhor(previsoes: Array) -> int:
 	var idx := -1
 	var maior := -1.0
