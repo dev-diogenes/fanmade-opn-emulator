@@ -861,14 +861,14 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 		var titulo: String = {"procurar": "Procurar pistas", "facilitar": "Facilitar", "ajudar": "Ajudar"}.get(String(cmd.acao), "Teste")
 		RolagemDados.mostrar(self, titulo, missao.ruleset.atributo_da_pericia(per), t.slots, t.dt,
 			"%s  ·  %d %+d = %d" % [missao.ruleset.pericia(per).get("nome", per), t.escolhido, t.bonus, t.total],
-			RolagemDados.estados_do_teste(t), t.sucesso)
+			RolagemDados.estados_do_teste(t), t.sucesso, per)
 	match String(cmd.get("acao", "")):
 		"examinar":
 			if res.ok:
 				var ex: Dictionary = res.exame
 				var per := String(ex.get("pericia", ""))
 				RolagemDados.mostrar(self, "Pista central", missao.ruleset.atributo_da_pericia(per), [], 0,
-					"Sem dados: o treino em %s basta%s" % [missao.ruleset.pericia(per).get("nome", per), "" if int(ex.custo) == 0 else " (%d PE)" % int(ex.custo)], [], true)
+					"Sem dados: o treino em %s basta%s" % [missao.ruleset.pericia(per).get("nome", per), "" if int(ex.custo) == 0 else " (%d PE)" % int(ex.custo)], [], true, per)
 				Tema.pulso_vhs(_vista, 0.8, 0.6)
 				Som.tocar("pista")
 				_mostrar_pista()

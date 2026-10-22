@@ -2,7 +2,9 @@ class_name RolagemDados
 extends CanvasLayer
 ## Rolagem no centro da tela, como no FTK2 (docs/13): o símbolo do atributo no alto, os d20
 ## girando e caindo um a um (✓ ou ✗), e o resultado embaixo. Some sozinha; um clique fecha.
-##   RolagemDados.mostrar(self, "Movimento", "agi", [15, 3, 11], 11, "4 de movimento")
+##   RolagemDados.mostrar(self, "Movimento", "agi", [15, 3, 11], 11, "4 de movimento", [], null, "movimento")
+## Com a perícia (docs/66), o cabeçalho mostra o símbolo dela e uma etiqueta do atributo; cada
+## d20 leva no canto o símbolo do atributo que o deu.
 
 const NOMES := {"agi": "AGILIDADE", "for": "FORÇA", "int": "INTELECTO", "pre": "PRESENÇA", "vig": "VIGOR"}
 const CORES := {"agi": Color("7fd3c7"), "for": Color("e0574a"), "int": Color("e3c27a"), "pre": Color("b98ae6"), "vig": Color("6fcf8e")}
@@ -17,17 +19,34 @@ var _tw: Tween
 
 ## `estados`: "sucesso" | "falha" | "neutro" por dado. Vazio = cada dado contra a DT.
 static func mostrar(pai: Node, titulo: String, atributo: String, slots: Array, dt: int, resultado: String,
-		estados: Array = [], sucesso_geral: Variant = null) -> RolagemDados:
+		estados: Array = [], sucesso_geral: Variant = null, pericia: String = "") -> RolagemDados:
 	for antigo in pai.find_children("*", "RolagemDados", false, false):
 		antigo.queue_free()
 	var r := RolagemDados.new()
 	r.name = "RolagemDados"
 	pai.add_child(r)
-	r._montar(titulo, atributo, slots, dt, resultado, estados, sucesso_geral)
+	r._atributo = atributo
+	r._montar(titulo, atributo, slots, dt, resultado, estados, sucesso_geral, pericia)
 	return r
 
 
-func _montar(titulo: String, atributo: String, slots: Array, dt: int, resultado: String, estados: Array, sucesso_geral) -> void:
+## O nome da perícia, pelo arquivo do ruleset (a rolagem não tem o ruleset à mão).
+static func nome_pericia(id: String) -> String:
+	if id == "movimento":
+		return "Movimento"
+	if _nomes_pericias.is_empty():
+		var d = JSON.parse_string(FileAccess.get_file_as_string("res://data/rulesets/op2022/pericias.json"))
+		if d is Dictionary:
+			for p in d.get("pericias", []):
+				_nomes_pericias[String(p.id)] = String(p.nome)
+	return String(_nomes_pericias.get(id, id.capitalize()))
+
+
+static var _nomes_pericias: Dictionary = {}
+var _atributo := ""
+
+
+func _montar(titulo: String, atributo: String, slots: Array, dt: int, resultado: String, estados: Array, sucesso_geral, pericia: String = "") -> void:
 	layer = 70
 	_raiz = Control.new()
 	_raiz.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -54,17 +73,26 @@ func _montar(titulo: String, atributo: String, slots: Array, dt: int, resultado:
 	cab.add_theme_constant_override("separation", 10)
 	cab.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(cab)
-	var icone := IconeAtributo.new()
-	icone.atributo = atributo
-	icone.cor = CORES.get(atributo, Tema.PERGAMINHO)
-	icone.custom_minimum_size = Vector2(40, 40)
-	cab.add_child(icone)
+	# O símbolo da perícia (ou do atributo, sem perícia) e o título; ao lado, a etiqueta do atributo
+	cab.add_child(IconeTeste.criar(pericia if pericia != "" else atributo, 40, CORES.get(atributo, Tema.PERGAMINHO)))
 	var t := Label.new()
-	t.text = "%s  ·  %s" % [titulo.to_upper(), NOMES.get(atributo, atributo.to_upper())]
+	t.text = "%s  ·  %s" % [titulo.to_upper(), (nome_pericia(pericia).to_upper() if pericia != "" and pericia.to_upper() != titulo.to_upper() else NOMES.get(atributo, atributo.to_upper()))]
 	t.theme_type_variation = "Titulo"
 	t.add_theme_font_size_override("font_size", Tema.FONTE_G + 2)
 	t.add_theme_color_override("font_color", CORES.get(atributo, Tema.OURO_CLARO))
 	cab.add_child(t)
+	if pericia != "" and NOMES.has(atributo):
+		var etq := HBoxContainer.new()
+		etq.add_theme_constant_override("separation", 4)
+		etq.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		etq.add_child(IconeTeste.criar(atributo, 22))
+		var la := Label.new()
+		la.text = NOMES[atributo]
+		la.add_theme_font_size_override("font_size", Tema.FONTE_P)
+		la.add_theme_color_override("font_color", CORES.get(atributo, Tema.PERGAMINHO))
+		la.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		etq.add_child(la)
+		cab.add_child(etq)
 	var linha := HBoxContainer.new()
 	linha.alignment = BoxContainer.ALIGNMENT_CENTER
 	linha.add_theme_constant_override("separation", 12)
@@ -110,6 +138,12 @@ func _dado(valor: int, estado: String) -> Control:
 		l.add_theme_font_override("font", f)
 	l.text = str(randi_range(1, 20))
 	p.add_child(l)
+	if NOMES.has(_atributo):   # o símbolo do atributo que deu este dado, no canto (docs/66)
+		var ic := IconeTeste.criar(_atributo, 18)
+		ic.contorno = false
+		ic.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		ic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		p.add_child(ic)
 	_caixas.append([p, l, valor, estado])
 	return p
 
@@ -159,48 +193,6 @@ func _cair(c: Array) -> void:
 	p.scale = Vector2.ONE * 1.35
 	p.create_tween().tween_property(p, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	Som.tocar("clique")
-
-
-## Desenho simples do atributo: AGI asa, FOR punho, INT olho, PRE estrela, VIG coração.
-class IconeAtributo:
-	extends Control
-
-	var atributo := ""
-	var cor := Color.WHITE
-
-	func _init() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	func _draw() -> void:
-		var c := size / 2.0
-		var r := minf(size.x, size.y) / 2.0 - 2.0
-		draw_arc(c, r, 0, TAU, 32, cor, 2.0, true)
-		var k := r * 0.55
-		match atributo:
-			"agi":   # raio/asa: zigue-zague
-				draw_polyline(PackedVector2Array([c + Vector2(-k, -k), c + Vector2(k * 0.2, -k * 0.1), c + Vector2(-k * 0.2, k * 0.1), c + Vector2(k, k)]), cor, 2.5, true)
-			"for":   # punho: quadrado com dedos
-				draw_rect(Rect2(c - Vector2(k * 0.8, k * 0.4), Vector2(k * 1.6, k * 1.1)), cor, false, 2.5)
-				for i in 4:
-					draw_line(c + Vector2(-k * 0.8 + i * k * 0.53, -k * 0.4), c + Vector2(-k * 0.8 + i * k * 0.53, -k * 0.85), cor, 2.0)
-			"int":   # olho
-				draw_arc(c + Vector2(0, k * 0.7), k * 1.2, PI * 1.2, PI * 1.8, 16, cor, 2.0, true)
-				draw_arc(c - Vector2(0, k * 0.7), k * 1.2, PI * 0.2, PI * 0.8, 16, cor, 2.0, true)
-				draw_circle(c, k * 0.3, cor)
-			"pre":   # estrela de cinco pontas
-				var pts := PackedVector2Array()
-				for i in 6:
-					var ang := -PI / 2.0 + i * TAU * 2.0 / 5.0
-					pts.append(c + Vector2(cos(ang), sin(ang)) * k)
-				draw_polyline(pts, cor, 2.0, true)
-			_:       # vigor: coração
-				var pts := PackedVector2Array()
-				for i in 33:
-					var t := TAU * i / 32.0
-					var x := 16.0 * pow(sin(t), 3)
-					var y := -(13.0 * cos(t) - 5.0 * cos(2 * t) - 2.0 * cos(3 * t) - cos(4 * t))
-					pts.append(c + Vector2(x, y) * k / 16.0)
-				draw_polyline(pts, cor, 2.0, true)
 
 
 ## Estados dos dados de um teste: só o que valeu fica dourado ou vermelho; os outros, neutros.

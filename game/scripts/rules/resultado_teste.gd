@@ -3,6 +3,8 @@ extends RefCounted
 ## Resultado de um teste de OP mostrado como slots de d20 (estilo FTK).
 
 var slots: Array[int] = []        ## Cada d20 rolado
+var pericia := ""                 ## A perícia testada (para o ícone dos dados, docs/66)
+var atributo_id := ""             ## O atributo que deu os dados (agi, for, int, pre, vig)
 var atributo := 0                 ## Parâmetros da rolagem (para rerrolar)
 var dados_extras := 0
 var usa_pior := false             ## true quando a reserva de dados ficou em 0 ou menos

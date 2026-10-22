@@ -360,7 +360,7 @@ static func aplicar() -> void:
 
 ## Slot de d20 (docs/08, R7). `estado`: "sucesso" (dourado, ✓), "falha" (sangue, ✗)
 ## ou "neutro" (pedra: dado que não decidiu o teste). `ordem` atrasa a entrada.
-static func slot_d20(valor: int, estado: String, ordem: int = 0) -> Control:
+static func slot_d20(valor: int, estado: String, ordem: int = 0, atributo: String = "") -> Control:
 	var caixa := PanelContainer.new()
 	var cores := cores_slot(estado)
 	var fundo: Color = cores[0]
@@ -380,6 +380,12 @@ static func slot_d20(valor: int, estado: String, ordem: int = 0) -> Control:
 	l.add_theme_constant_override("line_spacing", -6)
 	l.add_theme_color_override("font_color", cores[2])
 	caixa.add_child(l)
+	if atributo != "":   # o símbolo do atributo que deu o dado, no canto (docs/66)
+		var ic := IconeTeste.criar(atributo, 14)
+		ic.contorno = false
+		ic.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		ic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		caixa.add_child(ic)
 	caixa.scale = Vector2.ONE * 0.6
 	caixa.modulate.a = 0.0
 	caixa.ready.connect(func():

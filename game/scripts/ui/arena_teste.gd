@@ -502,7 +502,7 @@ func _ao_atacar(r: ResultadoAtaque) -> void:
 		var per := String(r.arma.get("pericia", "luta"))
 		var resultado := ("%d de dano%s" % [r.dano, "  ·  CRÍTICO" if r.critico else ""]) if r.acertou else "errou"
 		RolagemDados.mostrar(self, "Ataque de %s" % r.atacante.nome, ruleset.atributo_da_pericia(per), r.teste.slots, r.teste.dt,
-			resultado, RolagemDados.estados_do_teste(r.teste), r.acertou)
+			resultado, RolagemDados.estados_do_teste(r.teste), r.acertou, per)
 	if r.acertou:
 		txt += " → [b]%d de dano[/b]%s" % [r.dano, " [color=#e3c27a]CRÍTICO[/color]" if r.critico else ""]
 		Som.tocar("golpe")
@@ -1369,7 +1369,7 @@ func _desenhar_slots() -> void:
 		if valor == _ultimo_teste.escolhido and not marcado:
 			marcado = true
 			estado = "sucesso" if _ultimo_teste.sucesso else "falha"
-		_slots.add_child(Tema.slot_d20(valor, estado, i))
+		_slots.add_child(Tema.slot_d20(valor, estado, i, _ultimo_teste.atributo_id))
 	_lbl_resultado.text = "%s %d %+d = %d contra %d → %s" % [
 		"pior" if _ultimo_teste.usa_pior else "maior", _ultimo_teste.escolhido, _ultimo_teste.bonus,
 		_ultimo_teste.total, _ultimo_teste.dt, "SUCESSO" if _ultimo_teste.sucesso else "FALHA"]

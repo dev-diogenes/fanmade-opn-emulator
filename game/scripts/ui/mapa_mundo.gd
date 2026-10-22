@@ -495,7 +495,7 @@ func _mostrar_rolagem(cmd: Dictionary, res: Dictionary, opcao_evento: Dictionary
 			var r: Dictionary = res.get("rolagem", {})
 			if not r.is_empty():
 				RolagemDados.mostrar(self, "Movimento", String(r.get("atributo", "agi")), r.slots, int(r.dt),
-					"%d de movimento" % int(r.total))
+					"%d de movimento" % int(r.total), [], null, "movimento")
 		"resolver_evento":
 			var r: Dictionary = res.get("teste", {})
 			var t = r.get("teste")
@@ -504,7 +504,7 @@ func _mostrar_rolagem(cmd: Dictionary, res: Dictionary, opcao_evento: Dictionary
 				var per := String(opcao_evento.get("pericia", ""))
 				RolagemDados.mostrar(self, missao.ruleset.pericia(per).get("nome", per), missao.ruleset.atributo_da_pericia(per),
 					t.slots, t.dt, "%d %+d = %d  →  %s" % [t.escolhido, t.bonus, t.total, "SUCESSO" if t.sucesso else "FALHA"],
-					RolagemDados.estados_do_teste(t), t.sucesso)
+					RolagemDados.estados_do_teste(t), t.sucesso, per)
 				atraso = RolagemDados.duracao_ate_resultado(t.slots.size()) + 0.6
 			# Desfecho (docs/16, E1): o que aconteceu e os efeitos, depois da rolagem
 			BilheteDesfecho.mostrar(self, String(r.get("titulo", "Evento")), String(r.get("texto", "")), r.get("efeitos", []),
@@ -1158,4 +1158,4 @@ func _desenhar_slots() -> void:
 		return
 	for i in mov.slots.size():
 		var v: int = mov.slots[i]
-		_slots.add_child(Tema.slot_d20(v, "sucesso" if v >= int(mov.dt) else "falha", i))
+		_slots.add_child(Tema.slot_d20(v, "sucesso" if v >= int(mov.dt) else "falha", i, String(mov.get("atributo", "agi"))))

@@ -889,6 +889,8 @@ func testar(dados: Dados, pericia_id: String, dt: int, pe_foco: int = 0, opcoes:
 	if plano.atributo_base != "":
 		reserva = atributo(plano.atributo_base)
 	var r := Teste.rolar(dados, reserva, bonus, dt, int(opcoes.get("dados_extras", 0)) + pe_foco)
+	r.pericia = pericia_id
+	r.atributo_id = plano.atributo_base if plano.atributo_base != "" else ruleset.atributo_da_pericia(pericia_id)
 	if plano.dado_perito != "":
 		var extra := dados.rolar_expressao(plano.dado_perito)
 		r.dados_bonus.append(extra)
