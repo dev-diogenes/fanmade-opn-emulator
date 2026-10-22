@@ -597,15 +597,15 @@ func manobra(atacante: Ser, alvo: Ser, tipo: String) -> Dictionary:
 
 ## Teste de manobra (p.85): Luta do atacante, com os modificadores de ataque corpo a corpo
 ## (flanquear, caído, agarrado…), contra a Luta do alvo. Devolve a diferença (>0: o atacante vence).
-func _teste_de_manobra(atacante: Ser, alvo: Ser) -> int:
+func _teste_de_manobra(atacante: Ser, alvo: Ser, dados_bonus: int = 0, bonus: int = 0) -> int:
 	var arma := ruleset.arma("desarmado")
 	var mods_a := atacante.modificar_ataque(arma, alvo)
 	var mods_b := alvo.modificar_ataque(arma, atacante)
-	var extra_a := int(mods_a.dados_extras)
+	var extra_a := int(mods_a.dados_extras) + dados_bonus
 	if grade != null and grade.tem(atacante) and grade.tem(alvo) and grade.flanqueando(atacante, alvo):
 		extra_a += 1
 	for _i in 10:
-		var ra := Teste.rolar(dados, atacante.dados_da_pericia("luta"), atacante.bonus_pericia("luta") + int(mods_a.bonus_ataque), 0, extra_a)
+		var ra := Teste.rolar(dados, atacante.dados_da_pericia("luta"), atacante.bonus_pericia("luta") + int(mods_a.bonus_ataque) + bonus, 0, extra_a)
 		var rb := Teste.rolar(dados, alvo.dados_da_pericia("luta"), alvo.bonus_pericia("luta"), 0, int(mods_b.dados_extras))
 		if ra.total != rb.total:
 			_log("Manobra: %s %d contra %s %d." % [atacante.nome, ra.total, alvo.nome, rb.total])
@@ -1354,6 +1354,12 @@ func _ao_acertar(atacante: Ser, alvo: Ser, arma: Dictionary, res: ResultadoAtaqu
 			_hipnotizar(atacante as Ameaca, alvo, int(aa.comandar.dt), true)   # Comandar: ataca um aliado no próximo turno
 	if aa.has("envelhecer") and res.dano > 0:
 		_envelhecer(alvo, dados.rolar_expressao(String(aa.envelhecer.dados)))
+	# Derrubar de graça ao acertar (Cão de Guarda, p.288): manobra livre com bônus próprio
+	if aa.has("derrubar_ao_acertar") and not alvo.tem(Ser.CAIDO) and not alvo.imune_a_condicao(Ser.CAIDO) and not alvo.esta_fora_de_combate():
+		var dd: Dictionary = aa.derrubar_ao_acertar
+		if _teste_de_manobra(atacante, alvo, int(dd.get("dados", 0)), int(dd.get("bonus", 0))) > 0:
+			alvo.aplicar_condicao(Ser.CAIDO)
+			_log("%s derruba %s." % [atacante.nome, alvo.nome])
 	if aa.has("agarrar") and not alvo.tem(Ser.AGARRADO) and not alvo.imune_a_condicao(Ser.AGARRADO):
 		var lista: Array = atacante.mods_cena.get("agarrando", [])
 		if lista.size() < int(aa.agarrar.get("maximo", 1)):
@@ -2270,7 +2276,7 @@ func _retaliar(amea: Ameaca, atacante: Ser) -> void:
 	_teleportar_para_perto(amea, atacante)
 	var arma: Dictionary = amea.ataques[0] if not amea.ataques.is_empty() else ruleset.arma("desarmado")
 	_log("[color=#e0574a]%s está de repente ao lado de %s.[/color]" % [amea.nome, atacante.nome])
-	atacar(amea, atacante, arma, 0, {"ignorar_distancia": true})
+	atacar(amea, atacante, arma, 0, {"ignorar_distancia": true, "nao_letal": true, "nao_letal_natural": true})   # retaliação não letal (p.254)
 	_usos_rodada.get(amea, {}).erase("retaliando")
 
 
@@ -2466,8 +2472,8 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	var nao_letal := padrao_nao_letal
 	if pode_render and opcoes.has("nao_letal"):
 		nao_letal = bool(opcoes.nao_letal)
-	if nao_letal != padrao_nao_letal:
-		bonus_ataque -= 5
+	if nao_letal != padrao_nao_letal and not opcoes.get("nao_letal_natural", false):
+		bonus_ataque -= 5   # o golpe que já é não letal por natureza (retaliação do ocioso) não paga
 	var bonus_dano := int(mods.bonus_dano)
 	var margem_extra := int(mods.margem)
 	var custo := pe_foco

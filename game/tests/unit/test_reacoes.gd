@@ -378,3 +378,66 @@ func test_quem_agarra_arrasta_a_vitima():
 	assert_true(c.mover(lutador, Vector2i(2, 1)))
 	assert_true(cultista.tem(Ser.AGARRADO), "continua agarrado")
 	assert_true(c.grade.estao_adjacentes(lutador, cultista), "veio junto")
+
+
+# --- Manobras das ameaças (docs/46) -----------------------------------------------------
+
+func _ficha_de(id: String) -> Dictionary:
+	return rs.ameaca(id).ficha
+
+
+func test_ia_de_pessoa_agarra_quem_atira_e_criatura_nao():
+	var c := Combate.new(rs, Dados.new(1))
+	c.grade = Grade.new(8, 5)
+	var atiradora := Agente.criar(rs, "Atiradora", "especialista",
+		{"agi": 2, "for": 1, "int": 2, "pre": 1, "vig": 1}, {"pontaria": "treinado"})
+	atiradora.equipamento.append("pistola")
+	atiradora.arma_id = "pistola"
+	var bandido := Ameaca.criar(rs, "Bandido", _ficha_de("bandido"))
+	bandido.lado = "ameacas"
+	var zumbi := Ameaca.criar(rs, "Zumbi", _ficha_de("zumbi_de_sangue"))
+	zumbi.lado = "ameacas"
+	for s in [atiradora, bandido, zumbi]:
+		c.adicionar(s)
+	c.grade.colocar(atiradora, Vector2i(2, 2))
+	c.grade.colocar(bandido, Vector2i(3, 2))
+	c.grade.colocar(zumbi, Vector2i(2, 3))
+	c.acoes[bandido] = {"padrao": 1, "movimento": 1}
+	var escolhas := {}
+	for r in 30:
+		c.rodada = r
+		escolhas[IaCombate.escolher_manobra(c, bandido, atiradora, bandido.ataques[0])] = true
+		assert_eq(IaCombate.escolher_manobra(c, zumbi, atiradora, zumbi.ataques[0]), "", "criatura usa a ficha, não manobra")
+	assert_true(escolhas.has("agarrar"), "às vezes o bandido agarra quem atira")
+	assert_true(escolhas.has(""), "e às vezes só ataca")
+	# Uma manobra por rodada
+	c.rodada = 99
+	bandido.mods_cena["manobrou_na_rodada"] = 99
+	assert_eq(IaCombate.escolher_manobra(c, bandido, atiradora, bandido.ataques[0]), "")
+
+
+func test_cao_de_guarda_derruba_ao_morder():
+	var c := Combate.new(rs, Dados.new(1))
+	var cao := Ameaca.criar(rs, "Cão", _ficha_de("cao_de_guarda"))
+	var alvo := _defensor()
+	c.adicionar(cao)
+	c.adicionar(alvo)
+	c.dados.forcar([15, 15, 6, 20, 20, 20, 20, 1, 1])   # acerta sem crítico; dano; manobra (+2 dados) contra a Luta do alvo
+	var r := c.atacar(cao, alvo, cao.ataques[0])
+	assert_true(r.acertou)
+	assert_true(alvo.tem(Ser.CAIDO), "a mordida derruba (p.288)")
+
+
+func test_agente_no_automatico_tenta_se_soltar():
+	var a := _arena_manobra()
+	var c: Combate = a[0]
+	var lutador: Agente = a[1]
+	var cultista: Ameaca = a[2]
+	c.dados.forcar([20, 20, 20, 1])
+	c.manobra(lutador, cultista, "agarrar")
+	# Invertido: o cultista agarrado; o agente agarrado seria o caso da IA dos agentes
+	assert_true(cultista.tem(Ser.AGARRADO))
+	c.acoes[cultista] = {"padrao": 1, "movimento": 1}
+	c.dados.forcar([20, 1, 1, 1])
+	IaCombate.jogar(c, cultista, {})
+	assert_false(cultista.tem(Ser.AGARRADO) and int(c.acoes_restantes(cultista).padrao) == 1, "a vez foi gasta")

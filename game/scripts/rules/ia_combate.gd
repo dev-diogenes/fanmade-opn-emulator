@@ -11,6 +11,9 @@ static func jogar(c: Combate, ser: Ser, armas: Dictionary) -> void:
 		c.levantar(ser)
 	if ser.mods_cena.has("arma_caida") and int(c.acoes_restantes(ser).get("movimento", 0)) > 0:
 		c.pegar_arma(ser)
+	# Agarrado por manobra (docs/46): o agente no automático tenta se soltar
+	if ser is Agente and ser.tem(Ser.AGARRADO) and ser.mods_cena.get("agarrado_manobra", false):
+		c.escapar(ser)
 	var alvo := IaAmeaca.alvo_preferido(c, ser, inimigo_mais_proximo(c, ser))
 	if alvo == null:
 		return
@@ -39,9 +42,57 @@ static func jogar(c: Combate, ser: Ser, armas: Dictionary) -> void:
 		if destino != c.grade.posicao(ser):
 			c.mover(ser, destino)
 	if pode_atacar(c, ser, alvo, arma) and not c.encerrado:
+		var man := escolher_manobra(c, ser as Ameaca, alvo, arma) if ser is Ameaca else ""
+		if man != "":
+			ser.mods_cena["manobrou_na_rodada"] = c.rodada
+			if man == "fintar":
+				c.fintar(ser, alvo)
+			else:
+				c.manobra(ser, alvo, man)
+			return
 		if alvo is Agente and alvo.treinado_em("reflexos"):
 			c.declarar_reacao(alvo, "esquiva")
 		c.agredir(ser, alvo, arma)
+
+
+## Manobras das ameaças (docs/46). Só pessoas, isto é, quem luta com armas da tabela (cultistas,
+## bandidos, policiais); criaturas têm as habilidades da ficha. No máximo uma por rodada. A
+## "sorte" sai de uma semente da rodada, da ameaça e do alvo (igual no online, sem gastar dados).
+##   agarrar: quem atira ou conjura, para amarrar o perigo (metade das vezes);
+##   derrubar: quando outro aliado também está ao lado do alvo (um terço das vezes);
+##   fintar: quando a chance de acertar está abaixo de 35% (um terço das vezes).
+static func escolher_manobra(c: Combate, amea: Ameaca, alvo: Ser, arma: Dictionary) -> String:
+	if amea == null or amea.criatura or c.grade == null or not alvo is Agente or not _luta_com_armas(c, amea):
+		return ""
+	if int(amea.mods_cena.get("manobrou_na_rodada", -1)) == c.rodada:
+		return ""
+	var sorte := absi(hash("%d|%s|%s" % [c.rodada, amea.nome, alvo.nome])) % 6 + 1
+	var ao_lado := c.grade.estao_adjacentes(amea, alvo)
+	var ag := alvo as Agente
+	if ao_lado and sorte <= 3:
+		var perigoso: bool = ag.arma().get("ataque", "corpo_a_corpo") != "corpo_a_corpo" or not ag.rituais.is_empty()
+		if perigoso and c.pode_manobrar(amea, alvo, "agarrar") == "":
+			return "agarrar"
+	if ao_lado and sorte <= 2 and _outro_aliado_ao_lado(c, amea, alvo) and c.pode_manobrar(amea, alvo, "derrubar") == "":
+		return "derrubar"
+	if sorte <= 2 and c.chance_de_acerto(amea, alvo, arma) < 0.35:
+		return "fintar"
+	return ""
+
+
+static func _luta_com_armas(c: Combate, amea: Ameaca) -> bool:
+	for at in amea.ataques:
+		var id := String(at.get("id", ""))
+		if id != "" and c.ruleset.tem_arma(id):
+			return true
+	return false
+
+
+static func _outro_aliado_ao_lado(c: Combate, amea: Ser, alvo: Ser) -> bool:
+	for s in c.participantes:
+		if s != amea and s.lado == amea.lado and not s.esta_fora_de_combate() and c.grade.tem(s) and c.grade.estao_adjacentes(s, alvo):
+			return true
+	return false
 
 
 ## O que a IA provavelmente fará na vez deste ser (docs/21, C3), para a faixa da vez:

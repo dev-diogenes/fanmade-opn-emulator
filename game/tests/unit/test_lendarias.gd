@@ -188,7 +188,8 @@ func test_ocioso():
 	var pv := b.pv
 	c.dados.forcar([20, 10, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 	assert_false(c.atacar(b, oc, rs.arma("desarmado")).acertou, "b não o vê")
-	assert_eq(b.pv, pv - 24, "Retaliação")
+	assert_eq(b.pv, pv, "a Retaliação é não letal (p.254, docs/46): os PV letais não caem")
+	assert_eq(b.dano_nao_letal, 24, "Retaliação")
 	assert_false(c.usar_habilidade(oc, "aterrorizar", b).ok, "só contra o seu alvo")
 	var san := a.san
 	c.dados.forcar([5, 5, 5, 5])

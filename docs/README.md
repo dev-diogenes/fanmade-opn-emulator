@@ -48,6 +48,7 @@
 | [43-pp-por-pista-adicional.md](43-pp-por-pista-adicional.md) | PP por pista adicional como na Tabela 3.2: só as pistas além das necessárias; cerca de 12 PP por missão |
 | [44-deducao-mais-dificil.md](44-deducao-mais-dificil.md) | Dedução mais difícil: um ponto firme por pergunta em cada cena, uma testemunha por cena e depoimento firme só passando por 10 |
 | [45-mirante-da-serra.md](45-mirante-da-serra.md) | Mirante ▲ no alto de cada serra: um achado (ver o covil, pista, fôlego ou esconderijo) para quem sobe com um 20 |
+| [46-ameacas-manobram.md](46-ameacas-manobram.md) | Ameaças que são pessoas agarram quem atira ou conjura, derrubam com um aliado ao lado e fintam; o Cão de Guarda derruba ao morder; Retaliação do Ocioso não letal |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.
