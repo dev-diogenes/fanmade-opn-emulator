@@ -13,7 +13,14 @@ var _ficha_agente: FichaAgente   ## a ficha no formato da oficial (docs/25)
 var _papel_pendencia: PanelContainer
 var _opt_recruta: OptionButton
 var _caixa_pendencia: VBoxContainer
-var _caixa_requisicao: HFlowContainer
+var _caixa_requisicao: VBoxContainer
+## Arsenal por agente (docs/64): a lista de quem se equipa, as cotas e a carga
+var _lista_arsenal: VBoxContainer
+var _cotas_arsenal: HBoxContainer
+var _barra_carga: ProgressBar
+var _lbl_carga: Label
+var _lbl_aviso_arsenal: Label
+var _cabecalhos_cat: Dictionary = {}   ## categoria -> Label
 var _checks_itens: Dictionary = {}     ## item_id -> Button (etiqueta que liga e desliga)
 var _opt_arma: OptionButton
 var _lbl_requisicao: Label
@@ -196,41 +203,82 @@ func _montar_interface() -> void:
 	_caixa_pendencia.theme = Tema.tema_papel()
 	_papel_pendencia.add_child(_caixa_pendencia)
 
-	# --- Aba Arsenal: a gaveta de requisição
-	var arsenal := VBoxContainer.new()
+	# --- Aba Arsenal (docs/64): a requisição de cada agente, pela patente e pela carga (p.51-53)
+	var arsenal := HBoxContainer.new()
 	arsenal.name = "Arsenal"
-	arsenal.add_theme_constant_override("separation", Tema.ESPACO_M)
+	arsenal.add_theme_constant_override("separation", Tema.ESPACO_GG)
 	_abas.add_child(arsenal)
-	arsenal.add_child(_titulo("Requisição de equipamento"))
+	var esquerda_a := VBoxContainer.new()
+	esquerda_a.custom_minimum_size = Vector2(240, 0)
+	esquerda_a.add_theme_constant_override("separation", Tema.ESPACO_P)
+	arsenal.add_child(esquerda_a)
+	esquerda_a.add_child(_titulo("Quem se equipa"))
+	_lista_arsenal = VBoxContainer.new()
+	_lista_arsenal.add_theme_constant_override("separation", Tema.ESPACO_P)
+	esquerda_a.add_child(_lista_arsenal)
+	var direita_a := VBoxContainer.new()
+	direita_a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	direita_a.add_theme_constant_override("separation", Tema.ESPACO_P)
+	arsenal.add_child(direita_a)
 	_lbl_requisicao = Label.new()
-	_lbl_requisicao.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_lbl_requisicao.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
-	arsenal.add_child(_lbl_requisicao)
-	var rolagem := ScrollContainer.new()
-	rolagem.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	rolagem.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_caixa_requisicao = HFlowContainer.new()
-	_caixa_requisicao.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_caixa_requisicao.add_theme_constant_override("h_separation", Tema.ESPACO_GG)
-	rolagem.add_child(_caixa_requisicao)
-	arsenal.add_child(rolagem)
+	_lbl_requisicao.theme_type_variation = "Subtitulo"
+	direita_a.add_child(_lbl_requisicao)
+	_cotas_arsenal = HBoxContainer.new()
+	_cotas_arsenal.add_theme_constant_override("separation", Tema.ESPACO_M)
+	direita_a.add_child(_cotas_arsenal)
+	var linha_carga := HBoxContainer.new()
+	linha_carga.add_theme_constant_override("separation", Tema.ESPACO_M)
+	direita_a.add_child(linha_carga)
+	_barra_carga = ProgressBar.new()
+	_barra_carga.show_percentage = false
+	_barra_carga.custom_minimum_size = Vector2(300, 14)
+	_barra_carga.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	linha_carga.add_child(_barra_carga)
+	_lbl_carga = Label.new()
+	linha_carga.add_child(_lbl_carga)
 	var linha_arma := HBoxContainer.new()
 	linha_arma.add_theme_constant_override("separation", Tema.ESPACO_M)
+	direita_a.add_child(linha_arma)
 	var lbl := Label.new()
 	lbl.text = "Arma empunhada:"
 	linha_arma.add_child(lbl)
 	_opt_arma = OptionButton.new()
-	_opt_arma.custom_minimum_size = Vector2(220, 0)
+	_opt_arma.custom_minimum_size = Vector2(240, 0)
+	_opt_arma.item_selected.connect(func(_i): _aplicar_requisicao(_selecionado.equipamento.duplicate() if _selecionado != null else []))
 	linha_arma.add_child(_opt_arma)
-	var req := _botao("Requisitar", _requisitar)
-	req.theme_type_variation = "BotaoPrincipal"
-	linha_arma.add_child(req)
-	arsenal.add_child(linha_arma)
-	for item in _catalogo():
-		var chk := _etiqueta_item(item)
-		chk.toggled.connect(func(_v): _atualizar_armas_requisicao())
-		_checks_itens[item.id] = chk
-		_caixa_requisicao.add_child(chk)
+	_lbl_aviso_arsenal = Label.new()
+	_lbl_aviso_arsenal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_lbl_aviso_arsenal.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_lbl_aviso_arsenal.add_theme_color_override("font_color", Tema.AVISO)
+	linha_arma.add_child(_lbl_aviso_arsenal)
+	var rolagem := ScrollContainer.new()
+	rolagem.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rolagem.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_caixa_requisicao = VBoxContainer.new()
+	_caixa_requisicao.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_caixa_requisicao.add_theme_constant_override("separation", Tema.ESPACO_P)
+	rolagem.add_child(_caixa_requisicao)
+	direita_a.add_child(rolagem)
+	# Os itens por categoria (p.53): a 0 é livre; as outras, pela patente
+	var catalogo := _catalogo()
+	for cat in 5:
+		var do_cat := catalogo.filter(func(it): return clampi(int(it.get("categoria", 0)), 0, 4) == cat)
+		if do_cat.is_empty():
+			continue
+		var cab_cat := Label.new()
+		cab_cat.theme_type_variation = "Subtitulo"
+		_caixa_requisicao.add_child(cab_cat)
+		_cabecalhos_cat[cat] = cab_cat
+		var fluxo := HFlowContainer.new()
+		fluxo.add_theme_constant_override("h_separation", Tema.ESPACO_M)
+		fluxo.add_theme_constant_override("v_separation", Tema.ESPACO_P)
+		_caixa_requisicao.add_child(fluxo)
+		for item in do_cat:
+			var chk := _etiqueta_item(item)
+			var id := String(item.id)
+			chk.toggled.connect(func(v): _marcar_item(id, v))
+			_checks_itens[id] = chk
+			fluxo.add_child(chk)
 
 	# --- Aba Missão: grupo e opções à esquerda; o briefing e o relatório em papel
 	var missao_aba := HBoxContainer.new()
@@ -557,13 +605,7 @@ func _atualizar_agente() -> void:
 		_ficha_agente.mostrar(null)
 		return
 	_ficha_agente.mostrar(a)
-	for item_id in _checks_itens:
-		_checks_itens[item_id].set_pressed_no_signal(item_id in a.equipamento)
-	_atualizar_armas_requisicao()
-	# Para quem se está requisitando (docs/20): o limite em palavras, não em siglas
-	var lim: Dictionary = a.patente().itens_por_categoria
-	_lbl_requisicao.text = "Equipando %s (%s): até %d %s de categoria I, %d de II e %d de III." % [a.nome, a.patente().get("nome", "?"),
-		int(lim["1"]), "item" if int(lim["1"]) == 1 else "itens", int(lim["2"]), int(lim["3"])]
+	_atualizar_arsenal()
 	_montar_pendencia(a)
 
 
@@ -573,7 +615,7 @@ func _atualizar_armas_requisicao() -> void:
 	_opt_arma.add_item("Desarmado")
 	_opt_arma.set_item_metadata(0, "")
 	for item_id in _checks_itens:
-		if _checks_itens[item_id].button_pressed and carreira.ruleset.equipamento(item_id).tipo == "arma":
+		if _selecionado != null and item_id in _selecionado.equipamento and carreira.ruleset.equipamento(item_id).tipo == "arma":
 			_opt_arma.add_item(carreira.ruleset.equipamento(item_id).nome)
 			_opt_arma.set_item_metadata(_opt_arma.item_count - 1, item_id)
 			if item_id == atual:
@@ -679,18 +721,97 @@ func _recrutar() -> void:
 	_atualizar_tudo()
 
 
-func _requisitar() -> void:
+# --- Arsenal por agente (docs/64) ----------------------------------------------
+
+## Marcar ou desmarcar um item já requisita (o que a regra não deixa nem fica marcável).
+func _marcar_item(item_id: String, marcado: bool) -> void:
 	if _selecionado == null:
 		return
-	var itens: Array = []
-	for item_id in _checks_itens:
-		if _checks_itens[item_id].button_pressed:
-			itens.append(item_id)
-	var arma: String = _opt_arma.get_item_metadata(_opt_arma.selected) if _opt_arma.selected >= 0 else ""
-	var erros := carreira.requisitar(_selecionado, itens, arma)
-	_lbl_requisicao.text = "\n".join(erros) if not erros.is_empty() else "Equipamento requisitado."
+	var lista: Array = _selecionado.equipamento.duplicate()
+	if marcado and not item_id in lista:
+		var motivo := _selecionado.motivo_bloqueio(item_id, lista)
+		if motivo != "":
+			_lbl_aviso_arsenal.text = motivo
+			_atualizar_arsenal()
+			return
+		lista.append(item_id)
+	elif not marcado:
+		lista.erase(item_id)
+	_aplicar_requisicao(lista)
+
+
+## Requisita a lista com a arma empunhada escolhida (a arma sai se não está mais na lista).
+func _aplicar_requisicao(lista: Array) -> void:
+	if _selecionado == null:
+		return
+	var arma: String = String(_opt_arma.get_item_metadata(_opt_arma.selected)) if _opt_arma.selected >= 0 and _opt_arma.get_item_metadata(_opt_arma.selected) != null else ""
+	if arma != "" and not arma in lista:
+		arma = ""
+	if arma == "":
+		for i in lista:   # sem arma escolhida, empunha a primeira da lista
+			if carreira.ruleset.equipamento(i).get("tipo", "") == "arma":
+				arma = String(i)
+				break
+	var erros := carreira.requisitar(_selecionado, lista, arma)
+	_lbl_aviso_arsenal.text = "\n".join(erros)
 	_salvar()
-	_atualizar_agente()
+	_atualizar_arsenal()
+
+
+## Redesenha o arsenal do agente escolhido: a lista à esquerda, as cotas da patente, a carga
+## e cada item (marcado, livre ou bloqueado, com o motivo na dica).
+func _atualizar_arsenal() -> void:
+	var a := _selecionado
+	for f in _lista_arsenal.get_children():
+		f.queue_free()
+	for ag in carreira.roster:
+		var b := Button.new()
+		b.toggle_mode = true
+		b.button_pressed = ag == a
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.text = "%s · %s\n%d/%d espaços" % [ag.nome, ag.patente().get("nome", "?"), ag.espacos_usados(), ag.capacidade_carga()]
+		b.pressed.connect(func():
+			_selecionado = ag
+			_atualizar_tudo())
+		_lista_arsenal.add_child(b)
+	if a == null:
+		return
+	var lim: Dictionary = a.patente().get("itens_por_categoria", {})
+	_lbl_requisicao.text = "Equipando %s · %s · Força %d" % [a.nome, a.patente().get("nome", "?"), a.atributo("for")]
+	for f in _cotas_arsenal.get_children():
+		f.queue_free()
+	for cat in [1, 2, 3, 4]:
+		var limite := int(lim.get(str(cat), 0))
+		var usados := a.equipamento.filter(func(i): return int(carreira.ruleset.equipamento(i).get("categoria", 0)) == cat).size()
+		var chip := Label.new()
+		chip.text = "Cat. %s  %s" % [["", "I", "II", "III", "IV"][cat], ("%d/%d" % [usados, limite]) if limite > 0 else "—"]
+		chip.add_theme_stylebox_override("normal", Tema.caixa(Color(Tema.PEDRA, 0.9), Tema.OURO if limite > 0 else Tema.OURO_ESCURO, 1, 4, Vector2(8, 2)))
+		chip.add_theme_color_override("font_color", Tema.OURO_CLARO if limite > 0 else Tema.TEXTO_SUAVE)
+		chip.tooltip_text = "Categoria %s: a patente %s libera %d por missão (p.52)." % [["", "I", "II", "III", "IV"][cat], a.patente().get("nome", "?"), limite]
+		_cotas_arsenal.add_child(chip)
+	var cap := a.capacidade_carga()
+	var usado := a.espacos_usados()
+	var maximo := cap * int(carreira.ruleset.regra_carga().get("maximo_multiplicador", 2))
+	_barra_carga.max_value = maximo
+	_barra_carga.value = usado
+	_barra_carga.modulate = Tema.AVISO if usado > cap else Color.WHITE
+	_lbl_carga.text = "%d/%d espaços%s" % [usado, cap, ("  ·  sobrecarregado: −5 Defesa, −3 m (até %d)" % maximo) if usado > cap else ("  ·  sobrecarga até %d" % maximo)]
+	for cat in _cabecalhos_cat:
+		var limite := int(lim.get(str(cat), 0))
+		(_cabecalhos_cat[cat] as Label).text = "Categoria 0 · livre, só conta a carga" if cat == 0 else \
+			("Categoria %s · %d por missão" % [["", "I", "II", "III", "IV"][cat], limite] if limite > 0 else "Categoria %s · a patente ainda não libera" % ["", "I", "II", "III", "IV"][cat])
+	for item_id in _checks_itens:
+		var b: Button = _checks_itens[item_id]
+		var marcado: bool = item_id in a.equipamento
+		var motivo := "" if marcado else a.motivo_bloqueio(item_id, a.equipamento)
+		var aviso := a.aviso_item(item_id)
+		b.set_pressed_no_signal(marcado)
+		b.disabled = motivo != ""
+		b.modulate = Color(1, 1, 1, 0.45) if motivo != "" else Color.WHITE
+		var base_dica := String(b.get_meta("dica", b.tooltip_text))
+		b.set_meta("dica", base_dica)
+		b.tooltip_text = base_dica + ("\n\nBloqueado: " + motivo if motivo != "" else "") + ("\n" + aviso if aviso != "" else "")
+	_atualizar_armas_requisicao()
 
 
 # --- Co-op local (ADR 0004) ---------------------------------------------------

@@ -361,6 +361,8 @@ func chance_de_acerto(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: 
 	var mods := atacante.modificar_ataque(arma, alvo)
 	var corpo_a_corpo: bool = arma.get("ataque", "corpo_a_corpo") == "corpo_a_corpo"
 	var dados_extras := pe_foco + int(mods.dados_extras)
+	if atacante is Agente:
+		dados_extras -= (atacante as Agente).dados_sem_proficiencia(arma)   # p.53
 	var defesa := alvo.defesa()
 	if grade != null and grade.tem(atacante) and grade.tem(alvo):
 		if corpo_a_corpo:
@@ -2545,6 +2547,8 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	var tipo_ataque: String = arma.get("ataque", "corpo_a_corpo")
 	var eh_corpo_a_corpo := tipo_ataque == "corpo_a_corpo"
 	var dados_extras := pe_foco + int(mods.dados_extras)
+	if agente != null:
+		dados_extras -= agente.dados_sem_proficiencia(arma)   # arma sem proficiência: −2 dados (p.53)
 	var bonus_ataque := int(mods.bonus_ataque)
 	# Dano não letal (p.88): o desarmado já é não letal; trocar o padrão da arma custa −5.
 	# Só corpo a corpo.

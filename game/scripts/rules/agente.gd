@@ -495,6 +495,57 @@ func consumir_item(item_id: String) -> bool:
 	return true
 
 
+## Espaços que uma lista de itens ocupa (p.53).
+func espacos_de(lista: Array) -> int:
+	var total := 0
+	for item_id in lista:
+		total += int(ruleset.equipamento(item_id).get("espacos", 1))
+	return total
+
+
+## Por que este agente não pode pôr `item_id` numa requisição que já tem `lista` (docs/64,
+## p.51-53): a patente não libera a categoria, a cota da categoria acabou, passaria do dobro
+## da carga, já tem uma proteção, ou é amaldiçoado antes de Agente Especial. "" = pode.
+func motivo_bloqueio(item_id: String, lista: Array) -> String:
+	var e := ruleset.equipamento(item_id)
+	if e.is_empty():
+		return "Item desconhecido."
+	if item_id in lista:
+		return ""
+	var cat := int(e.get("categoria", 0))
+	var romano: String = ["0", "I", "II", "III", "IV"][clampi(cat, 0, 4)]
+	if cat > 0:
+		var limite := int(patente().get("itens_por_categoria", {}).get(str(cat), 0))
+		if limite <= 0:
+			return "A patente %s ainda não libera itens de categoria %s." % [patente().get("nome", "?"), romano]
+		var usados := lista.filter(func(i): return int(ruleset.equipamento(i).get("categoria", 0)) == cat).size()
+		if usados >= limite:
+			return "Já leva %d de %d itens de categoria %s." % [usados, limite, romano]
+	if e.has("maldicoes") and pp < int(ruleset.cfg_maldicoes().get("patente_minima_pp", 50)):
+		return "Itens amaldiçoados só a partir de Agente Especial."
+	if e.get("tipo", "") == "protecao" and lista.any(func(i): return ruleset.equipamento(i).get("tipo", "") == "protecao"):
+		return "Só dá para vestir uma proteção."
+	var maximo := capacidade_carga() * int(ruleset.regra_carga().get("maximo_multiplicador", 2))
+	if espacos_de(lista) + int(e.get("espacos", 1)) > maximo:
+		return "Passaria da carga máxima (%d espaços)." % maximo
+	return ""
+
+
+## Aviso que não impede a requisição: arma ou proteção sem proficiência (p.53 e p.72).
+func aviso_item(item_id: String) -> String:
+	var e := ruleset.equipamento(item_id)
+	var prof := String(e.get("proficiencia", ""))
+	if prof == "" or tem_proficiencia(prof):
+		return ""
+	return "Sem proficiência: −2 dados no ataque." if e.get("tipo", "") == "arma" else "Sem proficiência: −2 dados em Força e Agilidade."
+
+
+## Arma sem proficiência (p.53): −2 dados nos testes de ataque com ela.
+func dados_sem_proficiencia(arma: Dictionary) -> int:
+	var prof := String(arma.get("proficiencia", ""))
+	return 0 if prof == "" or tem_proficiencia(prof) else 2
+
+
 ## Erros de uma requisição de equipamento para a patente atual (p.61-63).
 func validar_equipamento(lista: Array) -> Array[String]:
 	var erros: Array[String] = []
