@@ -239,6 +239,7 @@ func proximo_turno() -> Ser:
 			continue
 		ser.iniciar_turno()
 		_ao_iniciar_turno(ser)
+		_processar_aflicoes(ser)
 		_processar_hemorragia(ser)
 		_manter_sustentados(ser)
 		_processar_zonas(ser)
@@ -248,6 +249,9 @@ func proximo_turno() -> Ser:
 		if _verificar_fim():
 			return null
 		if ser.esta_fora_de_combate():
+			continue
+		if ser.tem(Ser.PARALISADO):
+			turno_perdido.emit(ser, "paralisado")   # p.321: não age
 			continue
 		if _perdeu_turno_por_tosse(ser):
 			continue
@@ -263,6 +267,9 @@ func _ao_iniciar_turno(ser: Ser) -> void:
 		if quem == null or (quem as Ser).esta_fora_de_combate():
 			_soltar(ser)
 	_usos_rodada.erase(ser)
+	for rid in ser.rituais_ativos.keys():
+		if ser.rituais_ativos[rid].get("ate_proximo_turno", false):
+			ser.rituais_ativos.erase(rid)   # durou uma rodada
 	_ataques_no_turno[ser] = 0
 	_ultimo_ataque.erase(ser)
 	# Efeitos que duram até o início do próximo turno de quem os causou
@@ -396,7 +403,7 @@ func chance_de_acerto(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: 
 		dados_teste = int(arma.teste.dados) - atacante.penalidade_dados_atributo(ruleset.atributo_da_pericia(pericia_id))
 		bonus_teste = int(arma.teste.bonus)
 	var aj := _ajuste_da_arma(atacante, arma, alvo, false)
-	dados_extras += int(aj.dados)
+	dados_extras += int(aj.dados) + alvo.efeito_ritual("dados_ataque_contra")
 	if pode_disparar(atacante, arma) != "":
 		return -1.0
 	var chance := Teste.chance_de_passar(dados_teste, bonus_teste + int(mods.bonus_ataque) + bonus_extra + int(aj.bonus), defesa, dados_extras)
@@ -416,6 +423,8 @@ func agredir(atacante: Ser, alvo: Ser, arma: Dictionary, pe_foco: int = 0, opcoe
 	var res := atacar(atacante, alvo, arma, pe_foco, opcoes)
 	if arma.get("linha", false) and res.teste != null:
 		_atingir_linha(atacante, alvo, arma, res)
+	if res.teste != null:
+		_punir_flagelo(atacante, alvo)
 	var vezes := int(arma.get("vezes", 1))
 	if atacante is Ameaca and (atacante as Ameaca).tem_hab("instinto_mortal") and atacante.tem(Ser.MACHUCADO):
 		vezes += 1   # Instinto Mortal (carniçal)
@@ -506,7 +515,7 @@ func usar_item(ser: Agente, item_id: String, alvo: Ser) -> int:
 	if not gastar_acao(ser, uso.get("acao", "padrao")):
 		return -1
 	ser.consumir_item(item_id)
-	var cura := dados.rolar_expressao(uso.get("cura", "0"))
+	var cura := dados.rolar_expressao(uso.get("cura", "0")) + ser.bonus_cura()   # Técnica Medicinal
 	alvo.curar(cura)
 	return cura
 
@@ -628,13 +637,16 @@ func acalmar(agente: Agente, alvo: Ser, pericia: String = "diplomacia") -> Resul
 	if int(acoes_restantes(agente).get("padrao", 0)) <= 0:
 		return null
 	var dt := 20 + 5 * alvo.acalmado_na_cena
-	var t := agente.testar(dados, pericia, dt)
+	var acalentar := pericia == "religiao" and agente.tem_habilidade("acalentar")
+	var t := agente.testar(dados, pericia, dt, 0, {"bonus_extra": 5} if acalentar else {})   # Acalentar: +5 (p.30)
 	if t == null:
 		return null
 	gastar_acao(agente, "padrao")
 	if t.sucesso:
 		if alvo.san < 1:
 			alvo.recuperar_sanidade(1 - alvo.san)
+		if agente.tem_habilidade("acalentar"):
+			alvo.recuperar_sanidade(dados.rolar(6) + agente.atributo("pre"))   # Acalentar: 1d6 + Presença de Sanidade
 		alvo.condicoes.erase(Ser.ENLOUQUECENDO)
 		alvo.acalmado_na_cena += 1
 	return t
@@ -839,6 +851,110 @@ func pode_disparar(atacante: Ser, arma: Dictionary) -> String:
 	return "" if int(a.movimento) > 0 and int(a.padrao) > 0 else "Recarregar pede uma ação de movimento antes do disparo."
 
 
+# --- Rituais do lote de docs/69 ----------------------------------------------------
+
+## Zonas de ritual em que o ser está agora.
+func _zonas_em(ser: Ser) -> Array:
+	if grade == null or not grade.tem(ser):
+		return []
+	var pos := grade.posicao(ser)
+	return _zonas.filter(func(z): return pos in z.celulas)
+
+
+## Cinerária (p.136): rituais conjurados dentro da névoa têm DT +5 (Rejeitar Névoa a anula).
+func _dt_extra_das_zonas(conjurador: Ser) -> int:
+	var zonas := _zonas_em(conjurador)
+	if zonas.any(func(z): return z.efeito.get("custo_por_circulo", 0) > 0):
+		return 0
+	var total := 0
+	for z in zonas:
+		total += int(z.efeito.get("dt_rituais", 0))
+	return total
+
+
+## Rejeitar Névoa (p.133): rituais conjurados dentro dela custam +2 PE por círculo.
+func _custo_extra_das_zonas(conjurador: Ser, r: Dictionary) -> int:
+	var total := 0
+	for z in _zonas_em(conjurador):
+		total += int(z.efeito.get("custo_por_circulo", 0)) * int(r.get("circulo", 1))
+	return total
+
+
+## Salto Fantasma (p.149): o corpo vira Energia e reaparece num ponto em alcance médio; o
+## conjurador não age mais no turno.
+func _teleportar_ritual(conjurador: Ser, e: Dictionary, opcoes: Dictionary, res: Dictionary) -> void:
+	var destino = opcoes.get("celula")
+	if grade == null or not grade.tem(conjurador) or destino == null:
+		res.textos.append("Sem ponto de chegada.")
+		return
+	var limite := int(Grade.ALCANCES.get(String(e.get("alcance_salto", "medio")), 12))
+	if Grade.distancia(grade.posicao(conjurador), destino) > limite or not grade.colocar(conjurador, destino):
+		res.textos.append("O ponto de chegada não serve; o salto falha.")
+		return
+	if acoes.has(conjurador):
+		acoes[conjurador] = {"padrao": 0, "movimento": 0}
+	res.textos.append("%s some e reaparece adiante." % conjurador.nome)
+
+
+## Ferver Sangue, Âncora Temporal e Zerar Entropia: o teste no começo do turno do alvo.
+func _processar_aflicoes(ser: Ser) -> void:
+	for rid in ser.rituais_ativos.keys():
+		if ser.rituais_ativos.has(rid) and ser.rituais_ativos[rid].has("aflicao"):
+			_testar_aflicao(ser, rid, false)
+
+
+func _testar_aflicao(ser: Ser, rid: String, primeiro: bool) -> void:
+	var af: Dictionary = ser.rituais_ativos[rid].aflicao
+	var nome := String(ruleset.ritual(rid).get("nome", rid))
+	var per := String(af.pericia)
+	var t := Teste.rolar(dados, ser.dados_da_pericia(per), ser.bonus_pericia(per) + ser.efeito_ritual("resistencia_rituais"), int(af.dt))
+	var dano := 0
+	if t.sucesso:
+		af.sucessos = int(af.sucessos) + 1
+		if af.has("dano") and af.get("metade_ao_passar", false):
+			dano = dados.rolar_expressao(String(af.dano)) / 2
+		if af.has("condicao_passa") and primeiro:
+			ser.aplicar_condicao(String(af.condicao_passa))
+	else:
+		af.sucessos = 0
+		if af.has("dano"):
+			dano = dados.rolar_expressao(String(af.dano))
+		if af.has("condicao_falha") and (primeiro or not af.get("condicao_so_no_inicio", false)):
+			ser.aplicar_condicao(String(af.condicao_falha), int(af.get("rodadas_condicao", 0)))
+	if dano > 0:
+		dano = aplicar_dano(ser, dano, String(af.get("tipo_dano", "sangue")))
+	_log("%s: %s %s%s." % [nome, ser.nome, "resiste" if t.sucesso else "sucumbe", (" (%d de dano)" % dano) if dano > 0 else ""])
+	if not primeiro and int(af.sucessos) >= int(af.get("encerra_apos", 2)):
+		ser.rituais_ativos.erase(rid)
+		for c in [af.get("condicao_falha", ""), af.get("condicao_passa", "")]:
+			if String(c) != "" and int(af.get("rodadas_condicao", 0)) == 0:
+				ser.condicoes.erase(String(c))
+		_log("%s se livra de %s." % [ser.nome, nome])
+
+
+## Flagelo de Sangue (p.143): a cada vez que ataca quem fez a marca ou os aliados dele, a marca
+## queima: 10d6 de Sangue e enjoado (Fortitude: metade e sem a condição). Dois testes passados
+## seguidos apagam a marca.
+func _punir_flagelo(atacante: Ser, alvo: Ser) -> void:
+	var f: Dictionary = atacante.rituais_ativos.get("flagelo_de_sangue", {})
+	var dono = f.get("conjurador")
+	if f.is_empty() or not dono is Ser or alvo.lado != (dono as Ser).lado:
+		return
+	var t := Teste.rolar(dados, atacante.dados_da_pericia("fortitude"), atacante.bonus_pericia("fortitude"), (dono as Ser).dt_ritual("flagelo_de_sangue"))
+	var d := dados.rolar_expressao(String(f.marca.get("dados", "10d6")))
+	if t.sucesso:
+		d /= 2
+		f.sucessos = int(f.get("sucessos", 0)) + 1
+	else:
+		f.sucessos = 0
+		atacante.aplicar_condicao(Ser.ENJOADO, 1)
+	d = aplicar_dano(atacante, d, "sangue", 0, dono)
+	_log("[color=#e0574a]A marca de %s queima:[/color] %d de dano%s." % [atacante.nome, d, "" if t.sucesso else " e enjoado"])
+	if int(f.sucessos) >= 2:
+		atacante.rituais_ativos.erase("flagelo_de_sangue")
+		_log("A marca de %s se apaga." % atacante.nome)
+
+
 ## Ajustes da própria arma no ataque (p.68-69): motosserra desajeitada (−1 dado), metralhadora
 ## sem Força 4 (−5) e fuzil de precisão mirado por veterano em Pontaria (+5 na margem).
 func _ajuste_da_arma(atacante: Ser, arma: Dictionary, alvo: Ser, mirando: bool) -> Dictionary:
@@ -995,6 +1111,8 @@ func pode_conjurar(conjurador: Agente, ritual_id: String, alvo: Ser, forma: Stri
 		return "%s não conhece %s" % [conjurador.nome, r.nome]
 	if not r.get("implementado", false):
 		return "%s ainda não tem efeito no jogo" % r.nome
+	if r.get("efeitos", []).is_empty():
+		return "%s se usa fora do combate" % r.nome
 	if int(r.circulo) > conjurador.circulo_maximo():
 		return "círculo acima do permitido pelo NEX"
 	if forma != "":
@@ -1005,6 +1123,10 @@ func pode_conjurar(conjurador: Agente, ritual_id: String, alvo: Ser, forma: Stri
 			return "a forma %s exige afinidade com %s" % [forma, r.elemento]
 	if conjurador.efeito_ritual("ataque_corpo_a_corpo") > 0 and conjurador.rituais_ativos.has("odio_incontrolavel"):
 		return "em frenesi, não dá para se concentrar"
+	if conjurador.efeito_ritual("sem_rituais") > 0:
+		return "na forma monstruosa, não dá para conjurar"
+	if not _zonas_em(conjurador).filter(func(z): return z.efeito.get("silencio", false)).is_empty():
+		return "a Dissonância Acústica não deixa conjurar"
 	if r.elemento != "medo" and conjurador.afinidade != r.elemento and not conjurador.equipamento.any(func(i): return ruleset.equipamento(i).get("componentes", "") == r.elemento):
 		return "faltam componentes ritualísticos de %s" % r.elemento
 	var custo := conjurador.custo_ritual(ritual_id, forma)
@@ -1013,6 +1135,8 @@ func pode_conjurar(conjurador: Agente, ritual_id: String, alvo: Ser, forma: Stri
 	if custo > conjurador.pe + conjurador.pe_temporario:
 		return "PE insuficientes"
 	var e := efeito_do_ritual(ritual_id, forma)
+	if e.tipo == "teleporte":
+		return "" if opcoes.get("celula") != null else "escolha o ponto de chegada"
 	var alcance := String(e.alcance)
 	if e.has("area"):
 		if e.area.forma != "explosao":
@@ -1124,9 +1248,10 @@ func conjurar(conjurador: Agente, ritual_id: String, alvo: Ser, forma: String = 
 		return {"ok": false, "erro": erro}
 	var r := ruleset.ritual(ritual_id)
 	var cfg: Dictionary = ruleset.dados.rituais
-	var custo := conjurador.custo_ritual(ritual_id, forma)
-	if acoes.has(conjurador):
-		gastar_acao(conjurador, "completa" if String(r.get("execucao", "")).begins_with("completa") else "padrao")
+	var custo := conjurador.custo_ritual(ritual_id, forma) + _custo_extra_das_zonas(conjurador, r)
+	var execucao := String(r.get("execucao", ""))
+	if acoes.has(conjurador) and not execucao.begins_with("livre"):
+		gastar_acao(conjurador, "completa" if execucao.begins_with("completa") else "padrao")
 	conjurador.gastar_pe(custo, true)
 	var res := {"ok": true, "ritual": r, "forma": forma, "custo": custo, "alvo": alvo, "conjurador": conjurador, "textos": [], "danos": {}, "dano_total": 0}
 	# Concentração: proteção leve = condição ruim, pesada = terrível (p.129)
@@ -1162,8 +1287,15 @@ func conjurar(conjurador: Agente, ritual_id: String, alvo: Ser, forma: String = 
 		membrana.registrar_ritual(int(r.circulo))
 	# Efeito (forma básica com as mudanças da forma escolhida)
 	var efeito := efeito_do_ritual(ritual_id, forma)
+	if efeito.tipo == "teleporte":
+		_teleportar_ritual(conjurador, efeito, opcoes, res)
+		_log("[color=#b98ae6]%s conjura %s (%d PE).[/color] %s" % [conjurador.nome, r.nome, custo, " ".join(PackedStringArray(res.textos))])
+		ritual_conjurado.emit(res)
+		return res
 	var celulas := _celulas_do_efeito(conjurador, efeito, alvo, opcoes)
 	var alvos := _alvos_do_efeito(conjurador, efeito, alvo, opcoes, celulas)
+	if efeito.get("zona", {}).get("sem_efeito_imediato", false):
+		alvos = []   # o enxame só morde no turno do conjurador
 	res.celulas = celulas
 	res.alvos = alvos
 	if efeito.has("zona"):
@@ -1208,7 +1340,8 @@ func _resistir_ritual(conjurador: Ser, ritual_id: String, r: Dictionary, alvo: S
 			mod -= int(cfg_af.get("dados_resistencia", 2))
 		bonus += ag._soma_efeitos("bonus_resistencia_rituais")   # Abascanta
 	bonus += alvo.bonus_contra(Array(r.get("tags", [])) + (["area"] if r.has("area") else []), pericia)   # máscara de gás, antibombas (p.72, p.76)
-	var t := Teste.rolar(dados, alvo.dados_da_pericia(pericia), bonus, conjurador.dt_ritual(ritual_id), mod)
+	bonus += alvo.efeito_ritual("resistencia_rituais")   # Proteção contra Rituais
+	var t := Teste.rolar(dados, alvo.dados_da_pericia(pericia), bonus, conjurador.dt_ritual(ritual_id) + _dt_extra_das_zonas(conjurador), mod)
 	if t.sucesso:
 		_ao_passar_resistencia(alvo)
 	elif alvo is Agente:
@@ -1327,7 +1460,7 @@ func _aplicar_efeito_ritual(conjurador: Ser, ritual_id: String, r: Dictionary, e
 					alvo._morrer()   # Paradoxo (verdadeiro): reduzido a cinzas
 					res.textos.append("%s vira cinzas." % alvo.nome)
 		"cura":
-			var cura := dados.rolar_expressao(e.dados) + conjurador.bonus_ritual_potente()
+			var cura := dados.rolar_expressao(e.dados) + conjurador.bonus_ritual_potente() + ((conjurador as Agente).bonus_cura() if conjurador is Agente else 0)
 			alvo.curar(cura)
 			res.cura = cura
 			res.textos.append("%s recupera %d PV." % [alvo.nome, cura])
@@ -1349,6 +1482,9 @@ func _aplicar_efeito_ritual(conjurador: Ser, ritual_id: String, r: Dictionary, e
 			elif not passou:
 				alvo.aplicar_condicao(e.condicao, int(e.get("rodadas", 0)))
 				res.textos.append("%s fica %s." % [alvo.nome, e.condicao])
+				if e.has("lacos"):   # Contenção Fantasmagórica: três laços de Energia (p.137)
+					alvo.mods_cena["lacos"] = {"n": int(e.lacos), "dt": conjurador.dt_ritual(ritual_id)}
+					alvo.mods_cena["agarrado_ritual"] = true
 		"buff", "debuff", "arma":
 			var ativo := e.duplicate()
 			if e.get("atributo", "") == "fisico":
@@ -1357,12 +1493,48 @@ func _aplicar_efeito_ritual(conjurador: Ser, ritual_id: String, r: Dictionary, e
 				ativo["atributo_" + ("int" if alvo.atributo("int") >= alvo.atributo("pre") else "pre")] = int(e.valor)
 			ativo.conjurador = conjurador
 			alvo.rituais_ativos[ritual_id] = ativo
+			if e.has("pv_temporario_buff"):   # Forma Monstruosa
+				alvo.pv_temporario = maxi(alvo.pv_temporario, int(e.pv_temporario_buff))
 			if e.get("sustentado", false):
 				if not res.get("_sustentado_lote", false):
 					_encerrar_sustentados_de(conjurador)   # um sustentado por vez (os alvos do mesmo ritual contam juntos)
 					res._sustentado_lote = true
 				_sustentados.append({"conjurador": conjurador, "alvo": alvo, "ritual": ritual_id})
 			res.textos.append("%s: o efeito dura %s." % [alvo.nome, "enquanto sustentado" if e.get("sustentado", false) else "até o fim da cena"])
+		"aflicao":   # Ferver Sangue, Âncora Temporal, Zerar Entropia: um teste a cada turno do alvo
+			if e.get("so_pessoas", false) and alvo is Ameaca and (alvo as Ameaca).criatura:
+				res.textos.append("%s não é uma pessoa: o ritual não pega." % alvo.nome)
+				return
+			var af := e.duplicate()
+			af["dt"] = conjurador.dt_ritual(ritual_id) + _dt_extra_das_zonas(conjurador)
+			af["sucessos"] = 0
+			alvo.rituais_ativos[ritual_id] = {"aflicao": af, "conjurador": conjurador, "sustentado": e.get("sustentado", false)}
+			if e.get("sustentado", false):
+				_encerrar_sustentados_de(conjurador)
+				_sustentados.append({"conjurador": conjurador, "alvo": alvo, "ritual": ritual_id})
+			if e.get("imediato", false):
+				_testar_aflicao(alvo, ritual_id, true)
+			res.textos.append("%s está sob %s." % [alvo.nome, r.nome])
+		"marca":   # Flagelo de Sangue: quem desobedece sofre
+			if alvo is Ameaca and (alvo as Ameaca).criatura:
+				res.textos.append("%s não é uma pessoa: a marca não pega." % alvo.nome)
+				return
+			alvo.rituais_ativos[ritual_id] = {"marca": e.duplicate(), "conjurador": conjurador, "sucessos": 0}
+			res.textos.append("%s recebe a marca: não pode atacar %s e os aliados." % [alvo.nome, conjurador.nome])
+		"dissipar":
+			var to := Teste.rolar(dados, conjurador.dados_da_pericia("ocultismo"), conjurador.bonus_pericia("ocultismo"), 0)
+			var desfeitos := PackedStringArray()
+			for rid in alvo.rituais_ativos.keys():
+				var origem = alvo.rituais_ativos[rid].get("conjurador")
+				var dt_r: int = (origem as Ser).dt_ritual(rid) if origem is Ser else 10
+				if dt_r <= to.total:
+					alvo.rituais_ativos.erase(rid)
+					desfeitos.append(String(ruleset.ritual(rid).get("nome", rid)))
+			for z in _zonas.duplicate():
+				if grade != null and grade.tem(alvo) and grade.posicao(alvo) in z.celulas and (z.conjurador as Ser).dt_ritual(z.ritual) <= to.total:
+					_remover_zona(z)
+					desfeitos.append(String(ruleset.ritual(z.ritual).get("nome", z.ritual)))
+			res.textos.append("Ocultismo %d: %s." % [to.total, ("desfaz " + ", ".join(desfeitos)) if not desfeitos.is_empty() else "nada se desfaz"])
 		"purgatorio":
 			res.textos.append("%s está na poça de sangue." % alvo.nome)
 		"tentaculos":
@@ -1413,6 +1585,20 @@ func _tentaculos(conjurador: Ser, e: Dictionary, alvo: Ser, res: Dictionary) -> 
 ## Ação padrão para se soltar dos tentáculos: Atletismo ou Acrobacia contra a DT do ritual.
 func escapar(ser: Ser) -> bool:
 	if not ser.tem(Ser.AGARRADO):
+		return false
+	if ser.mods_cena.has("lacos"):   # Contenção Fantasmagórica: Atletismo contra a DT do ritual
+		if acoes.has(ser) and not gastar_acao(ser, "padrao"):
+			return false
+		var lacos: Dictionary = ser.mods_cena.lacos
+		var tl := Teste.rolar(dados, ser.dados_da_pericia("atletismo"), ser.bonus_pericia("atletismo"), int(lacos.dt))
+		if tl.sucesso:
+			lacos.n = int(lacos.n) - 1 - (tl.total - int(lacos.dt)) / 5
+		_log("%s puxa os laços (%s): %s." % [ser.nome, tl.descrever(), ("restam %d" % maxi(0, int(lacos.n))) if tl.sucesso else "não cedem"])
+		if int(lacos.n) <= 0:
+			ser.mods_cena.erase("lacos")
+			ser.mods_cena.erase("agarrado_ritual")
+			ser.condicoes.erase(Ser.AGARRADO)
+			return true
 		return false
 	if ser.mods_cena.has("prisao_pv"):
 		if acoes.has(ser) and not gastar_acao(ser, "padrao"):
@@ -1478,6 +1664,8 @@ func _criar_zona(conjurador: Ser, ritual_id: String, e: Dictionary, celulas: Arr
 	_zonas.append(z)
 	if cfg.get("terreno_dificil", false) and grade != null:
 		grade.marcar_dificil(celulas, true)
+	if cfg.get("camuflagem", false) and grade != null:
+		grade.marcar_camuflagem(celulas, true)   # Nuvem de Cinzas
 	return z
 
 
@@ -1485,6 +1673,8 @@ func _remover_zona(z: Dictionary) -> void:
 	_zonas.erase(z)
 	if z.efeito.zona.get("terreno_dificil", false) and grade != null:
 		grade.marcar_dificil(z.celulas, false)
+	if z.efeito.zona.get("camuflagem", false) and grade != null:
+		grade.marcar_camuflagem(z.celulas, false)
 	for s in z.agarrados:
 		s.condicoes.erase(Ser.AGARRADO)
 	_log("%s se desfaz." % ruleset.ritual(z.ritual).nome)
@@ -2128,7 +2318,8 @@ func decifrar_enigma(agente: Agente, criatura: Ameaca, pericia: String = "") -> 
 	var dt := int(etapa.get("dt", 20)) - int(regras.get("bonus_enigma", 0))
 	if criatura.enigma.has("pergunta") and criatura.enigma.pergunta in regras.get("perguntas_respondidas", []):
 		dt -= 5   # a investigação já respondeu a pergunta ligada ao enigma
-	var t := agente.testar(dados, pericia, dt)
+	var ident := pericia == "ocultismo" and agente.tem_habilidade("identificacao_paranormal")
+	var t := agente.testar(dados, pericia, dt, 0, {"bonus_extra": 10} if ident else {})   # Identificação Paranormal: +10 (p.34)
 	if t == null or not t.sucesso:
 		_log("%s tenta: %s (%s), sem sucesso." % [agente.nome, etapa.get("texto", "decifrar o enigma"), ruleset.pericia(pericia).nome])
 		return t
@@ -2380,6 +2571,13 @@ func usar_granada(agente: Agente, item_id: String, celula: Vector2i) -> Dictiona
 			if not x.esta_fora_de_combate() or x.tem(Ser.POCA):
 				atingidos.append(x)
 	var dt := agente.dt_habilidade(String(ex.get("dt_atributo", "agi")))
+	if agente.tem_habilidade("perito_em_explosivos"):
+		dt += agente.atributo("int")   # Perito em Explosivos (p.34): Intelecto na DT e aliados poupados
+		var poupar := agente.atributo("int")
+		for x in atingidos.duplicate():
+			if poupar > 0 and x.lado == agente.lado:
+				atingidos.erase(x)
+				poupar -= 1
 	var rolagem := dados.rolar_expressao(String(ex.dano)) if ex.has("dano") else 0
 	var textos := PackedStringArray()
 	for x in atingidos:
@@ -2643,9 +2841,17 @@ func _encerrar_sustentado(s: Dictionary) -> void:
 		s.alvo.rituais_ativos.erase(s.ritual)
 
 
+## Um sustentado por vez; com Fluxo de Poder (p.33), dois: o mais antigo sai.
 func _encerrar_sustentados_de(conjurador: Ser) -> void:
-	for s in _sustentados.duplicate():
-		if s.conjurador == conjurador:
+	var meus := _sustentados.filter(func(s): return s.conjurador == conjurador)
+	var manter := 1 if conjurador is Agente and (conjurador as Agente).tem_habilidade("fluxo_de_poder") else 0
+	var rituais_meus: Array = []
+	for s in meus:
+		if not s.ritual in rituais_meus:
+			rituais_meus.append(s.ritual)
+	var sair := rituais_meus.slice(0, maxi(0, rituais_meus.size() - manter))
+	for s in meus:
+		if s.ritual in sair:
 			_encerrar_sustentado(s)
 
 
@@ -2780,8 +2986,14 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	if mirando:
 		margem_extra += int(mira.margem)
 		_miras.erase(atacante)
+	var defesa_desprevenida := false
 	var aj := _ajuste_da_arma(atacante, arma, alvo, mirando)
-	dados_extras += int(aj.dados)
+	dados_extras += int(aj.dados) + alvo.efeito_ritual("dados_ataque_contra")   # Fortalecimento Sensorial (discente)
+	if atacante.efeito_ritual("invisivel") > 0:
+		defesa_desprevenida = true   # Esconder dos Olhos: quem não vê o atacante fica desprevenido
+		for rid in atacante.rituais_ativos.keys():
+			if atacante.rituais_ativos[rid].get("invisivel", 0) > 0:
+				atacante.rituais_ativos.erase(rid)   # atacar desfaz a invisibilidade
 	bonus_ataque += int(aj.bonus)
 	margem_extra += int(aj.margem)
 	if opcoes.get("rajada", false) and arma.get("automatica", false):
@@ -2828,7 +3040,7 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	# Reação declarada pelo alvo
 	var reacao: Dictionary = _reacoes_declaradas.get(alvo, {})
 	_reacoes_declaradas.erase(alvo)
-	var defesa := alvo.defesa() + (5 if cobertura_leve else 0)
+	var defesa := alvo.defesa() + (5 if cobertura_leve else 0) - (5 if defesa_desprevenida and not (alvo.tem(Ser.DESPREVENIDO) or alvo.tem(Ser.SURPREENDIDO)) else 0)
 	if opcoes.get("fintado", false):
 		alvo.mods_cena.erase("fintado_por")
 		if not (alvo.tem(Ser.DESPREVENIDO) or alvo.tem(Ser.SURPREENDIDO) or alvo.tem(Ser.AGARRADO) or alvo.esta_indefeso()):
@@ -2904,6 +3116,9 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 	if res.acertou and grade != null and grade.camuflado(alvo) and not arma.get("ignora_camuflagem", false) and not (agente != null and agente.ignora_camuflagem()) and dados.rolar(10) <= 2:
 		res.acertou = false   # camuflagem leve: 1 ou 2 no d10 (p.89)
 		_log("O golpe de %s se perde: %s está encoberto." % [atacante.nome, alvo.nome])
+	if res.acertou and alvo.efeito_ritual("invisivel") > 0 and dados.rolar(100) <= 50:
+		res.acertou = false   # Esconder dos Olhos: camuflagem total
+		_log("%s ataca onde %s estava: só ar." % [atacante.nome, alvo.nome])
 	if res.acertou and atacante.tem(Ser.CEGO) and dados.rolar(100) <= 50:
 		res.acertou = false   # cego: todo alvo tem camuflagem total (p.320)
 		_log("%s, cego, golpeia o vazio." % atacante.nome)

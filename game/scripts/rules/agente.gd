@@ -307,6 +307,8 @@ func dados_da_pericia(pericia_id: String) -> int:
 		d -= 2   # proteção ou escudo sem proficiência: −2 dados em Força e Agilidade (p.72)
 	if pericia_id == "reflexos" and (tem(Ser.DESPREVENIDO) or tem(Ser.SURPREENDIDO)):
 		d -= 1   # desprevenido: −1 dado em Reflexos (p.320)
+	for r in rituais_ativos.values():
+		d += int(r.get("dados_pericias", {}).get(pericia_id, 0))   # Fortalecimento Sensorial
 	return d
 
 
@@ -579,6 +581,19 @@ func usa_duas_maos(a: Dictionary) -> bool:
 	return pericia_v == "" or not grau(pericia_v) in ["veterano", "expert"]
 
 
+## Técnica Medicinal (Agente de Saúde, p.26): soma o Intelecto aos PV que cura.
+func bonus_cura() -> int:
+	var total := 0
+	for e in efeitos("bonus_cura"):
+		total += atributo(String(e.atributo))
+	return total
+
+
+## A proteção vestida é pesada (o escudo não conta)?
+func protecao_pesada_vestida() -> bool:
+	return String(protecao().get("proficiencia", "")) == "protecoes_pesadas"
+
+
 ## Óculos de visão térmica (p.76): a camuflagem não faz o golpe se perder.
 func ignora_camuflagem() -> bool:
 	return equipamento.any(func(i): return ruleset.equipamento(i).get("ignora_camuflagem", false))
@@ -594,6 +609,9 @@ func bonus_contra(tags: Array, pericia_id: String) -> int:
 			melhor = maxi(melhor, int(b.get(pericia_id, b.get("todas", 0))))
 	if "area" in tags:
 		melhor = maxi(melhor, int(protecao().get("bonus_area", 0)))   # proteção antibombas (p.72)
+	for r in rituais_ativos.values():
+		if Array(r.get("contra", [])).any(func(t): return t in tags):
+			melhor = maxi(melhor, 50)   # Corpo Adaptado: o corpo não sente o que respira nem o ambiente
 	return melhor
 
 
@@ -879,6 +897,8 @@ func defesa() -> int:
 	d += maxi(int(protecao().get("defesa", 0)), efeito_ritual("defesa_ritual"))
 	if escudo_em_uso():
 		d += int(escudo().get("defesa", 0))   # escudo: soma com a proteção (p.72)
+	if protecao_pesada_vestida() and tem_habilidade("tanque_de_guerra"):
+		d += 2   # Tanque de Guerra (p.36)
 	if sobrecarregado():
 		d += int(ruleset.regra_carga().get("sobrecarga", {}).get("defesa", 0))
 	if tem(Ser.MACHUCADO) and tem_habilidade("inquebravel"):
@@ -896,6 +916,8 @@ func resistencia(tipo_dano: String) -> int:
 	if tem(Ser.MACHUCADO) and tem_habilidade("inquebravel"):
 		total += 5   # Inquebrável: RD 5 contra qualquer dano enquanto machucado
 	total += int(protecao().get("resistencias", {}).get(tipo_dano, 0))
+	if protecao_pesada_vestida() and tem_habilidade("tanque_de_guerra") and protecao().get("resistencias", {}).has(tipo_dano):
+		total += 2   # Tanque de Guerra: a resistência da proteção pesada sobe 2
 	var do_item := 0
 	for item_id in equipamento:
 		var e := ruleset.equipamento(item_id)

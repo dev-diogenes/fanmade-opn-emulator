@@ -23,6 +23,7 @@ var altura := 0
 var terreno: Dictionary = {}   ## Vector2i -> PAREDE | COBERTURA | DIFICIL
 ## Terreno difícil criado por efeitos (Tentáculos de Lodo): Vector2i -> quantos efeitos o criam
 var dificil_por_efeito: Dictionary = {}
+var camuflagem_por_efeito: Dictionary = {}   ## Vector2i -> quantos efeitos a criam
 var _posicoes: Dictionary = {} ## Ser -> Vector2i
 
 
@@ -242,7 +243,17 @@ func elevado(ser: Ser) -> bool:
 
 
 func camuflado(ser: Ser) -> bool:
-	return tem(ser) and terreno.get(posicao(ser), "") == CAMUFLAGEM
+	return tem(ser) and (terreno.get(posicao(ser), "") == CAMUFLAGEM or camuflagem_por_efeito.has(posicao(ser)))
+
+
+## Camuflagem criada por efeitos (Nuvem de Cinzas): liga e desliga, contando quantos a criam.
+func marcar_camuflagem(celulas: Array, ligar: bool) -> void:
+	for c in celulas:
+		var n := int(camuflagem_por_efeito.get(c, 0)) + (1 if ligar else -1)
+		if n > 0:
+			camuflagem_por_efeito[c] = n
+		else:
+			camuflagem_por_efeito.erase(c)
 
 
 func marcar_dificil(celulas: Array, ligar: bool) -> void:

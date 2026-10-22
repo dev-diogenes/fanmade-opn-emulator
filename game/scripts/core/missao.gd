@@ -82,6 +82,10 @@ var varredura := ""
 var credencial: Dictionary = {}
 ## Cultistas rendidos que vão para a contenção da Base (docs/63, OR8): [{nome, papel, elemento}].
 var presos: Array = []
+## Rituais de mapa (docs/69): os de uso único já gastos na missão, e o bônus guardado para o
+## próximo teste de um agente num evento (Enfeitiçar, Distorcer Aparência).
+var rituais_usados_no_mapa: Array = []
+var bonus_de_ritual: Dictionary = {}   ## id do agente -> {"pericia": String, "valor": int}
 
 
 const NOMES_TERRENO := {"campo": "campos abertos", "estrada": "estradas de terra", "floresta": "mata fechada",
@@ -500,7 +504,9 @@ func opcoes_do_evento(ev: Dictionary = {}, a: Agente = null) -> Array:
 
 
 ## O agente que entrou no hex escolhe uma opção e faz o teste. Retorna {teste, sucesso, texto}.
-func resolver_evento(pe_foco: int = 0, opcao: int = 0) -> Dictionary:
+## `trocar`: a perícia que substitui a do teste, pagando 2 PE (Impostor: Enganação; Motor de
+## Busca: Tecnologia; p.30-31).
+func resolver_evento(pe_foco: int = 0, opcao: int = 0, trocar: String = "") -> Dictionary:
 	if evento_pendente.is_empty():
 		return {}
 	var a: Agente = evento_pendente.agente
@@ -512,8 +518,23 @@ func resolver_evento(pe_foco: int = 0, opcao: int = 0) -> Dictionary:
 	if o.get("sem_teste", false):
 		linha = "%s: %s" % [a.nome, String(o.get("texto", "segue em frente"))]
 	else:
-		var ajuda := _ajudar_no_evento(a, String(o.pericia))
-		teste = a.testar(dados, String(o.pericia), int(o.dt), pe_foco, {"bonus_extra": ajuda} if ajuda > 0 else {})
+		var per := String(o.pericia)
+		if trocar != "" and trocar in trocas_de_pericia(a) and a.gastar_pe(2):
+			_log("%s troca %s por %s (%s)." % [a.nome, ruleset.pericia(per).nome, ruleset.pericia(trocar).nome, trocas_de_pericia(a)[trocar]])
+			per = trocar
+			o = o.duplicate()
+			o.pericia = per
+		var ajuda := _ajudar_no_evento(a, per)
+		var b_rit: Dictionary = bonus_de_ritual.get(a.id, {})
+		if not b_rit.is_empty() and String(b_rit.pericia) == String(o.pericia):
+			ajuda += int(b_rit.valor)   # Enfeitiçar, Distorcer Aparência (docs/69)
+			bonus_de_ritual.erase(a.id)
+		var dos_poderes := _poderes_no_evento(a, per)
+		ajuda += int(dos_poderes.bonus)
+		var op_teste := {"bonus_extra": ajuda} if ajuda > 0 else {}
+		if int(dos_poderes.dados) > 0:
+			op_teste["dados_extras"] = int(dos_poderes.dados)
+		teste = a.testar(dados, per, int(o.dt), pe_foco, op_teste)
 		sucesso = teste != null and teste.sucesso
 		linha = "%s testa %s (DT %d): %s" % [a.nome, ruleset.pericia(o.pericia).nome, int(o.dt),
 			teste.descrever() if teste != null else "sem treino — falha automática"]
@@ -534,6 +555,32 @@ func resolver_evento(pe_foco: int = 0, opcao: int = 0) -> Dictionary:
 	_verificar_derrota()
 	return {"teste": teste, "sucesso": sucesso, "texto": lado.get("texto", ""), "efeitos": aplicados,
 		"titulo": titulo, "agente": a.nome, "sem_teste": o.get("sem_teste", false)}
+
+
+## As perícias que o agente pode pôr no lugar da do evento, pagando 2 PE: {pericia: poder}.
+func trocas_de_pericia(a: Agente) -> Dictionary:
+	var t := {}
+	if a.pe + a.pe_temporario < 2:
+		return t
+	if a.tem_habilidade("impostor"):
+		t["enganacao"] = "Impostor"
+	if a.tem_habilidade("motor_de_busca"):
+		t["tecnologia"] = "Motor de Busca"
+	return t
+
+
+## Poderes que valem nos testes de evento (cada evento é uma cena): Primeira Impressão (+2
+## dados no teste social), Envolto em Mistério (+5 em Enganação e Intimidação contra leigos) e
+## Hacker (+5 em Tecnologia).
+func _poderes_no_evento(a: Agente, pericia: String) -> Dictionary:
+	var r := {"bonus": 0, "dados": 0}
+	if a.tem_habilidade("primeira_impressao") and pericia in ["diplomacia", "enganacao", "intimidacao", "intuicao"]:
+		r.dados += 2
+	if a.tem_habilidade("envolto_em_misterio") and pericia in ["enganacao", "intimidacao"]:
+		r.bonus += 5
+	if a.tem_habilidade("hacker") and pericia == "tecnologia":
+		r.bonus += 5
+	return r
 
 
 ## Quem está no hex do evento e pode ajudar o teste (docs/59): vivo, de pé e sem Teimoso.
@@ -592,6 +639,9 @@ func itens_fora_de_combate(a: Agente) -> Array:
 func rituais_fora_de_combate(a: Agente) -> Array:
 	var lista: Array = []
 	for rid in a.rituais:
+		if _ritual_de_mapa_disponivel(a, rid):
+			lista.append([rid, ""])
+	for rid in a.rituais:
 		var r := ruleset.ritual(rid)
 		if not r.get("implementado", false):
 			continue
@@ -633,7 +683,7 @@ func usar_item_no_mapa(item_id: String, alvo: Agente) -> Dictionary:
 		return {}
 	var info := ruleset.equipamento(item_id)
 	a.consumir_item(item_id)
-	var cura := dados.rolar_expressao(String(info.uso.get("cura", "0")))
+	var cura := dados.rolar_expressao(String(info.uso.get("cura", "0"))) + a.bonus_cura()   # Técnica Medicinal
 	alvo.curar(cura)
 	acao_usada = true
 	_log("%s usa %s em %s: +%d PV." % [a.nome, info.nome, alvo.nome, cura])
@@ -645,6 +695,8 @@ func conjurar_no_mapa(ritual_id: String, forma: String, alvo: Agente) -> Diction
 	if not pode_agir_no_mapa() or not [ritual_id, forma] in rituais_fora_de_combate(a):
 		return {}
 	var r := ruleset.ritual(ritual_id)
+	if r.has("mapa"):
+		return _conjurar_ritual_de_mapa(a, ritual_id)
 	var pessoal := String(r.get("alcance", "")).begins_with("pessoal")
 	if (pessoal and alvo != a) or not alvo in alcance_de_toque():
 		return {}
@@ -652,7 +704,7 @@ func conjurar_no_mapa(ritual_id: String, forma: String, alvo: Agente) -> Diction
 	if not a.gastar_pe(custo):
 		return {}
 	var ef := _efeito_fora(r, forma)
-	var valor := dados.rolar_expressao(String(ef.get("dados", "0")))
+	var valor := dados.rolar_expressao(String(ef.get("dados", "0"))) + (a.bonus_cura() if ef.tipo == "cura" else 0)
 	if ef.tipo == "cura":
 		alvo.curar(valor)
 	else:
@@ -661,6 +713,45 @@ func conjurar_no_mapa(ritual_id: String, forma: String, alvo: Agente) -> Diction
 	_log("[color=#b98ae6]%s conjura %s%s em %s (%d PE): %s %d.[/color]" % [a.nome, r.nome, "" if forma == "" else " " + forma, alvo.nome, custo,
 		"+PV" if ef.tipo == "cura" else "PV temporários", valor])
 	return {"valor": valor, "tipo": ef.tipo, "alvo": alvo}
+
+
+## Rituais que agem no mapa e no caso (docs/69): o efeito vem do bloco "mapa" do ritual. Pedem
+## o círculo, os componentes (ou a afinidade) e, alguns, um caso, um preso ou a credencial.
+func _ritual_de_mapa_disponivel(a: Agente, rid: String) -> bool:
+	var r := ruleset.ritual(rid)
+	var m: Dictionary = r.get("mapa", {})
+	if m.is_empty() or int(r.circulo) > a.circulo_maximo():
+		return false
+	if r.elemento != "medo" and a.afinidade != r.elemento and not a.equipamento.any(func(i): return ruleset.equipamento(i).get("componentes", "") == r.elemento):
+		return false
+	if m.get("uma_vez", false) and rid in rituais_usados_no_mapa:
+		return false
+	match String(m.get("exige", "")):
+		"caso":
+			return caso != null
+		"preso":
+			return not presos.is_empty()
+		"credencial":
+			return not credencial.is_empty() and int(credencial.get("usos", 0)) > 0 and not credencial.get("queimada", false)
+	return true
+
+
+func _conjurar_ritual_de_mapa(a: Agente, rid: String) -> Dictionary:
+	var r := ruleset.ritual(rid)
+	var m: Dictionary = r.mapa
+	var custo := a.custo_ritual(rid)
+	if not a.gastar_pe(custo):
+		return {}
+	if m.get("uma_vez", false):
+		rituais_usados_no_mapa.append(rid)
+	acao_usada = true
+	_log("[color=#b98ae6]%s conjura %s (%d PE).[/color]" % [a.nome, r.nome, custo])
+	var feitos: Array = []
+	for ef in m.get("efeitos", []):
+		var f := _aplicar_efeito(a, ef, posicao(a))
+		if not f.is_empty():
+			feitos.append(f)
+	return {"tipo": "mapa", "efeitos": feitos, "alvo": a, "valor": 0}
 
 
 func _valor(v) -> int:
@@ -723,6 +814,23 @@ func _aplicar_efeito(a: Agente, ef: Dictionary, h: Vector2i) -> Dictionary:
 			modificador_chefe += v / 100.0
 			_log("[color=#e0574a]O chefe do covil vai começar com %+d%% de PV.[/color]" % v if v > 0 else "[color=#6fcf8e]O chefe do covil vai começar com %d%% a menos de PV.[/color]" % -v)
 			return {"tipo": "chefe", "valor": v, "texto": "Chefe %+d%% PV" % v}
+		"sussurros":   # Ouvir os Sussurros (p.147): com 1 no d6, o Outro Lado não responde
+			if dados.rolar(6) == 1:
+				_log("Os sussurros falam muito e não dizem nada.")
+				return {"tipo": "sussurros", "valor": 0, "texto": "Os sussurros calam"}
+			return _aplicar_efeito(a, {"tipo": "pista", "texto": String(ef.get("texto", "{indicio}"))}, h)
+		"credencial":   # Alterar Memória (p.134): quem viu a credencial esquece
+			if credencial.is_empty():
+				return {}
+			var antes := int(credencial.get("usos", 0))
+			credencial.usos = maxi(0, antes + int(ef.valor))
+			_log("[color=#7fd3c7]A testemunha esquece a credencial de %s.[/color]" % credencial.get("nome", "fachada"))
+			return {"tipo": "credencial", "valor": int(credencial.usos) - antes, "texto": "Credencial: −%d uso(s)" % (antes - int(credencial.usos))}
+		"bonus_teste":   # Enfeitiçar, Distorcer Aparência: vale no próximo teste dessa perícia num evento
+			bonus_de_ritual[a.id] = {"pericia": String(ef.pericia), "valor": int(ef.valor)}
+			var nome_p := String(ruleset.pericia(String(ef.pericia)).get("nome", ef.pericia))
+			_log("%s guarda +%d para o próximo teste de %s." % [a.nome, int(ef.valor), nome_p])
+			return {"tipo": "bonus_teste", "valor": int(ef.valor), "texto": "+%d no próximo teste de %s" % [int(ef.valor), nome_p]}
 		"inocente_morto":
 			var n := int(ef.get("valor", 1))
 			inocentes_mortos += n
@@ -1782,6 +1890,7 @@ func para_dicionario() -> Dictionary:
 		"pesquisa": pesquisa.duplicate(), "rumores": rumores.duplicate(true),
 		"sinal": sinal.duplicate(), "alarme_confirmado": alarme_confirmado, "varredura": varredura,
 		"credencial": credencial.duplicate(), "presos": presos.duplicate(true),
+		"rituais_usados_no_mapa": rituais_usados_no_mapa.duplicate(), "bonus_de_ritual": bonus_de_ritual.duplicate(true),
 		"rastros": rastros.keys().map(func(h): return [h.x, h.y, int(rastros[h])]), "descansos": descansos, "revisaveis": revisaveis.duplicate(true),
 		"historico": historico.slice(maxi(0, historico.size() - 300)),
 		"encerrada": encerrada, "vitoria": vitoria, "extras": extras.duplicate(true),
@@ -1845,6 +1954,8 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 		m.credencial = {"nome": String(d.credencial.get("nome", "")), "usos": int(d.credencial.get("usos", 0)),
 			"queimada": bool(d.credencial.get("queimada", false))}
 	m.presos = (d.get("presos", []) as Array).duplicate(true)
+	m.rituais_usados_no_mapa = (d.get("rituais_usados_no_mapa", []) as Array).duplicate()
+	m.bonus_de_ritual = (d.get("bonus_de_ritual", {}) as Dictionary).duplicate(true)
 	for r in d.get("rastros", []):
 		m.rastros[Vector2i(int(r[0]), int(r[1]))] = int(r[2])
 	for i in d.get("descansos", {}):

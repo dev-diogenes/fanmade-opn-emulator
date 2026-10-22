@@ -46,7 +46,7 @@ static func aplicar_mapa(m: Missao, cmd: Dictionary) -> Dictionary:
 		"resolver_evento":
 			if m.evento_pendente.is_empty():
 				return {"ok": false, "erro": "nenhum evento pendente"}
-			return {"ok": true, "teste": m.resolver_evento(int(cmd.get("foco", 0)), int(cmd.get("opcao", 0)))}
+			return {"ok": true, "teste": m.resolver_evento(int(cmd.get("foco", 0)), int(cmd.get("opcao", 0)), String(cmd.get("trocar", "")))}
 		"usar_item":
 			var alvo := _agente_da_missao(m, cmd.get("alvo", ""))
 			var r := m.usar_item_no_mapa(String(cmd.get("item", "")), alvo) if alvo != null else {}

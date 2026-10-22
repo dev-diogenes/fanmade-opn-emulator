@@ -584,7 +584,11 @@ func cartao_ritual(rid: String) -> Control:
 		for f in formas:
 			fs.append("%s: %d PE (%dº)" % [String(f).capitalize(), agente.custo_ritual(rid, f), int(formas[f].get("circulo", r.get("circulo", 1)))])
 		v.add_child(_texto("Formas — " + " · ".join(fs), Tema.FONTE_P, Color(Tema.TINTA, 0.85)))
+	if r.has("mapa"):   # rituais de mapa e de caso (docs/69)
+		v.add_child(_texto("No mapa: " + String(r.mapa.get("texto", "")), Tema.FONTE_P, Color("5b2a86")))
 	if not r.get("implementado", false):
 		var aviso := _texto("ainda sem efeito nas regras deste jogo", Tema.FONTE_P, Color(Tema.TINTA, 0.75))
 		v.add_child(aviso)
+	elif r.has("pendente"):
+		v.add_child(_texto("Ainda sem efeito: %s." % r.pendente, Tema.FONTE_P, Color(Tema.TINTA, 0.75)))
 	return p

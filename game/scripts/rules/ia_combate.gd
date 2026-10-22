@@ -32,7 +32,7 @@ static func jogar(c: Combate, ser: Ser, armas: Dictionary) -> void:
 			return
 		for rid in (ser as Agente).rituais:
 			var rr := c.ruleset.ritual(rid)
-			if rr.get("implementado", false) and rr.efeitos[0].tipo == "dano" and not rr.efeitos[0].has("area") and c.pode_conjurar(ser, rid, alvo) == "":
+			if rr.get("implementado", false) and not rr.get("efeitos", []).is_empty() and rr.efeitos[0].tipo == "dano" and not rr.efeitos[0].has("area") and c.pode_conjurar(ser, rid, alvo) == "":
 				c.conjurar(ser, rid, alvo)
 				return
 	if not pode_atacar(c, ser, alvo, arma):

@@ -252,6 +252,8 @@ func resistencia(tipo_dano: String) -> int:
 		total += int(resistencias_base.get("dano", 0))   # "Resistência a dano N": vale para todos os tipos
 	if tipo_dano in DANO_FISICO:
 		total += efeito_ritual("resistencia_fisica")   # Ódio Incontrolável
+	if tipo_dano in ["sangue", "morte", "conhecimento", "energia", "medo"]:
+		total += efeito_ritual("rd_paranormal")   # Proteção contra Rituais
 	return total
 
 

@@ -157,7 +157,7 @@ static func agir_antes(c: Combate, ser: Ameaca, alvo: Ser) -> bool:
 	if not ser.conjurador.is_empty() and alvo != null and c.rodada % 2 == 1:
 		for rid in ser.conjurador.get("rituais", []):
 			var r := c.ruleset.ritual(rid)
-			if not r.get("implementado", false) or not r.efeitos[0].tipo in ["dano", "purgatorio"]:
+			if not r.get("implementado", false) or r.get("efeitos", []).is_empty() or not r.efeitos[0].tipo in ["dano", "purgatorio"]:
 				continue
 			if r.efeitos[0].has("area"):
 				# Ritual de área: só quando pega 2+ inimigos e nenhum aliado

@@ -41,6 +41,7 @@ var _lbl_caso: RichTextLabel
 var _btn_deduzir: Button
 var _btn_pesquisa: Button   ## contato da Pesquisa (docs/61)
 var _caixa_opcoes: VBoxContainer
+var _troca_evento := ""   ## Impostor e Motor de Busca: a perícia que substitui a do evento (docs/69)
 var _bilhete_acao: PanelContainer
 var _log: RelatorioCampo
 var _dica: Label
@@ -167,7 +168,9 @@ func _encerrar_turno() -> void:
 
 
 func _testar_evento(opcao: int = 0) -> void:
-	_enviar("resolver_evento", {"foco": _foco.consumir(), "opcao": opcao})
+	var troca := _troca_evento
+	_troca_evento = ""
+	_enviar("resolver_evento", {"foco": _foco.consumir(), "opcao": opcao, "trocar": troca})
 
 
 ## Opções do evento (docs/13): uma linha por perícia, com a DT; "seguir em frente" sem teste.
@@ -181,9 +184,12 @@ func _montar_opcoes_evento() -> void:
 		_btn_testar.get_parent().remove_child(_btn_testar)
 	var a: Agente = missao.evento_pendente.get("agente")
 	var ops := missao.opcoes_do_evento()
+	var trocas := missao.trocas_de_pericia(a) if a != null else {}
+	if not trocas.has(_troca_evento):
+		_troca_evento = ""
 	var previsoes: Array = []
 	for o in ops:
-		previsoes.append({} if o.get("sem_teste", false) or a == null else a.prever_teste(String(o.pericia), int(o.dt), _foco.valor))
+		previsoes.append({} if o.get("sem_teste", false) or a == null else a.prever_teste(_troca_evento if _troca_evento != "" else String(o.pericia), int(o.dt), _foco.valor))
 	var melhor := LinhaTeste.recomendada(previsoes)
 	for i in ops.size():
 		var o: Dictionary = ops[i]
@@ -196,7 +202,7 @@ func _montar_opcoes_evento() -> void:
 			b.text = "→ " + (texto if texto != "" else "Seguir em frente")
 			b.theme_type_variation = "BotaoPapel"
 		else:
-			var per := String(o.pericia)
+			var per := _troca_evento if _troca_evento != "" else String(o.pericia)
 			var nome := String(missao.ruleset.pericia(per).get("nome", per))
 			b.text = "%s%s\n   %s" % [texto if texto != "" else "Testar", "  ★" if i == melhor and ops.size() > 1 else "",
 				LinhaTeste.texto(nome, previsoes[i], int(o.dt))]
@@ -207,6 +213,15 @@ func _montar_opcoes_evento() -> void:
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.pressed.connect(_testar_evento.bind(i))
 		_caixa_opcoes.add_child(b)
+	for per in trocas:   # Impostor e Motor de Busca (p.30-31): a perícia no lugar, por 2 PE
+		var chk := CheckBox.new()
+		chk.text = "Usar %s no lugar (%s, 2 PE)" % [missao.ruleset.pericia(per).get("nome", per), trocas[per]]
+		chk.button_pressed = _troca_evento == per
+		chk.add_theme_color_override("font_color", Tema.TINTA)
+		chk.toggled.connect(func(v):
+			_troca_evento = per if v else ""
+			_montar_opcoes_evento())
+		_caixa_opcoes.add_child(chk)
 
 
 ## Ação do turno no mapa (docs/13): bilhete com itens e rituais, e em quem usar.
@@ -263,6 +278,7 @@ func _abrir_acao() -> void:
 			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			b.add_theme_color_override("font_color", Color("5b2a86"))
 			b.text = "✦ %s%s em %s  ·  %d PE" % [r.nome, "" if par[1] == "" else " " + par[1], "si" if alvo == a else alvo.nome, a.custo_ritual(par[0], par[1])]
+			b.tooltip_text = String(r.get("mapa", {}).get("texto", r.get("descricao", "")))
 			b.disabled = a.pe < a.custo_ritual(par[0], par[1])
 			b.pressed.connect(func(): _fechar_acao(); _enviar("conjurar", {"ritual": par[0], "forma": par[1], "alvo": alvo.id}))
 			v.add_child(b)

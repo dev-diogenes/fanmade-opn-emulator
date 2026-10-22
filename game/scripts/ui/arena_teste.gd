@@ -928,8 +928,8 @@ func _rituais_disponiveis(agente: Agente) -> Array:
 	var lista: Array = []
 	for rid in agente.rituais:
 		var rr := ruleset.ritual(rid)
-		if not rr.get("implementado", false):
-			continue
+		if not rr.get("implementado", false) or rr.get("efeitos", []).is_empty():
+			continue   # sem efeito, ou só de mapa (docs/69)
 		for forma in [""] + rr.get("formas", {}).keys():
 			if forma != "":
 				var fm: Dictionary = rr.formas[forma]
@@ -1009,7 +1009,10 @@ func _modo_ritual() -> void:
 	var escolha: Array = _ritual_sel
 	var e := combate.efeito_do_ritual(escolha[0], escolha[1])
 	var nome: String = ruleset.ritual(escolha[0]).nome
-	if e.has("area") and e.area.forma == "explosao" or (not e.has("area") and String(e.get("alcance", "")).begins_with("pessoal")):
+	if e.tipo == "teleporte":
+		_modo = "ritual_area"
+		_registrar("Escolha no tabuleiro o ponto de chegada de %s." % nome)
+	elif e.has("area") and e.area.forma == "explosao" or (not e.has("area") and String(e.get("alcance", "")).begins_with("pessoal")):
 		_conjurar(agente, escolha[0], escolha[1], agente, {})
 	elif e.has("area"):
 		_modo = "ritual_area"
