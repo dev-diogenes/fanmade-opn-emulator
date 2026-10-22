@@ -235,13 +235,16 @@ func _alternar_quadro() -> void:
 		_btn_quadro.text = Atalhos.com_tecla("Quadro", "quadro")   # a pista nova já foi vista
 
 
-## Ficha de suspeitos (docs/32): acusar vira o comando `deduzir` (lockstep no online).
+## Ficha de suspeitos (docs/32): o relatório vira o comando `relatar` e a acusação da
+## reviravolta, `deduzir` (lockstep no online, docs/52).
 func abrir_deducao(pergunta_id: String = "") -> PainelDeducao:
 	if PainelDeducao.aberto(self):
 		return null
 	var pid := pergunta_id if pergunta_id != "" else PainelDeducao.pergunta_sugerida(missao.caso)
 	return PainelDeducao.abrir(self, missao.caso, pid, func(q: String, c: String):
-		_enviar("deduzir", {"pergunta": q, "candidato": c}))
+		_enviar("deduzir", {"pergunta": q, "candidato": c}),
+		func(respostas: Dictionary):
+			_enviar("relatar", {"respostas": respostas, "sem_contagem": String(missao.opcoes.get("modo_morte", "normal")) != "normal"}))
 
 
 ## Pista nova com o quadro fechado (docs/23, C6): o botão pulsa e avisa; o quadro abre sozinho
@@ -863,6 +866,16 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 					_alternar_quadro()
 			elif res.ok:
 				Tema.pulso_vhs(_vista, 1.0, 0.5)   # a pista falsa custa: a fita treme forte
+		"relatar":
+			if res.ok and res.relatorio.acertou:
+				Tema.pulso_vhs(_vista, 0.6, 0.7)
+				Som.tocar("carimbo")
+				if not res.relatorio.get("ampliacao", {}).is_empty():
+					_posicionar_quadro()   # a ficha ganha uma pergunta (docs/36)
+				if not _quadro_aberto:
+					_alternar_quadro()
+			elif res.ok:
+				Tema.pulso_vhs(_vista, 1.0, 0.5)   # o relatório recusado custa: a fita treme forte
 		"sair":
 			if res.ok and _jogo != null:
 				_jogo.voltar_da_investigacao(res.resultado)

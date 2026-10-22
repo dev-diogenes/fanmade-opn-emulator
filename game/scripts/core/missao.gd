@@ -100,6 +100,7 @@ static func nova(semente_: int, ruleset_: Ruleset = null, grupo: Array = [], opc
 		m.opcoes[k] = opcoes_[k]
 	m.reforcos = 2 if m.opcoes.get("modo_morte", "normal") == "normal" else 0
 	m.caso = Caso.gerar(m.dados)
+	m._ajustar_encontros_ao_elemento()
 	m.covil_localizado = not bool(DadosJogo.ler("mapa").get("covil_selado", true))
 	var inicio := m.mapa.encontrar("inicio")
 	if grupo.is_empty():
@@ -670,7 +671,7 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool, semente_s
 	for a in agentes:
 		if not a.tem(Ser.MORTO) and not a.esta_fora_de_combate() and Hex.distancia(posicao(a), h) <= alcance:
 			participantes.append(a)
-	var info: Dictionary = (extras.covil if not extras.get("covil", {}).is_empty() else covil_para(participantes)) if chefe else _encontro(encontro_id)
+	var info: Dictionary = (extras.covil if not extras.get("covil", {}).is_empty() else covil_para(participantes, caso.elemento if caso != null else "")) if chefe else _encontro(encontro_id)
 	var ameacas: Array = []
 	for amea_id in info.ameacas:
 		var am := ameaca_info(amea_id)
@@ -739,16 +740,75 @@ func aliados_perto(a: Agente, h: Vector2i) -> int:
 
 
 ## O covil muda com o grupo: o de maior "nex_minimo" que a soma do NEX alcança.
-static func covil_para(grupo: Array) -> Dictionary:
+## O covil do caso (docs/52): o de maior "nex_minimo" que o grupo alcança, entre os do elemento
+## do caso; sem nenhum do elemento, entre todos.
+static func covil_para(grupo: Array, elemento: String = "") -> Dictionary:
 	var d := DadosJogo.ler("encontros")
 	var nex_total := 0
 	for a in grupo:
 		nex_total += a.nex
-	var melhor: Dictionary = d.chefe
-	for c in d.get("chefes", []):
-		if nex_total >= int(c.nex_minimo) and int(c.nex_minimo) >= int(melhor.get("nex_minimo", 0)):
-			melhor = c
-	return melhor
+	for so_do_elemento in [true, false]:
+		if so_do_elemento and elemento == "":
+			continue
+		var melhor: Dictionary = {}
+		for c in d.get("chefes", []):
+			if so_do_elemento and String(c.get("elemento", "")) != elemento:
+				continue
+			if nex_total >= int(c.nex_minimo) and (melhor.is_empty() or int(c.nex_minimo) > int(melhor.get("nex_minimo", 0))):
+				melhor = c   # no mesmo nível, vale o primeiro da lista
+		if not melhor.is_empty():
+			return melhor
+	return d.chefe
+
+
+## O elemento de um encontro: o da primeira ameaça paranormal dele ("" se só há gente e bichos).
+func elemento_do_encontro(e: Dictionary) -> String:
+	for amea_id in e.get("ameacas", []):
+		var el := String(ameaca_info(String(amea_id)).get("ficha", {}).get("elemento", ""))
+		if el != "":
+			return el
+	return ""
+
+
+## Encontros paranormais do mapa seguem o elemento do caso (docs/52): um de outro elemento vira
+## um do elemento do caso, de nível até o dele (ou 1) e sem VD maior; os de gente e bichos ficam.
+## A troca usa uma semente do hex, sem gastar os Dados.
+func _ajustar_encontros_ao_elemento() -> void:
+	if caso == null:
+		return
+	var todos: Array = DadosJogo.ler("encontros").encontros
+	for h in mapa.celulas:
+		var c := mapa.conteudo(h)
+		if String(c.get("tipo", "")) != "encontro":
+			continue
+		var e := _encontro(String(c.get("encontro", "")))
+		var el := elemento_do_encontro(e)
+		if el == "" or el == caso.elemento:
+			continue
+		var teto := maxi(1, int(e.get("nivel", 0)))
+		var vd := maxi(20, _vd_minimo(e))
+		var opcoes := todos.filter(func(x): return elemento_do_encontro(x) == caso.elemento and int(x.get("nivel", 0)) <= teto and _vd_minimo(x) <= vd)
+		if opcoes.is_empty():
+			continue
+		var i := absi(hash("%d|%d|%s" % [h.x, h.y, caso.elemento])) % opcoes.size()
+		mapa.definir_conteudo(h, {"tipo": "encontro", "encontro": String(opcoes[i].id)})
+
+
+## Encontro que combina com o caso: de gente e bichos, do elemento do caso ou do Medo (que só
+## vem com a Membrana fina, pelo nível).
+func _encontro_do_caso(e: Dictionary) -> bool:
+	var el := elemento_do_encontro(e)
+	return el == "" or el == "medo" or caso == null or el == caso.elemento
+
+
+## O elemento opressor de outro (p.98: Morte oprime Sangue, Sangue oprime Conhecimento,
+## Conhecimento oprime Energia, Energia oprime Morte). "" para o Medo.
+func elemento_opressor(el: String) -> String:
+	var vantagem: Dictionary = ruleset.dados.get("rituais", {}).get("vantagem_elemental", {})
+	for k in vantagem:
+		if String(vantagem[k]) == el:
+			return String(k)
+	return ""
 
 
 ## Escolhe ameaças da lista, da mais forte para a mais fraca, sem passar do orçamento de VD.
@@ -777,6 +837,10 @@ func encontros_para_surgir(nivel: int, vivos: Array) -> Array:
 		return []
 	var base: Array = extras.get("encontros", []) if modo == "proprios" else DadosJogo.ler("encontros").encontros
 	var opcoes: Array = base.filter(func(e): return int(e.get("nivel", 0)) <= nivel and _vd_minimo(e) <= nex_total * 2)
+	if modo != "proprios":
+		var do_caso := opcoes.filter(func(e): return _encontro_do_caso(e))   # o elemento do caso (docs/52)
+		if not do_caso.is_empty():
+			opcoes = do_caso
 	if opcoes.is_empty() and modo != "proprios":
 		opcoes = base.filter(func(e): return int(e.get("nivel", 0)) == 0)
 	return opcoes
@@ -982,6 +1046,49 @@ func deduzir(pergunta_id: String, candidato_id: String) -> Dictionary:
 		_log("[color=#e0574a][b]Acusação errada:[/b] %s não bate com tudo. A Membrana cai %d.[/color]" % [r.candidato.nome, -custo])
 		_verificar_derrota()
 	return r
+
+
+## Relatório à Ordem (docs/52): quem, o quê e onde de uma vez. Aceito: os efeitos das perguntas,
+## o elemento confirmado e a reviravolta. Recusado: a Membrana cai uma vez; no modo normal, a
+## Ordem diz quantas respostas se sustentam (no hardcore, nada).
+func relatar(respostas: Dictionary) -> Dictionary:
+	if caso == null:
+		return {"ok": false}
+	var r := caso.relatar(respostas)
+	if not r.ok:
+		return r
+	if r.acertou:
+		_log("[color=#e3c27a][b]Relatório aceito pela Ordem.[/b][/color]")
+		for q in r.perguntas:
+			_log("[color=#e3c27a]%s → %s[/color]" % [q.texto, caso.resposta(String(q.id))])
+			_aplicar_efeito_pergunta(q)
+		if caso.elemento_confirmado():
+			_log("[color=#e3c27a]%s[/color]" % linha_do_elemento())
+		if not r.get("ampliacao", {}).is_empty():
+			_log("[color=#c9a0ff][b]A investigação se amplia.[/b] %s Nova pergunta: %s[/color]" % [r.ampliacao.revelacao, r.ampliacao.pergunta.texto])
+	else:
+		var custo := Caso.penalidade_palpite()
+		membrana.alterar(custo, "palpite_errado")
+		_log("[color=#e0574a][b]Relatório recusado:[/b] a teoria não se sustenta. A Membrana cai %d.%s[/color]" % [-custo, texto_do_recusado(r)])
+		_verificar_derrota()
+	return r
+
+
+## O que a Ordem diz de um relatório recusado: no normal, quantas respostas se sustentam.
+func texto_do_recusado(r: Dictionary) -> String:
+	if String(opcoes.get("modo_morte", "normal")) != "normal":
+		return ""
+	return " %d de %d respostas se sustentam." % [int(r.certas), int(r.total)]
+
+
+## O elemento confirmado e o que ele muda no covil (rituais do opressor com vantagem, p.118).
+func linha_do_elemento() -> String:
+	if caso == null:
+		return ""
+	var op := elemento_opressor(caso.elemento)
+	var nomes: Dictionary = DadosJogo.ler("casos").get("elementos", {})
+	var nome_op := String(nomes.get(op, {}).get("nome", op.capitalize()))
+	return "O elemento é %s: no covil, rituais de %s têm vantagem e os de %s, desvantagem." % [caso.nome_elemento(), nome_op, caso.nome_elemento()]
 
 
 ## Volta ao mesmo agente depois da cena, sem zerar o movimento que ele tinha.

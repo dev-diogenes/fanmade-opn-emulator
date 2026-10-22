@@ -4,11 +4,11 @@
     {
       "id": "seita",
       "nome": "uma seita de mascarados",
-      "chefe_titulo": "o Sacerdote Carmesim",
+      "chefe_titulo": "o Sacerdote Mascarado",
       "indicios": [
-        "grupo",
+        "mascara",
         "fe",
-        "mascara"
+        "grupo"
       ]
     },
     {
@@ -16,9 +16,9 @@
       "nome": "um médico aposentado",
       "chefe_titulo": "o Doutor",
       "indicios": [
-        "ciencia",
+        "idoso",
         "dinheiro",
-        "idoso"
+        "mascara"
       ]
     },
     {
@@ -26,9 +26,9 @@
       "nome": "a herdeira de uma família antiga",
       "chefe_titulo": "a Herdeira",
       "indicios": [
-        "grupo",
         "dinheiro",
-        "familia"
+        "fe",
+        "arquivo"
       ]
     },
     {
@@ -37,8 +37,8 @@
       "chefe_titulo": "o Desertor",
       "indicios": [
         "mascara",
-        "ciencia",
-        "treino"
+        "voz",
+        "arquivo"
       ]
     },
     {
@@ -46,8 +46,8 @@
       "nome": "um radialista da madrugada",
       "chefe_titulo": "a Voz",
       "indicios": [
-        "fe",
         "idoso",
+        "fe",
         "voz"
       ]
     },
@@ -56,9 +56,9 @@
       "nome": "o delegado da cidade",
       "chefe_titulo": "o Delegado",
       "indicios": [
-        "treino",
-        "familia",
-        "autoridade"
+        "dinheiro",
+        "voz",
+        "grupo"
       ]
     },
     {
@@ -67,28 +67,28 @@
       "chefe_titulo": "a Professora",
       "indicios": [
         "idoso",
-        "autoridade",
-        "criancas"
+        "arquivo",
+        "grupo"
       ]
     }
   ],
   "acoes": [
     {
       "id": "invocar",
-      "texto": "tenta trazer algo de Sangue para este lado",
+      "texto": "tenta trazer uma entidade do Outro Lado para este lado",
       "indicios": [
-        "chamado",
-        "data",
-        "sangue"
+        "sangue",
+        "objeto",
+        "chamado"
       ]
     },
     {
       "id": "sequestros",
       "texto": "sequestra moradores para um ritual",
       "indicios": [
-        "lista",
-        "data",
-        "cativeiro"
+        "sangue",
+        "lucro",
+        "lista"
       ]
     },
     {
@@ -97,16 +97,16 @@
       "indicios": [
         "objeto",
         "lucro",
-        "sangue"
+        "juventude"
       ]
     },
     {
       "id": "vinganca",
       "texto": "quer vingança contra a cidade",
       "indicios": [
+        "chamado",
         "lista",
-        "rancor",
-        "chamado"
+        "data"
       ]
     },
     {
@@ -114,8 +114,8 @@
       "texto": "quer escapar da morte a qualquer preço",
       "indicios": [
         "sangue",
-        "cativeiro",
-        "juventude"
+        "juventude",
+        "data"
       ]
     }
   ],
@@ -124,26 +124,26 @@
       "id": "frigorifico",
       "nome": "um frigorífico desativado",
       "indicios": [
-        "frio",
         "eco",
-        "longe"
+        "longe",
+        "decomposicao"
       ]
     },
     {
       "id": "igreja",
       "nome": "uma igreja interditada",
       "indicios": [
-        "vitral",
+        "eco",
         "centro",
-        "eco"
+        "badalada"
       ]
     },
     {
       "id": "fazenda",
       "nome": "uma fazenda de porcos abandonada",
       "indicios": [
-        "bichos",
         "longe",
+        "remedio",
         "terra"
       ]
     },
@@ -151,31 +151,31 @@
       "id": "hospital",
       "nome": "a ala fechada do hospital",
       "indicios": [
-        "frio",
         "centro",
-        "azulejo"
+        "remedio",
+        "etiqueta"
       ]
     },
     {
       "id": "escola",
       "nome": "a escola rural fechada",
       "indicios": [
-        "longe",
-        "azulejo",
-        "giz"
+        "badalada",
+        "terra",
+        "portao"
       ]
     },
     {
       "id": "cemiterio",
       "nome": "o cemitério municipal",
       "indicios": [
-        "centro",
-        "terra",
-        "flores"
+        "decomposicao",
+        "etiqueta",
+        "portao"
       ]
     }
   ],
-  "resumo": "Desaparecimentos e marcas de sangue seco na região. A Ordem suspeita de atividade paranormal ligada a Sangue.",
+  "resumo": "A Ordem suspeita de atividade paranormal na região. {sintomas}",
   "objetivo": "Descobrir quem está por trás, o que pretende e onde fica o covil; então, encerrar a ameaça.",
   "perguntas": [
     {
@@ -194,7 +194,7 @@
       "efeito": {
         "tipo": "membrana",
         "valor": 10,
-        "texto": "Sabendo o que o ritual precisa, os agentes atrapalham os preparativos: a Membrana se fortalece."
+        "texto": "Sabendo o que o ritual precisa, os agentes atrapalham os preparativos e confirmam o elemento: a Membrana se fortalece."
       }
     },
     {
@@ -218,11 +218,7 @@
     },
     "mascara": {
       "rotulo": "Esconde o rosto",
-      "texto": "Um pano preto recortado na altura dos olhos, como um capuz feito em casa."
-    },
-    "ciencia": {
-      "rotulo": "Mão treinada",
-      "texto": "Cortes precisos e material esterilizado: quem fez isso sabe usar um bisturi."
+      "texto": "Máscaras descartáveis e um capuz preto num saco: quem esteve aqui não quis ser reconhecido."
     },
     "dinheiro": {
       "rotulo": "Dinheiro sobrando",
@@ -232,17 +228,9 @@
       "rotulo": "Idade avançada",
       "texto": "Caixas de remédio para pressão e uma letra trêmula nas anotações."
     },
-    "familia": {
-      "rotulo": "Nome de família",
-      "texto": "Um brasão antigo carimbado em lacre vermelho, de uma família tradicional da região."
-    },
-    "treino": {
-      "rotulo": "Treino de campo",
-      "texto": "Um perímetro montado com técnica: alarmes de linha e rotas de fuga marcadas. Parece treino da Ordem."
-    },
     "voz": {
-      "rotulo": "Fala no ar",
-      "texto": "Uma fita com a mesma frase repetida, gravada em estúdio, com o chiado de uma transmissão."
+      "rotulo": "Rádio fechado",
+      "texto": "Uma fita gravada de um rádio em frequência fechada, com chiado e uma voz dando ordens."
     },
     "chamado": {
       "rotulo": "Um chamado",
@@ -260,10 +248,6 @@
       "rotulo": "Lista de nomes",
       "texto": "Uma lista de moradores, com endereços e horários em que ficam sozinhos."
     },
-    "cativeiro": {
-      "rotulo": "Cativeiro",
-      "texto": "Correntes novas, cadeados e comida para várias pessoas por vários dias."
-    },
     "objeto": {
       "rotulo": "Um objeto",
       "texto": "Uma caixa forrada de chumbo, vazia, do tamanho exato de algo que foi retirado dali."
@@ -271,14 +255,6 @@
     "lucro": {
       "rotulo": "Lucro",
       "texto": "Extratos com depósitos altos e repentinos, logo depois de cada desaparecimento."
-    },
-    "rancor": {
-      "rotulo": "Rancor antigo",
-      "texto": "Recortes de jornal de vinte anos atrás sobre uma tragédia na cidade, com rostos riscados."
-    },
-    "frio": {
-      "rotulo": "Frio",
-      "texto": "A roupa da vítima tinha cristais de gelo, mesmo numa noite quente."
     },
     "eco": {
       "rotulo": "Salão vazio",
@@ -292,41 +268,13 @@
       "rotulo": "Perto do centro",
       "texto": "Um bilhete de ônibus da linha que só passa pelo centro da cidade."
     },
-    "vitral": {
-      "rotulo": "Vitral",
-      "texto": "Pó de vidro colorido e uma lasca de chumbo de vitral presa na sola."
-    },
-    "azulejo": {
-      "rotulo": "Azulejo",
-      "texto": "Um caco de azulejo branco, com rejunte encardido e cheiro de desinfetante."
-    },
-    "bichos": {
-      "rotulo": "Cheiro de bicho",
-      "texto": "Pelos grossos e um cheiro forte de chiqueiro impregnado no tecido."
-    },
     "terra": {
-      "rotulo": "Terra arada",
-      "texto": "Lama vermelha de terra revirada, misturada com restos de ração."
-    },
-    "autoridade": {
-      "rotulo": "Autoridade",
-      "texto": "Um carimbo oficial e papéis assinados por alguém que ninguém na cidade questiona."
-    },
-    "criancas": {
-      "rotulo": "Perto de crianças",
-      "texto": "Desenhos infantis guardados com cuidado, todos com a mesma figura alta ao fundo."
+      "rotulo": "Estrada de terra",
+      "texto": "Lama vermelha de estrada de terra, seca na barra da calça."
     },
     "juventude": {
       "rotulo": "Não envelhece",
       "texto": "Fotos de décadas diferentes mostram a mesma pessoa, com o mesmo rosto."
-    },
-    "giz": {
-      "rotulo": "Pó de giz",
-      "texto": "Pó de giz na roupa e um cheiro de merenda velha."
-    },
-    "flores": {
-      "rotulo": "Flores de velório",
-      "texto": "Pétalas de crisântemo e cera de vela presas no tecido."
     },
     "chaves": {
       "rotulo": "Molho de chaves",
@@ -340,10 +288,6 @@
       "rotulo": "Uniforme",
       "texto": "Um fiapo de tecido de uniforme preso num prego."
     },
-    "seringas": {
-      "rotulo": "Sedativos",
-      "texto": "Ampolas vazias de sedativo e seringas descartadas com pressa."
-    },
     "escala": {
       "rotulo": "Escala de plantão",
       "texto": "Uma escala de turnos com as mesmas noites marcadas a caneta."
@@ -351,10 +295,6 @@
     "unhas_sujas": {
       "rotulo": "Terra nas unhas",
       "texto": "Marcas de dedos sujos de terra escura na maçaneta."
-    },
-    "rotas": {
-      "rotulo": "Rotas anotadas",
-      "texto": "Um mapa rodoviário com corridas anotadas e horários de madrugada."
     },
     "reflexo": {
       "rotulo": "Reflexo errado",
@@ -368,29 +308,13 @@
       "rotulo": "Sussurros",
       "texto": "Quem passou perto diz ter ouvido alguém sussurrar o próprio nome."
     },
-    "clarao": {
-      "rotulo": "Clarões",
-      "texto": "Vizinhos viram clarões brancos e curtos, como flashes, saindo da janela."
-    },
-    "negativos": {
-      "rotulo": "Negativos",
-      "texto": "Tiras de negativo de filme com rostos que ninguém reconhece."
-    },
     "chiado": {
       "rotulo": "Chiado",
       "texto": "Um chiado baixo, de agulha em disco, que continua mesmo com tudo desligado."
     },
-    "giro": {
-      "rotulo": "Algo girando",
-      "texto": "Marcas circulares no pó, como se algo tivesse girado ali a noite toda."
-    },
     "olhos_vidro": {
-      "rotulo": "Olhos de vidro",
-      "texto": "Um olho de vidro pequeno, de brinquedo antigo, rolado para baixo do sofá."
-    },
-    "lua": {
-      "rotulo": "Lua",
-      "texto": "Um almanaque com as fases da lua circuladas em vermelho."
+      "rotulo": "Olho de vidro",
+      "texto": "Uma lente de vidro que parece acompanhar quem passa pela sala."
     },
     "madrugada": {
       "rotulo": "Madrugada",
@@ -408,17 +332,9 @@
       "rotulo": "Sino",
       "texto": "Anotações sobre a hora em que o sino da igreja toca."
     },
-    "foto_antiga": {
-      "rotulo": "Foto antiga",
-      "texto": "Uma foto de jornal antigo com a data circulada."
-    },
-    "fogos": {
-      "rotulo": "Fogos",
-      "texto": "Caixas de fogos de artifício compradas em quantidade."
-    },
     "multidao": {
-      "rotulo": "Multidão",
-      "texto": "Um panfleto de evento público, com a praça cheia desenhada à caneta."
+      "rotulo": "A cidade reunida",
+      "texto": "Um panfleto de evento que vai juntar a cidade inteira na praça."
     },
     "missa": {
       "rotulo": "Saída da missa",
@@ -432,10 +348,6 @@
       "rotulo": "Sangue raro",
       "texto": "Uma ficha de doação de sangue com o tipo sublinhado duas vezes."
     },
-    "comercio": {
-      "rotulo": "Atrás do balcão",
-      "texto": "Notas de compra de um mesmo armazém, todas na hora de fechar as portas."
-    },
     "nome_publico": {
       "rotulo": "Nome conhecido",
       "texto": "Recortes do jornal da cidade sobre a mesma pessoa, com o nome sublinhado."
@@ -443,14 +355,6 @@
     "jovem": {
       "rotulo": "Alguém jovem",
       "texto": "Um boletim escolar recortado, com a média circulada a caneta."
-    },
-    "bicicleta": {
-      "rotulo": "De bicicleta",
-      "texto": "Marcas de pneu fino na terra, seguidas até a mesma porteira em várias manhãs."
-    },
-    "gabinete": {
-      "rotulo": "Papel timbrado",
-      "texto": "Um envelope de papel timbrado de gabinete, sem assinatura e sem remetente."
     },
     "favores": {
       "rotulo": "Favores devidos",
@@ -460,29 +364,13 @@
       "rotulo": "Palavras ensaiadas",
       "texto": "Um texto para ser lido em público, com as palavras do ritual escondidas nas frases."
     },
-    "terras": {
-      "rotulo": "Escritura de terras",
-      "texto": "Uma escritura com as divisas redesenhadas a lápis, engolindo os vizinhos."
-    },
-    "caminhonete": {
-      "rotulo": "Caminhonete",
-      "texto": "Marcas de pneu largo de caminhonete, com barro vermelho de lavoura."
-    },
     "leilao": {
       "rotulo": "Catálogo de leilão",
-      "texto": "Um catálogo de leilão com peças antigas marcadas a caneta e valores altos."
+      "texto": "Um catálogo de leilão com lotes marcados a caneta e lances altos."
     },
     "capital": {
       "rotulo": "Vem da capital",
       "texto": "Canhotos de pedágio da estrada da capital, ida e volta no mesmo dia."
-    },
-    "luvas": {
-      "rotulo": "Luvas brancas",
-      "texto": "Luvas de algodão de manusear peças antigas, com manchas de sangue seco."
-    },
-    "estudio": {
-      "rotulo": "Estúdio de TV",
-      "texto": "Uma fita de programa com o logotipo de uma emissora e um intervalo cortado."
     },
     "fuligem": {
       "rotulo": "Fuligem",
@@ -490,7 +378,7 @@
     },
     "ingresso": {
       "rotulo": "Ingressos velhos",
-      "texto": "Canhotos de ingresso de uma única sessão, todos do mesmo dia."
+      "texto": "Canhotos de ingresso de uma única sessão de cinema, todos do mesmo dia."
     },
     "sirene": {
       "rotulo": "Sirene",
@@ -505,25 +393,61 @@
       "texto": "Um rádio de pilha parado na mesma estação, como no dia em que tudo aconteceu."
     },
     "onibus": {
-      "rotulo": "Ônibus escolar",
-      "texto": "Uma foto de turma na frente de um ônibus escolar, com alguns rostos riscados."
+      "rotulo": "Ônibus fretado",
+      "texto": "Uma foto de grupo na frente de um ônibus fretado, com alguns rostos riscados."
     },
-    "chamada": {
-      "rotulo": "Lista de chamada",
-      "texto": "Uma lista de chamada antiga, com um nome a mais no fim, escrito por outra mão."
+    "arquivo": {
+      "rotulo": "Arquivo pessoal",
+      "texto": "Pastas com fichas de moradores, recortes e datas, tudo catalogado com método."
     },
-    "pedra": {
-      "rotulo": "Pó de pedra",
-      "texto": "Pó branco de pedreira no fundo dos bolsos e nas dobras das roupas."
+    "decomposicao": {
+      "rotulo": "Cheiro de carne",
+      "texto": "O tecido cheira a carne guardada há tempo demais, um cheiro adocicado que não sai."
     },
-    "dinamite": {
-      "rotulo": "Pavio velho",
-      "texto": "Um pavio de dinamite enrolado como lembrança, com uma data escrita na fita."
+    "remedio": {
+      "rotulo": "Remédio controlado",
+      "texto": "Frascos de remédio e seringas, alguns de uso veterinário, comprados no mesmo lugar."
+    },
+    "etiqueta": {
+      "rotulo": "Etiqueta de corpo",
+      "texto": "Uma etiqueta de identificação de corpo, de papel pardo, amarrada com barbante."
+    },
+    "badalada": {
+      "rotulo": "Sino na gravação",
+      "texto": "Na gravação, um sino toca sempre na mesma hora, perto demais."
+    },
+    "portao": {
+      "rotulo": "Portão de ferro",
+      "texto": "Ferrugem de portão de ferro na mão e um cadeado de corrente cortado."
+    },
+    "bip": {
+      "rotulo": "Chamado de madrugada",
+      "texto": "Um bip antigo que toca de madrugada, com o mesmo número de retorno."
+    },
+    "manivela": {
+      "rotulo": "Manivela gasta",
+      "texto": "Uma manivela de corda antiga, gasta de tanto girar, achada junto ao objeto."
+    },
+    "ceu_limpo": {
+      "rotulo": "Céu aberto",
+      "texto": "Anotações da previsão do tempo para uma única noite, com 'céu limpo' sublinhado."
+    },
+    "cedo": {
+      "rotulo": "Antes do sol",
+      "texto": "Anotações de quem sai de casa às cinco da manhã, todo dia, pelo mesmo caminho."
+    },
+    "doacoes": {
+      "rotulo": "Doações generosas",
+      "texto": "Recibos de doações altas para a prefeitura e para o museu da cidade."
+    },
+    "patrocinio": {
+      "rotulo": "Patrocínio",
+      "texto": "Um contrato de patrocínio de programa de TV, com a mesma assinatura."
     }
   },
   "penalidade_palpite": {
     "membrana": -5,
-    "texto": "Acusação errada: a Ordem perde tempo com a pista falsa."
+    "texto": "Relatório recusado: a Ordem perde tempo com uma teoria que não se sustenta."
   },
   "ampliacoes_nota": "Investigação ampliada (p.79, docs/36): em casos extensos, o objetivo cresce com as descobertas. Cada caso sorteia uma reviravolta, que abre uma pergunta nova na primeira acusação certa. Conteúdo original.",
   "ampliacoes": [
@@ -546,9 +470,9 @@
           "id": "vigia",
           "nome": "o vigia noturno",
           "indicios": [
+            "uniforme",
             "chaves",
-            "insonia",
-            "uniforme"
+            "insonia"
           ]
         },
         {
@@ -556,8 +480,8 @@
           "nome": "uma enfermeira do plantão",
           "indicios": [
             "uniforme",
-            "seringas",
-            "escala"
+            "escala",
+            "bip"
           ]
         },
         {
@@ -565,8 +489,8 @@
           "nome": "o coveiro do cemitério",
           "indicios": [
             "chaves",
-            "unhas_sujas",
-            "escala"
+            "escala",
+            "unhas_sujas"
           ]
         },
         {
@@ -574,7 +498,7 @@
           "nome": "um taxista da rodoviária",
           "indicios": [
             "insonia",
-            "rotas",
+            "bip",
             "unhas_sujas"
           ]
         }
@@ -599,8 +523,8 @@
           "nome": "um espelho de moldura dourada",
           "indicios": [
             "reflexo",
-            "douracao",
-            "sussurros"
+            "sussurros",
+            "douracao"
           ]
         },
         {
@@ -608,8 +532,8 @@
           "nome": "uma câmera fotográfica antiga",
           "indicios": [
             "reflexo",
-            "clarao",
-            "negativos"
+            "manivela",
+            "olhos_vidro"
           ]
         },
         {
@@ -617,8 +541,8 @@
           "nome": "um disco de vinil sem rótulo",
           "indicios": [
             "sussurros",
-            "chiado",
-            "giro"
+            "manivela",
+            "chiado"
           ]
         },
         {
@@ -626,8 +550,8 @@
           "nome": "uma boneca de porcelana",
           "indicios": [
             "douracao",
-            "chiado",
-            "olhos_vidro"
+            "olhos_vidro",
+            "chiado"
           ]
         }
       ]
@@ -651,17 +575,17 @@
           "id": "lua_cheia",
           "nome": "na próxima lua cheia",
           "indicios": [
-            "lua",
             "madrugada",
-            "contagem"
+            "contagem",
+            "ceu_limpo"
           ]
         },
         {
           "id": "velorio",
           "nome": "no próximo velório da cidade",
           "indicios": [
-            "luto",
             "madrugada",
+            "luto",
             "sino"
           ]
         },
@@ -671,15 +595,15 @@
           "indicios": [
             "contagem",
             "luto",
-            "foto_antiga"
+            "multidao"
           ]
         },
         {
           "id": "festa",
           "nome": "na festa do padroeiro",
           "indicios": [
+            "ceu_limpo",
             "sino",
-            "fogos",
             "multidao"
           ]
         }
@@ -713,9 +637,9 @@
           "id": "dono_armazem",
           "nome": "o dono do armazém",
           "indicios": [
-            "comercio",
             "nome_publico",
-            "sozinho"
+            "sozinho",
+            "cedo"
           ]
         },
         {
@@ -732,8 +656,8 @@
           "nome": "o menino que entrega o jornal",
           "indicios": [
             "jovem",
-            "bicicleta",
-            "sangue_raro"
+            "sangue_raro",
+            "cedo"
           ]
         }
       ]
@@ -756,9 +680,9 @@
           "id": "vereador",
           "nome": "um vereador da cidade",
           "indicios": [
-            "gabinete",
             "favores",
-            "discurso"
+            "discurso",
+            "doacoes"
           ]
         },
         {
@@ -766,26 +690,26 @@
           "nome": "um fazendeiro poderoso",
           "indicios": [
             "favores",
-            "terras",
-            "caminhonete"
+            "leilao",
+            "patrocinio"
           ]
         },
         {
           "id": "colecionador",
           "nome": "um colecionador de antiguidades",
           "indicios": [
+            "doacoes",
             "leilao",
-            "capital",
-            "luvas"
+            "capital"
           ]
         },
         {
           "id": "apresentador",
           "nome": "um apresentador de TV",
           "indicios": [
-            "capital",
             "discurso",
-            "estudio"
+            "patrocinio",
+            "capital"
           ]
         }
       ]
@@ -809,17 +733,17 @@
           "id": "incendio_cinema",
           "nome": "o incêndio do cinema",
           "indicios": [
-            "fuligem",
+            "sirene",
             "ingresso",
-            "sirene"
+            "fuligem"
           ]
         },
         {
           "id": "enchente",
           "nome": "a grande enchente",
           "indicios": [
-            "lama",
             "sirene",
+            "lama",
             "radio_antigo"
           ]
         },
@@ -827,18 +751,18 @@
           "id": "excursao",
           "nome": "o sumiço da excursão escolar",
           "indicios": [
-            "onibus",
-            "chamada",
-            "lama"
+            "ingresso",
+            "lama",
+            "onibus"
           ]
         },
         {
           "id": "pedreira",
           "nome": "o desabamento na pedreira",
           "indicios": [
-            "pedra",
-            "dinamite",
-            "radio_antigo"
+            "fuligem",
+            "radio_antigo",
+            "onibus"
           ]
         }
       ]
@@ -851,5 +775,25 @@
       "oque"
     ],
     "nota": "Só vale o que está na ficha (p.79): o caso é solucionado quando a ameaça cai e a ficha responde quem está por trás e o que pretende (o objetivo do caso). Sem isso, a Ordem não paga a solução do caso (Tabela 3.2)."
-  }
+  },
+  "elementos_nota": "O elemento do caso (docs/52) sai de uma semente do próprio caso. O briefing só descreve os sintomas; responder 'o quê' confirma o elemento na ficha. Sinais tirados da wiki de cada elemento, com palavras próprias.",
+  "elementos": {
+    "sangue": {
+      "nome": "Sangue",
+      "sintomas": "Desaparecimentos, marcas de sangue seco e animais achados mortos sem uma gota de sangue."
+    },
+    "morte": {
+      "nome": "Morte",
+      "sintomas": "Gente que envelheceu de um dia para o outro, relógios parados na mesma hora e uma poeira cinza que se junta em espirais."
+    },
+    "conhecimento": {
+      "nome": "Conhecimento",
+      "sintomas": "Moradores repetindo frases que não sabem de onde vêm, símbolos dourados riscados nos muros e gente que esqueceu o próprio nome."
+    },
+    "energia": {
+      "nome": "Energia",
+      "sintomas": "Aparelhos que ligam sozinhos, quedas de luz em sequência e gente com queimaduras sem nenhum fogo por perto."
+    }
+  },
+  "relatorio_nota": "Confirmação em lote (docs/52, como em Return of the Obra Dinn): quem, o quê e onde vão juntos num relatório à Ordem. Errar custa Membrana uma vez; no modo normal, a Ordem diz quantas respostas se sustentam, no hardcore, nada. A reviravolta é confirmada à parte."
 }

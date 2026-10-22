@@ -6,8 +6,8 @@ extends RefCounted
 ## `participantes`; agentes da investigação, pelo índice na cena; hexes e células, como [x, y].
 ## Números chegam da rede como float: tudo passa por int() aqui.
 
-const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar", "deduzir", "interludio"]
-const ACOES_INVESTIGACAO := ["examinar", "procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair", "deduzir"]
+const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar", "deduzir", "interludio", "relatar"]
+const ACOES_INVESTIGACAO := ["examinar", "procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair", "deduzir", "relatar"]
 const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair",
 	"socorrer", "acalmar", "manobra", "levantar", "pegar_arma"]
 ## Modo Mestre (Fase 8.3): valem em qualquer tela, só do peer do mestre
@@ -61,6 +61,9 @@ static func aplicar_mapa(m: Missao, cmd: Dictionary) -> Dictionary:
 		"deduzir":
 			var r := m.deduzir(String(cmd.get("pergunta", "")), String(cmd.get("candidato", "")))
 			return {"ok": r.get("ok", false), "deducao": r}
+		"relatar":
+			var r := m.relatar(cmd.get("respostas", {}))
+			return {"ok": r.get("ok", false), "relatorio": r}
 	return {"ok": false, "erro": "ação de mapa desconhecida: %s" % cmd.get("acao", "")}
 
 
@@ -104,6 +107,9 @@ static func aplicar_investigacao(cena: CenaInvestigacao, cmd: Dictionary) -> Dic
 		"deduzir":
 			var r := cena.deduzir(String(cmd.get("pergunta", "")), String(cmd.get("candidato", "")))
 			return {"ok": r.get("ok", false), "deducao": r}
+		"relatar":
+			var r := cena.relatar(cmd.get("respostas", {}), bool(cmd.get("sem_contagem", false)))
+			return {"ok": r.get("ok", false), "relatorio": r}
 		"sair":
 			if not cena.encerrada:
 				return {"ok": false, "erro": "a cena ainda não acabou"}

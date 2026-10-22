@@ -216,6 +216,7 @@ func test_lider_de_culto_conjura_area_e_sustenta_de_graca():
 
 func test_surgimentos_respeitam_o_nex_do_grupo():
 	var m := Missao.nova(42)
+	m.caso.elemento = "sangue"   # o titã é de Sangue (os surgimentos seguem o elemento do caso, docs/52)
 	assert_eq(m._vd_minimo({"ameacas": ["mumia_xipofaga"]}), 240)
 	for e in m.encontros_para_surgir(3, m.agentes):
 		assert_lte(m._vd_minimo(e), 30, "grupo de NEX 15 somado: nada acima de VD 30 (%s)" % e.id)

@@ -3,23 +3,30 @@ extends CanvasLayer
 ## Ficha de suspeitos (docs/32): a mesa de dedução do caso. Uma aba por pergunta; em cada
 ## uma, os candidatos com os 3 traços de cada. Os traços que as pistas já revelaram acendem em
 ## ouro, com ✔ (não só a cor); cruzar os traços é com o jogador: a carta não acende sozinha.
-## Clicar num candidato pede confirmação e ACUSA: quem chama
-## decide como enviar (comando de lockstep `deduzir`, na cena ou no mapa).
-##   PainelDeducao.abrir(self, caso, "quem", func(pergunta, candidato): ...)
+## Quem, o quê e onde vão juntos num RELATÓRIO à Ordem (docs/52): clicar num candidato só o põe
+## no relatório, e "Enviar relatório" confirma os três de uma vez (comando `relatar`). Na pergunta
+## da reviravolta, clicar pede confirmação e ACUSA (comando `deduzir`). Quem chama decide como
+## enviar (lockstep, na cena ou no mapa).
+##   PainelDeducao.abrir(self, caso, "quem", func(pergunta, candidato): ..., func(respostas): ...)
 
 var caso: Caso
 var pergunta_id := ""
 var ao_acusar: Callable
+var ao_relatar: Callable
+var escolhas: Dictionary = {}    ## pergunta_id -> candidato_id no relatório (docs/52)
+var _barra_relatorio: Label
+var _btn_relatorio: Button
 var _cartas: Dictionary = {}     ## candidato_id -> Button
 var _abas: Dictionary = {}       ## pergunta_id -> Button
 var _corpo: VBoxContainer
 
 
-static func abrir(pai: Node, p_caso: Caso, p_pergunta: String, p_ao_acusar: Callable) -> PainelDeducao:
+static func abrir(pai: Node, p_caso: Caso, p_pergunta: String, p_ao_acusar: Callable, p_ao_relatar: Callable = Callable()) -> PainelDeducao:
 	var d := PainelDeducao.new()
 	d.caso = p_caso
 	d.pergunta_id = p_pergunta if p_caso.pergunta(p_pergunta).size() > 0 else String(p_caso.perguntas[0].id)
 	d.ao_acusar = p_ao_acusar
+	d.ao_relatar = p_ao_relatar
 	d._montar()
 	pai.add_child(d)
 	return d
@@ -89,11 +96,25 @@ func _montar() -> void:
 	_corpo = VBoxContainer.new()
 	_corpo.add_theme_constant_override("separation", Tema.ESPACO_M)
 	v.add_child(_corpo)
+	if em_lote():
+		var barra := HBoxContainer.new()
+		barra.add_theme_constant_override("separation", Tema.ESPACO_M)
+		v.add_child(barra)
+		_barra_relatorio = Label.new()
+		_barra_relatorio.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_barra_relatorio.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_barra_relatorio.add_theme_color_override("font_color", Tema.TINTA)
+		barra.add_child(_barra_relatorio)
+		_btn_relatorio = Button.new()
+		_btn_relatorio.theme_type_variation = "BotaoPrincipal"
+		_btn_relatorio.text = "Enviar relatório"
+		_btn_relatorio.pressed.connect(_pedir_relatorio)
+		barra.add_child(_btn_relatorio)
 	var rodape := HBoxContainer.new()
 	rodape.add_theme_constant_override("separation", Tema.ESPACO_M)
 	v.add_child(rodape)
 	var regra := Label.new()
-	regra.text = "Cada pista revela um traço do culpado. Duas pistas firmes diferentes deixam um só suspeito; um depoimento com ? pode estar errado. Acusar errado custa %d de Membrana e risca o suspeito." % -Caso.penalidade_palpite()
+	regra.text = "Cada pista revela um traço do culpado. Uma pista nunca basta: duas firmes diferentes deixam um só suspeito; um depoimento com ? pode estar errado. Quem, o quê e onde vão juntos no relatório à Ordem; se ela recusar, a Membrana cai %d." % -Caso.penalidade_palpite()
 	regra.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	regra.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	regra.add_theme_color_override("font_color", Color(Tema.TINTA, 0.75))
@@ -105,6 +126,54 @@ func _montar() -> void:
 	fechar_b.pressed.connect(fechar)
 	rodape.add_child(fechar_b)
 	mostrar(pergunta_id)
+
+
+## Quem, o quê e onde ainda em aberto vão juntos (docs/52).
+func em_lote() -> bool:
+	return caso.perguntas_do_relatorio().size() > 1
+
+
+func _no_relatorio(pid: String) -> bool:
+	return em_lote() and pid in Caso.PERGUNTAS_BASE
+
+
+func _atualizar_relatorio() -> void:
+	if _barra_relatorio == null:
+		return
+	var partes: Array[String] = []
+	var completo := true
+	for q in caso.perguntas_do_relatorio():
+		var curto: String = {"quem": "Quem", "oque": "O quê", "onde": "Onde"}.get(q.id, String(q.id))
+		var cid := String(escolhas.get(q.id, ""))
+		var nome := "?"
+		for c in caso.candidatos(String(q.id)):
+			if c.id == cid:
+				nome = c.nome
+		partes.append("%s: %s" % [curto, nome])
+		completo = completo and cid != "" and int(q.encontradas) > 0
+	var repetido := completo and _lote() in caso.relatorios_recusados
+	_barra_relatorio.text = "RELATÓRIO  ·  " + "  ·  ".join(PackedStringArray(partes)) + ("\nA Ordem já recusou este relatório." if repetido else "")
+	_btn_relatorio.disabled = not completo or repetido
+	_btn_relatorio.tooltip_text = "Escolha um suspeito em cada pergunta (cada uma precisa de ao menos uma pista)." if not completo else "Confirmar quem, o quê e onde de uma vez."
+
+
+func _lote() -> Dictionary:
+	var lote := {}
+	for q in caso.perguntas_do_relatorio():
+		lote[String(q.id)] = String(escolhas.get(q.id, ""))
+	return lote
+
+
+func _pedir_relatorio() -> void:
+	DialogoPapel.perguntar(self, "Relatório à Ordem", "Enviar quem, o quê e onde?\nSe a Ordem recusar, a Membrana cai %d." % -Caso.penalidade_palpite(),
+		"Enviar", func(): relatar())
+
+
+## Envia o relatório (depois da confirmação) e fecha a ficha.
+func relatar() -> void:
+	if ao_relatar.is_valid():
+		ao_relatar.call(_lote())
+	fechar()
 
 
 func mostrar(pid: String) -> void:
@@ -148,6 +217,7 @@ func mostrar(pid: String) -> void:
 	var culpado := String(caso.verdadeiro(pid).get("id", "")) if q.respondida else ""
 	for c in caso.candidatos(pid):
 		grade.add_child(_carta(c, achados, q.get("descartados", []), pode, culpado, duvidosos))
+	_atualizar_relatorio()
 
 
 func _carta(c: Dictionary, achados: Array, descartados: Array, pode: bool, culpado: String, duvidosos: Array = []) -> Button:
@@ -157,7 +227,8 @@ func _carta(c: Dictionary, achados: Array, descartados: Array, pode: bool, culpa
 	b.clip_contents = true
 	var riscado: bool = c.id in descartados
 	b.disabled = not pode or riscado
-	b.tooltip_text = "Acusar: %s" % c.nome if not b.disabled else c.nome
+	var lote := _no_relatorio(pergunta_id)
+	b.tooltip_text = (("Pôr no relatório: %s" if lote else "Acusar: %s") % c.nome) if not b.disabled else c.nome
 	var v := VBoxContainer.new()
 	v.set_anchors_preset(Control.PRESET_FULL_RECT)
 	v.offset_left = 10
@@ -190,8 +261,13 @@ func _carta(c: Dictionary, achados: Array, descartados: Array, pode: bool, culpa
 		_selo(b, "DESCARTADO", Tema.SANGUE)
 	elif culpado == c.id:
 		_selo(b, "CULPADO" if pergunta_id == "quem" else "CONFIRMADO", Tema.SANGUE_CLARO)
+	elif lote and String(escolhas.get(pergunta_id, "")) == c.id:
+		_selo(b, "NO RELATÓRIO", Tema.OURO_ESCURO)
 	var cid := String(c.id)
-	b.pressed.connect(func(): _pedir_acusacao(cid, c.nome))
+	if lote:
+		b.pressed.connect(func(): escolher(cid))
+	else:
+		b.pressed.connect(func(): _pedir_acusacao(cid, c.nome))
 	_cartas[cid] = b
 	return b
 
@@ -231,6 +307,16 @@ func _selo(b: Control, texto: String, cor: Color) -> void:
 	s.position = Vector2(140, 54)
 	s.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(s)
+
+
+## Põe (ou tira) o candidato no relatório da pergunta aberta.
+func escolher(cid: String) -> void:
+	if String(escolhas.get(pergunta_id, "")) == cid:
+		escolhas.erase(pergunta_id)
+	else:
+		escolhas[pergunta_id] = cid
+	Som.tocar("papel")
+	mostrar(pergunta_id)
 
 
 func _pedir_acusacao(cid: String, nome: String) -> void:

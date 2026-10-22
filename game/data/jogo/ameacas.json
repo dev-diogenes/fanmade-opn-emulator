@@ -44,6 +44,39 @@
       "soma_forca": false,
       "ataque": "corpo_a_corpo",
       "tipo_dano": "medo"
+    },
+    "toque_do_tempo": {
+      "id": "toque_do_tempo",
+      "nome": "Toque do Tempo",
+      "dano": "2d6",
+      "margem": 20,
+      "multiplicador": 2,
+      "pericia": "luta",
+      "soma_forca": false,
+      "ataque": "corpo_a_corpo",
+      "tipo_dano": "morte"
+    },
+    "sussurro_dourado": {
+      "id": "sussurro_dourado",
+      "nome": "Sussurro Dourado",
+      "dano": "2d6",
+      "margem": 20,
+      "multiplicador": 2,
+      "pericia": "luta",
+      "soma_forca": false,
+      "ataque": "corpo_a_corpo",
+      "tipo_dano": "conhecimento"
+    },
+    "descarga": {
+      "id": "descarga",
+      "nome": "Descarga",
+      "dano": "2d6",
+      "margem": 19,
+      "multiplicador": 2,
+      "pericia": "luta",
+      "soma_forca": false,
+      "ataque": "corpo_a_corpo",
+      "tipo_dano": "energia"
     }
   },
   "ameacas": {
@@ -229,7 +262,10 @@
           "dt": 15,
           "dano": "1d6",
           "nex": 30
-        }
+        },
+        "vulnerabilidades": [
+          "morte"
+        ]
       },
       "nota": "Chefe do covil inicial, calibrado para 3 a 4 agentes de NEX 5-10% (orçamento difícil, p.187)."
     },
@@ -349,6 +385,141 @@
           }
         ]
       }
+    },
+    "arauto_cinzento": {
+      "nome": "Arauto Cinzento",
+      "nivel": 2,
+      "arma": "toque_do_tempo",
+      "chefe": true,
+      "ficha": {
+        "pv": 45,
+        "defesa": 14,
+        "deslocamento": 12,
+        "atributos": {
+          "agi": 2,
+          "for": 3,
+          "vig": 3
+        },
+        "pericias": {
+          "luta": {
+            "dados": 2,
+            "bonus": 5
+          },
+          "fortitude": {
+            "dados": 3,
+            "bonus": 5
+          },
+          "vontade": {
+            "dados": 2,
+            "bonus": 5
+          }
+        },
+        "resistencias": {
+          "balistico": 2
+        },
+        "elemento": "morte",
+        "criatura": true,
+        "vd": 25,
+        "presenca_perturbadora": {
+          "dt": 15,
+          "dano": "1d6",
+          "nex": 30
+        },
+        "vulnerabilidades": [
+          "energia"
+        ]
+      },
+      "nota": "Chefe do covil de Morte no início da carreira (docs/52): o mesmo porte do Horror Carmesim. Toca e envelhece."
+    },
+    "mascara_dourada": {
+      "nome": "Máscara Dourada",
+      "nivel": 2,
+      "arma": "sussurro_dourado",
+      "chefe": true,
+      "ficha": {
+        "pv": 45,
+        "defesa": 14,
+        "deslocamento": 12,
+        "atributos": {
+          "agi": 2,
+          "for": 3,
+          "vig": 3
+        },
+        "pericias": {
+          "luta": {
+            "dados": 2,
+            "bonus": 5
+          },
+          "fortitude": {
+            "dados": 3,
+            "bonus": 5
+          },
+          "vontade": {
+            "dados": 2,
+            "bonus": 5
+          }
+        },
+        "resistencias": {
+          "balistico": 2
+        },
+        "elemento": "conhecimento",
+        "criatura": true,
+        "vd": 25,
+        "presenca_perturbadora": {
+          "dt": 15,
+          "dano": "1d6",
+          "nex": 30
+        },
+        "vulnerabilidades": [
+          "sangue"
+        ]
+      },
+      "nota": "Chefe do covil de Conhecimento no início da carreira (docs/52): o mesmo porte do Horror Carmesim. Uma máscara sem rosto atrás."
+    },
+    "estatica_viva": {
+      "nome": "Estática Viva",
+      "nivel": 2,
+      "arma": "descarga",
+      "chefe": true,
+      "ficha": {
+        "pv": 45,
+        "defesa": 14,
+        "deslocamento": 12,
+        "atributos": {
+          "agi": 2,
+          "for": 3,
+          "vig": 3
+        },
+        "pericias": {
+          "luta": {
+            "dados": 2,
+            "bonus": 5
+          },
+          "fortitude": {
+            "dados": 3,
+            "bonus": 5
+          },
+          "vontade": {
+            "dados": 2,
+            "bonus": 5
+          }
+        },
+        "resistencias": {
+          "balistico": 2
+        },
+        "elemento": "energia",
+        "criatura": true,
+        "vd": 25,
+        "presenca_perturbadora": {
+          "dt": 15,
+          "dano": "1d6",
+          "nex": 30
+        },
+        "vulnerabilidades": [
+          "conhecimento"
+        ]
+      },
+      "nota": "Chefe do covil de Energia no início da carreira (docs/52): o mesmo porte do Horror Carmesim. Luz que queima e pula."
     }
   }
 }

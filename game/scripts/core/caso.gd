@@ -11,8 +11,15 @@ extends RefCounted
 ## Investigação ampliada (p.79, docs/36): cada caso guarda uma reviravolta sorteada. A primeira
 ## acusação certa a revela e põe uma pergunta nova na ficha, com candidatos e traços próprios.
 ## Pistas de pontos cuja pergunta já foi resolvida passam a responder a pergunta nova.
+##
+## Relatório à Ordem (docs/52): quem, o quê e onde se confirmam juntos (`relatar`), como os
+## destinos em Return of the Obra Dinn. Cada traço está em dois candidatos ou mais, então uma
+## pista nunca basta e duas diferentes sempre bastam. O elemento do caso (Sangue, Morte,
+## Conhecimento ou Energia) sai da semente do caso; o briefing só traz os sintomas, e
+## responder "o quê" o confirma.
 
 const PERGUNTA_GRUPO := {"quem": "sujeitos", "oque": "acoes", "onde": "locais"}
+const PERGUNTAS_BASE := ["quem", "oque", "onde"]
 
 var sujeito: Dictionary = {}
 var acao: Dictionary = {}
@@ -28,6 +35,9 @@ var pistas: Array[Dictionary] = []
 var ampliacao_id := ""        ## a reviravolta deste caso (casos.json, "ampliacoes"); "" = nenhuma
 var ampliacao_verdade := ""   ## o candidato verdadeiro da pergunta nova
 var ampliada := false         ## a reviravolta já foi revelada
+var elemento := "sangue"      ## o elemento do caso (docs/52)
+## Relatórios já recusados ([{quem, oque, onde}]): o mesmo não se manda duas vezes.
+var relatorios_recusados: Array = []
 
 
 static func gerar(dados: Dados) -> Caso:
@@ -36,7 +46,8 @@ static func gerar(dados: Dados) -> Caso:
 	c.sujeito = d.sujeitos[dados.rolar(d.sujeitos.size()) - 1].duplicate(true)   # cópia: não mexer no cache dos dados
 	c.acao = d.acoes[dados.rolar(d.acoes.size()) - 1].duplicate(true)
 	c.local = d.locais[dados.rolar(d.locais.size()) - 1].duplicate(true)
-	c.resumo = d.resumo
+	c.elemento = c._sortear_elemento()
+	c.resumo = String(d.resumo).replace("{sintomas}", String(d.get("elementos", {}).get(c.elemento, {}).get("sintomas", "")))
 	c.objetivo = d.objetivo
 	for p in d.perguntas:
 		c.perguntas.append({"id": p.id, "texto": p.texto, "pistas_necessarias": int(p.pistas_necessarias),
@@ -44,6 +55,25 @@ static func gerar(dados: Dados) -> Caso:
 			"ordem": c._embaralhar_tracos(String(p.id))})
 	c._sortear_ampliacao()
 	return c
+
+
+## O elemento do caso, da semente do próprio caso (sem gastar os Dados, igual no online).
+func _sortear_elemento() -> String:
+	var lista: Array = DadosJogo.ler("casos").get("elementos", {}).keys()
+	if lista.is_empty():
+		return "sangue"
+	var semente := absi(hash("%s|%s|%s|elemento" % [sujeito.get("id", ""), acao.get("id", ""), local.get("id", "")]))
+	return String(lista[semente % lista.size()])
+
+
+## Nome do elemento ("Morte"). O elemento só aparece na ficha depois de confirmado.
+func nome_elemento() -> String:
+	return String(DadosJogo.ler("casos").get("elementos", {}).get(elemento, {}).get("nome", elemento.capitalize()))
+
+
+## O elemento está confirmado quando a ficha responde "o quê" (docs/52).
+func elemento_confirmado() -> bool:
+	return pergunta("oque").get("respondida", false)
 
 
 ## Sorteia a reviravolta e o culpado dela, com a semente do próprio caso (sem gastar os Dados).
@@ -207,13 +237,57 @@ func compativeis(pergunta_id: String) -> Array[Dictionary]:
 	return lista
 
 
+## As perguntas de base (quem, o quê, onde) ainda em aberto.
+func perguntas_do_relatorio() -> Array[Dictionary]:
+	var lista: Array[Dictionary] = []
+	for pid in PERGUNTAS_BASE:
+		var q := pergunta(pid)
+		if not q.is_empty() and not q.respondida:
+			lista.append(q)
+	return lista
+
+
+## Relatório à Ordem (docs/52): `respostas` = {pergunta_id: candidato_id} para TODAS as perguntas
+## de base em aberto, cada uma com ao menos uma pista. Confirma tudo ou nada.
+## Devolve {ok, acertou, certas, total, perguntas, ampliacao}. `ok` é false com respostas
+## faltando ou inválidas, ou com um relatório igual a um já recusado ("repetido": true).
+func relatar(respostas: Dictionary) -> Dictionary:
+	var abertas := perguntas_do_relatorio()
+	if abertas.is_empty():
+		return {"ok": false}
+	var lote := {}
+	for q in abertas:
+		var cid := String(respostas.get(q.id, ""))
+		if int(q.encontradas) < 1 or not candidatos(String(q.id)).any(func(c): return c.id == cid):
+			return {"ok": false}
+		lote[String(q.id)] = cid
+	if lote in relatorios_recusados:
+		return {"ok": false, "repetido": true}
+	var certas := 0
+	for q in abertas:
+		if lote[String(q.id)] == String(verdadeiro(String(q.id)).get("id", "")):
+			certas += 1
+	var r := {"ok": true, "acertou": certas == abertas.size(), "certas": certas, "total": abertas.size(), "perguntas": abertas}
+	if r.acertou:
+		for q in abertas:
+			q.respondida = true
+		r.ampliacao = ampliar()   # a primeira descoberta amplia a investigação (p.79)
+	else:
+		relatorios_recusados.append(lote)
+	return r
+
+
 ## O grupo acusa um candidato. Precisa de ao menos uma pista da pergunta.
 ## Devolve {ok, acertou, pergunta, candidato}. `ok` é false com a pergunta já resolvida,
-## sem pista, ou com o candidato já riscado ou inexistente.
+## sem pista, ou com o candidato já riscado ou inexistente. Quem, o quê e onde vão juntos
+## no relatório (`relatar`); a acusação avulsa vale para a reviravolta (e para a última
+## pergunta de base, em saves antigos).
 func deduzir(pergunta_id: String, candidato_id: String) -> Dictionary:
 	var p := pergunta(pergunta_id)
 	if p.is_empty() or p.respondida or int(p.encontradas) < 1:
 		return {"ok": false}
+	if pergunta_id in PERGUNTAS_BASE and perguntas_do_relatorio().size() > 1:
+		return {"ok": false, "lote": true}
 	var cand: Dictionary = {}
 	for c in candidatos(pergunta_id):
 		if c.id == candidato_id:
@@ -311,7 +385,8 @@ func resposta(id: String) -> String:
 func para_dicionario() -> Dictionary:
 	return {"sujeito": sujeito, "acao": acao, "local": local, "resumo": resumo, "objetivo": objetivo,
 		"perguntas": perguntas.duplicate(true), "pistas": pistas.duplicate(true),
-		"ampliacao_id": ampliacao_id, "ampliacao_verdade": ampliacao_verdade, "ampliada": ampliada}
+		"ampliacao_id": ampliacao_id, "ampliacao_verdade": ampliacao_verdade, "ampliada": ampliada,
+		"elemento": elemento, "relatorios_recusados": relatorios_recusados.duplicate(true)}
 
 
 static func de_dicionario(d: Dictionary) -> Caso:
@@ -324,23 +399,25 @@ static func de_dicionario(d: Dictionary) -> Caso:
 	c.ampliacao_id = String(d.get("ampliacao_id", ""))
 	c.ampliacao_verdade = String(d.get("ampliacao_verdade", ""))
 	c.ampliada = bool(d.get("ampliada", false))
+	c.elemento = String(d.get("elemento", "sangue"))   # save de antes de docs/52: Sangue
+	c.relatorios_recusados = (d.get("relatorios_recusados", []) as Array).duplicate(true)
 	if not d.has("ampliacao_id"):   # save de antes da investigação ampliada (docs/36)
 		c._sortear_ampliacao()
-	# Save de antes da dedução: o sujeito, a ação e o local vêm sem os traços
+	# Os traços vêm sempre da tabela atual (saves de antes da dedução ou de antes de docs/52)
 	for pid in PERGUNTA_GRUPO:
 		var elem := c.verdadeiro(pid)
-		if not elem.has("indicios"):
-			for cand in c.candidatos(pid):
-				if cand.id == String(elem.get("id", "")):
-					elem.indicios = cand.indicios
+		for cand in c.candidatos(pid):
+			if cand.id == String(elem.get("id", "")):
+				elem.indicios = cand.indicios
 	for p in d.get("perguntas", []):
 		var copia: Dictionary = p.duplicate(true)
 		copia.encontradas = int(copia.get("encontradas", 0))
 		copia.pistas_necessarias = int(copia.get("pistas_necessarias", 2))
 		if not copia.has("descartados"):
 			copia.descartados = []
-		if not copia.has("ordem"):   # save de antes da dedução (docs/32)
-			copia.ordem = c._embaralhar_tracos(String(copia.id))
+		var tracos: Array = c.verdadeiro(String(copia.id)).get("indicios", [])
+		if not copia.has("ordem") or not (copia.ordem as Array).all(func(t): return t in tracos):
+			copia.ordem = c._embaralhar_tracos(String(copia.id))   # save antigo: os traços mudaram
 		c.perguntas.append(copia)
 	for p in d.get("pistas", []):
 		c.pistas.append(p)

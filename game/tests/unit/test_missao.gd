@@ -123,6 +123,7 @@ func test_quem_nao_caiu_continua_a_missao():
 
 func test_vencer_o_covil_cumpre_a_missao():
 	var m := _missao()
+	m.caso.elemento = "sangue"   # o covil segue o elemento do caso (docs/52)
 	m._preparar_encontro(m.mapa.encontrar("objetivo"), "covil", true)
 	assert_eq(m.encontro_pendente.ameacas[0].nome, "Horror Carmesim")
 	m.concluir_encontro("agentes")

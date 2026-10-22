@@ -79,7 +79,7 @@ func _ready() -> void:
 		_log.append_text(linha + "\n")
 	if missao.historico.is_empty():
 		_mostrar_briefing.call_deferred()
-		_registrar("[b]Missão iniciada.[/b] O covil carmesim está em algum lugar a leste. A Membrana já começa a ceder.")
+		_registrar("[b]Missão iniciada.[/b] O covil está em algum lugar a leste. A Membrana já começa a ceder.")
 	missao.registro.connect(_registrar_sem_guardar)
 	missao.encontro_iniciado.connect(_ao_encontro)
 	missao.investigacao_iniciada.connect(_ao_investigar)
@@ -313,6 +313,9 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 				Som.tocar("pista" if res.deducao.acertou else "erro")
 				if not res.deducao.get("ampliacao", {}).is_empty():
 					Som.tocar("carimbo")   # a ficha ganha uma pergunta (docs/36)
+		"relatar":
+			if res.ok:
+				Som.tocar("carimbo" if res.relatorio.acertou else "erro")
 		"mover":
 			if res.ok and a != null and missao.agentes.size() > 1 and missao.aliados_perto(a, missao.posicao(a)) == 0:
 				missao._log("[color=#eda64a]⚠ %s está longe do grupo: numa luta, ninguém chega a tempo.[/color]" % a.nome)
@@ -544,13 +547,15 @@ func _ao_encerrar(venceu: bool) -> void:
 	_painel_fim.mostrar(carimbo, linhas, venceu, Color("a5651a") if venceu and not solucionado else Color(0, 0, 0, 0))
 
 
-## Ficha de suspeitos (docs/32): acusar vira o comando `deduzir` (lockstep no online).
+## Ficha de suspeitos (docs/32): o relatório vira o comando `relatar` e a acusação da
+## reviravolta, `deduzir` (lockstep no online, docs/52).
 func abrir_deducao(pergunta_id: String = "") -> PainelDeducao:
 	if missao.caso == null or PainelDeducao.aberto(self):
 		return null
 	var pid := pergunta_id if pergunta_id != "" else PainelDeducao.pergunta_sugerida(missao.caso)
 	return PainelDeducao.abrir(self, missao.caso, pid, func(q: String, c: String):
-		_enviar("deduzir", {"pergunta": q, "candidato": c}))
+		_enviar("deduzir", {"pergunta": q, "candidato": c}),
+		func(respostas: Dictionary): _enviar("relatar", {"respostas": respostas}))
 
 
 func _nova_missao() -> void:
@@ -981,6 +986,8 @@ func _atualizar_caso() -> void:
 				tracos.append(String(Caso.indicio(t).get("rotulo", t)).to_lower() + "?")
 			if not tracos.is_empty():
 				linhas.append("   " + Tema.bb(" · ".join(tracos), Tema.TEXTO_SUAVE))
+	if c.elemento_confirmado():   # o elemento do caso (docs/52)
+		linhas.append(Tema.bb("Elemento: %s" % c.nome_elemento(), Tema.ELEMENTO.get(c.elemento, Tema.OURO_CLARO)))
 	_btn_deduzir.visible = alguma_aberta
 	_btn_deduzir.disabled = not alguma_com_pista
 	var obj := missao.mapa.encontrar("objetivo")

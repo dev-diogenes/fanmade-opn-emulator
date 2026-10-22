@@ -167,8 +167,20 @@ func _melhor_opcao(m: Missao) -> int:
 ## Acusa quando as pistas firmes deixam um só suspeito. `arriscar`: com 1+ pista, acusa o
 ## mais provável (os incertos desempatam).
 func _deduzir(m: Missao, r: Dictionary, arriscar: bool) -> void:
+	# Relatório à Ordem (docs/52): quem, o quê e onde juntos
+	if m.caso.perguntas_do_relatorio().size() > 1:
+		var lote := PilotoMissao.lote_para_relatar(m.caso, arriscar)
+		if not lote.is_empty():
+			var rel := m.relatar(lote)
+			if rel.get("ok", false):
+				if rel.acertou:
+					r.acusacoes_certas += 1
+				else:
+					r.acusacoes_erradas += 1
 	for q in m.caso.perguntas.duplicate():
 		if q.respondida or int(q.encontradas) < 1:
+			continue
+		if String(q.id) in Caso.PERGUNTAS_BASE and m.caso.perguntas_do_relatorio().size() > 1:
 			continue
 		var comp := m.caso.compativeis(q.id)
 		if comp.size() != 1 and not arriscar:

@@ -143,9 +143,16 @@ static func _cmd(m: Missao, args: Dictionary, registro) -> Dictionary:
 static func deduzir(m: Missao, arriscar: bool, registro = null) -> void:
 	if m.caso == null:
 		return
+	# Relatório à Ordem (docs/52): quem, o quê e onde juntos
+	if m.caso.perguntas_do_relatorio().size() > 1:
+		var lote := lote_para_relatar(m.caso, arriscar)
+		if not lote.is_empty():
+			_cmd(m, {"acao": "relatar", "respostas": lote}, registro)
 	for q in m.caso.perguntas.duplicate():
 		if q.respondida or int(q.encontradas) < 1:
 			continue
+		if String(q.id) in Caso.PERGUNTAS_BASE and m.caso.perguntas_do_relatorio().size() > 1:
+			continue   # vai no relatório
 		var comp := m.caso.compativeis(q.id)
 		if comp.size() != 1 and not arriscar:
 			continue
@@ -153,6 +160,33 @@ static func deduzir(m: Missao, arriscar: bool, registro = null) -> void:
 			var res := _cmd(m, {"acao": "deduzir", "pergunta": q.id, "candidato": cand.id}, registro)
 			if res.get("deducao", {}).get("acertou", false) or not arriscar:
 				break
+
+
+## O relatório que o piloto manda (docs/52): com um só compatível em cada pergunta, esse; com
+## `arriscar`, a primeira combinação de compatíveis que a Ordem ainda não recusou. {} se falta
+## pista em alguma pergunta (ou, sem arriscar, se alguma ainda tem mais de um suspeito).
+static func lote_para_relatar(caso: Caso, arriscar: bool) -> Dictionary:
+	var listas: Array = []
+	var ids: Array = []
+	for q in caso.perguntas_do_relatorio():
+		var comp := caso.compativeis(String(q.id))
+		if int(q.encontradas) < 1 or comp.is_empty() or (comp.size() != 1 and not arriscar):
+			return {}
+		listas.append(comp.map(func(c): return String(c.id)))
+		ids.append(String(q.id))
+	var combos: Array = [{}]
+	for i in ids.size():
+		var novos: Array = []
+		for parcial in combos:
+			for cid in listas[i]:
+				var c: Dictionary = parcial.duplicate()
+				c[ids[i]] = cid
+				novos.append(c)
+		combos = novos
+	for c in combos:
+		if not c in caso.relatorios_recusados:
+			return c
+	return {}
 
 
 ## Próximo lugar com o que investigar (investigação ou evento) mais perto do agente, ou o covil.

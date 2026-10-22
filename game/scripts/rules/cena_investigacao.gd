@@ -305,6 +305,27 @@ func deduzir(pergunta_id: String, candidato_id: String) -> Dictionary:
 	return r
 
 
+## Relatório à Ordem no quadro da cena (docs/52): quem, o quê e onde de uma vez. Os efeitos valem
+## ao sair da cena; o erro custa Membrana na hora.
+func relatar(respostas: Dictionary, sem_contagem: bool = false) -> Dictionary:
+	var r := caso.relatar(respostas)
+	if not r.ok:
+		return r
+	if r.acertou:
+		for q in r.perguntas:
+			perguntas_respondidas.append(q)
+		_log("[color=#e3c27a][b]Relatório aceito pela Ordem.[/b][/color]")
+		if not r.get("ampliacao", {}).is_empty():
+			_log("[color=#c9a0ff][b]A investigação se amplia.[/b] %s Nova pergunta: %s[/color]" % [r.ampliacao.revelacao, r.ampliacao.pergunta.texto])
+	else:
+		var custo := Caso.penalidade_palpite()
+		if membrana != null:
+			membrana.alterar(custo, "palpite_errado")
+		_log("[color=#e0574a][b]Relatório recusado:[/b] a teoria não se sustenta. A Membrana cai %d.%s[/color]" % [-custo,
+			"" if sem_contagem else " %d de %d respostas se sustentam." % [int(r.certas), int(r.total)]])
+	return r
+
+
 # --- Pista central (docs/14, inspirado no GUMSHOE de The Esoterrorists) ---------
 # Design do jogo, não do livro: quem tem o treino certo e está no lugar certo encontra a
 # pista sem rolar dados. Numa perícia de DT simples (15), é de graça; nas mais difíceis,

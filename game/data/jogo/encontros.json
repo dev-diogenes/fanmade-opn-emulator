@@ -57,15 +57,18 @@
     { "id": "sinais", "nome": "Sinais", "nivel": 3, "ameacas": ["estrangeiro"] }
   ],
   "chefe": {"id": "covil", "nome": "O Covil Carmesim", "ameacas": ["horror_carmesim", "investido", "zumbi_de_sangue"]},
-  "chefes_nota": "O covil muda com o grupo: vale o de maior 'nex_minimo' que a soma do NEX de quem entra alcança. A primeira ameaça é o chefe.",
+  "chefes_nota": "O covil muda com o grupo e com o elemento do caso (docs/52): vale o de maior 'nex_minimo' que a soma do NEX de quem entra alcança, entre os do elemento do caso (sem nenhum, entre todos). A primeira ameaça é o chefe.",
   "chefes": [
-    {"id": "covil", "nome": "O Covil Carmesim", "nex_minimo": 0, "ameacas": ["horror_carmesim", "investido", "zumbi_de_sangue"]},
-    {"id": "jardim", "nome": "O Jardim das Sete Flores", "nex_minimo": 90, "ameacas": ["dama_de_sangue", "lider_de_culto", "zumbi_de_sangue", "zumbi_de_sangue"]},
-    {"id": "labirinto", "nome": "O Labirinto", "nex_minimo": 180, "ameacas": ["minotauro", "zumbi_de_sangue_bestial"]},
-    {"id": "inferno", "nome": "O Portão do Inferno", "nex_minimo": 280, "ameacas": ["kerberos", "tita_de_sangue"]},
-    {"id": "julgamento", "nome": "O Julgamento", "nex_minimo": 330, "ameacas": ["anjo"]},
-    {"id": "apocalipse", "nome": "O Apocalipse", "nex_minimo": 350, "ameacas": ["aniquilacao"]},
-    {"id": "fim_e_retorno", "nome": "Tudo Termina, Tudo Retorna", "nex_minimo": 370, "ameacas": ["deus_da_morte"]},
-    {"id": "o_pacto", "nome": "O Pacto", "nex_minimo": 390, "ameacas": ["o_diabo"]}
+    {"id": "covil", "nome": "O Covil Carmesim", "elemento": "sangue", "nex_minimo": 0, "ameacas": ["horror_carmesim", "investido", "zumbi_de_sangue"]},
+    {"id": "casa_parada", "nome": "A Casa Parada", "elemento": "morte", "nex_minimo": 0, "ameacas": ["arauto_cinzento", "esqueleto_de_lodo", "iniciado"]},
+    {"id": "arquivo_dourado", "nome": "O Arquivo Dourado", "elemento": "conhecimento", "nex_minimo": 0, "ameacas": ["mascara_dourada", "existido", "iniciado"]},
+    {"id": "subestacao", "nome": "A Subestação", "elemento": "energia", "nex_minimo": 0, "ameacas": ["estatica_viva", "anarquico", "iniciado"]},
+    {"id": "jardim", "nome": "O Jardim das Sete Flores", "elemento": "sangue", "nex_minimo": 90, "ameacas": ["dama_de_sangue", "lider_de_culto", "zumbi_de_sangue", "zumbi_de_sangue"]},
+    {"id": "labirinto", "nome": "O Labirinto", "elemento": "sangue", "nex_minimo": 180, "ameacas": ["minotauro", "zumbi_de_sangue_bestial"]},
+    {"id": "inferno", "nome": "O Portão do Inferno", "elemento": "sangue", "nex_minimo": 280, "ameacas": ["kerberos", "tita_de_sangue"]},
+    {"id": "julgamento", "nome": "O Julgamento", "elemento": "conhecimento", "nex_minimo": 330, "ameacas": ["anjo"]},
+    {"id": "apocalipse", "nome": "O Apocalipse", "elemento": "sangue", "nex_minimo": 350, "ameacas": ["aniquilacao"]},
+    {"id": "fim_e_retorno", "nome": "Tudo Termina, Tudo Retorna", "elemento": "morte", "nex_minimo": 370, "ameacas": ["deus_da_morte"]},
+    {"id": "o_pacto", "nome": "O Pacto", "elemento": "sangue", "nex_minimo": 390, "ameacas": ["o_diabo"]}
   ]
 }

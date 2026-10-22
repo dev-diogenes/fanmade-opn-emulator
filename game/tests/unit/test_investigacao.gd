@@ -50,6 +50,17 @@ func test_dois_candidatos_nunca_dividem_mais_de_um_traco():
 			for j in range(i + 1, cands.size()):
 				var comuns: Array = cands[i].indicios.filter(func(t): return t in cands[j].indicios)
 				assert_lte(comuns.size(), 1, "%s e %s" % [cands[i].id, cands[j].id])
+	# docs/52: todo traço em dois candidatos ou mais (uma pista nunca basta), também nas reviravoltas
+	var grupos: Array = [d.sujeitos, d.acoes, d.locais]
+	for a in d.ampliacoes:
+		grupos.append(a.candidatos)
+	for grupo in grupos:
+		var conta := {}
+		for cand in grupo:
+			for t in cand.indicios:
+				conta[t] = int(conta.get(t, 0)) + 1
+		for t in conta:
+			assert_gte(int(conta[t]), 2, "o traço %s aparece em dois candidatos ou mais" % t)
 
 
 func test_duas_pistas_deixam_um_so_suspeito():
@@ -57,55 +68,81 @@ func test_duas_pistas_deixam_um_so_suspeito():
 		var c := Caso.gerar(Dados.new(semente))
 		for pid in ["quem", "oque", "onde"]:
 			c.registrar_pista("{indicio}", pid, "t")
-			assert_true(c.compativeis(pid).size() >= 1)
+			assert_gt(c.compativeis(pid).size(), 1, "uma pista nunca basta (docs/52): semente %d, %s" % [semente, pid])
 			c.registrar_pista("{indicio}", pid, "t")
 			var restam := c.compativeis(pid)
 			assert_eq(restam.size(), 1, "semente %d, %s" % [semente, pid])
 			assert_eq(restam[0].id, c.verdadeiro(pid).id)
 
 
-func test_deduzir_certo_e_errado():
+## Um relatório com o verdadeiro em cada pergunta, trocando as de `erradas` por outro suspeito.
+func _relatorio(c: Caso, erradas: Array = []) -> Dictionary:
+	var lote := {}
+	for pid in Caso.PERGUNTAS_BASE:
+		var certo := String(c.verdadeiro(pid).id)
+		lote[pid] = certo
+		if pid in erradas:
+			for cand in c.candidatos(pid):
+				if cand.id != certo:
+					lote[pid] = cand.id
+					break
+	return lote
+
+
+func _uma_pista_em_cada(c: Caso) -> void:
+	for pid in Caso.PERGUNTAS_BASE:
+		c.registrar_pista("{indicio}", pid, "t")
+
+
+func test_relatorio_certo_e_errado():
+	# docs/52: quem, o quê e onde se confirmam juntos, como em Return of the Obra Dinn
 	var c := m.caso
-	assert_false(c.deduzir("quem", c.sujeito.id).ok, "sem pista não dá para acusar")
-	c.registrar_pista("{indicio}", "quem", "t")
-	var errado := ""
-	for cand in c.candidatos("quem"):
-		if cand.id != c.sujeito.id:
-			errado = cand.id
-	var r := c.deduzir("quem", errado)
+	assert_false(c.relatar(_relatorio(c)).ok, "sem pista não dá para relatar")
+	_uma_pista_em_cada(c)
+	assert_false(c.deduzir("quem", c.sujeito.id).ok, "quem, o quê e onde não vão sozinhos")
+	var r := c.relatar(_relatorio(c, ["onde"]))
 	assert_true(r.ok)
 	assert_false(r.acertou)
-	assert_true(errado in c.pergunta("quem").descartados, "o suspeito fica riscado")
-	assert_false(c.deduzir("quem", errado).ok, "não se acusa o mesmo duas vezes")
-	r = c.deduzir("quem", c.sujeito.id)
+	assert_eq(r.certas, 2, "duas das três se sustentam")
+	assert_false(c.pergunta("quem").respondida, "nada é confirmado num relatório errado")
+	assert_true(c.relatar(_relatorio(c, ["onde"])).get("repetido", false), "o mesmo relatório não volta")
+	r = c.relatar(_relatorio(c))
 	assert_true(r.acertou)
+	for pid in Caso.PERGUNTAS_BASE:
+		assert_true(c.pergunta(pid).respondida, pid)
 	assert_eq(c.resposta("quem"), c.sujeito.nome)
-	assert_false(c.deduzir("quem", c.sujeito.id).ok, "já resolvida")
+	assert_false(r.ampliacao.is_empty(), "o relatório aceito amplia a investigação")
+	assert_true(c.elemento_confirmado())
 
 
-func test_deduzir_no_mapa_aplica_efeito_e_penalidade():
+func test_relatorio_no_mapa_aplica_efeitos_e_custa_membrana():
 	var antes := m.membrana.valor
-	m.caso.registrar_pista("{indicio}", "onde", "t")
-	var errado := ""
-	for cand in m.caso.candidatos("onde"):
-		if cand.id != m.caso.local.id:
-			errado = cand.id
-	var r := Comandos.aplicar_mapa(m, Comandos.novo("mapa", "deduzir", {"pergunta": "onde", "candidato": errado}))
+	_uma_pista_em_cada(m.caso)
+	var r := Comandos.aplicar_mapa(m, Comandos.novo("mapa", "relatar", {"respostas": _relatorio(m.caso, ["quem", "onde"])}))
 	assert_true(r.ok)
-	assert_eq(m.membrana.valor, antes + Caso.penalidade_palpite(), "acusação errada custa Membrana")
-	r = Comandos.aplicar_mapa(m, Comandos.novo("mapa", "deduzir", {"pergunta": "onde", "candidato": m.caso.local.id}))
-	assert_true(r.deducao.acertou)
+	assert_eq(m.membrana.valor, antes + Caso.penalidade_palpite(), "relatório recusado custa Membrana uma vez")
+	assert_string_contains(m.historico.back(), "1 de 3", "no modo normal, a Ordem diz quantas se sustentam")
+	r = Comandos.aplicar_mapa(m, Comandos.novo("mapa", "relatar", {"respostas": _relatorio(m.caso)}))
+	assert_true(r.relatorio.acertou)
 	assert_true(m.mapa.revelado(m.mapa.encontrar("objetivo")), "acertar o onde revela o covil")
+	assert_true(m.historico.any(func(l): return String(l).contains("O elemento é %s" % m.caso.nome_elemento())))
 
 
-func test_deduzir_na_cena_vale_ao_sair():
+func test_relatorio_no_hardcore_nao_conta():
+	m.opcoes["modo_morte"] = "hardcore"
+	_uma_pista_em_cada(m.caso)
+	m.relatar(_relatorio(m.caso, ["oque"]))
+	assert_false(m.historico.back().contains("se sustentam"))
+
+
+func test_relatorio_na_cena_vale_ao_sair():
 	var membrana := m.membrana
 	var c := _cena([], "medio", membrana)
-	c.caso.registrar_pista("{indicio}", "quem", "t")
-	var r := Comandos.aplicar_investigacao(c, Comandos.novo("investigacao", "deduzir", {"pergunta": "quem", "candidato": m.caso.sujeito.id}))
-	assert_true(r.ok and r.deducao.acertou)
-	assert_eq(c.resultado().perguntas.size(), 1, "o efeito vai com o resultado da cena")
-	assert_eq(c.agente_atual(), mauro, "deduzir não gasta a vez")
+	_uma_pista_em_cada(c.caso)
+	var r := Comandos.aplicar_investigacao(c, Comandos.novo("investigacao", "relatar", {"respostas": _relatorio(m.caso)}))
+	assert_true(r.ok and r.relatorio.acertou)
+	assert_eq(c.resultado().perguntas.size(), 3, "os efeitos vão com o resultado da cena")
+	assert_eq(c.agente_atual(), mauro, "relatar não gasta a vez")
 
 
 func test_cada_cena_tem_um_ponto_firme_por_pergunta_e_uma_testemunha():
@@ -287,6 +324,7 @@ func test_mapa_tem_investigacoes():
 
 
 func test_resultado_da_investigacao_na_missao():
+	m.caso.elemento = "sangue"   # o Covil Carmesim (docs/52)
 	var h := m.posicao(mauro)
 	m._preparar_investigacao(h, "casa_abandonada")
 	assert_true(m.ocupado())
@@ -301,6 +339,7 @@ func test_resultado_da_investigacao_na_missao():
 
 
 func test_descobrir_quem_enfraquece_e_nomeia_o_chefe():
+	m.caso.elemento = "sangue"   # o Covil Carmesim (docs/52)
 	m._preparar_investigacao(m.posicao(mauro), "capela")
 	var quem := m.caso.pergunta("quem")
 	quem.respondida = true
@@ -443,10 +482,10 @@ func test_primeira_acusacao_certa_amplia_a_investigacao():
 	var c := m.caso
 	assert_ne(c.ampliacao_id, "", "todo caso guarda uma reviravolta")
 	assert_eq(c.perguntas.size(), 3, "ela começa escondida")
-	c.registrar_pista("{indicio}", "quem", "t")
-	var r := c.deduzir("quem", c.sujeito.id)
+	_uma_pista_em_cada(c)
+	var r := c.relatar(_relatorio(c))
 	assert_true(r.acertou)
-	assert_false(r.ampliacao.is_empty(), "a primeira descoberta amplia o caso")
+	assert_false(r.ampliacao.is_empty(), "o relatório aceito amplia o caso")
 	assert_eq(c.perguntas.size(), 4)
 	var nova: String = r.ampliacao.pergunta.id
 	assert_eq(c.candidatos(nova).size(), c.ampliacao().candidatos.size())
@@ -458,20 +497,21 @@ func test_primeira_acusacao_certa_amplia_a_investigacao():
 	assert_eq(c.compativeis(nova).size(), 1, "duas pistas firmes, um suspeito, também na reviravolta")
 	assert_true(c.deduzir(nova, c.ampliacao_verdade).acertou)
 	assert_eq(c.resposta(nova), String(c.verdadeiro(nova).nome))
-	# A segunda descoberta não amplia de novo
-	c.registrar_pista("{indicio}", "onde", "t")
-	assert_true(c.deduzir("onde", c.local.id).get("ampliacao", {}).is_empty())
+	assert_true(c.ampliar().is_empty(), "não amplia duas vezes")
 
 
 func test_caso_ampliado_vai_e_volta_no_save():
 	var c := m.caso
-	c.registrar_pista("{indicio}", "onde", "t")
-	c.deduzir("onde", c.local.id)
+	_uma_pista_em_cada(c)
+	c.relatar(_relatorio(c, ["quem"]))
+	c.relatar(_relatorio(c))
 	var c2 := Caso.de_dicionario(JSON.parse_string(JSON.stringify(c.para_dicionario())))
 	assert_true(c2.ampliada)
 	assert_eq(c2.perguntas.size(), 4)
 	assert_eq(c2.ampliacao_verdade, c.ampliacao_verdade)
 	assert_eq(c2.candidatos(c2.perguntas[3].id).size(), c.candidatos(c.perguntas[3].id).size())
+	assert_eq(c2.elemento, c.elemento, "o elemento vai no save (docs/52)")
+	assert_eq(c2.relatorios_recusados, c.relatorios_recusados, "os relatórios recusados também")
 
 
 
@@ -503,8 +543,8 @@ func test_covil_selado_ate_saber_onde():
 	var obj := m.mapa.encontrar("objetivo")
 	m._entrar(mauro, obj)
 	assert_true(m.encontro_pendente.is_empty(), "sem saber onde, não há entrada nem luta")
-	m.caso.registrar_pista("{indicio}", "onde", "t")
-	assert_true(m.deduzir("onde", m.caso.local.id).acertou)
+	_uma_pista_em_cada(m.caso)
+	assert_true(m.relatar(_relatorio(m.caso)).acertou)
 	assert_true(m.covil_aberto(), "acertar o onde abre o covil")
 	m._entrar(mauro, obj)
 	assert_false(m.encontro_pendente.is_empty(), "agora o confronto começa")
