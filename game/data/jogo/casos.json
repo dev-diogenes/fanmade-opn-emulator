@@ -127,7 +127,12 @@
         "eco",
         "longe",
         "decomposicao"
-      ]
+      ],
+      "arena": {
+        "parede": 4,
+        "cobertura": 6,
+        "dificil": 3
+      }
     },
     {
       "id": "igreja",
@@ -136,7 +141,12 @@
         "eco",
         "centro",
         "badalada"
-      ]
+      ],
+      "arena": {
+        "parede": 4,
+        "cobertura": 8,
+        "elevado": 1
+      }
     },
     {
       "id": "fazenda",
@@ -145,7 +155,12 @@
         "longe",
         "remedio",
         "terra"
-      ]
+      ],
+      "arena": {
+        "parede": 1,
+        "cobertura": 5,
+        "dificil": 6
+      }
     },
     {
       "id": "hospital",
@@ -154,7 +169,11 @@
         "centro",
         "remedio",
         "etiqueta"
-      ]
+      ],
+      "arena": {
+        "parede": 5,
+        "cobertura": 6
+      }
     },
     {
       "id": "escola",
@@ -163,7 +182,11 @@
         "badalada",
         "terra",
         "portao"
-      ]
+      ],
+      "arena": {
+        "parede": 3,
+        "cobertura": 9
+      }
     },
     {
       "id": "cemiterio",
@@ -172,7 +195,13 @@
         "decomposicao",
         "etiqueta",
         "portao"
-      ]
+      ],
+      "arena": {
+        "parede": 1,
+        "cobertura": 9,
+        "dificil": 3,
+        "camuflagem": 2
+      }
     }
   ],
   "resumo": "A Ordem suspeita de atividade paranormal na região. {sintomas}",
@@ -805,5 +834,124 @@
       "sentido": "Um zumbido elétrico que arrepia os pelos do braço."
     }
   },
-  "relatorio_nota": "Confirmação em lote (docs/52, como em Return of the Obra Dinn): quem, o quê e onde vão juntos num relatório à Ordem. Errar custa Membrana uma vez; no modo normal, a Ordem diz quantas respostas se sustentam, no hardcore, nada. A reviravolta é confirmada à parte."
+  "relatorio_nota": "Confirmação em lote (docs/52, como em Return of the Obra Dinn): quem, o quê e onde vão juntos num relatório à Ordem. Errar custa Membrana uma vez; no modo normal, a Ordem diz quantas respostas se sustentam, no hardcore, nada. A reviravolta é confirmada à parte.",
+  "covil_nota": "Covil vestido pelo lugar (docs/58): o combate do chefe acontece no lugar do caso. 'arena' em cada local dá quantas paredes, coberturas e terrenos difíceis a grade sorteia; a peça de cada uma vem do Tabuleiro3D (bancos na igreja, carcaças no frigorífico, macas no hospital, carteiras na escola, fardos na fazenda, lápides no cemitério).",
+  "enigmas_do_chefe_nota": "Enigma de Medo do chefe do caso (docs/58, IN4 do relatório). A wiki descreve o Enigma de Medo como um mistério ligado à origem da criatura: resolvido, ela perde poderes; antes disso, ela se refaz. Os tipos de solução seguem os da wiki (juntar metades de um objeto, destruir um registro, fechar a passagem, fotografar o invisível) e um nosso (dizer o nome). Um por caso, sorteado pela semente; a pergunta do caso ligada a ele, se respondida, baixa a DT em 5, e as pistas baixam 2 cada (até 10), como nos enigmas do livro. Textos nossos.",
+  "enigma_do_chefe_regras": {
+    "cura": 4,
+    "virada": 0.5,
+    "escolta": [
+      "cultista"
+    ],
+    "nota": "cura: PV por turno até o enigma ser resolvido; virada: fração dos PV em que ele se desfaz e volta; escolta: quem surge na virada."
+  },
+  "enigmas_do_chefe": [
+    {
+      "id": "metades",
+      "pergunta": "oque",
+      "texto": "Ele carrega a metade de um objeto da primeira vítima. Juntar as duas metades diante dele o prende a este lado.",
+      "etapas": [
+        {
+          "texto": "Achar a outra metade",
+          "pericias": [
+            "investigacao",
+            "percepcao"
+          ],
+          "dt": 18
+        },
+        {
+          "texto": "Juntar as metades diante dele",
+          "pericias": [
+            "vontade",
+            "ocultismo"
+          ],
+          "dt": 16
+        }
+      ]
+    },
+    {
+      "id": "registro",
+      "pergunta": "quem",
+      "texto": "Ele vive num registro que ainda circula: um vídeo, um áudio, uma foto. Destruir o original o enfraquece.",
+      "etapas": [
+        {
+          "texto": "Achar o aparelho com o original",
+          "pericias": [
+            "investigacao",
+            "tecnologia"
+          ],
+          "dt": 18
+        },
+        {
+          "texto": "Destruir o original",
+          "pericias": [
+            "atletismo",
+            "tecnologia"
+          ],
+          "dt": 16
+        }
+      ]
+    },
+    {
+      "id": "fresta",
+      "pergunta": "onde",
+      "texto": "Ele some e volta por uma passagem em {local}. Fechada a passagem, ele fica preso aqui.",
+      "etapas": [
+        {
+          "texto": "Achar por onde ele volta",
+          "pericias": [
+            "percepcao",
+            "sobrevivencia"
+          ],
+          "dt": 18
+        },
+        {
+          "texto": "Fechar a passagem",
+          "pericias": [
+            "atletismo",
+            "ocultismo"
+          ],
+          "dt": 16
+        }
+      ]
+    },
+    {
+      "id": "nome",
+      "pergunta": "quem",
+      "texto": "Ele já foi alguém. Dizer em voz alta quem ele foi quebra a forma que o Outro Lado lhe deu.",
+      "etapas": [
+        {
+          "texto": "Lembrar quem ele foi",
+          "pericias": [
+            "investigacao",
+            "intuicao"
+          ],
+          "dt": 18
+        },
+        {
+          "texto": "Dizer o nome diante dele",
+          "pericias": [
+            "vontade",
+            "religiao"
+          ],
+          "dt": 16
+        }
+      ]
+    },
+    {
+      "id": "fotografar",
+      "pergunta": "onde",
+      "texto": "O que ninguém vê não pode ser vencido. Uma foto dele o prende à forma que tem agora.",
+      "etapas": [
+        {
+          "texto": "Fotografar o que não aparece",
+          "pericias": [
+            "percepcao",
+            "tecnologia"
+          ],
+          "dt": 20
+        }
+      ]
+    }
+  ]
 }

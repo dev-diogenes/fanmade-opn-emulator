@@ -13,7 +13,7 @@ const EFEITOS := {"estatica": [-14.0, 0.0], "tecla": [-16.0, 0.12], "carimbo": [
 	"hover": [-26.0, 0.1], "clique": [-18.0, 0.08], "pista": [-10.0, 0.0], "glitch": [-14.0, 0.2],
 	"golpe": [-8.0, 0.12], "erro": [-14.0, 0.1], "ritual": [-9.0, 0.05], "passo": [-20.0, 0.2], "encontro": [-8.0, 0.0],
 	"caixinha": [-16.0, 0.0], "el_sangue": [-9.0, 0.03], "el_morte": [-10.0, 0.0], "el_conhecimento": [-11.0, 0.02],
-	"el_energia": [-12.0, 0.05], "el_medo": [-10.0, 0.0]}
+	"el_energia": [-12.0, 0.05], "el_medo": [-10.0, 0.0], "chefe": [-13.0, 0.0]}
 
 static var _instancia: Som
 static var _cache: Dictionary = {}
@@ -154,6 +154,9 @@ static func gerar(nome: String) -> AudioStreamWAV:
 		"el_medo": amostras = _el_medo()
 		"caixinha":
 			amostras = _caixinha()
+			laco = true
+		"chefe":
+			amostras = _chefe_laco()
 			laco = true
 		"drone":
 			amostras = _drone_laco()
@@ -425,6 +428,25 @@ static func _caixinha() -> PackedFloat32Array:
 			var t := float(i - ini) / TAXA
 			var env := exp(-t / 0.45) * minf(1.0, t / 0.004)
 			a[i] += 0.22 * env * (sin(TAU * f * t) + 0.35 * sin(TAU * f * 2.0 * t) + 0.12 * sin(TAU * f * 3.01 * t))
+	return a
+
+
+## Trilha do chefe (docs/58): um coração a 60 batimentos por minuto sobre um acorde menor grave
+## que bate (55 e 65,5 Hz). Laço de 4 s; as frequências fecham ciclos inteiros, sem estalo.
+static func _chefe_laco() -> PackedFloat32Array:
+	var d := 4.0
+	var n := int(d * TAXA)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	for i in n:
+		var t := float(i) / TAXA
+		var fundo := 0.18 * (sin(TAU * 55.0 * t) + 0.7 * sin(TAU * 65.5 * t) + 0.4 * sin(TAU * 55.25 * t))
+		var bat := 0.0
+		for ini in [0.0, 0.28]:   # tum-tum
+			var tb: float = fmod(t, 1.0) - float(ini)
+			if tb >= 0.0:
+				bat += (1.0 if ini == 0.0 else 0.7) * sin(TAU * 46.0 * tb) * exp(-tb / 0.08)
+		a[i] = fundo * (0.75 + 0.25 * sin(TAU * 0.25 * t)) + 0.7 * bat
 	return a
 
 

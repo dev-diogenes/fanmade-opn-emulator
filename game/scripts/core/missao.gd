@@ -690,6 +690,8 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool, semente_s
 		var am := ameaca_info(amea_id)
 		if chefe and amea_id == info.ameacas[0]:
 			am.chefe = true   # a primeira ameaça do covil é o chefe
+		if chefe and am.chefe and caso != null and extras.get("covil", {}).is_empty():
+			am = _chefe_do_caso(am)   # só no caso gerado; as campanhas escrevem o próprio chefe
 		if chefe and am.chefe and modificador_chefe != 0.0:
 			am.ficha = am.ficha.duplicate(true)
 			am.ficha.pv = maxi(1, roundi(float(am.ficha.pv) * (1.0 + modificador_chefe)))
@@ -715,11 +717,49 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool, semente_s
 		"regras": {"lesoes": opcoes.get("lesoes", true), "inspiracao_resoluta": opcoes.get("inspiracao_resoluta", true),
 			"presenca_perturbadora": true, "bonus_enigma": mini(10, pistas * 2), "perguntas_respondidas": _perguntas_respondidas()},
 		"nivel_membrana": membrana.nivel_ameaca(), "semente": semente_salva if semente_salva >= 0 else dados.rolar(1000000),
+		# O covil é o lugar do caso (docs/58): a arena se veste por ele, e o cartão do chefe diz
+		# o elemento só se o grupo o confirmou
+		"local": String(caso.local.get("id", "")) if chefe and caso != null else "",
+		"local_nome": String(caso.local.get("nome", "")) if chefe and caso != null else "",
+		"elemento_caso": caso.elemento if chefe and caso != null and caso.elemento_confirmado() else "",
 		"mestre": bool(opcoes.get("mestre", false)),
 	}
 	if semente_salva < 0:
 		_log("[color=#e0574a][b]Encontro: %s![/b][/color] (%d agente(s) entram no combate)" % [info.nome, participantes.size()])
 	encontro_iniciado.emit(encontro_pendente)
+
+
+## Enigma de Medo do chefe do caso (docs/58): um da tabela de casos.json, sorteado pela semente
+## (igual no online), com o lugar do caso no texto. {} sem caso.
+func enigma_do_chefe() -> Dictionary:
+	if caso == null:
+		return {}
+	var lista: Array = DadosJogo.ler("casos").get("enigmas_do_chefe", [])
+	if lista.is_empty():
+		return {}
+	var en: Dictionary = (lista[absi(hash("%d|enigma" % semente)) % lista.size()] as Dictionary).duplicate(true)
+	en.texto = String(en.texto).replace("{local}", String(caso.local.get("nome", "o covil")))
+	return en
+
+
+## O chefe do caso (docs/58): ganha o Enigma de Medo, se refaz a cada turno até ele ser
+## resolvido e, na metade dos PV, vira (se desfaz, volta e chama a escolta). Quem já tem
+## enigma próprio (as criaturas do livro) ou que não é criatura fica como está.
+func _chefe_do_caso(am: Dictionary) -> Dictionary:
+	var en := enigma_do_chefe()
+	if en.is_empty() or am.ficha.has("enigma") or not am.ficha.get("criatura", false):
+		return am   # gente (o líder do culto) não tem Enigma de Medo
+	var regras: Dictionary = DadosJogo.ler("casos").get("enigma_do_chefe_regras", {})
+	var novo: Dictionary = am.duplicate(true)
+	novo.ficha.enigma = {"tipo": "etapas", "id": en.id, "texto": en.texto, "pergunta": en.pergunta, "etapas": en.etapas,
+		"efeito": {"remove_imunidade": false, "remove_habilidades": ["cura_acelerada"]}}
+	var cura := int(regras.get("cura", 4))
+	var habs: Array = (novo.ficha.get("habilidades", []) as Array).duplicate(true)
+	habs.append({"id": "cura_acelerada", "valor": cura, "descricao": "Se refaz: recupera %d PV no início do turno até o enigma ser resolvido." % cura})
+	habs.append({"id": "virada", "fracao": float(regras.get("virada", 0.5)), "invoca": (regras.get("escolta", []) as Array).duplicate(),
+		"descricao": "Na metade dos PV, se desfaz e volta ao lado de quem está mais abalado; a escolta surge com ele."})
+	novo.ficha.habilidades = habs
+	return novo
 
 
 ## O achado do alto da serra (docs/45): aplica os efeitos e o mirante se esgota.

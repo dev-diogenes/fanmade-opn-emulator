@@ -15,6 +15,7 @@ signal oportunidade_de_ataque(atacante: Ser, alvo: Ser)
 signal ritual_conjurado(resultado: Dictionary)
 signal registro(texto: String)
 signal ser_adicionado(ser: Ser)   ## um ser entrou no meio do combate (cópias do escutado)
+signal virada(ser: Ser, texto: String)   ## o chefe do caso virou na metade dos PV (docs/58)
 
 const REACOES := ["bloqueio", "esquiva", "contra_ataque"]
 const ORDEM_LESAO := ["agi", "for", "int", "pre", "vig"]   ## 1d6: 1..5; 6 = nenhuma (p.184)
@@ -2033,6 +2034,59 @@ func _multiplicacao_melodica(am: Ameaca) -> void:
 		_resolver_enigma(am, _melodia_quem)
 
 
+## Virada do chefe do caso (docs/58): na metade dos PV, ele se desfaz e volta ao lado de quem
+## está com a Sanidade mais baixa, a escolta surge e, conforme o que o grupo fez, ele muda de
+## elemento (como a Degolificada da wiki). A vulnerabilidade passa a ser a do novo elemento:
+## o elemento que o oprime (p.128).
+func _virada(am: Ameaca, h: Dictionary) -> void:
+	am.mods_cena["virou"] = true
+	var fragil: Ser = null
+	for s in participantes:
+		if s is Agente and not s.esta_fora_de_combate():
+			if fragil == null or float(s.san) / maxf(1.0, s.san_maximo) < float(fragil.san) / maxf(1.0, fragil.san_maximo):
+				fragil = s
+	if fragil != null and grade != null and grade.tem(am):
+		_teleportar_para_perto(am, fragil)
+	var escolta := 0
+	for id_inv in h.get("invoca", []):
+		var info := DadosJogo.ameaca(ruleset, String(id_inv))
+		var inv := Ameaca.criar(ruleset, info.nome, info.ficha)
+		inv.lado = am.lado
+		adicionar_durante(inv, am)
+		escolta += 1
+	var texto := "%s se desfaz no ar e volta%s." % [am.nome, (" ao lado de %s" % fragil.nome) if fragil != null else ""]
+	var novo := elemento_da_virada()
+	if novo != "" and novo != am.elemento:
+		am.elemento = novo
+		var op := opressor_de(novo)
+		am.vulnerabilidades = [op] if op != "" else []
+		texto += " Agora é %s%s." % [novo.capitalize(), (": %s o fere em dobro" % op.capitalize()) if op != "" else ""]
+	if escolta > 0:
+		texto += " E não volta sozinho."
+	_log("[color=#e0574a][b]Virada.[/b] %s[/color]" % texto)
+	virada.emit(am, texto)
+
+
+## Para onde o chefe vira (docs/58): alguém do grupo caído → Sangue (ele se alimentou); a luta
+## se arrastou até a 4ª rodada → Morte (o tempo corre a favor dele); senão, não muda.
+func elemento_da_virada() -> String:
+	for s in participantes:
+		if s is Agente and (s.tem(Ser.MORRENDO) or s.tem(Ser.MORTO)):
+			return "sangue"
+	if rodada >= 4:
+		return "morte"
+	return ""
+
+
+## O elemento que oprime `el` (p.128): Morte oprime Sangue, Sangue oprime Conhecimento…
+func opressor_de(el: String) -> String:
+	var vantagem: Dictionary = ruleset.dados.get("rituais", {}).get("vantagem_elemental", {})
+	for k in vantagem:
+		if k != "ref" and k != "dados" and String(vantagem[k]) == el:
+			return String(k)
+	return ""
+
+
 ## Coloca um ser no meio do combate: age logo depois de `perto_de`, numa célula livre próxima.
 func adicionar_durante(ser: Ser, perto_de: Ser) -> void:
 	adicionar(ser)
@@ -2838,6 +2892,10 @@ func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 
 		var cura := amea_alvo.habilidade("cura_acelerada")
 		if not cura.is_empty() and tipo_dano in cura.get("desliga_com", []):
 			amea_alvo.mods_cena["cura_desligada"] = true   # Regeneração de Sangue para até o fim da cena
+		var vir := amea_alvo.habilidade("virada")
+		if not vir.is_empty() and not amea_alvo.mods_cena.get("virou", false) and amea_alvo.pv > 0 \
+				and amea_alvo.pv <= int(amea_alvo.pv_maximo * float(vir.get("fracao", 0.5))):
+			_virada(amea_alvo, vir)
 		if tipo_dano == "energia" and amea_alvo.mods_cena.has("abracando"):
 			var abracado: Ser = amea_alvo.mods_cena.abracando
 			abracado.condicoes.erase(Ser.PARALISADO)

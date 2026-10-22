@@ -630,6 +630,95 @@ static func prisma_hex(raio: float, altura: float, cor: Color) -> MeshInstance3D
 	return _malha(m, material(cor), Vector3(0, altura / 2.0, 0))
 
 
+# --- O covil pelo lugar do caso (docs/58): a cobertura de cada lugar, em unidades de célula ---
+
+## A peça de cobertura do covil pelo nome ("" se não houver).
+static func peca_covil(nome: String) -> Node3D:
+	match nome:
+		"banco": return banco_igreja()
+		"carcaca": return carcaca()
+		"maca": return maca()
+		"carteira": return carteira()
+		"fardo": return fardo()
+		"lapide": return lapide()
+	return null
+
+
+## Banco de igreja: assento comprido e encosto, de madeira escura.
+static func banco_igreja() -> Node3D:
+	var n := Node3D.new()
+	var madeira := material(Color("5a3a24"))
+	n.add_child(_malha(_cubo(0.34, 0.06, 0.92), madeira, Vector3(0, 0.26, 0)))
+	n.add_child(_malha(_cubo(0.06, 0.34, 0.92), madeira, Vector3(-0.15, 0.43, 0)))
+	for z in [-0.4, 0.4]:
+		n.add_child(_malha(_cubo(0.3, 0.26, 0.05), madeira, Vector3(0, 0.13, z)))
+	return n
+
+
+## Carcaça pendurada no trilho do frigorífico: o gancho, a corrente e a carne escura.
+static func carcaca() -> Node3D:
+	var n := Node3D.new()
+	var aco := material(Color("8a9396"))
+	n.add_child(_malha(_cubo(0.04, 0.5, 0.04), aco, Vector3(0, 1.05, 0)))
+	var carne := CapsuleMesh.new()
+	carne.radius = 0.17
+	carne.height = 0.62
+	n.add_child(_malha(carne, material(Color("6e2a2a")), Vector3(0, 0.55, 0)))
+	n.add_child(_malha(_cubo(0.22, 0.05, 0.12), material(Color("d9c9b0")), Vector3(0, 0.62, 0.1)))   # gordura
+	return n
+
+
+## Maca de hospital: colchão claro sobre pés de metal.
+static func maca() -> Node3D:
+	var n := Node3D.new()
+	var metal := material(Color("a7b0ad"))
+	n.add_child(_malha(_cubo(0.46, 0.08, 0.9), material(Color("dfe6e1")), Vector3(0, 0.42, 0)))
+	n.add_child(_malha(_cubo(0.46, 0.04, 0.9), metal, Vector3(0, 0.36, 0)))
+	for x in [-0.2, 0.2]:
+		for z in [-0.4, 0.4]:
+			n.add_child(_malha(_cubo(0.03, 0.34, 0.03), metal, Vector3(x, 0.17, z)))
+	n.add_child(_malha(_cubo(0.46, 0.05, 0.3), material(Color("7a1f22")), Vector3(0, 0.47, 0.2)))   # o lençol manchado
+	return n
+
+
+## Carteira escolar com a cadeira encostada.
+static func carteira() -> Node3D:
+	var n := Node3D.new()
+	var tampo := material(Color("b08a54"))
+	var ferro := material(Color("3c4a5c"))
+	n.add_child(_malha(_cubo(0.5, 0.04, 0.38), tampo, Vector3(0.08, 0.5, 0)))
+	n.add_child(_malha(_cubo(0.04, 0.48, 0.32), ferro, Vector3(0.08, 0.24, 0)))
+	n.add_child(_malha(_cubo(0.3, 0.04, 0.3), tampo, Vector3(-0.28, 0.3, 0)))
+	n.add_child(_malha(_cubo(0.04, 0.32, 0.3), tampo, Vector3(-0.42, 0.46, 0)))
+	n.add_child(_malha(_cubo(0.04, 0.28, 0.04), ferro, Vector3(-0.28, 0.14, 0)))
+	return n
+
+
+## Fardo de feno redondo, deitado.
+static func fardo() -> Node3D:
+	var n := Node3D.new()
+	var rolo := CylinderMesh.new()
+	rolo.top_radius = 0.32
+	rolo.bottom_radius = 0.32
+	rolo.height = 0.55
+	rolo.radial_segments = 10
+	var mi := _malha(rolo, material(Color("b8994a")), Vector3(0, 0.32, 0))
+	mi.rotation.z = PI / 2.0
+	n.add_child(mi)
+	return n
+
+
+## Lápide de cimento com a cruz em cima.
+static func lapide() -> Node3D:
+	var n := Node3D.new()
+	var pedra := material(Color("8a8a84"))
+	n.add_child(_malha(_cubo(0.5, 0.12, 0.8), material(Color("6f6f6a")), Vector3(0, 0.06, 0)))
+	n.add_child(_malha(_cubo(0.12, 0.5, 0.5), pedra, Vector3(-0.15, 0.37, 0)))
+	n.add_child(_malha(_cubo(0.08, 0.26, 0.06), pedra, Vector3(-0.15, 0.75, 0)))
+	n.add_child(_malha(_cubo(0.08, 0.06, 0.2), pedra, Vector3(-0.15, 0.8, 0)))
+	return n
+
+
 ## Contorno de hexágono (docs/57): um anel achatado, nos mesmos cantos do `prisma_hex`, para
 ## marcar alcance sem pintar o hex inteiro. `largura` é a espessura da borda.
 static func contorno_hex(raio: float, largura: float, cor: Color) -> MeshInstance3D:

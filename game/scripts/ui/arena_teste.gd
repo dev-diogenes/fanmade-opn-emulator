@@ -141,8 +141,9 @@ func iniciar_combate(semente: int) -> void:
 	fluxo.nova_rodada.connect(func(r): _registrar("[color=#a69b88]— Rodada %d —[/color]" % r))
 	combate.registro.connect(_registrar)
 	combate.ser_adicionado.connect(_ao_adicionar)
+	combate.virada.connect(_ao_virada)
 	if _tab3d != null:
-		_tab3d.construir(grade, String(config.get("terreno", "")))   # o chão do hex do encontro (docs/22)
+		_tab3d.construir(grade, String(config.get("terreno", "")), String(config.get("local", "")))   # o chão do hex (docs/22); no covil, o lugar do caso (docs/58)
 	combate.ataque_resolvido.connect(_ao_atacar)
 	combate.ritual_conjurado.connect(_ao_conjurar)
 	combate.combate_encerrado.connect(_ao_encerrar)
@@ -160,7 +161,11 @@ func iniciar_combate(semente: int) -> void:
 		Som.tocar("el_" + el_combate)
 	for s in combate.participantes:
 		if s is Ameaca and (s as Ameaca).enigma_pendente():
-			_registrar("[color=#eda64a]Enigma de Medo — %s: %s Nada a fere até alguém decifrar (botão Decifrar).[/color]" % [s.nome, (s as Ameaca).enigma.get("texto", "")])
+			var imune := "dano" in (s as Ameaca).imunidades
+			_registrar("[color=#eda64a]Enigma de Medo — %s: %s %s[/color]" % [s.nome, (s as Ameaca).enigma.get("texto", ""),
+				"Nada a fere até alguém decifrar (botão Decifrar)." if imune else "Até alguém decifrar (botão Enigma), ele se refaz a cada turno."])
+	if bool(config.get("chefe", false)):
+		_apresentar_chefe()
 	var nomes := PackedStringArray()
 	for s in combate.ordem:
 		nomes.append("%s (%d)" % [s.nome, combate.iniciativas[s]])
@@ -202,12 +207,46 @@ func _criar_lados() -> void:
 	_adicionar(Ameaca.criar(ruleset, "Aberração", aberracao), garras, Vector2i(11, 4))
 
 
+## Apresentação do chefe do covil (docs/58): a ficha do dossiê, a câmera nele e a trilha do
+## chefe. O elemento só aparece se o relatório o confirmou; a fraqueza vem do ciclo (p.128).
+func _apresentar_chefe() -> void:
+	var chefe: Ameaca = null
+	for s in combate.participantes:
+		if s is Ameaca and (chefe == null or s.pv_maximo > chefe.pv_maximo):
+			chefe = s
+	if chefe == null:
+		return
+	var el := String(config.get("elemento_caso", ""))
+	Som.musica("chefe")
+	var antes := _tab3d.rig.alvo if _tab3d != null else Vector3.ZERO
+	if _tab3d != null and grade.tem(chefe):
+		_tab3d.rig.focar(_tab3d.posicao(grade.posicao(chefe)))
+	CartaoChefe.apresentar(self, {"local": String(config.get("local_nome", "")), "nome": chefe.nome, "elemento": el,
+		"fraqueza": combate.opressor_de(el) if el != "" else "",
+		"enigma": String(chefe.enigma.get("texto", "")) if chefe.enigma_pendente() else ""}, func():
+			if _tab3d != null:
+				_tab3d.rig.focar(antes)   # a câmera volta ao tabuleiro inteiro
+			_focar_para_controle())
+
+
+## A virada do chefe (docs/58): a fita treme, o som do novo elemento e o aviso em vermelho.
+func _ao_virada(ser: Ser, texto: String) -> void:
+	var el := (ser as Ameaca).elemento if ser is Ameaca else ""
+	if _vista != null:
+		Tema.pulso_vhs(_vista, 1.0, 0.8)
+	Som.tocar("el_" + el if el != "" else "glitch")
+	CartaoChefe.anunciar_virada(self, texto, el)
+	_atualizar()
+
+
 ## Seres que surgem no meio do combate (cópias do escutado); a arma vem do FluxoCombate.
 func _ao_adicionar(ser: Ser) -> void:
 	_registrar("%s entra no combate." % ser.nome)
 
 
 func _exit_tree() -> void:
+	if bool(config.get("chefe", false)):
+		Som.musica("")   # a trilha do chefe acaba com o covil (docs/58)
 	if sessao != null:
 		sessao.sair("combate")
 		if sessao.comando_aplicado.is_connected(_ao_comando_aplicado):
@@ -254,8 +293,8 @@ func _avancar() -> void:
 		if not autoplay and not sessao.atrasado():
 			_mostrar_faixa_vez(ser)
 			await get_tree().create_timer(1.0).timeout   # tempo de ler a faixa (era 0,6)
-			while TourGuiado.em_andamento() and is_inside_tree():
-				await get_tree().create_timer(0.2).timeout   # a IA espera o tutorial fechar
+			while (TourGuiado.em_andamento() or TourGuiado.papel_aberto(get_tree())) and is_inside_tree():
+				await get_tree().create_timer(0.2).timeout   # a IA espera o tutorial e a apresentação do chefe
 			if not is_inside_tree():
 				return
 		fluxo.jogar_ia(ser)
@@ -511,6 +550,8 @@ func _ao_conjurar(res: Dictionary) -> void:
 
 func _ao_encerrar(vencedor: String) -> void:
 	_vencedor = vencedor
+	if bool(config.get("chefe", false)):
+		Som.musica("")
 	var texto := "VITÓRIA DA ORDEM" if vencedor == "agentes" else "OS AGENTES CAÍRAM"
 	if _btn_fim != null and not config.is_empty():
 		_btn_fim.text = "Voltar ao mapa"
@@ -1308,7 +1349,7 @@ func _ficha(ser: Ser) -> String:
 	if not ser.condicoes.is_empty():
 		linhas.append("Condições: %s" % ", ".join(PackedStringArray(ser.condicoes.keys())))
 	if ser is Ameaca and (ser as Ameaca).enigma_pendente():
-		linhas.append("Enigma de Medo: imune a dano até alguém decifrar.")
+		linhas.append("Enigma de Medo: imune a dano até alguém decifrar." if "dano" in (ser as Ameaca).imunidades else "Enigma de Medo: se refaz até alguém decifrar.")
 	return "\n".join(PackedStringArray(linhas))
 
 

@@ -29,6 +29,22 @@ const ESTILO_TERRENO := {
 	"agua": {"chao": ["1c2329", "182026"], "dificil": "1f3328", "parede": "33352d", "cobertura": "rocha",
 		"borda": ["waterplant_A", "waterlily_A", "", ""]},
 }
+## O covil é o lugar do caso (docs/58): chão, parede, a peça de cobertura, o que cerca e a cor
+## da luz de cada lugar. Sobrepõe o estilo do terreno do hex.
+const ESTILO_COVIL := {
+	"frigorifico": {"chao": ["40474a", "3a4043"], "dificil": "4a2626", "parede": "8a9396", "cobertura": "carcaca",
+		"borda": ["parede", "parede", "carcaca", ""], "luz": "c8ecff"},
+	"igreja": {"chao": ["4e2e17", "452914"], "dificil": "4e2e17", "parede": "cfc6b0", "cobertura": "banco",
+		"borda": ["parede", "cruz", "banco", ""], "luz": "ffcf8a"},
+	"fazenda": {"chao": ["3a3020", "342b1c"], "dificil": "4a3a22", "parede": "6a5a40", "cobertura": "fardo",
+		"borda": ["fardo", "tree_single_A", "parede", ""], "luz": "ffd9a0"},
+	"hospital": {"chao": ["46514a", "404a44"], "dificil": "3a4a40", "parede": "c9d1c4", "cobertura": "maca",
+		"borda": ["parede", "parede", "maca", ""], "luz": "d6ffe6"},
+	"escola": {"chao": ["4f4232", "483c2d"], "dificil": "4f4232", "parede": "c9b27a", "cobertura": "carteira",
+		"borda": ["parede", "carteira", "poste", ""], "luz": "f0e6c8"},
+	"cemiterio": {"chao": ["2a3324", "252d20"], "dificil": "2f3d26", "parede": "6a6a66", "cobertura": "lapide",
+		"borda": ["lapide", "cruz", "trees_B_medium", "lapide"], "luz": "b9c8ff"},
+}
 ## Props por código no combate: a figura aqui tem escala 1 (no mapa, 0,75), então as peças
 ## crescem na mesma proporção que a miniatura (docs/32).
 const ESCALA_PROPS := 1.35
@@ -64,11 +80,11 @@ func clima_membrana(valor: int) -> void:
 	Pecas.clima_membrana(_env, valor)
 
 
-func construir(p_grade: Grade, p_terreno: String = "") -> void:
+func construir(p_grade: Grade, p_terreno: String = "", p_local: String = "") -> void:
 	grade = p_grade
 	terreno = p_terreno
 	_env = Pecas.ambiente(self, Color("0b0d18"))
-	var estilo: Dictionary = ESTILO_TERRENO.get(terreno, {})
+	var estilo: Dictionary = ESTILO_COVIL.get(p_local, ESTILO_TERRENO.get(terreno, {}))
 	rig = CameraRig.new()
 	add_child(rig)
 	for x in grade.largura:
@@ -90,7 +106,14 @@ func construir(p_grade: Grade, p_terreno: String = "") -> void:
 			var deco: Node3D = null
 			match t:
 				Grade.PAREDE: deco = Pecas.parede(1.4, Color(estilo.get("parede", "4a4f5c")).lightened(0.15))
-				Grade.COBERTURA: deco = Pecas.rocha(0.36) if estilo.get("cobertura", "") == "rocha" else Pecas.caixote()
+				Grade.COBERTURA:
+					deco = Pecas.peca_covil(String(estilo.get("cobertura", "")))
+					if deco != null:
+						deco.rotation.y = PI / 2.0 if estilo.cobertura in ["banco", "carteira"] else float(hash(c) % 4) * PI / 2.0
+					elif estilo.get("cobertura", "") == "rocha":
+						deco = Pecas.rocha(0.36)
+					else:
+						deco = Pecas.caixote()
 				Grade.DIFICIL: deco = Pecas.capim(Color(estilo.get("dificil", "2f5a2a")).lightened(0.25))
 				Grade.ELEVADO: deco = _plataforma(Color(estilo.get("parede", "5e574d")))   # docs/40
 				Grade.CAMUFLAGEM: deco = _moita()
@@ -99,7 +122,7 @@ func construir(p_grade: Grade, p_terreno: String = "") -> void:
 				add_child(deco)
 	if not estilo.is_empty():
 		_cercar(estilo)
-	_clareira()
+	_clareira(Color(String(estilo.get("luz", "d2dcff"))))
 	_destaques = Node3D.new()
 	add_child(_destaques)
 	_anel_vez = Pecas.anel(0.46, Color("f1c40f"))
@@ -250,10 +273,10 @@ func _atualizar_unidade(s: Ser) -> void:
 
 ## Clareira ao luar (docs/22): um foco frio de cima ilumina o tabuleiro e deixa o entorno no
 ## escuro. A noite fica na moldura; a luta continua legível.
-func _clareira() -> void:
+func _clareira(cor: Color = Color("d2dcff")) -> void:
 	var centro := (posicao(Vector2i(0, 0)) + posicao(Vector2i(grade.largura - 1, grade.altura - 1))) / 2.0
 	var foco := SpotLight3D.new()
-	foco.light_color = Color("d2dcff")
+	foco.light_color = cor   # a luz do lugar: fluorescente fria, vela, lâmpada (docs/58)
 	foco.light_energy = 3.0
 	foco.spot_range = 22.0
 	foco.spot_angle = 46.0
@@ -301,6 +324,8 @@ func _cercar(estilo: Dictionary) -> void:
 							luz.position = Vector3(0, 0.4, 0.35)   # na frente da porta
 							Qualidade.luz_extra(luz)
 							peca.add_child(luz)
+				"banco", "carcaca", "maca", "carteira", "fardo", "lapide":
+					peca = Pecas.peca_covil(nome)   # o covil continua além da grade (docs/58)
 				"poste", "carro", "orelhao", "parede", "cruz":
 					# Props brasileiros (docs/32), na escala da miniatura do combate
 					match nome:

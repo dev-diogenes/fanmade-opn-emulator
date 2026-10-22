@@ -14,7 +14,7 @@ static func montar(ruleset: Ruleset, config: Dictionary, dados: Dados, membrana:
 	var grade := Grade.new(COLUNAS, LINHAS)
 	c.grade = grade
 	c.membrana = membrana
-	_terreno(grade, dados, String(config.get("terreno", "campo")))
+	_terreno(grade, dados, String(config.get("terreno", "campo")), String(config.get("local", "")))
 	var armas := {}
 	var linhas_livres := [4, 2, 6, 3, 5, 1, 7]
 	var i := 0
@@ -35,11 +35,15 @@ static func arma_de(ruleset: Ruleset, ser: Ser) -> Dictionary:
 	return lista[0] if not lista.is_empty() else ruleset.arma("desarmado")
 
 
-## Campo de batalha a partir do terreno do hex (parâmetros "arena" em mapa.json).
+## Campo de batalha a partir do terreno do hex (parâmetros "arena" em mapa.json). No covil,
+## manda o lugar do caso ("arena" do local em casos.json, docs/58).
 ## Colunas 0-1 e 12-13 ficam livres para os dois lados se posicionarem.
-static func _terreno(grade: Grade, dados: Dados, terreno_id: String) -> void:
+static func _terreno(grade: Grade, dados: Dados, terreno_id: String, local_id: String = "") -> void:
 	var t: Dictionary = DadosJogo.ler("mapa").terrenos.get(terreno_id, {})
 	var param: Dictionary = t.get("arena", {})
+	for l in DadosJogo.ler("casos").get("locais", []):
+		if local_id != "" and l.id == local_id and l.has("arena"):
+			param = l.arena
 	var tipos := {Grade.PAREDE: int(param.get("parede", 0)), Grade.COBERTURA: int(param.get("cobertura", 2)), Grade.DIFICIL: int(param.get("dificil", 0)),
 		Grade.ELEVADO: int(param.get("elevado", 0)), Grade.CAMUFLAGEM: int(param.get("camuflagem", 0))}   # docs/40
 	for tipo in tipos:
