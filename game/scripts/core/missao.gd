@@ -62,6 +62,9 @@ var _turnos_sem_surgimento := 0
 ## Medo no mapa (docs/53): por onde algo passou ({hex: turno do mundo}), os turnos de alívio
 ## depois de um combate e os passos da caçada no último turno do mundo (para a tela animar).
 var rastros: Dictionary = {}
+## O caçador da Perseguição (docs/74): {"lista", "estagio", "encontro", "derrotas", "volta_em",
+## "banido"}; {} sem ele. No mapa, é o encontro com "cacador": true.
+var cacador: Dictionary = {}
 var alivio := 0
 var passos_da_caca: Array = []   ## [{"de": Vector2i, "para": Vector2i}]
 var _covil_selado_avisado := -1
@@ -274,6 +277,7 @@ func _entrar(a: Agente, h: Vector2i) -> void:
 		return
 	match c.get("tipo", ""):
 		"encontro":
+			_contra_o_cacador = c.get("cacador", false)
 			_preparar_encontro(h, c.encontro, false)
 		"objetivo":
 			if not covil_aberto():
@@ -915,6 +919,8 @@ func aplicar_efeitos_do_culto() -> void:
 		modificador_chefe += int(fim.chefe) / 100.0
 	if String(sinal.get("subgenero", "classico")) != "classico":
 		_log("[color=#8fa3d9][b]%s.[/b] %s[/color]" % [sub.nome, sub.texto])
+	if sub.has("cacador") and not alarme_falso and caso != null:
+		_soltar_cacador(sub.cacador)
 
 
 ## O subgênero da missão ({nome, texto, …}).
@@ -1082,7 +1088,9 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool, semente_s
 		"local_nome": String(caso.local.get("nome", "")) if chefe and caso != null else "",
 		"elemento_caso": caso.elemento if chefe and caso != null and caso.elemento_confirmado() else "",
 		"mestre": bool(opcoes.get("mestre", false)),
+		"cacador": _contra_o_cacador,
 	}
+	_contra_o_cacador = false
 	if semente_salva < 0:
 		_log("[color=#e0574a][b]Encontro: %s![/b][/color] (%d agente(s) entram no combate)" % [info.nome, participantes.size()])
 	encontro_iniciado.emit(encontro_pendente)
@@ -1384,6 +1392,8 @@ func concluir_encontro(vencedor: String, rendidos: int = 0, escapados: int = 0) 
 	if vencedor == "fuga":
 		_fugir_do_encontro()
 		return
+	if vencedor == "agentes" and encontro_pendente.get("cacador", false):
+		_cacador_derrubado(encontro_pendente.hex)
 	if escapados > 0 and vencedor == "agentes":
 		membrana.alterar(-2 * escapados, "fugitivo")
 		_log("[color=#e0574a]%d fugitivo%s leva%s a notícia ao culto. A Membrana cai %d.[/color]" % [escapados, "" if escapados == 1 else "s", "" if escapados == 1 else "m", 2 * escapados])
@@ -1393,6 +1403,7 @@ func concluir_encontro(vencedor: String, rendidos: int = 0, escapados: int = 0) 
 		_levar_preso(encontro_pendente)
 	var h: Vector2i = encontro_pendente.hex
 	var chefe: bool = encontro_pendente.chefe
+	var era_cacador: bool = encontro_pendente.get("cacador", false)
 	for a in encontro_pendente.agentes:
 		a.encerrar_cena()
 	var participantes: Array = encontro_pendente.agentes
@@ -1419,6 +1430,8 @@ func concluir_encontro(vencedor: String, rendidos: int = 0, escapados: int = 0) 
 			_encerrar(true)
 	else:
 		_log("[color=#e0574a]Os agentes caíram.[/color]")
+		if era_cacador and mapa.conteudo(h).is_empty():
+			mapa.definir_conteudo(h, _conteudo_do_cacador())   # o caçador continua ali (docs/74)
 		for a in participantes:
 			if a.esta_fora_de_combate() or a.tem(Ser.MORTO):
 				_tratar_queda(a)
@@ -1431,6 +1444,8 @@ func concluir_encontro(vencedor: String, rendidos: int = 0, escapados: int = 0) 
 func _fugir_do_encontro() -> void:
 	var h: Vector2i = encontro_pendente.hex
 	var participantes: Array = encontro_pendente.agentes
+	if encontro_pendente.get("cacador", false) and mapa.conteudo(h).is_empty():
+		mapa.definir_conteudo(h, _conteudo_do_cacador())   # o caçador fica onde a luta foi (docs/74)
 	encontro_pendente = {}
 	for a in participantes:
 		a.encerrar_cena()
@@ -1769,6 +1784,7 @@ func _turno_do_mundo() -> void:
 	if _turnos_sem_surgimento >= int(_cfg.mundo.surgimento_a_cada_turnos) and membrana.nivel_ameaca() >= 1:
 		_turnos_sem_surgimento = 0
 		_surgir_ameaca()
+	_cacador_volta()
 	_cacar()
 	_ataque_a_sanidade()
 
@@ -1817,12 +1833,16 @@ func _cacar() -> void:
 	if alivio > 0:
 		alivio -= 1
 		return
-	if not eh_noite() or ocupado():
+	if ocupado() or _cacador_anda():
+		return
+	if not eh_noite():
 		return
 	var raio := int(cfg.get("raio", 6))
 	var cacadores: Array[Vector2i] = []
 	for h in mapa.celulas:
 		var c := mapa.conteudo(h)
+		if c.get("cacador", false):
+			continue   # o caçador da Perseguição anda à parte (docs/74)
 		if String(c.get("tipo", "")) == "encontro" and (c.get("caca", false) or _paranormal(String(c.get("encontro", "")))):
 			cacadores.append(h)
 	cacadores.sort()   # a mesma ordem nas duas máquinas do online
@@ -1843,6 +1863,168 @@ func _cacar() -> void:
 			return
 		mapa.definir_conteudo(passo, c)
 		passos_da_caca.append({"de": h, "para": passo})
+
+
+# --- O caçador da Perseguição (docs/74) -----------------------------------------------------
+
+var _contra_o_cacador := false   ## o próximo _preparar_encontro é contra o caçador
+
+
+func _cfg_cacador() -> Dictionary:
+	return subgenero().get("cacador", {})
+
+
+## O encontro de uma criatura só ("cacador_<ameaça>"), guardado nos extras da missão (vai no save).
+func _encontro_do_cacador(ameaca_id: String) -> String:
+	var id := "cacador_" + ameaca_id
+	var lista: Array = extras.get_or_add("encontros", [])
+	if not lista.any(func(e): return String(e.get("id", "")) == id):
+		lista.append({"id": id, "nome": "O caçador", "ameacas": [ameaca_id], "nivel": 1})
+	return id
+
+
+func _conteudo_do_cacador() -> Dictionary:
+	return {"tipo": "encontro", "encontro": String(cacador.encontro), "caca": true, "cacador": true}
+
+
+## Solta o caçador longe do grupo: uma criatura do elemento do caso, no primeiro degrau da lista.
+func _soltar_cacador(cfg: Dictionary) -> void:
+	var lista: Array = cfg.get("por_elemento", {}).get(caso.elemento, [])
+	if lista.is_empty():
+		return
+	cacador = {"lista": lista.duplicate(), "estagio": 0, "encontro": _encontro_do_cacador(String(lista[0])),
+		"derrotas": 0, "volta_em": -1, "banido": false}
+	var h := _lugar_do_cacador(int(cfg.get("distancia_inicial", 6)))
+	if h == Vector2i(-999, -999):
+		cacador = {}
+		return
+	mapa.definir_conteudo(h, _conteudo_do_cacador())
+	_log("[color=#e0574a][b]Algo segue o grupo.[/b] Um rastro de %s aparece no mapa e não some com o dia.[/color]" % caso.nome_elemento().to_lower())
+
+
+## Um hex livre e transitável, fora de vila e do ponto de encontro, o mais longe possível do
+## grupo até `distancia` (a semente escolhe entre os empatados: igual no online).
+func _lugar_do_cacador(distancia: int) -> Vector2i:
+	var grupo: Array = agentes.filter(func(a): return not a.tem(Ser.MORTO)).map(func(a): return posicao(a))
+	var candidatos: Array = []
+	var melhor := -1
+	var celulas: Array = mapa.celulas.keys()
+	celulas.sort()
+	for h in celulas:
+		if not mapa.passavel(h) or not mapa.conteudo(h).is_empty():
+			continue
+		var d := 1 << 20
+		for p in grupo:
+			d = mini(d, Hex.distancia(h, p))
+		d = mini(d, distancia)
+		if d > melhor:
+			melhor = d
+			candidatos = [h]
+		elif d == melhor:
+			candidatos.append(h)
+	if candidatos.is_empty():
+		return Vector2i(-999, -999)
+	return candidatos[absi(hash("%d|cacador|%d" % [semente, int(cacador.get("derrotas", 0))])) % candidatos.size()]
+
+
+func cacador_no_mapa() -> Vector2i:
+	for h in mapa.celulas:
+		if mapa.conteudo(h).get("cacador", false):
+			return h
+	return Vector2i(-999, -999)
+
+
+## O caçador anda todo turno, de dia e de noite (de noite, `passos_de_noite`), atrás do agente
+## mais isolado, onde quer que esteja: ele sente o grupo. Vilas e o ponto de encontro seguem
+## seguros. Devolve true se alcançou alguém (a emboscada do turno).
+func _cacador_anda() -> bool:
+	if cacador.is_empty() or cacador.get("banido", false):
+		return false
+	var h := cacador_no_mapa()
+	if not mapa.tem(h):
+		return false
+	var passos := int(_cfg_cacador().get("passos_de_noite", 2)) if eh_noite() else 1
+	var c := mapa.conteudo(h)
+	for _i in passos:
+		var alvo := _presa_perto(h, 1 << 10)
+		if alvo == null:
+			return false
+		var destino := posicao(alvo)
+		var passo := _passo_no_caminho(h, destino)
+		if passo == h:
+			return false
+		mapa.limpar_conteudo(h)
+		rastros[h] = turno_mundo
+		if passo == destino:
+			_log("[color=#e0574a][b]Ele alcança %s.[/b][/color]" % alvo.nome)
+			_contra_o_cacador = true
+			_preparar_encontro(destino, String(c.encontro), false)
+			return true
+		mapa.definir_conteudo(passo, c)
+		passos_da_caca.append({"de": h, "para": passo})
+		h = passo
+	return false
+
+
+## O primeiro passo do caminho mais curto de `de` até `para`, por hexes transitáveis e vazios
+## (busca em largura, vizinhos em ordem: igual no online). O caçador contorna rio e mata; os
+## outros que caçam vão em linha reta (_passo_para). Sem caminho, fica onde está.
+func _passo_no_caminho(de: Vector2i, para: Vector2i) -> Vector2i:
+	var veio := {de: de}
+	var fila: Array[Vector2i] = [de]
+	while not fila.is_empty():
+		var h: Vector2i = fila.pop_front()
+		if h == para:
+			break
+		var vizinhos := Hex.vizinhos(h)
+		vizinhos.sort()
+		for v in vizinhos:
+			if veio.has(v) or not mapa.tem(v) or not mapa.passavel(v):
+				continue
+			if v != para and not mapa.conteudo(v).is_empty():
+				continue
+			veio[v] = h
+			fila.append(v)
+	if not veio.has(para):
+		return de
+	var passo := para
+	while veio[passo] != de:
+		passo = veio[passo]
+	return passo
+
+
+## Derrubado, o caçador some e volta em alguns turnos. Com o "o quê" respondido, a Ordem sabe o
+## que ele é e o prende de vez: a Membrana respira.
+func _cacador_derrubado(h: Vector2i) -> void:
+	if cacador.is_empty():
+		return
+	if mapa.conteudo(h).get("cacador", false):
+		mapa.limpar_conteudo(h)
+	if caso != null and caso.elemento_confirmado():
+		cacador.banido = true
+		var m := int(_cfg_cacador().get("membrana_ao_banir", 3))
+		membrana.alterar(m, "cacador")
+		_log("[color=#6fcf8e][b]Sabendo o que ele é, a Ordem o prende de vez.[/b] A Membrana respira (+%d).[/color]" % m)
+		return
+	cacador.derrotas = int(cacador.get("derrotas", 0)) + 1
+	cacador.volta_em = turno_mundo + int(_cfg_cacador().get("volta_em_turnos", 3))
+	var lista: Array = cacador.get("lista", [])
+	if not lista.is_empty():   # volta um degrau acima (o slasher que volta pior)
+		cacador.estagio = mini(int(cacador.get("estagio", 0)) + 1, lista.size() - 1)
+		cacador.encontro = _encontro_do_cacador(String(lista[int(cacador.estagio)]))
+	_log("[color=#eda64a][b]Ele cai e se desfaz na névoa.[/b] Vai voltar no turno %d, maior, a menos que a Ordem descubra o que ele é.[/color]" % int(cacador.volta_em))
+
+
+## No turno marcado, o caçador volta, longe do grupo.
+func _cacador_volta() -> void:
+	if cacador.is_empty() or cacador.get("banido", false) or int(cacador.get("volta_em", -1)) < 0 or turno_mundo < int(cacador.volta_em):
+		return
+	var h := _lugar_do_cacador(int(_cfg_cacador().get("distancia_inicial", 6)))
+	if h == Vector2i(-999, -999):
+		return
+	cacador.volta_em = -1
+	mapa.definir_conteudo(h, _conteudo_do_cacador())
+	_log("[color=#e0574a][b]Ele voltou.[/b] O rastro recomeça, longe do grupo.[/color]")
 
 
 ## Encontro com criatura paranormal (o elemento de alguma ameaça), com cache por id.
@@ -1925,6 +2107,8 @@ func previsao(n: int = 5) -> Array:
 			tem_cacador = true
 		if noite and tem_cacador:
 			eventos.append({"id": "caca", "texto": "algo caça"})
+		if not cacador.is_empty() and not cacador.get("banido", false) and int(cacador.get("volta_em", -1)) == t:
+			eventos.append({"id": "cacador", "texto": "ele volta"})   # docs/74
 		if valor == 0:
 			eventos.append({"id": "rompe", "texto": "o covil se abre"})
 		lista.append({"turno": t, "noite": noite, "eventos": eventos})
@@ -2179,7 +2363,7 @@ func para_dicionario() -> Dictionary:
 	var enc: Dictionary = {}
 	if not encontro_pendente.is_empty():
 		enc = {"hex": [encontro_pendente.hex.x, encontro_pendente.hex.y], "encontro": encontro_pendente.encontro, "chefe": encontro_pendente.chefe,
-			"semente": int(encontro_pendente.semente)}
+			"semente": int(encontro_pendente.semente), "cacador": encontro_pendente.get("cacador", false)}
 	var descansos: Dictionary = {}
 	for a in _descansou:
 		descansos[a.id] = [_descansou[a].x, _descansou[a].y]
@@ -2192,7 +2376,7 @@ func para_dicionario() -> Dictionary:
 		"posicoes": pos, "turno_mundo": turno_mundo, "indice": indice,
 		"movimento_restante": movimento_restante, "movimento_rolado": movimento_rolado, "acao_usada": acao_usada,
 		"pode_escalar": pode_escalar, "covil_localizado": covil_localizado,
-		"evento_pendente": ev, "encontro_pendente": enc, "reforcos": reforcos, "pistas": pistas,
+		"evento_pendente": ev, "encontro_pendente": enc, "reforcos": reforcos, "pistas": pistas, "cacador": cacador.duplicate(),
 		"caso": caso.para_dicionario() if caso != null else {}, "modificador_chefe": modificador_chefe,
 		"investigacao_pendente": {"hex": [investigacao_pendente.hex.x, investigacao_pendente.hex.y], "cena": investigacao_pendente.cena,
 			"semente": int(investigacao_pendente.semente)} if not investigacao_pendente.is_empty() else {},
@@ -2268,6 +2452,11 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.rituais_usados_no_mapa = (d.get("rituais_usados_no_mapa", []) as Array).duplicate()
 	m.bonus_de_ritual = (d.get("bonus_de_ritual", {}) as Dictionary).duplicate(true)
 	m.escuta_instalada = bool(d.get("escuta_instalada", false))
+	m.cacador = (d.get("cacador", {}) as Dictionary).duplicate()
+	if not m.cacador.is_empty():
+		m.cacador.derrotas = int(m.cacador.get("derrotas", 0))
+		m.cacador.volta_em = int(m.cacador.get("volta_em", -1))
+		m.cacador.estagio = int(m.cacador.get("estagio", 0))
 	for r in d.get("rastros", []):
 		m.rastros[Vector2i(int(r[0]), int(r[1]))] = int(r[2])
 	for i in d.get("descansos", {}):
@@ -2288,5 +2477,6 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 		m.evento_pendente = {"hex": Vector2i(int(ev.hex[0]), int(ev.hex[1])), "evento": m._evento(ev.evento), "agente": por_id[ev.agente]}
 	var enc: Dictionary = d.get("encontro_pendente", {})
 	if not enc.is_empty():
+		m._contra_o_cacador = bool(enc.get("cacador", false))
 		m._preparar_encontro(Vector2i(int(enc.hex[0]), int(enc.hex[1])), enc.encontro, enc.chefe, int(enc.get("semente", -1)))
 	return m

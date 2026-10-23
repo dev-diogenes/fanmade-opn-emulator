@@ -96,10 +96,16 @@ func _ready() -> void:
 	sessao.liberar()
 	Tutorial.botao_ajuda(self, "mapa", _alvos_do_tutorial)
 	Tutorial.ao_entrar("mapa", self, _alvos_do_tutorial())
+	# Dicas de primeira vez (docs/74): o caçador da Perseguição, ou o subgênero
+	if not missao.cacador.is_empty():
+		Dicas.mostrar(self, "cacador")
+	elif String(missao.sinal.get("subgenero", "classico")) != "classico":
+		Dicas.mostrar(self, "subgenero")
 
 
 func _alvos_do_tutorial() -> Dictionary:
-	return {"vez": _lbl_turno, "rolar": _btn_rolar, "mapa": _vista, "botoes": _btn_rolar.get_parent(), "membrana": _barra_membrana, "registro": _log}
+	return {"vez": _lbl_turno, "rolar": _btn_rolar, "mapa": _vista, "botoes": _btn_rolar.get_parent(), "membrana": _barra_membrana, "registro": _log,
+		"caso": _caso}
 
 
 func _ao_mudar_turno(_a: Agente) -> void:
@@ -610,7 +616,7 @@ func _desenhar_linha_tempo() -> void:
 			var l := Label.new()
 			l.text = String(e.texto)
 			l.add_theme_font_size_override("font_size", Tema.FONTE_P - 3)
-			l.add_theme_color_override("font_color", Tema.PERIGO if String(e.id) in ["caca", "rompe"] else Tema.AVISO)
+			l.add_theme_color_override("font_color", Tema.PERIGO if String(e.id) in ["caca", "rompe", "cacador"] else Tema.AVISO)
 			l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			v.add_child(l)
 			dicas.append(String(e.texto).capitalize())

@@ -23,6 +23,7 @@ func _ready() -> void:
 	Som.musica("caixinha")   # caixinha de música desafinada (docs/12)
 	# Na primeira vez: o aviso de conteúdo (exigido pela licença, docs/60) e depois o de flashes
 	if avisar_flashes and not _capturando():
+		Dicas.ativas = true   # docs/74: só no jogo de verdade (testes e sondas não passam por aqui)
 		if not Preferencias.aviso_conteudo_visto():
 			_avisar_conteudo.call_deferred()
 		elif not Preferencias.aviso_flashes_visto():

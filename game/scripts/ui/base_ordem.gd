@@ -170,6 +170,9 @@ func _montar_interface() -> void:
 	_abas = TabContainer.new()
 	_abas.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	corpo.add_child(_abas)
+	_abas.tab_changed.connect(func(i: int):   # docs/74: a dica da Oficina ao abrir o Arsenal
+		if _abas.get_tab_title(i) == "Arsenal":
+			Dicas.mostrar(self, "oficina"))
 
 	# --- Aba Base (docs/63, docs/65): o bar de fachada em 3D, com as salas da Ordem nos fundos
 	_aba_planta = Control.new()
@@ -466,6 +469,19 @@ func _montar_interface() -> void:
 	chk_tutorial.button_pressed = Preferencias.perguntar_tutorial()
 	chk_tutorial.toggled.connect(func(v): Preferencias.definir_perguntar_tutorial(v))
 	cj.add_child(chk_tutorial)
+	var linha_dicas := HBoxContainer.new()   # docs/74: as dicas de primeira vez
+	linha_dicas.add_theme_constant_override("separation", Tema.ESPACO_M)
+	var chk_dicas := CheckBox.new()
+	chk_dicas.text = "Mostrar dicas na primeira vez de cada sistema"
+	chk_dicas.button_pressed = Preferencias.dicas_ligadas()
+	chk_dicas.toggled.connect(func(v): Preferencias.definir_dicas(v))
+	linha_dicas.add_child(chk_dicas)
+	var rever := _botao("Rever as dicas", func():
+		Preferencias.esquecer_dicas()
+		chk_dicas.button_pressed = true)
+	rever.tooltip_text = "As dicas já vistas voltam a aparecer, uma vez cada."
+	linha_dicas.add_child(rever)
+	cj.add_child(linha_dicas)
 	cj.add_child(_titulo("Leitura e acessibilidade"))
 	var leitura := VBoxContainer.new()
 	leitura.add_theme_constant_override("separation", Tema.ESPACO_P)
@@ -804,6 +820,8 @@ func _catalogo() -> Array:
 # --- Atualização -----------------------------------------------------------------
 
 func _atualizar_tudo() -> void:
+	if carreira.roster.any(func(a): return not a.traumas.is_empty()):
+		Dicas.mostrar.call_deferred(self, "fobias")   # docs/74
 	_lista.clear()
 	for a in carreira.roster:
 		var pend := Progressao.pendencias(a).size()

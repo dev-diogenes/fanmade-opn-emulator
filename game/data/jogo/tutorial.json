@@ -4,14 +4,25 @@
     "titulo": "Bem-vindo à Ordem",
     "texto": "Quer um tour rápido de como o jogo funciona? A Base leva um minuto. O resto aparece aos poucos, na primeira vez que você chegar ao mapa, ao combate e a uma investigação. Dá para rever qualquer tela depois, no botão ? do canto."
   },
+  "dicas_nota": "Dicas de primeira vez (docs/74): aparecem uma vez, quando o sistema surge na partida. Textos próprios; BBCode permitido.",
+  "dicas": {
+    "municao": {"titulo": "Munição", "texto": "Esta arma gasta [b]munição[/b]. Um pacote de balas curtas dura duas cenas; balas longas, cartuchos e combustível, uma; flechas, a missão toda; o foguete, um disparo. Só conta a cena em que o agente atirou. Sem pacote, a arma vira [b]coronhada[/b] (1d4, ou 1d6 com arma de duas mãos). Peça mais no Arsenal."},
+    "oficina": {"titulo": "A Oficina", "texto": "O item requisitado que aceita modificação tem o botão [b]Modificar[/b]. A Oficina aplica as modificações do livro (certeira, cruel, mira laser, blindada…): cada uma sobe a categoria do item em I, e a patente precisa liberar a categoria nova."},
+    "fobias": {"titulo": "Traumas", "texto": "Alguém voltou com uma [b]fobia[/b]. No começo de um combate com uma criatura daquele elemento, o agente fica [b]abalado[/b] (−1 dado). Na [b]Enfermaria[/b] (aba Base), Tratar deixa o agente fora da próxima missão e cura a fobia mais antiga."},
+    "subgenero": {"titulo": "O subgênero da missão", "texto": "Cada sinal tem um subgênero, que muda as regras do mapa. [b]Isolados[/b]: cada turno é um dia e o descanso rende menos. [b]Transmissão[/b]: a Membrana cai 1 a mais por turno. [b]Perseguição[/b]: um caçador segue o grupo. O desta missão está no registro."},
+    "cacador": {"titulo": "O caçador", "texto": "Na Perseguição, uma criatura do elemento do caso segue o grupo [b]todo turno[/b] (dois passos à noite) e ataca o agente mais isolado. Derrubada, ela some e [b]volta[/b] em 3 turnos, mais forte. Para prendê-la de vez, mande o relatório com [b]o quê[/b] respondido e vença a luta. Vilas e o ponto de encontro são seguros."},
+    "fuga": {"titulo": "Fugir", "texto": "A luta está ficando feia. [b]Fugir[/b] (ação completa) tira o grupo inteiro: cada agente testa uma perícia de fuga (Atletismo, Furtividade, Percepção…), até 3, 5 ou 7 sucessos antes de 3 falhas. Cada falha deixa o perseguidor atacar. Fugindo, o encontro fica no mapa e a Membrana cai 2."},
+    "cacada": {"titulo": "A caçada", "texto": "Alguém fugiu da luta. [b]Caçar o fugitivo[/b] é um teste estendido de 3 sucessos (DT 15) com Atletismo, Percepção, Sobrevivência, Investigação ou Intimidação. Pegando, ele vai para o interrogatório; se escapar, avisa o culto e a Membrana cai 2."},
+    "culto": {"titulo": "O culto por trás", "texto": "Todo caso tem um [b]culto[/b]. O [b]símbolo na parede[/b] só se lê com [b]Ocultismo[/b] treinado: o anel de sigilos dá o nome do culto e uma pista de quem. A estrutura do culto também muda os cultistas das lutas: células fogem cedo, a hierarquia tem líder, os mascarados não fogem, a família se vinga."}
+  },
   "telas": {
     "base": {
       "nome": "Base da Ordem",
       "passos": [
         {"titulo": "A Base da Ordem", "texto": "Você comanda agentes da Ordem contra o Outro Lado. O jogo alterna entre a [b]Base[/b], onde você prepara o grupo, e as [b]missões[/b]: um mapa em hexágonos, combates táticos e cenas de investigação."},
         {"alvo": "agentes", "titulo": "Seus agentes", "texto": "Até 8 agentes. Clique num nome para ver a ficha. Um [b](!)[/b] ao lado do nome quer dizer que há uma escolha de NEX pendente: o agente só sai em missão depois dela. Recrute novos agentes logo abaixo."},
-        {"alvo": "ficha", "titulo": "A ficha", "texto": "[b]PV[/b] é a vida, [b]PE[/b] paga habilidades, rituais e Foco, e [b]SAN[/b] é a sanidade. O [b]NEX[/b] mede a exposição ao paranormal: sobe a cada missão vencida e libera trilhas, poderes e rituais."},
-        {"alvo": "requisicao", "titulo": "Requisição", "texto": "Escolha o agente à esquerda e marque o que ele leva: cada marca já vale. A [b]patente[/b] libera quantos itens de cada categoria, e a [b]Força[/b] dá a carga (5 espaços por ponto). O que não cabe fica apagado, com o motivo na dica."},
+        {"alvo": "ficha", "titulo": "A ficha", "texto": "[b]PV[/b] é a vida, [b]PE[/b] paga habilidades, rituais e Foco, e [b]SAN[/b] é a sanidade. O [b]NEX[/b] mede a exposição ao paranormal: sobe a cada missão vencida e libera trilhas, poderes e rituais. Quem enlouquece pode voltar com [b]fobia[/b]: a [b]Enfermaria[/b], na aba Base, trata."},
+        {"alvo": "requisicao", "titulo": "Requisição", "texto": "Escolha o agente à esquerda e marque o que ele leva: cada marca já vale. A [b]patente[/b] libera quantos itens de cada categoria, e a [b]Força[/b] dá a carga (5 espaços por ponto). O que não cabe fica apagado, com o motivo na dica. Arma de fogo precisa de um [b]pacote[/b] da munição dela (sem ele, vira coronhada), e o botão [b]Modificar[/b] abre a Oficina."},
         {"alvo": "grupo", "titulo": "O grupo da missão", "texto": "Marque até 4 agentes. Com mais de um jogador, cada agente tem um dono, que joga a vez dele."},
         {"alvo": "jogadores", "titulo": "Jogadores, mestre e online", "texto": "Para jogar com amigos no mesmo PC, adicione jogadores. Aqui também se escolhe um [b]mestre[/b], que joga as ameaças e narra. Para jogar em computadores diferentes, use o painel [b]Online[/b]: uma pessoa hospeda e as outras entram pelo IP."},
         {"alvo": "missao", "titulo": "A missão", "texto": "Escolha entre a missão procedural (sempre diferente), a campanha [b]O Fundo da Represa[/b] ou as missões da comunidade. O Editor de missões cria as suas."},
@@ -27,6 +38,7 @@
         {"alvo": "mapa", "titulo": "Andar pelo mapa", "texto": "Depois de rolar, os hexes azuis mostram até onde dá para ir: clique num deles. Os marcos têm um sigilo no chão: o [b]cultista[/b] é encontro (combate), o [b]?[/b] dourado é evento (um teste), a [b]casa iluminada[/b] é vila (descanso) e o [b]◎[/b] verde-água é investigação. Passe o mouse num hex para ver o que há nele. Câmera: roda = zoom, botão direito = girar, WASD = deslizar."},
         {"alvo": "botoes", "titulo": "Descansar e encerrar", "texto": "Numa vila, [b]Descansar[/b] recupera parte dos PV, PE e SAN, uma vez por visita. [b]Encerrar turno[/b] passa a vez ao próximo agente."},
         {"alvo": "membrana", "titulo": "A Membrana", "texto": "É a barreira entre a realidade e o Outro Lado. Ela cai a cada turno do mundo e a cada ritual. Quanto mais fraca, mais ameaças surgem; se romper, o Medo passa a atacar a Sanidade de todos."},
+        {"alvo": "caso", "titulo": "O caso e o culto", "texto": "Todo caso tem um [b]culto[/b] por trás: o sinal dele aparece nos muros desde o começo. Cada missão também tem um [b]subgênero[/b] (Investigação, Perseguição, Isolados ou Transmissão), dito no registro. Na Perseguição, um [b]caçador[/b] segue o grupo e volta mais forte depois de derrubado, até o caso responder [b]o quê[/b]."},
         {"alvo": "registro", "titulo": "O registro", "texto": "Tudo o que acontece aparece aqui: testes, encontros, pistas e a narração do mestre. Boa caçada!"}
       ]
     },
@@ -39,6 +51,7 @@
         {"alvo": "slots", "titulo": "Testes em slots de d20", "texto": "Cada teste rola um d20 por ponto do atributo, fica com o melhor e soma o bônus da perícia. A cada teste, os dados aparecem no centro da tela, com a soma e o resultado."},
         {"alvo": "foco", "titulo": "Foco e Ataque Especial", "texto": "Gaste [b]PE[/b] para somar d20 ao próximo ataque. Combatentes também têm o Ataque Especial (+5 no ataque por 2 PE)."},
         {"alvo": "membrana", "titulo": "Rituais, itens e a Membrana", "texto": "Ocultistas conjuram rituais, que custam PE, podem custar Sanidade e enfraquecem a Membrana. Granadas ficam no seletor de itens. Algumas criaturas só caem depois de alguém [b]decifrar o enigma[/b]."},
+        {"alvo": "fugir", "titulo": "Fugir", "texto": "Se a luta virar, [b]Fugir[/b] (ação completa) tira o grupo inteiro num teste estendido: cada agente testa uma perícia de fuga, até 3, 5 ou 7 sucessos antes de 3 falhas. Cada falha deixa o perseguidor atacar. Quem foge deixa o encontro no mapa."},
         {"alvo": "encerrar", "titulo": "Encerrar o turno", "texto": "Quando acabar, encerre o turno. Agente que cai fica morrendo; vencer o combate socorre quem caiu."}
       ]
     },
@@ -50,6 +63,7 @@
         {"alvo": "procurar", "titulo": "Procurar pistas", "texto": "Se o agente tem [b]treino[/b] numa perícia do ponto, ele [b]examina[/b] e acha a pista sem rolar dados (de graça na DT 15; nas mais difíceis, gasta PE). Sem treino, escolha a perícia e procure com teste. A cada 3 falhas, perde-se uma rodada."},
         {"alvo": "facilitar", "titulo": "Facilitar e ajudar", "texto": "[b]Facilitar[/b] dá +2 aos próximos testes e ilumina a cena. [b]Ajudar[/b] dá um bônus a um aliado."},
         {"alvo": "caso", "titulo": "A ficha do caso", "texto": "Cada pista revela um [b]traço[/b] do culpado (a etiqueta na foto). Em [b]Deduzir[/b], cruze os traços com os suspeitos e acuse: errar custa Membrana. Acertar [b]quem[/b] enfraquece o chefe; [b]o quê[/b] fortalece a Membrana; [b]onde[/b] revela o covil. Só vale o que está na ficha: sem [b]quem[/b] e [b]o quê[/b], a Ordem não paga a solução do caso."},
+        {"alvo": "cena", "titulo": "O símbolo do culto", "texto": "Até alguém traduzir, cada cena tem o [b]símbolo na parede[/b]: o traço do elemento num anel de sigilos. Só [b]Ocultismo[/b] treinado lê o anel: ele dá o nome do culto e uma pista de quem."},
         {"alvo": "topo", "titulo": "Hora de sair", "texto": "Quando as rodadas acabam, ou quando você decide sair, a cena termina e o grupo volta ao mapa com o que descobriu."}
       ]
     }

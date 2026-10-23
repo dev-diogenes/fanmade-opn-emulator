@@ -1,13 +1,17 @@
 extends SceneTree
 ## Playtest automatizado (docs/41): joga missões completas como um jogador cuidadoso
 ## ("investigador") e como o piloto antigo ("pressa") e grava um resumo em playtest.json.
-##   Godot --headless --path game -s res://dev/playtest_auto.gd -- <pasta de saída>
+##   Godot --headless --path game -s res://dev/playtest_auto.gd -- <pasta de saída> [subgênero]
+## Com o subgênero (ex.: perseguicao, docs/74), as missões vêm de um sinal desse subgênero.
 
 var notas: Array = []
+var subgenero := ""
 
 
 func _initialize():
 	var pasta: String = OS.get_cmdline_user_args()[0]
+	if OS.get_cmdline_user_args().size() > 1:
+		subgenero = OS.get_cmdline_user_args()[1]
 	Preferencias.caminho = "user://sonda_prefs.json"
 	await process_frame
 	root.get_node("Jogo").salvar_automaticamente = false
@@ -28,7 +32,8 @@ func _nota(texto: String) -> void:
 
 func _jogar(perfil: String, semente: int) -> Dictionary:
 	var c := Carreira.nova()
-	var m := c.iniciar_missao(c.roster.duplicate(), semente)
+	var sinal := {} if subgenero == "" else {"semente": semente, "subgenero": subgenero, "alarme_falso": false}
+	var m := c.iniciar_missao(c.roster.duplicate(), semente, sinal)
 	var log: Array = []
 	m.registro.connect(func(t): log.append(String(t))) if m.has_signal("registro") else null
 	var r := {"perfil": perfil, "semente": semente, "combates": 0, "vitorias_combate": 0, "investigacoes": 0, "eventos": 0,
@@ -106,6 +111,8 @@ func _jogar(perfil: String, semente: int) -> Dictionary:
 	r.vitoria = m.vitoria
 	r.turnos = m.turno_mundo
 	r.membrana_fim = m.membrana.valor
+	r.cacador = m.cacador.duplicate()   # docs/74: derrotas e se foi banido
+	r.emboscadas_do_cacador = log.filter(func(t): return String(t).contains("Ele alcança")).size()
 	r.inocentes = m.inocentes_mortos
 	r.solucionado = m.caso_solucionado()
 	r.ampliou = m.caso.ampliada

@@ -163,6 +163,38 @@ static func marcar_aviso_conteudo() -> void:
 	gravar(d)
 
 
+## Dicas de primeira vez (docs/74): ligadas por padrão; as já vistas não voltam.
+static func dicas_ligadas() -> bool:
+	return bool(ler().get("dicas", true))
+
+
+static func definir_dicas(valor: bool) -> void:
+	var d := ler()
+	d["dicas"] = valor
+	gravar(d)
+
+
+static func dicas_vistas() -> Array:
+	return ler().get("dicas_vistas", [])
+
+
+static func marcar_dica(id: String) -> void:
+	var d := ler()
+	var vistas: Array = d.get("dicas_vistas", [])
+	if not id in vistas:
+		vistas.append(id)
+	d["dicas_vistas"] = vistas
+	gravar(d)
+
+
+## "Rever as dicas": todas voltam a aparecer uma vez.
+static func esquecer_dicas() -> void:
+	var d := ler()
+	d.erase("dicas_vistas")
+	d["dicas"] = true
+	gravar(d)
+
+
 static func aviso_flashes_visto() -> bool:
 	return bool(ler().get("aviso_flashes_visto", false))
 

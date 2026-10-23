@@ -110,7 +110,7 @@ func _ready() -> void:
 
 func _alvos_do_tutorial() -> Dictionary:
 	return {"tabuleiro": _vista, "acoes": _btn_mover.get_parent(), "slots": _titulo_slots, "foco": _foco.get_parent(),
-		"membrana": _barra_membrana, "encerrar": _btn_encerrar}
+		"membrana": _barra_membrana, "fugir": _btn_fugir, "encerrar": _btn_encerrar}
 
 
 # --- Preparação ------------------------------------------------------------
@@ -292,6 +292,7 @@ func _avancar() -> void:
 		if fluxo.decide_jogador(ser):
 			_mostrar_faixa_vez(null)
 			_focar_para_controle()
+			_dicas_do_turno(ser as Agente)
 			sessao.liberar()
 			return   # vez do jogador
 		if not autoplay and not sessao.atrasado():
@@ -594,10 +595,24 @@ func _ao_encerrar(vencedor: String) -> void:
 	if _btn_fim != null and not config.is_empty():
 		_btn_fim.text = "Voltar ao mapa"
 	_btn_cacar.visible = vencedor == "agentes" and not combate.fugitivos().is_empty()
+	if _btn_cacar.visible:
+		Dicas.mostrar(self, "cacada")   # docs/74
 	var extra: Array = []
 	for f in combate.fugitivos():
 		extra.append("%s fugiu. Quem escapa avisa o culto." % f.nome)
 	_mostrar_fim(vencedor, extra)
+
+
+## Dicas de primeira vez na vez de um agente (docs/74): a munição da arma de fogo e, quando a
+## luta aperta (alguém com metade dos PV ou caído), a fuga.
+func _dicas_do_turno(a: Agente) -> void:
+	if a == null or autoplay:
+		return
+	if String(a.arma().get("municao", "")) != "" and Dicas.mostrar(self, "municao") != null:
+		return   # uma dica por vez
+	var apertou := combate.participantes.any(func(s): return s is Agente and (s.pv * 2 <= s.pv_maximo or s.esta_fora_de_combate()))
+	if apertou and combate.motivo_fugir(a) == "":
+		Dicas.mostrar(self, "fuga")
 
 
 ## A folha do fim (docs/72: também a fuga do grupo e a caçada ao fugitivo).

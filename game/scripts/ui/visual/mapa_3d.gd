@@ -463,7 +463,10 @@ func atualizar(missao: Missao, destinos: Dictionary) -> void:
 		var revelado := ver_tudo or mapa.revelado(h)
 		_tiles[h].terreno.visible = revelado
 		_tiles[h].nevoa.visible = not revelado
-		_atualizar_marcador(h, mapa.conteudo(h).get("tipo", "") if revelado else "")
+		var tipo: String = mapa.conteudo(h).get("tipo", "") if revelado else ""
+		if tipo == "encontro" and mapa.conteudo(h).get("cacador", false):
+			tipo = "encontro_cacador"   # o caçador da Perseguição (docs/74) tem rótulo
+		_atualizar_marcador(h, tipo)
 	for filho in _destaques.get_children():
 		filho.queue_free()
 	var a := missao.agente_atual()
@@ -492,8 +495,12 @@ func _atualizar_marcador(h: Vector2i, tipo: String) -> void:
 		_marcadores.erase(h)
 	if tipo == "":
 		return
-	var m := Pecas.marco(tipo)
+	var m := Pecas.marco("encontro" if tipo == "encontro_cacador" else tipo)
 	m.set_meta("tipo", tipo)
+	if tipo == "encontro_cacador":
+		var rot := Pecas.rotulo("CAÇADOR", 40, Tema.PERIGO)
+		rot.position = Vector3(0, 1.25, 0)
+		m.add_child(rot)
 	m.position = posicao_hex(h)
 	add_child(m)
 	_marcadores[h] = m
@@ -505,7 +512,7 @@ func _atualizar_marcador(h: Vector2i, tipo: String) -> void:
 	luz.omni_range = 1.8 if tipo in ["objetivo", "vila"] else 1.2
 	luz.position = Vector3(0, 0.6, 0)
 	m.add_child(luz)
-	if tipo == "encontro":
+	if tipo in ["encontro", "encontro_cacador"]:
 		return   # o cultista fica parado, em guarda
 	var fase := float(hash(h) % 100) / 100.0
 	var sobe := m.create_tween().set_loops()

@@ -72,6 +72,8 @@ func _ready() -> void:
 	sessao.liberar()
 	Tutorial.botao_ajuda(self, "investigacao", _alvos_do_tutorial)
 	Tutorial.ao_entrar("investigacao", self, _alvos_do_tutorial())
+	if "simbolo_culto" in cena.pontos_restantes:
+		Dicas.mostrar(self, "culto")   # docs/74
 
 
 func _encerrar_cena() -> void:
