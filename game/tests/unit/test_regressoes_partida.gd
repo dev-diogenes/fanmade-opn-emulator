@@ -32,3 +32,18 @@ func test_encontro_vencido_sai_do_mapa():
 	m._preparar_encontro(h, String(m.mapa.conteudo(h).encontro), false)
 	m.concluir_encontro("agentes")
 	assert_true(m.mapa.conteudo(h).is_empty())
+
+
+## Achado nos testes de docs/72: o fim do combate apagava a marca de rendido, e a arena contava
+## zero presos para o interrogatório, mesmo com o cultista desacordado sem morrer.
+func test_rendido_continua_rendido_depois_da_luta():
+	var rs := RulesetOp2022.carregar_padrao()
+	var c := Combate.new(rs, Dados.new(1))
+	var a := Agente.criar(rs, "A", "combatente", {"agi": 1, "for": 1, "int": 1, "pre": 1, "vig": 1}, {})
+	var p := Ameaca.criar(rs, "Cultista", {"pv": 5, "defesa": 10, "atributos": {"agi": 1}})
+	p.lado = "ameacas"
+	c.adicionar(a)
+	c.adicionar(p)
+	p.sofrer_dano_nao_letal(10)
+	assert_true(c._verificar_fim())
+	assert_eq(c.rendidos().size(), 1)

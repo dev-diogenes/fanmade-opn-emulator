@@ -282,6 +282,23 @@ func _abrir_acao() -> void:
 			b.disabled = a.pe < a.custo_ritual(par[0], par[1])
 			b.pressed.connect(func(): _fechar_acao(); _enviar("conjurar", {"ritual": par[0], "forma": par[1], "alvo": alvo.id}))
 			v.add_child(b)
+	# Itens paranormais (docs/72): medidor, scanner, escuta e emissor
+	for item_id in missao.itens_de_mapa(a):
+		var info := missao.ruleset.equipamento(item_id)
+		var motivo := missao.motivo_item_de_mapa(a, item_id)
+		var u: Dictionary = info.uso_mapa
+		var opcoes: Array = ["sangue", "morte", "conhecimento", "energia", "medo"] if String(u.tipo) == "emissor" else [""]
+		for op in opcoes:
+			var b := Button.new()
+			b.theme_type_variation = "BotaoPapel"
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.add_theme_color_override("font_color", Color("1f5c58"))
+			var custo := ("  ·  %d PE" % int(u.pe)) if int(u.get("pe", 0)) > 0 else ""
+			b.text = "◈ %s%s%s" % [info.nome, (" — pulso de %s" % String(DadosJogo.ler("casos").elementos.get(op, {}).get("nome", op.capitalize()))) if op != "" else "", custo]
+			b.tooltip_text = String(info.get("descricao", "")) + (("\n" + motivo) if motivo != "" else "")
+			b.disabled = motivo != ""
+			b.pressed.connect(func(): _fechar_acao(); _enviar("usar_item", {"item": item_id, "opcao": op, "alvo": a.id}))
+			v.add_child(b)
 	var nota := Label.new()
 	nota.text = "Alcance: você e quem está no mesmo hex."
 	nota.add_theme_color_override("font_color", Color(Tema.TINTA, 0.75))   # docs/21: 5,5:1 no papel
@@ -1020,7 +1037,7 @@ func _atualizar() -> void:
 	_btn_rolar.disabled = ocupado or missao.movimento_rolado
 	_btn_descansar.disabled = not missao.pode_descansar()
 	_motivos_mapa(a, ocupado)
-	_btn_acao.disabled = not missao.pode_agir_no_mapa() or (missao.itens_fora_de_combate(a).is_empty() and missao.rituais_fora_de_combate(a).is_empty())
+	_btn_acao.disabled = not missao.pode_agir_no_mapa() or (missao.itens_fora_de_combate(a).is_empty() and missao.rituais_fora_de_combate(a).is_empty() and missao.itens_de_mapa(a).is_empty())
 	_btn_encerrar.disabled = ocupado
 	_foco.definir(_foco.valor, a.pe_disponivel_no_turno() if a != null else 0)
 	_lbl_mov.text = ("Movimento restante: %d · clique num hex azul (âmbar: longe do grupo)" % missao.movimento_restante) if missao.movimento_rolado else "Role o movimento para andar."
@@ -1078,7 +1095,7 @@ func _motivos_mapa(a: Agente, ocupado: bool) -> void:
 	var tipo := String(missao.mapa.conteudo(missao.posicao(a)).get("tipo", "")) if a != null else ""
 	_btn_descansar.tooltip_text = "Dormir, relaxar, comer, treinar, ler ou revisar o caso: duas ações por agente (p.92)." if not _btn_descansar.disabled else \
 		(evento if evento != "" else ("Já descansou aqui nesta visita." if tipo in ["vila", "inicio"] else "Só dá para descansar numa vila ou no ponto de encontro."))
-	var sem_recurso := a != null and missao.itens_fora_de_combate(a).is_empty() and missao.rituais_fora_de_combate(a).is_empty()
+	var sem_recurso := a != null and missao.itens_fora_de_combate(a).is_empty() and missao.rituais_fora_de_combate(a).is_empty() and missao.itens_de_mapa(a).is_empty()
 	_btn_acao.tooltip_text = "Usar um item de cura ou um ritual de cura (uma vez por turno)." if not _btn_acao.disabled else \
 		(evento if evento != "" else ("A ação deste turno já foi usada." if missao.acao_usada else
 		("Sem itens de cura nem rituais que funcionem fora de combate." if sem_recurso else "Indisponível agora.")))

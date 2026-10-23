@@ -441,18 +441,26 @@
       "consumivel": true,
       "grupo": "explosivo",
       "ref": "p.74",
-      "pendente": "instalar e detonar a mina ainda não existem no combate",
-      "descricao": "Instalada no chão (ação completa, Tática DT 15), detona por controle remoto: 12d6 de perfuração num cone de 6 m (Reflexos DT Int: metade)."
+      "descricao": "Instalar (pede Tática treinada): ação completa e Tática DT 15, no seu espaço, virada para um ponto (falhando, a mina se perde). Detonar: ação padrão, até alcance longo dela: 12d6 de perfuração num cone de 6 m (Reflexos DT Int: metade). Pega quem estiver na frente, aliado ou não.",
+      "mina": {
+        "dano": "12d6",
+        "tipo_dano": "perfuracao",
+        "cone": 6,
+        "resistencia": "reflexos",
+        "dt_atributo": "int",
+        "tatica_dt": 15,
+        "alcance_detonar": "longo"
+      }
     },
     {
       "id": "algemas",
       "nome": "Algemas",
       "categoria": 0,
       "espacos": 1,
-      "pendente": "prender alguém exige agarrar; os rendidos já saem algemados",
-      "descricao": "Par de algemas de aço. Prender quem não está indefeso exige agarrar e vencer outro teste; escapar, Acrobacia DT 30.",
+      "descricao": "Prender uma pessoa (ação padrão): quem está caído, inconsciente ou paralisado vai direto; quem está de pé, só se você a agarra e vence outro teste de agarrar. No jogo, quem é algemado se rende e sai da luta, e a Ordem o interroga depois.",
       "grupo": "operacional",
-      "ref": "p.74"
+      "ref": "p.74",
+      "algemas": true
     },
     {
       "id": "arpeu",
@@ -710,10 +718,21 @@
         "condicao": "paralisado",
         "resistencia": "vontade",
         "dt_atributo": "agi",
-        "rodadas": 1
+        "rodadas": 0,
+        "manter": {
+          "pericia": "vontade",
+          "pe_por_turno": 1
+        }
       },
-      "pendente": "a armadilha de 3×3 m e manter a criatura presa (1 PE por rodada)",
-      "descricao": "Cordas ou correntes do elemento, para prender criaturas que o temem. Laçar: ação padrão e 1 PE, alcance curto; a criatura fica paralisada até o seu próximo turno (Vontade DT Agi evita)."
+      "descricao": "Cordas ou correntes do elemento, para prender criaturas que o temem. Laçar: ação padrão e 1 PE, alcance curto; a criatura fica paralisada (Vontade DT Agi evita) e repete o teste no começo de cada turno dela, enquanto você paga 1 PE por rodada. Armadilha: ação completa e 2 PE, gasta as amarras; quem entra na área de 3×3 m testa Reflexos (DT Int) ou fica imóvel até o fim da cena, e a área vira terreno difícil.",
+      "armadilha": {
+        "raio": 1.5,
+        "alcance": "curto",
+        "pe": 2,
+        "resistencia": "reflexos",
+        "dt_atributo": "int",
+        "condicao": "imovel"
+      }
     },
     {
       "id": "amarras_morte",
@@ -731,10 +750,21 @@
         "condicao": "paralisado",
         "resistencia": "vontade",
         "dt_atributo": "agi",
-        "rodadas": 1
+        "rodadas": 0,
+        "manter": {
+          "pericia": "vontade",
+          "pe_por_turno": 1
+        }
       },
-      "pendente": "a armadilha de 3×3 m e manter a criatura presa (1 PE por rodada)",
-      "descricao": "Cordas ou correntes do elemento, para prender criaturas que o temem. Laçar: ação padrão e 1 PE, alcance curto; a criatura fica paralisada até o seu próximo turno (Vontade DT Agi evita)."
+      "descricao": "Cordas ou correntes do elemento, para prender criaturas que o temem. Laçar: ação padrão e 1 PE, alcance curto; a criatura fica paralisada (Vontade DT Agi evita) e repete o teste no começo de cada turno dela, enquanto você paga 1 PE por rodada. Armadilha: ação completa e 2 PE, gasta as amarras; quem entra na área de 3×3 m testa Reflexos (DT Int) ou fica imóvel até o fim da cena, e a área vira terreno difícil.",
+      "armadilha": {
+        "raio": 1.5,
+        "alcance": "curto",
+        "pe": 2,
+        "resistencia": "reflexos",
+        "dt_atributo": "int",
+        "condicao": "imovel"
+      }
     },
     {
       "id": "amarras_conhecimento",
@@ -752,10 +782,21 @@
         "condicao": "paralisado",
         "resistencia": "vontade",
         "dt_atributo": "agi",
-        "rodadas": 1
+        "rodadas": 0,
+        "manter": {
+          "pericia": "vontade",
+          "pe_por_turno": 1
+        }
       },
-      "pendente": "a armadilha de 3×3 m e manter a criatura presa (1 PE por rodada)",
-      "descricao": "Cordas ou correntes do elemento, para prender criaturas que o temem. Laçar: ação padrão e 1 PE, alcance curto; a criatura fica paralisada até o seu próximo turno (Vontade DT Agi evita)."
+      "descricao": "Cordas ou correntes do elemento, para prender criaturas que o temem. Laçar: ação padrão e 1 PE, alcance curto; a criatura fica paralisada (Vontade DT Agi evita) e repete o teste no começo de cada turno dela, enquanto você paga 1 PE por rodada. Armadilha: ação completa e 2 PE, gasta as amarras; quem entra na área de 3×3 m testa Reflexos (DT Int) ou fica imóvel até o fim da cena, e a área vira terreno difícil.",
+      "armadilha": {
+        "raio": 1.5,
+        "alcance": "curto",
+        "pe": 2,
+        "resistencia": "reflexos",
+        "dt_atributo": "int",
+        "condicao": "imovel"
+      }
     },
     {
       "id": "amarras_energia",
@@ -773,10 +814,21 @@
         "condicao": "paralisado",
         "resistencia": "vontade",
         "dt_atributo": "agi",
-        "rodadas": 1
+        "rodadas": 0,
+        "manter": {
+          "pericia": "vontade",
+          "pe_por_turno": 1
+        }
       },
-      "pendente": "a armadilha de 3×3 m e manter a criatura presa (1 PE por rodada)",
-      "descricao": "Cordas ou correntes do elemento, para prender criaturas que o temem. Laçar: ação padrão e 1 PE, alcance curto; a criatura fica paralisada até o seu próximo turno (Vontade DT Agi evita)."
+      "descricao": "Cordas ou correntes do elemento, para prender criaturas que o temem. Laçar: ação padrão e 1 PE, alcance curto; a criatura fica paralisada (Vontade DT Agi evita) e repete o teste no começo de cada turno dela, enquanto você paga 1 PE por rodada. Armadilha: ação completa e 2 PE, gasta as amarras; quem entra na área de 3×3 m testa Reflexos (DT Int) ou fica imóvel até o fim da cena, e a área vira terreno difícil.",
+      "armadilha": {
+        "raio": 1.5,
+        "alcance": "curto",
+        "pe": 2,
+        "resistencia": "reflexos",
+        "dt_atributo": "int",
+        "condicao": "imovel"
+      }
     },
     {
       "id": "scanner_sangue",
@@ -786,8 +838,12 @@
       "elemento": "sangue",
       "grupo": "paranormal",
       "ref": "p.77",
-      "pendente": "mostrar no mapa a direção das manifestações",
-      "descricao": "Aparelho ligado a objetos amaldiçoados: gastando 1 PE por rodada, aponta a direção de tudo que é do elemento em alcance longo."
+      "descricao": "Aparelho ligado a objetos amaldiçoados: por 1 PE, aponta tudo que é do elemento a até 8 hexes. Se o caso for desse elemento, aponta também o covil.",
+      "uso_mapa": {
+        "tipo": "scanner",
+        "pe": 1,
+        "raio": 8
+      }
     },
     {
       "id": "scanner_morte",
@@ -797,8 +853,12 @@
       "elemento": "morte",
       "grupo": "paranormal",
       "ref": "p.77",
-      "pendente": "mostrar no mapa a direção das manifestações",
-      "descricao": "Aparelho ligado a objetos amaldiçoados: gastando 1 PE por rodada, aponta a direção de tudo que é do elemento em alcance longo."
+      "descricao": "Aparelho ligado a objetos amaldiçoados: por 1 PE, aponta tudo que é do elemento a até 8 hexes. Se o caso for desse elemento, aponta também o covil.",
+      "uso_mapa": {
+        "tipo": "scanner",
+        "pe": 1,
+        "raio": 8
+      }
     },
     {
       "id": "scanner_conhecimento",
@@ -808,8 +868,12 @@
       "elemento": "conhecimento",
       "grupo": "paranormal",
       "ref": "p.77",
-      "pendente": "mostrar no mapa a direção das manifestações",
-      "descricao": "Aparelho ligado a objetos amaldiçoados: gastando 1 PE por rodada, aponta a direção de tudo que é do elemento em alcance longo."
+      "descricao": "Aparelho ligado a objetos amaldiçoados: por 1 PE, aponta tudo que é do elemento a até 8 hexes. Se o caso for desse elemento, aponta também o covil.",
+      "uso_mapa": {
+        "tipo": "scanner",
+        "pe": 1,
+        "raio": 8
+      }
     },
     {
       "id": "scanner_energia",
@@ -819,8 +883,12 @@
       "elemento": "energia",
       "grupo": "paranormal",
       "ref": "p.77",
-      "pendente": "mostrar no mapa a direção das manifestações",
-      "descricao": "Aparelho ligado a objetos amaldiçoados: gastando 1 PE por rodada, aponta a direção de tudo que é do elemento em alcance longo."
+      "descricao": "Aparelho ligado a objetos amaldiçoados: por 1 PE, aponta tudo que é do elemento a até 8 hexes. Se o caso for desse elemento, aponta também o covil.",
+      "uso_mapa": {
+        "tipo": "scanner",
+        "pe": 1,
+        "raio": 8
+      }
     },
     {
       "id": "camera_aura",
@@ -828,9 +896,12 @@
       "categoria": 2,
       "espacos": 1,
       "ref": "p.76",
-      "pendente": "revelar auras na investigação",
-      "descricao": "Câmera amaldiçoada com sigilos: uma foto (ação padrão e 1 PE) revela auras paranormais em pessoas e objetos, na cor do elemento.",
-      "grupo": "paranormal"
+      "descricao": "Câmera amaldiçoada com sigilos: uma foto (1 PE e a ação) mostra as auras de pessoas e objetos, na cor do elemento. Na investigação, tira a dúvida de um depoimento incerto: confirma o traço ou o desmente.",
+      "grupo": "paranormal",
+      "uso_investigacao": {
+        "tipo": "aura",
+        "pe": 1
+      }
     },
     {
       "id": "emissor_de_pulsos",
@@ -838,9 +909,14 @@
       "categoria": 2,
       "espacos": 1,
       "ref": "p.77",
-      "pendente": "atrair e afastar criaturas no mapa",
-      "descricao": "Caixa coberta de sigilos (ação completa e 1 PE): atrai criaturas do elemento escolhido e afasta as do elemento oposto (Vontade DT Pre evita).",
-      "grupo": "paranormal"
+      "descricao": "Caixa coberta de sigilos (a ação e 1 PE): emite um pulso de um elemento, que puxa as criaturas dele dois hexes para perto e afasta dois hexes as do elemento que ele oprime.",
+      "grupo": "paranormal",
+      "uso_mapa": {
+        "tipo": "emissor",
+        "pe": 1,
+        "raio": 6,
+        "passos": 2
+      }
     },
     {
       "id": "escuta_de_ruidos",
@@ -848,9 +924,13 @@
       "categoria": 2,
       "espacos": 1,
       "ref": "p.77",
-      "pendente": "o +5 para identificar criaturas",
-      "descricao": "Microfone que grava ruídos do Outro Lado por 24 horas (ação completa e 2 PE). Ouvir dá +5 em Ocultismo para identificar a criatura.",
-      "grupo": "paranormal"
+      "descricao": "Microfone que grava ruídos do Outro Lado (a ação e 2 PE). Instalada, vale até o fim da missão: +5 em Ocultismo para identificar as criaturas (decifrar o enigma).",
+      "grupo": "paranormal",
+      "uso_mapa": {
+        "tipo": "escuta",
+        "pe": 2,
+        "bonus": 5
+      }
     },
     {
       "id": "medidor_de_membrana",
@@ -858,9 +938,13 @@
       "categoria": 2,
       "espacos": 1,
       "ref": "p.77",
-      "pendente": "ler a Membrana do lugar no mapa",
-      "descricao": "Conjunto de medidores de temperatura, campo e tempo. Treinado em Ocultismo, avalia a Membrana de um lugar: leituras instáveis indicam entidade.",
-      "grupo": "paranormal"
+      "descricao": "Medidores de temperatura, campo e tempo. Treinado em Ocultismo, lê a Membrana do lugar: mostra as criaturas a até 4 hexes e quanto falta para a próxima surgir.",
+      "grupo": "paranormal",
+      "uso_mapa": {
+        "tipo": "medidor",
+        "treinado": "ocultismo",
+        "raio": 4
+      }
     }
   ],
   "acessorios_base": [

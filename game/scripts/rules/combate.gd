@@ -40,6 +40,11 @@ var acoes: Dictionary = {}
 var inspiracoes_pendentes: Array[Dictionary] = []
 
 var _indice := -1
+var _armadilhas: Array = []   ## amarras armadas (docs/72): {celulas, elemento, dt, dono, nome}
+var fugiram := false          ## o grupo fugiu da luta (docs/72)
+const PERICIAS_FUGA := ["atletismo", "acrobacia", "furtividade", "percepcao", "sobrevivencia", "pilotagem", "tatica"]
+const PERICIAS_CACADA := ["atletismo", "percepcao", "sobrevivencia", "investigacao", "intimidacao", "pilotagem"]
+var _minas: Array = []        ## minas instaladas (docs/72): {dono, pos, direcao, dt, info}
 var _reacoes_declaradas: Dictionary = {}   ## Ser -> {"tipo", "arma", "revidar"}
 var _reducoes_declaradas: Dictionary = {}  ## Ser -> habilidade_id (Duro de Matar, Abraçar a Dor)
 var _mortos_inspiradores: Array[Agente] = []
@@ -477,6 +482,7 @@ func mover(ser: Ser, destino: Vector2i) -> bool:
 	grade.mover(ser, destino, limite)
 	for vitima in arrastando:
 		_arrastar(ser, vitima)
+	_checar_armadilhas(ser)
 	for outro in grade.seres():   # Reflexos Guiados por Corda: quem chega ao lado leva um golpe
 		if outro is Ameaca and (outro as Ameaca).tem_hab("reflexos_guiados") and outro.lado != ser.lado and not outro.esta_fora_de_combate():
 			if grade.estao_adjacentes(ser, outro) and not outro in vizinhos_antes and not _usou_na_rodada(outro, "reflexos_guiados"):
@@ -564,6 +570,10 @@ func usar_item_combate(agente: Agente, item_id: String, alvo: Ser) -> Dictionary
 			var rod = uso.get("rodadas", 0)
 			var n := 0 if uso.get("ate_fim_da_cena", false) else (dados.rolar_expressao(String(rod)) if rod is String else int(rod))
 			alvo.aplicar_condicao(String(uso.condicao), n)
+			if uso.has("manter"):   # amarras: repete Vontade no turno dela, enquanto o agente paga
+				alvo.rituais_ativos[item_id] = {"conjurador": agente, "aflicao": {"nome": info.nome, "pericia": String(uso.manter.pericia),
+					"dt": agente.dt_habilidade(String(uso.get("dt_atributo", "agi"))), "sucessos": 0, "encerra_apos": 1,
+					"condicao_falha": String(uso.condicao), "pe_por_turno": int(uso.manter.pe_por_turno), "pagador": agente}}
 			if String(uso.condicao) == Ser.INCONSCIENTE and alvo is Ameaca and not (alvo as Ameaca).criatura:
 				alvo.mods_cena["rendido"] = true   # dormiu: a Ordem interroga depois (docs/40)
 			res.textos.append("%s fica %s" % [alvo.nome, String(uso.condicao).replace("_", " ")])
@@ -572,6 +582,293 @@ func usar_item_combate(agente: Agente, item_id: String, alvo: Ser) -> Dictionary
 	_log("[color=#eda64a]%s usa %s em %s:[/color] %s." % [agente.nome, info.nome, alvo.nome, ", ".join(PackedStringArray(res.textos))])
 	_verificar_fim()
 	return res
+
+
+# --- Arremesso, amarras, mina e algemas (docs/72) -------------------------------------
+
+## Dá para arremessar esta arma? Corpo a corpo, menos o desarmado e a coronhada (p.64-65).
+func pode_arremessar(arma: Dictionary) -> bool:
+	return String(arma.get("ataque", "")) == "corpo_a_corpo" and not String(arma.get("id", "")) in ["desarmado", "coronhada", "arma_de_sangue"]
+
+
+## A arma voando (p.64): Pontaria em vez de Luta, a Força ainda soma no dano, alcance curto.
+## As feitas para isso (faca, lança, machadinha) vão sem penalidade; as outras, com −1 dado.
+func arma_arremessada(arma: Dictionary) -> Dictionary:
+	var a := arma.duplicate()
+	a.ataque = "arremesso"
+	a.pericia = "pontaria"
+	a.alcance = String(arma.get("alcance", "curto"))
+	if not arma.get("arremesso", false):
+		a.dados_ataque = int(arma.get("dados_ataque", 0)) - 1
+	a.nome = "%s (arremessada)" % arma.get("nome", "arma")
+	return a
+
+
+## Armadilha das amarras (p.76): ação completa e 2 PE; gasta as amarras. Área de 3×3 m em
+## alcance curto, terreno difícil. A criatura que teme o elemento e entra nela testa Reflexos
+## (DT Int); falhando, fica imóvel até o fim da cena.
+func preparar_armadilha(agente: Agente, item_id: String, celula: Vector2i) -> Dictionary:
+	var info := ruleset.equipamento(item_id)
+	var arm: Dictionary = info.get("armadilha", {})
+	if arm.is_empty() or not agente.tem_item(item_id):
+		return {"ok": false, "erro": "sem as amarras"}
+	if grade == null or not grade.tem(agente) or Grade.distancia(grade.posicao(agente), celula) > int(Grade.ALCANCES.get(String(arm.get("alcance", "curto")), 6)):
+		return {"ok": false, "erro": "fora de alcance"}
+	if agente.pe + agente.pe_temporario < int(arm.pe):
+		return {"ok": false, "erro": "PE insuficientes"}
+	if acoes.has(agente) and not gastar_acao(agente, "completa"):
+		return {"ok": false, "erro": "pede a ação completa"}
+	agente.gastar_pe(int(arm.pe), true)
+	agente.equipamento.erase(item_id)   # as amarras ficam no chão
+	var celulas := grade.celulas_da_area("esfera", grade.posicao(agente), celula, float(arm.get("raio", 1.5)))
+	grade.marcar_dificil(celulas, true)
+	_armadilhas.append({"celulas": celulas, "elemento": String(info.get("elemento", "")), "dt": agente.dt_habilidade(String(arm.get("dt_atributo", "int"))),
+		"dono": agente, "nome": info.nome, "resistencia": String(arm.resistencia), "condicao": String(arm.condicao), "pegos": []})
+	_log("[color=#eda64a]%s arma %s no chão.[/color]" % [agente.nome, info.nome])
+	return {"ok": true, "celulas": celulas}
+
+
+func _checar_armadilhas(ser: Ser) -> void:
+	if grade == null or not grade.tem(ser) or not ser is Ameaca or not (ser as Ameaca).criatura:
+		return
+	var pos := grade.posicao(ser)
+	for arm in _armadilhas:
+		if not pos in arm.celulas or not String(arm.elemento) in (ser as Ameaca).vulnerabilidades or arm.pegos.has(ser):
+			continue
+		arm.pegos.append(ser)   # uma vez por criatura
+		var t := Teste.rolar(dados, ser.dados_da_pericia(String(arm.resistencia)), ser.bonus_pericia(String(arm.resistencia)), int(arm.dt))
+		if not t.sucesso:
+			ser.aplicar_condicao(String(arm.condicao))
+			_log("[color=#eda64a]%s pisa em %s e fica preso.[/color]" % [ser.nome, arm.nome])
+		else:
+			_log("%s passa por %s sem se prender." % [ser.nome, arm.nome])
+
+
+## Mina antipessoal (p.74): ação completa e Tática DT 15 para instalar no espaço do agente,
+## virada para `direcao` (falhando, a mina se perde).
+func instalar_mina(agente: Agente, item_id: String, direcao: Vector2i) -> Dictionary:
+	var info := ruleset.equipamento(item_id)
+	var mi: Dictionary = info.get("mina", {})
+	if mi.is_empty() or not agente.tem_item(item_id) or grade == null or not grade.tem(agente):
+		return {"ok": false, "erro": "sem a mina"}
+	if direcao == grade.posicao(agente):
+		return {"ok": false, "erro": "escolha para onde a mina aponta"}
+	if not agente.pode_usar_pericia("tatica"):
+		return {"ok": false, "erro": "instalar a mina pede Tática treinada"}   # somente treinada: nem tenta, nem gasta
+	if acoes.has(agente) and not gastar_acao(agente, "completa"):
+		return {"ok": false, "erro": "pede a ação completa"}
+	agente.consumir_item(item_id)
+	var t := agente.testar(dados, "tatica", int(mi.get("tatica_dt", 15)))
+	if t == null or not t.sucesso:
+		_log("%s tenta instalar a mina, mas erra a fiação: ela não vai funcionar." % agente.nome)
+		return {"ok": true, "instalada": false, "teste": t}
+	_minas.append({"dono": agente, "pos": grade.posicao(agente), "direcao": direcao, "dt": agente.dt_habilidade(String(mi.get("dt_atributo", "int"))), "info": info})
+	_log("[color=#eda64a]%s instala uma mina antipessoal e desenrola o fio.[/color]" % agente.nome)
+	return {"ok": true, "instalada": true, "teste": t}
+
+
+func tem_mina(agente: Agente) -> bool:
+	return _minas.any(func(x): return x.dono == agente)
+
+
+## Detonar (p.74): ação padrão, com a mina até alcance longo. Cone de 6 m a partir dela.
+func detonar_mina(agente: Agente) -> Dictionary:
+	var minas := _minas.filter(func(x): return x.dono == agente)
+	if minas.is_empty() or grade == null or not grade.tem(agente):
+		return {"ok": false, "erro": "nenhuma mina instalada"}
+	var m: Dictionary = minas[0]
+	var mi: Dictionary = m.info.mina
+	if Grade.distancia(grade.posicao(agente), m.pos) > int(Grade.ALCANCES.get(String(mi.get("alcance_detonar", "longo")), 24)):
+		return {"ok": false, "erro": "longe demais do controle"}
+	if acoes.has(agente) and not gastar_acao(agente, "padrao"):
+		return {"ok": false, "erro": "sem ação padrão"}
+	_minas.erase(m)
+	var celulas := grade.celulas_da_area("cone", m.pos, m.direcao, float(mi.get("cone", 6)))
+	var rolagem := dados.rolar_expressao(String(mi.dano))
+	var textos := PackedStringArray()
+	for x in grade.seres_em(celulas):
+		if x.esta_fora_de_combate() and not x.tem(Ser.POCA):
+			continue
+		var rp := String(mi.get("resistencia", "reflexos"))
+		var dano := rolagem
+		if Teste.rolar(dados, x.dados_da_pericia(rp), x.bonus_pericia(rp) + x.bonus_contra(["area"], rp), int(m.dt)).sucesso:
+			dano = 0 if _tem_evasao(x, rp) else dano / 2
+		textos.append("%s %d" % [x.nome, aplicar_dano(x, dano, String(mi.get("tipo_dano", "perfuracao")), 0, agente)])
+	_log("[color=#eda64a]%s detona a mina:[/color] %s" % [agente.nome, ", ".join(textos) if not textos.is_empty() else "ninguém na frente dela"])
+	_verificar_fim()
+	return {"ok": true, "celulas": celulas}
+
+
+## Algemas (p.74): ação padrão contra uma pessoa ao lado. Caída, inconsciente ou paralisada,
+## vai direto; de pé, só se o agente a agarra e vence outro teste de agarrar. No jogo, quem é
+## algemado se rende: sai da luta e é interrogado depois (docs/40).
+func motivo_algemar(agente: Agente, alvo: Ser) -> String:
+	if not agente.equipamento.any(func(i): return ruleset.equipamento(i).get("algemas", false)):
+		return "Sem algemas."
+	if alvo == null or not alvo is Ameaca or (alvo as Ameaca).criatura or alvo.tem(Ser.MORTO) or alvo.mods_cena.get("algemado", false):
+		return "Só se algema uma pessoa."
+	if grade != null and grade.tem(agente) and grade.tem(alvo) and not grade.estao_adjacentes(agente, alvo):
+		return "Precisa estar ao lado."
+	var rendido: bool = alvo.esta_indefeso() or alvo.tem(Ser.CAIDO) or alvo.tem(Ser.INCONSCIENTE)
+	if not rendido and alvo.mods_cena.get("agarrado_por") != agente:
+		return "Agarre a pessoa antes (manobra), ou espere que ela caia."
+	if acoes.has(agente) and int(acoes_restantes(agente).padrao) <= 0:
+		return "Sem ação padrão."
+	return ""
+
+
+func algemar(agente: Agente, alvo: Ser) -> Dictionary:
+	var motivo := motivo_algemar(agente, alvo)
+	if motivo != "":
+		return {"ok": false, "erro": motivo}
+	gastar_acao(agente, "padrao")
+	var rendido: bool = alvo.esta_indefeso() or alvo.tem(Ser.CAIDO) or alvo.tem(Ser.INCONSCIENTE)
+	if not rendido and _teste_de_manobra(agente, alvo) <= 0:
+		_log("%s se debate e não deixa %s fechar as algemas." % [alvo.nome, agente.nome])
+		return {"ok": true, "algemado": false}
+	for i in agente.equipamento:
+		if ruleset.equipamento(i).get("algemas", false):
+			agente.equipamento.erase(i)
+			break
+	if alvo.mods_cena.get("agarrado_por") == agente:
+		_soltar(alvo)
+	alvo.mods_cena["algemado"] = true
+	alvo.mods_cena["rendido"] = true
+	_log("[color=#7fd3c7]%s algema %s, que se rende.[/color]" % [agente.nome, alvo.nome])
+	_verificar_fim()
+	return {"ok": true, "algemado": true}
+
+
+# --- Fuga e caçada (docs/72): testes estendidos, p.86-87 --------------------------------
+
+## A fuga pelo tipo de quem persegue: gente e bicho, complexidade baixa (DT 15); criatura do
+## Outro Lado, média (DT 20); o chefe do covil, alta (DT 25).
+func dificuldade_da_fuga() -> Dictionary:
+	var criatura := participantes.any(func(s): return s is Ameaca and s.lado != "agentes" and not s.esta_fora_de_combate() and (s as Ameaca).criatura)
+	if bool(regras.get("chefe", false)):
+		return {"dt": 25, "complexidade": "alta"}
+	if criatura:
+		return {"dt": 20, "complexidade": "media"}
+	return {"dt": 15, "complexidade": "baixa"}
+
+
+func motivo_fugir(agente: Agente) -> String:
+	if encerrado or ser_atual() != agente:
+		return "Não é a vez de quem foge."
+	if acoes.has(agente) and (int(acoes_restantes(agente).padrao) <= 0 or int(acoes_restantes(agente).movimento) <= 0):
+		return "Fugir pede a ação completa."
+	for s in participantes:
+		if s is Agente and not s.esta_fora_de_combate() and (s.tem(Ser.AGARRADO) or s.tem(Ser.PARALISADO) or s.tem(Ser.IMOVEL)):
+			return "%s está preso: ninguém foge deixando um agente para trás." % s.nome
+	return ""
+
+
+## Fugir (docs/72): o grupo todo foge num teste estendido (p.86-87). Cada agente de pé testa a
+## melhor perícia de fuga que ainda não usou, por rodadas, até os sucessos ou três falhas.
+## Cada falha deixa o mais forte dos perseguidores alcançar quem tropeçou e atacar. Fugindo,
+## o combate acaba ("fuga"); com três falhas, o grupo fica encurralado (desprevenido) e a luta segue.
+func fugir(agente: Agente) -> Dictionary:
+	var motivo := motivo_fugir(agente)
+	if motivo != "":
+		return {"ok": false, "erro": motivo}
+	if acoes.has(agente):
+		gastar_acao(agente, "completa")
+	var dif := dificuldade_da_fuga()
+	var te := TesteEstendido.novo(int(dif.dt), String(dif.complexidade), PERICIAS_FUGA)
+	var grupo: Array = participantes.filter(func(s): return s is Agente and not s.esta_fora_de_combate())
+	var textos := PackedStringArray()
+	_log("[color=#8fa3d9][b]Fuga![/b] Teste estendido: %d sucessos antes de 3 falhas, DT %d.[/color]" % [te.exigidos, te.dt])
+	for _rodada in 12:
+		for a in grupo:
+			if te.terminou() or a.esta_fora_de_combate():
+				continue
+			var r := te.testar(dados, a)
+			if r.is_empty():
+				continue
+			var linha := "%s, %s: %s" % [a.nome, ruleset.pericia(String(r.pericia)).nome, "consegue" if r.sucesso else "tropeça"]
+			if not r.sucesso:
+				var golpe := _perseguidor_alcanca(a)
+				if golpe != "":
+					linha += " — " + golpe
+			textos.append(linha)
+			_log("  %s (%s)" % [linha, te.placar()])
+		if te.terminou():
+			break
+	var res := {"ok": true, "fugiu": te.venceu(), "placar": te.placar(), "textos": textos, "registros": te.registros}
+	if te.venceu():
+		fugiram = true
+		_log("[color=#6fcf8e][b]O grupo escapa.[/b][/color]")
+		_verificar_fim()   # lado_vencedor() = "fuga"
+	else:
+		for a in grupo:
+			if not a.esta_fora_de_combate():
+				a.aplicar_condicao(Ser.DESPREVENIDO, 1)
+		_log("[color=#e0574a][b]Encurralados.[/b] A fuga falha e o grupo fica desprevenido.[/color]")
+		_verificar_fim()
+	return res
+
+
+## Quem persegue alcança quem tropeçou: o perseguidor mais forte ataca (sem contar distância).
+func _perseguidor_alcanca(alvo: Agente) -> String:
+	var melhor: Ameaca = null
+	for s in participantes:
+		if s is Ameaca and s.lado != alvo.lado and not s.esta_fora_de_combate() and not (s as Ameaca).ataques.is_empty():
+			if melhor == null or (s as Ameaca).vd > melhor.vd:
+				melhor = s
+	if melhor == null:
+		return ""
+	var r := atacar(melhor, alvo, melhor.ataques[0], 0, {"ignorar_distancia": true})
+	if r.teste == null:
+		return ""
+	return "%s alcança e %s" % [melhor.nome, ("acerta: %d de dano" % r.dano) if r.acertou else "erra"]
+
+
+## Ameaça que foge (docs/72): uma pessoa quase morta, sozinha no lado dela, larga a luta.
+func fuga_da_ameaca(amea: Ameaca) -> void:
+	amea.mods_cena["fugiu"] = true
+	if grade != null and grade.tem(amea):
+		grade.remover(amea)
+	_log("[color=#eda64a]%s larga tudo e foge.[/color]" % amea.nome)
+	_verificar_fim()
+
+
+## Quem fugiu do lado das ameaças e ainda não foi caçado.
+func fugitivos() -> Array:
+	return participantes.filter(func(s): return s is Ameaca and s.mods_cena.get("fugiu", false) and not s.mods_cena.get("rendido", false) and not s.mods_cena.get("escapou", false))
+
+
+## Caçada (docs/72): depois da luta, o grupo persegue quem fugiu, num teste estendido de
+## complexidade baixa (DT 15). Pegando, o fugitivo vira preso (interrogatório, docs/40);
+## falhando, ele escapa e avisa o culto (a Missão cobra Membrana).
+func cacar_fugitivo() -> Dictionary:
+	var lista := fugitivos()
+	if lista.is_empty():
+		return {"ok": false, "erro": "ninguém fugiu"}
+	var alvo: Ameaca = lista[0]
+	var te := TesteEstendido.novo(15, "baixa", PERICIAS_CACADA)
+	var grupo: Array = participantes.filter(func(s): return s is Agente and not s.tem(Ser.MORTO) and not s.tem(Ser.INCONSCIENTE) and not s.tem(Ser.INSANO))
+	var textos := PackedStringArray()
+	for _rodada in 12:
+		for a in grupo:
+			if te.terminou():
+				continue
+			var r := te.testar(dados, a)
+			if not r.is_empty():
+				textos.append("%s, %s: %s" % [a.nome, ruleset.pericia(String(r.pericia)).nome, "na trilha" if r.sucesso else "perde o rastro"])
+		if te.terminou() or grupo.is_empty():
+			break
+	if te.venceu():
+		alvo.mods_cena["rendido"] = true
+		_log("[color=#6fcf8e]O grupo alcança %s, que se rende.[/color]" % alvo.nome)
+	else:
+		alvo.mods_cena["escapou"] = true
+		_log("[color=#e0574a]%s some na noite. Alguém vai contar ao culto.[/color]" % alvo.nome)
+	return {"ok": true, "pegou": te.venceu(), "placar": te.placar(), "textos": textos, "alvo": alvo}
+
+
+## Quantos fugitivos escaparam (o que não foi caçado conta como escapado).
+func fugitivos_escapados() -> int:
+	return participantes.filter(func(s): return s is Ameaca and s.mods_cena.get("fugiu", false) and not s.mods_cena.get("rendido", false)).size()
 
 
 ## Por que o item de combate não pode ser usado neste alvo agora ("" = pode).
@@ -924,9 +1221,26 @@ func _processar_aflicoes(ser: Ser) -> void:
 			_testar_aflicao(ser, rid, false)
 
 
+## PE pagos no turno de outro ser (manter as amarras): fora do limite por turno do agente.
+func _pagar_fora_do_turno(ag: Agente, n: int) -> bool:
+	if ag.pe + ag.pe_temporario < n:
+		return false
+	var de_temp := mini(ag.pe_temporario, n)
+	ag.pe_temporario -= de_temp
+	ag.pe -= n - de_temp
+	return true
+
+
 func _testar_aflicao(ser: Ser, rid: String, primeiro: bool) -> void:
 	var af: Dictionary = ser.rituais_ativos[rid].aflicao
-	var nome := String(ruleset.ritual(rid).get("nome", rid))
+	var nome := String(af.get("nome", ruleset.ritual(rid).get("nome", rid)))
+	if not primeiro and af.has("pe_por_turno"):   # amarras: manter custa PE a cada rodada (p.76)
+		var pagador = af.get("pagador")
+		if not pagador is Agente or (pagador as Agente).esta_fora_de_combate() or not _pagar_fora_do_turno(pagador as Agente, int(af.pe_por_turno)):
+			ser.rituais_ativos.erase(rid)
+			ser.condicoes.erase(String(af.get("condicao_falha", "")))
+			_log("%s se solta de %s: ninguém segura." % [ser.nome, nome])
+			return
 	var per := String(af.pericia)
 	var t := Teste.rolar(dados, ser.dados_da_pericia(per), ser.bonus_pericia(per) + ser.efeito_ritual("resistencia_rituais"), int(af.dt))
 	var dano := 0
@@ -1059,9 +1373,14 @@ func levantar(ser: Ser) -> bool:
 
 ## Pegar a arma derrubada (ela cai no espaço de quem a segurava): ação de movimento (p.84).
 func pegar_arma(ser: Ser) -> bool:
-	if not ser.mods_cena.has("arma_caida") or not gastar_acao(ser, "movimento"):
+	if not ser.mods_cena.has("arma_caida"):
+		return false
+	if ser.mods_cena.has("arma_caida_em") and grade != null and grade.tem(ser) and Grade.distancia(grade.posicao(ser), ser.mods_cena.arma_caida_em) > 1:
+		return false   # a arma arremessada está lá longe: é preciso ir até ela
+	if not gastar_acao(ser, "movimento"):
 		return false
 	ser.mods_cena.erase("arma_caida")
+	ser.mods_cena.erase("arma_caida_em")
 	_log("%s pega a arma de volta." % ser.nome)
 	return true
 
@@ -1546,6 +1865,8 @@ func _aplicar_efeito_ritual(conjurador: Ser, ritual_id: String, r: Dictionary, e
 			var to := Teste.rolar(dados, conjurador.dados_da_pericia("ocultismo"), conjurador.bonus_pericia("ocultismo"), 0)
 			var desfeitos := PackedStringArray()
 			for rid in alvo.rituais_ativos.keys():
+				if ruleset.ritual(rid).is_empty():
+					continue   # as amarras não são ritual
 				var origem = alvo.rituais_ativos[rid].get("conjurador")
 				var dt_r: int = (origem as Ser).dt_ritual(rid) if origem is Ser else 10
 				if dt_r <= to.total:
@@ -1673,6 +1994,17 @@ func escapar(ser: Ser) -> bool:
 
 func zonas() -> Array[Dictionary]:
 	return _zonas
+
+
+## Armadilhas e minas no chão (docs/72), para o tabuleiro: {celulas, elemento}. O grupo sabe onde
+## armou; a mina aparece como "mina".
+func marcas_no_chao() -> Array:
+	var lista: Array = []
+	for arm in _armadilhas:
+		lista.append({"celulas": arm.celulas, "elemento": arm.elemento})
+	for mi in _minas:
+		lista.append({"celulas": [mi.pos], "elemento": "mina"})
+	return lista
 
 
 func _criar_zona(conjurador: Ser, ritual_id: String, e: Dictionary, celulas: Array) -> Dictionary:
@@ -2339,8 +2671,10 @@ func decifrar_enigma(agente: Agente, criatura: Ameaca, pericia: String = "") -> 
 	var dt := int(etapa.get("dt", 20)) - int(regras.get("bonus_enigma", 0))
 	if criatura.enigma.has("pergunta") and criatura.enigma.pergunta in regras.get("perguntas_respondidas", []):
 		dt -= 5   # a investigação já respondeu a pergunta ligada ao enigma
-	var ident := pericia == "ocultismo" and agente.tem_habilidade("identificacao_paranormal")
-	var t := agente.testar(dados, pericia, dt, 0, {"bonus_extra": 10} if ident else {})   # Identificação Paranormal: +10 (p.34)
+	var bonus_id := (10 if agente.tem_habilidade("identificacao_paranormal") else 0) + int(regras.get("bonus_identificar", 0))
+	if pericia != "ocultismo":
+		bonus_id = 0   # Identificação Paranormal +10 (p.34) e a escuta +5 (p.77, docs/72): só Ocultismo
+	var t := agente.testar(dados, pericia, dt, 0, {"bonus_extra": bonus_id} if bonus_id > 0 else {})
 	if t == null or not t.sucesso:
 		_log("%s tenta: %s (%s), sem sucesso." % [agente.nome, etapa.get("texto", "decifrar o enigma"), ruleset.pericia(pericia).nome])
 		return t
@@ -2941,6 +3275,9 @@ func declarar_reducao_dano(ser: Ser) -> bool:
 ##     "alvo_em_corpo_a_corpo": true — ataque à distância contra alvo engajado: −1 dado (p.85)
 func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, opcoes: Dictionary = {}) -> ResultadoAtaque:
 	arma_base = arma_em_maos(atacante, arma_base)
+	var arremessou: bool = opcoes.get("arremessar", false) and atacante is Agente and pode_arremessar(arma_base)
+	if arremessou:
+		arma_base = arma_arremessada(arma_base)
 	if _fintado_por(alvo, atacante):
 		opcoes["fintado"] = true   # Fintar (p.86): desprevenido contra este ataque
 	var res := ResultadoAtaque.new()
@@ -3133,6 +3470,10 @@ func atacar(atacante: Ser, alvo: Ser, arma_base: Dictionary, pe_foco: int = 0, o
 		agente.registrar_disparo(arma)   # munição (p.69)
 	if arma.get("recarga", false):
 		atacante.mods_cena["descarregada"] = String(arma.get("id", ""))
+	if arremessou:   # a arma voou: fica no chão perto do alvo até alguém pegá-la (p.64)
+		atacante.mods_cena["arma_caida"] = String(arma.get("id", ""))
+		if grade != null and grade.tem(alvo):
+			atacante.mods_cena["arma_caida_em"] = grade.posicao(alvo)
 	res.acertou = res.teste.sucesso
 	if res.acertou and grade != null and grade.camuflado(alvo) and not arma.get("ignora_camuflagem", false) and not (agente != null and agente.ignora_camuflagem()) and dados.rolar(10) <= 2:
 		res.acertou = false   # camuflagem leve: 1 ou 2 no d10 (p.89)
@@ -3698,6 +4039,8 @@ func aplicar_inspiracao(indice: int, aliado: Agente) -> bool:
 
 ## Lado que ainda tem alguém de pé, ou "" se o combate continua.
 func lado_vencedor() -> String:
+	if fugiram:
+		return "fuga"
 	var de_pe: Dictionary = {}
 	for ser in participantes:
 		if not ser.esta_fora_de_combate():

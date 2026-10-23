@@ -74,6 +74,7 @@
 | [69-rituais-e-poderes-do-livro.md](69-rituais-e-poderes-do-livro.md) | 20 rituais de combate, 9 rituais de mapa e de caso (pistas, covil, credencial) e 11 poderes de classe e de origem que ganharam efeito; o que ainda falta, ritual por ritual |
 | [70-traumas-e-fobias.md](70-traumas-e-fobias.md) | Quem enlouquece pode voltar com fobia do elemento do caso (Vontade DT 20): abalado diante da criatura desse elemento; a Enfermaria trata, com o agente fora da próxima missão. Camada do jogo, não do livro |
 | [71-cultos-vilao-e-subgenero.md](71-cultos-vilao-e-subgenero.md) | Um culto sorteado por caso em cinco eixos (elemento, fachada, estrutura, método, sinal) que mexe na Membrana, no chefe, na credencial e nos presos; um vilão da carreira que liga os casos por recortes de jornal até a sede; e o subgênero do sinal (perseguição, isolados, transmissão) |
+| [72-itens-de-campo-fuga-e-cacada.md](72-itens-de-campo-fuga-e-cacada.md) | Itens paranormais com efeito (câmera de aura, medidor, scanner, escuta, emissor), arremesso, amarras como armadilha, mina e algemas; fuga do grupo e caçada ao fugitivo por teste estendido (p.86-87); as correções e o playtest pela interface |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

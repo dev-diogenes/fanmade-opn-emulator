@@ -547,6 +547,12 @@ func _opcoes_procurar(a: Agente) -> void:
 			_botao_papel(selos, "⚡ %s (2 PE)" % a.ruleset.poder(a.classe_id, hab).nome, false, _usar_extra.bind(hab), false)
 	if a.tem_habilidade("na_trilha_certa"):
 		_botao_papel(selos, "⚡ Na Trilha Certa", false, _trilha_certa.bind(a), false)
+	if a.equipamento.any(func(i): return a.ruleset.equipamento(i).has("uso_investigacao")):   # câmera de aura (docs/72)
+		var motivo := cena.motivo_fotografar()
+		var bf = _botao_papel(selos, "◈ Fotografar a aura do último depoimento incerto (1 PE)", false, func(): _enviar("fotografar"), false)
+		if bf is Button:
+			bf.disabled = motivo != ""
+			bf.tooltip_text = "A foto mostra se o traço que a testemunha deu é mesmo do culpado." + (("\n" + motivo) if motivo != "" else "")
 	_confirmar("Procurar", _procurar)
 
 

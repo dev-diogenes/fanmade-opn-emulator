@@ -266,7 +266,7 @@ func tem(condicao: String) -> bool:
 
 
 func esta_fora_de_combate() -> bool:
-	return tem(MORTO) or tem(INCONSCIENTE) or tem(INSANO)
+	return tem(MORTO) or tem(INCONSCIENTE) or tem(INSANO) or mods_cena.get("algemado", false) or mods_cena.get("fugiu", false)   # algemado se rende; quem fugiu saiu (docs/72)
 
 
 func ultimo_atacante() -> Ser:
@@ -386,7 +386,14 @@ func encerrar_cena() -> void:
 	estabilizado_na_cena = 0
 	acalmado_na_cena = 0
 	dano_nao_letal = 0
+	# Quem se rendeu (desacordado sem matar, algemado) continua rendido depois da luta: é o que
+	# a arena conta para o interrogatório (docs/40). Antes, o fim da cena apagava a marca.
+	var preso := {}
+	for k in ["rendido", "algemado", "fugiu", "escapou"]:
+		if mods_cena.has(k):
+			preso[k] = mods_cena[k]
 	mods_cena.clear()
+	mods_cena.merge(preso)
 	defesa_temporaria = 0
 	penalidade_ataque_temporaria = 0
 	for c in [DESPREVENIDO, SURPREENDIDO, IMOVEL, VULNERAVEL, FATIGADO, ATORDOADO, PASMO, ABALADO, APAVORADO, ENJOADO, AGARRADO, CAIDO, OFUSCADO, SEM_CURA, SANGRANDO, EM_CHAMAS, CONFUSO, ASFIXIADO, CEGO, LENTO]:

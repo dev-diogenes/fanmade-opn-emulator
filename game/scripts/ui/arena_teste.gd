@@ -52,6 +52,7 @@ var _btn_socorrer: Button
 var _btn_manobra: MenuButton
 var _chk_nl: Button
 var _chk_rajada: Button   ## armas automáticas (p.69): −1 dado no ataque, +1 dado de dano
+var _chk_arremesso: Button   ## docs/72: arremessar a arma corpo a corpo (Pontaria, alcance curto)
 var _btn_levantar: Button
 var _btn_pegar: Button
 var _manobra_sel := ""   ## "agarrar", "derrubar", "desarmar" ou "empurrar" (docs/39)
@@ -83,6 +84,8 @@ var _log: RelatorioCampo
 var _painel_fim: RelatorioFim
 var _lbl_fim: Label
 var _btn_fim: Button
+var _btn_fugir: Button
+var _btn_cacar: Button      ## no relatório do fim: caçar quem fugiu (docs/72)
 var _titulo_slots: Label
 var _caixa_mestre: VBoxContainer
 var _lbl_mestre: Label
@@ -390,10 +393,21 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 		"contra":
 			if not res.ok:
 				_registrar("[color=#eda64a]Precisa estar ao lado da criatura (e de uma ação padrão).[/color]")
-		"usar":
+		"fugir":
+			if not res.get("ok", false):
+				_registrar("[color=#eda64a]Não dá para fugir: %s[/color]" % res.get("erro", "?"))
+			elif not res.fugiu:
+				Som.tocar("glitch")
+		"cacar":
+			if res.get("ok", false):
+				_btn_cacar.visible = false
+				_mostrar_fim(_vencedor, ["Caçada: %s." % res.placar] + Array(res.textos) + [
+					("%s foi pego e vai para o interrogatório." % res.alvo.nome) if res.pegou else ("%s escapou. O culto vai saber." % res.alvo.nome)])
+			return res
+		"usar", "armadilha", "mina", "detonar", "algemar":
 			if not res.get("ok", false):
 				_registrar("[color=#eda64a]Não deu: %s[/color]" % res.get("erro", "?"))
-			elif res.has("teste"):
+			elif res.get("teste") is ResultadoTeste:
 				_ultimo_teste = res.teste
 		"item":
 			var nome_item: String = ruleset.equipamento(String(cmd.get("item", ""))).get("nome", "item")
@@ -431,7 +445,7 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 		"sair":
 			var jogo := get_node_or_null("/root/Jogo")
 			if res.ok and jogo != null and not config.is_empty():
-				jogo.voltar_do_combate(res.vencedor, combate.rendidos().size())
+				jogo.voltar_do_combate(res.vencedor, combate.rendidos().size(), combate.fugitivos_escapados())
 			return res
 	_atualizar()
 	return res
@@ -468,6 +482,15 @@ func _clicar_celula(celula: Vector2i) -> void:
 	elif _modo == "usar" and agente != null and alvo != null:
 		_modo = ""
 		_enviar("usar", {"alvo": Comandos.ref(combate, alvo), "item": _item_sel})
+	elif _modo == "armadilha" and agente != null:
+		_modo = ""
+		_enviar("armadilha", {"item": _item_sel.get_slice("#", 0), "celula": Comandos.vetor(celula)})
+	elif _modo == "mina" and agente != null:
+		_modo = ""
+		_enviar("mina", {"item": _item_sel, "celula": Comandos.vetor(celula)})
+	elif _modo == "algemar" and agente != null and alvo != null:
+		_modo = ""
+		_enviar("algemar", {"alvo": Comandos.ref(combate, alvo)})
 	elif _modo == "ritual_area" and agente != null:
 		var escolha: Array = _ritual_sel
 		_conjurar(agente, escolha[0], escolha[1], alvo, {"celula": celula})
@@ -493,6 +516,9 @@ func _clicar_celula(celula: Vector2i) -> void:
 		if _chk_rajada.visible and _chk_rajada.button_pressed:
 			opcoes["rajada"] = true
 			_chk_rajada.button_pressed = false
+		if _chk_arremesso.visible and _chk_arremesso.button_pressed:
+			opcoes["arremessar"] = true
+			_chk_arremesso.button_pressed = false
 		_modo = ""
 		_chk_ae.button_pressed = false
 		_close(alvo, opcoes.has("ataque_especial"))
@@ -562,11 +588,21 @@ func _ao_conjurar(res: Dictionary) -> void:
 
 func _ao_encerrar(vencedor: String) -> void:
 	_vencedor = vencedor
+	_mostrar_faixa_vez(null)
 	if bool(config.get("chefe", false)):
 		Som.musica("")
-	var texto := "VITÓRIA DA ORDEM" if vencedor == "agentes" else "OS AGENTES CAÍRAM"
 	if _btn_fim != null and not config.is_empty():
 		_btn_fim.text = "Voltar ao mapa"
+	_btn_cacar.visible = vencedor == "agentes" and not combate.fugitivos().is_empty()
+	var extra: Array = []
+	for f in combate.fugitivos():
+		extra.append("%s fugiu. Quem escapa avisa o culto." % f.nome)
+	_mostrar_fim(vencedor, extra)
+
+
+## A folha do fim (docs/72: também a fuga do grupo e a caçada ao fugitivo).
+func _mostrar_fim(vencedor: String, extra: Array = []) -> void:
+	var texto: String = {"agentes": "VITÓRIA DA ORDEM", "fuga": "O GRUPO FUGIU"}.get(vencedor, "OS AGENTES CAÍRAM")
 	_registrar("[b]%s[/b]" % texto)
 	if _painel_fim != null:
 		var caidos := combate.participantes.filter(func(x): return x.lado != "agentes" and x.esta_fora_de_combate()).size()
@@ -576,7 +612,9 @@ func _ao_encerrar(vencedor: String) -> void:
 			"Ameaças neutralizadas: %d de %d." % [caidos, inimigos],
 			"Agentes caídos: %d." % feridos,
 			"Membrana ao fim do confronto: %d." % membrana.valor]
-		_painel_fim.mostrar(texto, linhas, vencedor == "agentes")
+		if vencedor == "fuga":
+			linhas[1] = "O que estava ali continua no mapa. O medo cobra: a Membrana cai 2."
+		_painel_fim.mostrar(texto, linhas + extra, vencedor == "agentes", Tema.AVISO if vencedor == "fuga" else Color(0, 0, 0, 0))
 
 
 func _registrar(texto: String) -> void:
@@ -796,6 +834,12 @@ func _montar_interface() -> void:
 	_chk_rajada.text = "Rajada −1 dado"
 	_chk_rajada.tooltip_text = "Arma automática (p.69): dispara uma rajada. −1 dado no ataque e +1 dado de dano."
 	extras.add_child(_chk_rajada)
+	_chk_arremesso = Button.new()
+	_chk_arremesso.toggle_mode = true
+	_chk_arremesso.text = "Arremessar"
+	_chk_arremesso.tooltip_text = "Atirar a arma corpo a corpo em alcance curto (p.64): teste de Pontaria, a Força soma no dano. Faca, lança e machadinha vão sem penalidade; as outras, com −1 dado. A arma fica no chão perto do alvo."
+	_chk_arremesso.toggled.connect(func(_v): _atualizar_3d())
+	extras.add_child(_chk_arremesso)
 	_btn_enigma = _botao("Decifrar enigma", _decifrar)
 	_btn_soltar = _botao("Soltar-se", _soltar)
 	_btn_apagar = _botao("Apagar chamas", _apagar)
@@ -822,6 +866,9 @@ func _montar_interface() -> void:
 	for b in [_btn_enigma, _btn_soltar, _btn_apagar, _btn_socorrer, _btn_acalmar, _btn_levantar, _btn_pegar]:
 		b.theme_type_variation = "BotaoPrincipal"
 		extras.add_child(b)
+	# Fugir (docs/72): o grupo todo tenta escapar num teste estendido (p.86-87)
+	_btn_fugir = _botao("Fugir", func(): _enviar("fugir"))
+	extras.add_child(_btn_fugir)
 
 	# Bilhete de rituais e itens (acima dos retratos do grupo)
 	_bilhete = PanelContainer.new()
@@ -846,6 +893,10 @@ func _montar_interface() -> void:
 
 	_painel_fim = RelatorioFim.new("Jogar de novo")
 	_painel_fim.botao.pressed.connect(_reiniciar)
+	_btn_cacar = _painel_fim.adicionar_botao("Caçar o fugitivo")
+	_btn_cacar.tooltip_text = "Teste estendido (p.86-87): 3 sucessos antes de 3 falhas, DT 15, cada agente com a melhor perícia de perseguição que ainda não usou. Pegando, ele vai para o interrogatório; escapando, avisa o culto e a Membrana cai."
+	_btn_cacar.pressed.connect(func(): _enviar("cacar"))
+	_btn_cacar.visible = false
 	_lbl_fim = _painel_fim.rotulo
 	_btn_fim = _painel_fim.botao
 	add_child(_painel_fim)
@@ -895,8 +946,18 @@ func _montar_bilhete() -> void:
 			_bilhete_tipo = ""
 			_usar_cicatrizante()
 			_montar_bilhete())
+		var restam := combate.acoes_restantes(agente)
+		var sem_completa := int(restam.padrao) <= 0 or int(restam.movimento) <= 0
 		for it in _itens_de_combate(agente):
 			var b := _botao_papel(it[1], false)
+			# Armadilha e mina pedem a ação completa (docs/72): depois de andar, ficam apagadas
+			var e_mina := ruleset.equipamento(String(it[0])).has("mina")
+			if sem_completa and (String(it[0]).ends_with("#armadilha") or e_mina):
+				b.disabled = true
+				b.tooltip_text = "Pede a ação completa: já não dá neste turno."
+			elif e_mina and not agente.pode_usar_pericia("tatica"):
+				b.disabled = true
+				b.tooltip_text = "Instalar a mina pede Tática treinada."
 			b.pressed.connect(func():
 				_item_sel = it[0]
 				_bilhete_tipo = ""
@@ -951,6 +1012,20 @@ func _itens_de_combate(agente: Agente) -> Array:
 		vistos[item_id] = true
 		var qtd := "%d cargas" % agente.cargas_restantes(item_id) if info.has("cargas") else str(agente.equipamento.count(item_id))
 		lista.append([item_id, "%s (%s)" % [info.nome, qtd] if info.has("cargas") or not info.has("uso_combate") else info.nome])
+	# docs/72: armadilha das amarras, mina, detonar e algemas
+	for item_id in agente.equipamento:
+		var info := ruleset.equipamento(item_id)
+		if info.has("armadilha") and not vistos.has(item_id + "#armadilha"):
+			vistos[item_id + "#armadilha"] = true
+			lista.append([item_id + "#armadilha", "%s: armar armadilha (ação completa, 2 PE)" % info.nome])
+		if info.has("mina") and not vistos.has(item_id):
+			vistos[item_id] = true
+			lista.append([item_id, "%s (%d): instalar aqui (ação completa)" % [info.nome, agente.equipamento.count(item_id)]])
+		if info.get("algemas", false) and not vistos.has("#algemar"):
+			vistos["#algemar"] = true
+			lista.append(["#algemar", "Algemas: prender quem está caído ou agarrado"])
+	if combate.tem_mina(agente):
+		lista.append(["#detonar", "Detonar a mina (ação padrão)"])
 	return lista
 
 
@@ -1070,6 +1145,26 @@ func _modo_item() -> void:
 	if agente == null or _item_sel == "":
 		return
 	var info := ruleset.equipamento(_item_sel)
+	if _item_sel == "#detonar":
+		_item_sel = ""
+		_enviar("detonar")
+		_atualizar()
+		return
+	if _item_sel == "#algemar":
+		_modo = "algemar"
+		_registrar("Escolha quem algemar: ao lado, caído ou agarrado por você.")
+		_atualizar()
+		return
+	if _item_sel.ends_with("#armadilha"):
+		_modo = "armadilha"
+		_registrar("Escolha onde armar a armadilha (alcance curto).")
+		_atualizar()
+		return
+	if info.has("mina"):
+		_modo = "mina"
+		_registrar("A mina fica no seu espaço. Clique para onde ela aponta.")
+		_atualizar()
+		return
 	_modo = "granada" if info.has("explosivo") else ("usar" if info.has("uso_combate") else "contra")
 	_registrar("Escolha %s para %s." % [{"granada": "o ponto", "usar": "o alvo"}.get(_modo, "a criatura"), info.nome])
 	_atualizar()
@@ -1178,6 +1273,12 @@ func _atualizar() -> void:
 	_btn_manobra.disabled = agente == null or sem_padrao
 	_btn_levantar.visible = agente != null and agente.tem(Ser.CAIDO)
 	_btn_pegar.visible = agente != null and agente.mods_cena.has("arma_caida")
+	_btn_fugir.visible = agente != null and not combate.encerrado
+	if agente != null:
+		var por_que := combate.motivo_fugir(agente)
+		var dif := combate.dificuldade_da_fuga()
+		_btn_fugir.disabled = por_que != ""
+		_btn_fugir.tooltip_text = por_que if por_que != "" else "Ação completa: o grupo todo foge num teste estendido (p.86-87). %d sucessos antes de 3 falhas, DT %d; cada um usa a melhor perícia de fuga que ainda não usou. Cada falha deixa o perseguidor mais forte atacar quem tropeçou. Três falhas: encurralados e desprevenidos." % [TesteEstendido.COMPLEXIDADE[dif.complexidade], dif.dt]
 	_btn_socorrer.visible = agente != null and _aliado_ao_lado(agente, Ser.MORRENDO) != null
 	_btn_socorrer.disabled = sem_padrao
 	_btn_acalmar.visible = agente != null and _pericia_para_acalmar(agente) != "" and _aliado_ao_lado(agente, Ser.ENLOUQUECENDO) != null
@@ -1191,6 +1292,7 @@ func _atualizar() -> void:
 	var arma_cac: bool = agente != null and agente.arma().get("ataque", "corpo_a_corpo") == "corpo_a_corpo"
 	_chk_nl.visible = arma_cac
 	_chk_rajada.visible = agente != null and agente.arma().get("automatica", false)
+	_chk_arremesso.visible = agente != null and not agente.mods_cena.has("arma_caida") and combate.pode_arremessar(agente.arma())
 	if arma_cac:
 		_chk_nl.text = "Letal −5" if String(agente.arma().get("id", "")) == "desarmado" else "Não letal −5"
 	_barra_membrana.value = membrana.valor
@@ -1279,7 +1381,7 @@ func _montar_faixa_vez() -> void:
 func _mostrar_faixa_vez(ser: Ser) -> void:
 	if _faixa_vez == null:
 		return
-	var mostrar := ser != null and ser is Ameaca
+	var mostrar := ser != null and ser is Ameaca and not combate.encerrado   # docs/72: quem foge encerra no turno dela
 	if mostrar:
 		var cor: Color = Tema.ELEMENTO.get((ser as Ameaca).elemento, Tema.SANGUE_CLARO)
 		_faixa_vez.add_theme_stylebox_override("panel", Tema.caixa(Color(Tema.FUNDO, 0.92), cor, 2, 6, Vector2(28, 8)))
@@ -1451,13 +1553,15 @@ func _atualizar_3d() -> void:
 	if agente != null and _modo == "atacar":
 		var ae := 5 if _chk_ae.button_pressed and agente.classe_id == "combatente" else 0
 		for s in grade.seres():
-			if s.lado != agente.lado and _pode_atacar(agente, s, armas[agente]):
+			var arma_v: Dictionary = combate.arma_arremessada(armas[agente]) if _chk_arremesso != null and _chk_arremesso.visible and _chk_arremesso.button_pressed else armas[agente]
+			if s.lado != agente.lado and _pode_atacar(agente, s, arma_v):
 				alvos.append(s)
-				chances[s] = combate.chance_de_acerto(agente, s, armas[agente], _foco.valor, ae)
+				chances[s] = combate.chance_de_acerto(agente, s, arma_v, _foco.valor, ae)
 	_tab3d.chances = chances
 	var zonas: Array = []
 	for z in combate.zonas():
 		zonas.append({"celulas": z.celulas, "elemento": ruleset.ritual(z.ritual).elemento})
+	zonas.append_array(combate.marcas_no_chao())
 	_tab3d.atualizar(destinos, alvos, combate.ser_atual(), _selecionado, zonas)
 	if _modo == "":
 		_cursor_ativo = false

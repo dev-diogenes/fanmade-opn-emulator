@@ -98,9 +98,12 @@ func _reconstruir() -> void:
 				continue
 			var rotulo := String(Caso.indicio(p.indicio).get("rotulo", "")).to_upper() if String(p.get("indicio", "")) != "" else ""
 			var duvidosa: bool = p.get("duvidosa", false)   # depoimento incerto (docs/35)
-			if duvidosa and rotulo != "":
+			var desmentida: bool = p.get("desmentida", false)   # a câmera de aura desmentiu (docs/72)
+			if desmentida and rotulo != "":
+				rotulo = "✗ " + rotulo
+			elif duvidosa and rotulo != "":
 				rotulo = "? " + rotulo
-			var dica := ("Depoimento incerto: a testemunha pode estar enganada.\n" if duvidosa else "") + String(p.texto)
+			var dica := ("A aura desmentiu: a testemunha se enganou.\n" if desmentida else ("Depoimento incerto: a testemunha pode estar enganada.\n" if duvidosa else ("A aura confirmou este depoimento.\n" if p.get("confirmada", false) else ""))) + String(p.texto)
 			var foto := _foto(rotulo if rotulo != "" else p.texto, hash(p.texto), rng.randf_range(-5.0, 5.0), dica)
 			foto.position = _vaga(x, y, k) + Vector2(rng.randf_range(-6, 6), rng.randf_range(-4, 4))
 			_conteudo.add_child(foto)

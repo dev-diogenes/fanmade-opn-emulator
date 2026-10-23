@@ -220,14 +220,38 @@ func indicios_encontrados(pergunta_id: String) -> Array:
 
 
 ## Traços que só vieram de depoimentos incertos (docs/35): podem ser verdade ou não.
+## Os desmentidos pela câmera de aura (docs/72) saem da lista.
 func indicios_duvidosos(pergunta_id: String) -> Array:
 	var firmes := indicios_encontrados(pergunta_id)
 	var lista: Array = []
 	for p in pistas:
 		var t := String(p.get("indicio", ""))
-		if p.get("responde", "") == pergunta_id and t != "" and p.get("duvidosa", false) and not t in firmes and not t in lista:
+		if p.get("responde", "") == pergunta_id and t != "" and p.get("duvidosa", false) and not p.get("desmentida", false) and not t in firmes and not t in lista:
 			lista.append(t)
 	return lista
+
+
+## O último depoimento incerto ainda não verificado (-1 se nenhum).
+func depoimento_a_verificar() -> int:
+	for i in range(pistas.size() - 1, -1, -1):
+		if pistas[i].get("duvidosa", false) and not pistas[i].get("desmentida", false) and String(pistas[i].get("indicio", "")) != "":
+			return i
+	return -1
+
+
+## Câmera de aura (docs/72): a foto mostra se o traço do depoimento incerto é do culpado.
+## Sendo, a pista vira firme; não sendo, fica desmentida. Devolve {ok, confirmada, pista}.
+func verificar_depoimento(i: int) -> Dictionary:
+	if i < 0 or i >= pistas.size() or not pistas[i].get("duvidosa", false) or pistas[i].get("desmentida", false):
+		return {"ok": false}
+	var p: Dictionary = pistas[i]
+	var verdade: bool = String(p.indicio) in verdadeiro(String(p.responde)).get("indicios", [])
+	if verdade:
+		p.duvidosa = false
+		p.confirmada = true
+	else:
+		p.desmentida = true
+	return {"ok": true, "confirmada": verdade, "pista": p}
 
 
 ## Candidatos que batem com todos os traços revelados e ainda não foram descartados.

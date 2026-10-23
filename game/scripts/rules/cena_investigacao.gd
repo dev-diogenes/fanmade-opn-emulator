@@ -542,6 +542,34 @@ func pagar_na_trilha_certa(a: Agente) -> bool:
 	return true
 
 
+## Câmera de aura (p.76, docs/72): 1 PE e a ação do agente para fotografar quem deu o último
+## depoimento incerto. A aura confirma ou desmente o traço. "" = pode; senão, o motivo.
+func motivo_fotografar() -> String:
+	var a := agente_atual()
+	if a == null or not a.equipamento.any(func(i): return ruleset.equipamento(i).has("uso_investigacao")):
+		return "Precisa da câmera de aura."
+	if caso.depoimento_a_verificar() < 0:
+		return "Nenhum depoimento incerto para tirar a dúvida."
+	if a.pe + a.pe_temporario < 1:
+		return "Sem PE."
+	return ""
+
+
+func fotografar_aura() -> Dictionary:
+	if motivo_fotografar() != "":
+		return {"ok": false, "erro": motivo_fotografar()}
+	var a := agente_atual()
+	a.gastar_pe(1)
+	var r := caso.verificar_depoimento(caso.depoimento_a_verificar())
+	var rotulo := String(Caso.indicio(String(r.pista.indicio)).get("rotulo", "")).to_upper()
+	if r.confirmada:
+		_log("[color=#6fcf8e]%s fotografa a testemunha: a aura bate. O traço %s é verdade.[/color]" % [a.nome, rotulo])
+	else:
+		_log("[color=#eda64a]%s fotografa a testemunha: a aura não bate. O traço %s era engano.[/color]" % [a.nome, rotulo])
+	_acao_concluida()
+	return r
+
+
 ## Passa o turno sem agir.
 func passar() -> void:
 	if agente_atual() != null:

@@ -86,6 +86,7 @@ var presos: Array = []
 ## próximo teste de um agente num evento (Enfeitiçar, Distorcer Aparência).
 var rituais_usados_no_mapa: Array = []
 var bonus_de_ritual: Dictionary = {}   ## id do agente -> {"pericia": String, "valor": int}
+var escuta_instalada := false          ## docs/72: a escuta grava até o fim da missão (+5 para identificar)
 
 
 const NOMES_TERRENO := {"campo": "campos abertos", "estrada": "estradas de terra", "floresta": "mata fechada",
@@ -674,6 +675,140 @@ func _efeito_fora(r: Dictionary, forma: String) -> Dictionary:
 	return ef
 
 
+## Itens paranormais de mapa (docs/72): medidor, scanner, escuta e emissor.
+func itens_de_mapa(a: Agente) -> Array:
+	var lista: Array = []
+	for item_id in a.equipamento:
+		if not item_id in lista and ruleset.equipamento(item_id).has("uso_mapa"):
+			lista.append(item_id)
+	return lista
+
+
+## Por que o item de mapa não pode ser usado agora ("" = pode).
+func motivo_item_de_mapa(a: Agente, item_id: String) -> String:
+	var u: Dictionary = ruleset.equipamento(item_id).get("uso_mapa", {})
+	if u.is_empty() or not a.tem_item(item_id):
+		return "Sem esse item."
+	if not pode_agir_no_mapa() or a != agente_atual():
+		return "A ação deste turno já foi usada."
+	if String(u.get("treinado", "")) != "" and not a.treinado_em(String(u.treinado)):
+		return "Pede %s treinado." % ruleset.pericia(String(u.treinado)).nome
+	if int(u.get("pe", 0)) > a.pe + a.pe_temporario:
+		return "PE insuficientes."
+	if String(u.tipo) == "escuta" and escuta_instalada:
+		return "A escuta já está gravando."
+	return ""
+
+
+## Usa um item paranormal no mapa. `opcao`: o elemento do pulso do emissor.
+func usar_item_de_mapa(item_id: String, opcao: String = "") -> Dictionary:
+	var a := agente_atual()
+	if a == null or motivo_item_de_mapa(a, item_id) != "":
+		return {}
+	var info := ruleset.equipamento(item_id)
+	var u: Dictionary = info.uso_mapa
+	if String(u.tipo) == "emissor" and not opcao in ["sangue", "morte", "conhecimento", "energia", "medo"]:
+		return {}
+	if int(u.get("pe", 0)) > 0:
+		a.gastar_pe(int(u.pe))
+	acao_usada = true
+	var texto := ""
+	match String(u.tipo):
+		"medidor":
+			texto = _ler_membrana(a, int(u.get("raio", 4)))
+		"scanner":
+			texto = _escanear(a, String(info.get("elemento", "")), int(u.get("raio", 8)))
+		"escuta":
+			escuta_instalada = true
+			texto = "%s instala a escuta. Até o fim da missão, o que ela grava ajuda a identificar as criaturas (+5 em Ocultismo)." % a.nome
+		"emissor":
+			texto = _emitir_pulso(a, opcao, int(u.get("raio", 6)), int(u.get("passos", 2)))
+	_log("[color=#7fd3c7]%s[/color]" % texto)
+	return {"ok": true, "texto": texto, "item": item_id}
+
+
+## Encontros com criatura a até `raio` hexes: [hex].
+func _criaturas_perto(h: Vector2i, raio: int, elemento: String = "") -> Array:
+	var lista: Array = []
+	for c in mapa.celulas:
+		var cont := mapa.conteudo(c)
+		if Hex.distancia(c, h) > raio or String(cont.get("tipo", "")) != "encontro":
+			continue
+		var el := elemento_de(String(cont.get("encontro", "")))
+		if el != "" and (elemento == "" or el == elemento):
+			lista.append(c)
+	lista.sort()
+	return lista
+
+
+## Medidor de estabilidade da Membrana (p.77).
+func _ler_membrana(a: Agente, raio: int) -> String:
+	var achados := _criaturas_perto(posicao(a), raio)
+	for c in achados:
+		mapa.revelar(c, 0)
+	var falta := maxi(1, int(_cfg.get("mundo", {}).get("surgimento_a_cada_turnos", 2)) - _turnos_sem_surgimento)
+	var proxima := "Com a Membrana %s, algo novo pode surgir em %d turno%s." % [String(membrana.estado().get("nome", "")).to_lower(), falta, "" if falta == 1 else "s"] \
+		if membrana.nivel_ameaca() >= 1 else "A Membrana está firme: nada novo deve surgir por enquanto."
+	return "%s lê o medidor: %d leitura%s fora do normal por perto. %s" % [a.nome, achados.size(), "" if achados.size() == 1 else "s", proxima]
+
+
+## Scanner de manifestação (p.77): o que é do elemento, e o covil se o caso for dele.
+func _escanear(a: Agente, elemento: String, raio: int) -> String:
+	var achados := _criaturas_perto(posicao(a), raio, elemento)
+	var nome_el := String(DadosJogo.ler("casos").get("elementos", {}).get(elemento, {}).get("nome", elemento.capitalize()))
+	var partes := PackedStringArray()
+	for c in achados:
+		mapa.revelar(c, 0)
+		partes.append(direcao_em_texto(Hex.para_pixel(c, 1.0) - Hex.para_pixel(posicao(a), 1.0)))
+	var texto := "%s liga o scanner de %s: %s." % [a.nome, nome_el, ("sinais " + ", ".join(partes)) if not partes.is_empty() else "nenhum sinal por perto"]
+	var obj := mapa.encontrar("objetivo")
+	if caso != null and caso.elemento == elemento and mapa.tem(obj) and Hex.distancia(obj, posicao(a)) <= raio:
+		mapa.revelar(obj, 0)
+		texto += " O ponteiro treme e aponta, forte, %s: é ali o covil." % direcao_em_texto(Hex.para_pixel(obj, 1.0) - Hex.para_pixel(posicao(a), 1.0))
+	return texto
+
+
+## Emissor de pulsos paranormais (p.77): puxa as criaturas do elemento e afasta as do elemento
+## que ele oprime, até `passos` hexes. Não entra no hex do agente nem em lugares com conteúdo.
+func _emitir_pulso(a: Agente, elemento: String, raio: int, passos: int) -> String:
+	var aqui := posicao(a)
+	var oprimido := String(ruleset.dados.get("rituais", {}).get("vantagem_elemental", {}).get(elemento, ""))
+	var puxados := 0
+	var afastados := 0
+	for c in _criaturas_perto(aqui, raio):
+		var el := elemento_de(String(mapa.conteudo(c).get("encontro", "")))
+		var dir := 1 if el == elemento else (-1 if el == oprimido and oprimido != "" else 0)
+		if dir == 0:
+			continue
+		var h: Vector2i = c
+		for _i in passos:
+			var prox := _passo_para(h, aqui) if dir > 0 else _passo_para_longe(h, aqui)
+			if prox == h or prox == aqui:
+				break
+			var cont := mapa.conteudo(h)
+			mapa.limpar_conteudo(h)
+			mapa.definir_conteudo(prox, cont)
+			h = prox
+		if h != c:
+			mapa.revelar(h, 0)
+			if dir > 0:
+				puxados += 1
+			else:
+				afastados += 1
+	var nome_el := String(DadosJogo.ler("casos").get("elementos", {}).get(elemento, {}).get("nome", elemento.capitalize()))
+	return "%s liga o emissor no pulso de %s: %d criatura%s vem para perto, %d se afasta%s." % [a.nome, nome_el, puxados, "" if puxados == 1 else "s", afastados, "" if afastados == 1 else "m"]
+
+
+func _passo_para_longe(de: Vector2i, de_quem: Vector2i) -> Vector2i:
+	var melhor := de
+	var dist := Hex.distancia(de, de_quem)
+	for v in Hex.vizinhos(de):
+		if mapa.tem(v) and mapa.passavel(v) and mapa.conteudo(v).is_empty() and Hex.distancia(v, de_quem) > dist:
+			melhor = v
+			dist = Hex.distancia(v, de_quem)
+	return melhor
+
+
 func pode_agir_no_mapa() -> bool:
 	var a := agente_atual()
 	return a != null and not acao_usada and not ocupado() and not a.esta_fora_de_combate()
@@ -934,7 +1069,8 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool, semente_s
 		"hex": h, "nome": info.nome, "chefe": chefe, "terreno": mapa.terreno(h),
 		"agentes": participantes, "armas": armas, "ameacas": ameacas, "encontro": encontro_id,
 		"regras": {"lesoes": opcoes.get("lesoes", true), "inspiracao_resoluta": opcoes.get("inspiracao_resoluta", true),
-			"presenca_perturbadora": true, "bonus_enigma": mini(10, pistas * 2), "perguntas_respondidas": _perguntas_respondidas()},
+			"presenca_perturbadora": true, "bonus_enigma": mini(10, pistas * 2), "perguntas_respondidas": _perguntas_respondidas(),
+			"bonus_identificar": 5 if escuta_instalada else 0, "chefe": chefe},
 		"nivel_membrana": membrana.nivel_ameaca(), "semente": semente_salva if semente_salva >= 0 else dados.rolar(1000000),
 		# O covil é o lugar do caso (docs/58): a arena se veste por ele, e o cartão do chefe diz
 		# o elemento só se o grupo o confirmou
@@ -1154,9 +1290,16 @@ func _encontro(encontro_id: String) -> Dictionary:
 ## Agentes caídos são socorridos com 1 PV ao fim de uma vitória (simplificação da fatia vertical).
 ## `rendidos` (docs/40): pessoas desacordadas com dano não letal. Na vitória, a Ordem as
 ## interroga e o caso ganha uma pista (uma por encontro).
-func concluir_encontro(vencedor: String, rendidos: int = 0) -> void:
+## `escapados`: quem fugiu da luta e não foi caçado (docs/72) avisa o culto: a Membrana cai.
+func concluir_encontro(vencedor: String, rendidos: int = 0, escapados: int = 0) -> void:
 	if encontro_pendente.is_empty():
 		return
+	if vencedor == "fuga":
+		_fugir_do_encontro()
+		return
+	if escapados > 0 and vencedor == "agentes":
+		membrana.alterar(-2 * escapados, "fugitivo")
+		_log("[color=#e0574a]%d fugitivo%s leva%s a notícia ao culto. A Membrana cai %d.[/color]" % [escapados, "" if escapados == 1 else "s", "" if escapados == 1 else "m", 2 * escapados])
 	if vencedor == "agentes" and rendidos > 0 and caso != null:
 		_log("[color=#7fd3c7]Interrogatório: %d rendido(s) acorda(m) algemado(s) e fala(m).[/color]" % rendidos)
 		_aplicar_efeito(agente_atual() if agente_atual() != null else agentes[0], {"tipo": "pista"}, encontro_pendente.hex)
@@ -1192,6 +1335,38 @@ func concluir_encontro(vencedor: String, rendidos: int = 0) -> void:
 		for a in participantes:
 			if a.esta_fora_de_combate() or a.tem(Ser.MORTO):
 				_tratar_queda(a)
+	_ajustar_indice()
+	_verificar_derrota()
+
+
+## O grupo fugiu (docs/72): o encontro (ou o covil) continua no mapa; o grupo recua para um hex
+## livre vizinho e ganha um respiro da caça. O medo deixa marca: a Membrana cai 2.
+func _fugir_do_encontro() -> void:
+	var h: Vector2i = encontro_pendente.hex
+	var participantes: Array = encontro_pendente.agentes
+	encontro_pendente = {}
+	for a in participantes:
+		a.encerrar_cena()
+	var destino := h
+	for v in Hex.vizinhos(h):
+		if mapa.tem(v) and mapa.passavel(v) and mapa.conteudo(v).is_empty():
+			destino = v
+			break
+	for a in participantes:
+		if not a.tem(Ser.MORTO) and posicao(a) == h:
+			posicoes[a] = destino
+	alivio = int(_cfg.get("mundo", {}).get("caca", {}).get("alivio_depois_de_combate", 1))
+	membrana.alterar(-2, "fuga")
+	_log("[color=#8fa3d9]O grupo foge e se esconde. O que estava ali continua lá. A Membrana cai 2.[/color]")
+	for a in participantes:
+		if a.tem(Ser.MORTO):
+			_tratar_queda(a)
+		elif a.pv == 0:
+			# Quem caiu na fuga foi carregado pelos outros, como na vitória
+			a.estabilizar()
+			a.curar(1)
+			a.condicoes.erase(Ser.INCONSCIENTE)
+			_log("%s é carregado na fuga e volta com 1 PV." % a.nome)
 	_ajustar_indice()
 	_verificar_derrota()
 
@@ -1931,7 +2106,7 @@ func para_dicionario() -> Dictionary:
 		"pesquisa": pesquisa.duplicate(), "rumores": rumores.duplicate(true),
 		"sinal": sinal.duplicate(), "alarme_confirmado": alarme_confirmado, "varredura": varredura,
 		"credencial": credencial.duplicate(), "presos": presos.duplicate(true),
-		"rituais_usados_no_mapa": rituais_usados_no_mapa.duplicate(), "bonus_de_ritual": bonus_de_ritual.duplicate(true),
+		"rituais_usados_no_mapa": rituais_usados_no_mapa.duplicate(), "bonus_de_ritual": bonus_de_ritual.duplicate(true), "escuta_instalada": escuta_instalada,
 		"rastros": rastros.keys().map(func(h): return [h.x, h.y, int(rastros[h])]), "descansos": descansos, "revisaveis": revisaveis.duplicate(true),
 		"historico": historico.slice(maxi(0, historico.size() - 300)),
 		"encerrada": encerrada, "vitoria": vitoria, "extras": extras.duplicate(true),
@@ -1998,6 +2173,7 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.presos = (d.get("presos", []) as Array).duplicate(true)
 	m.rituais_usados_no_mapa = (d.get("rituais_usados_no_mapa", []) as Array).duplicate()
 	m.bonus_de_ritual = (d.get("bonus_de_ritual", {}) as Dictionary).duplicate(true)
+	m.escuta_instalada = bool(d.get("escuta_instalada", false))
 	for r in d.get("rastros", []):
 		m.rastros[Vector2i(int(r[0]), int(r[1]))] = int(r[2])
 	for i in d.get("descansos", {}):

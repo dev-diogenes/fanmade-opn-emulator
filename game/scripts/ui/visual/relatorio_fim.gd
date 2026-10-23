@@ -10,6 +10,7 @@ var _resumo: Label
 var _carimbo: Control
 var _raiz: Control
 var _vao_carimbo: Control   ## espaço reservado para o carimbo, à esquerda do botão (docs/21)
+var _linha_extra: HBoxContainer   ## botões a mais, numa linha acima do carimbo (docs/72)
 ## true depois de mostrar(). O CanvasLayer fica sempre visível; quem some é a raiz
 ## (esconder o CanvasLayer e reexibir não reexibe todos os filhos).
 var aberto := false
@@ -48,6 +49,10 @@ func _init(texto_botao: String = "Continuar") -> void:
 	v.add_child(_resumo)
 	var linha := HBoxContainer.new()
 	linha.add_theme_constant_override("separation", Tema.ESPACO_M)
+	_linha_extra = HBoxContainer.new()
+	_linha_extra.alignment = BoxContainer.ALIGNMENT_END
+	_linha_extra.add_theme_constant_override("separation", Tema.ESPACO_M)
+	v.add_child(_linha_extra)
 	v.add_child(linha)
 	_vao_carimbo = Control.new()
 	_vao_carimbo.custom_minimum_size = Vector2(300, 64)
@@ -106,6 +111,16 @@ func mostrar(carimbo: String, linhas: Array, sucesso: bool, cor_carimbo: Color =
 	tw.parallel().tween_callback(func(): Som.tocar("carimbo")).set_delay(0.14)
 	tw.parallel().tween_property(rotulo, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	botao.grab_focus.call_deferred()
+
+
+## Um botão a mais, numa linha acima do principal (docs/72: "Caçar o fugitivo"), para não
+## tirar o vão do carimbo. Quem chama esconde ou mostra quando quiser.
+func adicionar_botao(texto: String) -> Button:
+	var b := Button.new()
+	b.text = texto
+	b.theme_type_variation = "BotaoPapel"
+	_linha_extra.add_child(b)
+	return b
 
 
 ## A folha é centralizada por contêiner e só se acomoda alguns quadros depois de aparecer

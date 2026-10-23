@@ -7,8 +7,8 @@ extends RefCounted
 ## Números chegam da rede como float: tudo passa por int() aqui.
 
 const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar", "deduzir", "interludio", "relatar", "pesquisa"]
-const ACOES_INVESTIGACAO := ["examinar", "procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair", "deduzir", "relatar"]
-const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "usar", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair",
+const ACOES_INVESTIGACAO := ["examinar", "procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair", "deduzir", "relatar", "fotografar"]
+const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "usar", "armadilha", "mina", "detonar", "algemar", "fugir", "cacar", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair",
 	"socorrer", "acalmar", "manobra", "levantar", "pegar_arma"]
 ## Modo Mestre (Fase 8.3): valem em qualquer tela, só do peer do mestre
 const ACOES_MESTRE := ["narrar", "membrana", "revelar", "encontro", "evento", "limpar", "curar", "ferir", "sanidade"]
@@ -48,6 +48,9 @@ static func aplicar_mapa(m: Missao, cmd: Dictionary) -> Dictionary:
 				return {"ok": false, "erro": "nenhum evento pendente"}
 			return {"ok": true, "teste": m.resolver_evento(int(cmd.get("foco", 0)), int(cmd.get("opcao", 0)), String(cmd.get("trocar", "")))}
 		"usar_item":
+			if m.ruleset.equipamento(String(cmd.get("item", ""))).has("uso_mapa"):   # itens paranormais (docs/72)
+				var rp := m.usar_item_de_mapa(String(cmd.get("item", "")), String(cmd.get("opcao", "")))
+				return {"ok": not rp.is_empty(), "resultado": rp}
 			var alvo := _agente_da_missao(m, cmd.get("alvo", ""))
 			var r := m.usar_item_no_mapa(String(cmd.get("item", "")), alvo) if alvo != null else {}
 			return {"ok": not r.is_empty(), "resultado": r}
@@ -104,6 +107,8 @@ static func aplicar_investigacao(cena: CenaInvestigacao, cmd: Dictionary) -> Dic
 			return {"ok": true}
 		"acao_extra":
 			return {"ok": cena.acao_extra(String(cmd.habilidade))}
+		"fotografar":   # câmera de aura (docs/72)
+			return cena.fotografar_aura()
 		"trilha_certa":
 			var a := _agente_da_cena(cena, cmd.get("agente", -1))
 			return {"ok": a != null and cena.pagar_na_trilha_certa(a)}
@@ -154,6 +159,8 @@ static func aplicar_combate(c: Combate, armas: Dictionary, cmd: Dictionary) -> D
 	var acao := String(cmd.get("acao", ""))
 	if acao == "sair":
 		return {"ok": c.encerrado, "vencedor": c.lado_vencedor() if c.encerrado else ""}
+	if acao == "cacar":   # docs/72: depois da luta, caçar quem fugiu
+		return c.cacar_fugitivo() if c.encerrado else {"ok": false, "erro": "a luta ainda não acabou"}
 	var ator := ser(c, cmd.get("ator", -1))
 	if ator == null or ator != c.ser_atual() or c.encerrado:
 		return {"ok": false, "erro": "não é a vez desse ser"}
@@ -214,6 +221,26 @@ static func aplicar_combate(c: Combate, armas: Dictionary, cmd: Dictionary) -> D
 				return {"ok": false, "erro": "alvo inválido"}
 			var cura := c.usar_item(ator as Agente, String(cmd.item), alvo)
 			return {"ok": cura >= 0, "cura": cura, "alvo": alvo}
+		"fugir":   # docs/72: teste estendido de fuga
+			if not ator is Agente:
+				return {"ok": false, "erro": "só agentes"}
+			return c.fugir(ator as Agente)
+		"armadilha":   # docs/72
+			if not ator is Agente:
+				return {"ok": false, "erro": "só agentes"}
+			return c.preparar_armadilha(ator as Agente, String(cmd.get("item", "")), de_vetor(cmd.celula))
+		"mina":
+			if not ator is Agente:
+				return {"ok": false, "erro": "só agentes"}
+			return c.instalar_mina(ator as Agente, String(cmd.get("item", "")), de_vetor(cmd.celula))
+		"detonar":
+			if not ator is Agente:
+				return {"ok": false, "erro": "só agentes"}
+			return c.detonar_mina(ator as Agente)
+		"algemar":
+			if not ator is Agente:
+				return {"ok": false, "erro": "só agentes"}
+			return c.algemar(ator as Agente, ser(c, cmd.get("alvo", -1)))
 		"usar":   # itens de combate do livro: taser, spray, lanterna, dardos… (docs/67)
 			var alvo_u := ser(c, cmd.get("alvo", -1))
 			if not ator is Agente:

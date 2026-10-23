@@ -184,9 +184,9 @@ func ir_para_combate(config: Dictionary) -> void:
 	get_tree().change_scene_to_file.call_deferred(CENA_ARENA)
 
 
-func voltar_do_combate(vencedor: String, rendidos: int = 0) -> void:
+func voltar_do_combate(vencedor: String, rendidos: int = 0, escapados: int = 0) -> void:
 	if missao != null:
-		missao.concluir_encontro(vencedor, rendidos)
+		missao.concluir_encontro(vencedor, rendidos, escapados)
 	combate_config = {}
 	salvar()
 	get_tree().change_scene_to_file.call_deferred(CENA_MAPA)

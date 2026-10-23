@@ -80,6 +80,9 @@ static func parado_no_tempo(c: Combate, am: Ameaca) -> bool:
 static func agir_antes(c: Combate, ser: Ameaca, alvo: Ser) -> bool:
 	if ser.mods_cena.has("prendendo"):
 		return true   # o succ só segura a vítima
+	if deve_fugir(c, ser):
+		c.fuga_da_ameaca(ser)   # docs/72: a pessoa quase morta e sozinha foge
+		return true
 	if ser.tem_hab("consumir") and int(ser.mods_cena.get("flores", 0)) < 7 and c.usar_habilidade(ser, "consumir").ok:
 		return true   # a Dama consome os corpos que encontra
 	if ser.tem_hab("comportamento_erratico"):
@@ -181,6 +184,14 @@ static func agir_antes(c: Combate, ser: Ameaca, alvo: Ser) -> bool:
 
 
 ## Enxames não atacam: só chegam perto (o dano vem no fim do turno).
+## Uma pessoa (não criatura, fora do covil) com um quarto dos PV ou menos, sem ninguém de pé do
+## lado dela, foge (docs/72). Criaturas do Outro Lado não fogem.
+static func deve_fugir(c: Combate, ser: Ameaca) -> bool:
+	if ser.criatura or bool(c.regras.get("chefe", false)) or ser.pv * 4 > ser.pv_maximo or ser.pv <= 0:
+		return false
+	return not c.participantes.any(func(s): return s != ser and s.lado == ser.lado and not s.esta_fora_de_combate())
+
+
 static func so_se_move(ser: Ser) -> bool:
 	return ser is Ameaca and (ser as Ameaca).ataques.is_empty()
 

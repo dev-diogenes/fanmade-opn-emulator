@@ -55,7 +55,8 @@ const COR_AGENTE := Color("3d7bd9")
 const COR_AMEACA := Color("b03a2e")
 ## Cor das áreas de rituais por elemento
 const COR_ZONA := {"sangue": Color(0.75, 0.1, 0.15, 0.4), "morte": Color(0.35, 0.3, 0.3, 0.45),
-	"energia": Color(0.6, 0.2, 0.9, 0.4), "conhecimento": Color(0.95, 0.75, 0.2, 0.4), "medo": Color(0.9, 0.9, 0.95, 0.35)}
+	"energia": Color(0.6, 0.2, 0.9, 0.4), "conhecimento": Color(0.95, 0.75, 0.2, 0.4), "medo": Color(0.9, 0.9, 0.95, 0.35),
+	"mina": Color(0.93, 0.65, 0.29, 0.55)}   # a mina instalada (docs/72), em âmbar de alerta
 
 var rig: CameraRig
 var grade: Grade

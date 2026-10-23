@@ -122,6 +122,9 @@ func test_faixa_da_vez_e_mao_que_desce():
 	arena.autoplay = true
 	add_child_autofree(arena)
 	await wait_frames(2)
+	# No autoplay a luta inteira acaba nesses quadros, e a faixa não aparece com a luta
+	# encerrada (docs/72): para olhar a faixa, a luta volta a estar em andamento.
+	arena.combate.encerrado = false
 	var amea: Ser = null
 	for s in arena.grade.seres():
 		if s is Ameaca:
