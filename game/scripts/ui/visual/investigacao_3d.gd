@@ -71,6 +71,8 @@ func construir(cena: Dictionary, agentes: Array) -> void:
 		var pos := Vector3(cos(ang) * RAIO_PONTOS, 0, sin(ang) * RAIO_PONTOS)
 		# Peça pelo tipo do ponto (docs/23, C6); sem palavra conhecida, a peça antiga da cena
 		var prop := PropsInvestigacao.criar(String(p.id), String(p.nome))
+		if p.get("simbolo", false):   # o símbolo do culto (docs/73)
+			prop = PropsInvestigacao.simbolo(int(p.semente), Tema.ELEMENTO.get(String(p.elemento), Tema.PERGAMINHO))
 		if prop == null:
 			prop = _prop_para(String(cena.get("visual", cena.id)), i)
 		prop.position = pos

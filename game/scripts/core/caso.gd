@@ -37,6 +37,8 @@ var ampliacao_verdade := ""   ## o candidato verdadeiro da pergunta nova
 var ampliada := false         ## a reviravolta já foi revelada
 var elemento := "sangue"      ## o elemento do caso (docs/52)
 var culto: Dictionary = {}    ## o culto por trás do caso, em cinco eixos (docs/71)
+var simbolo_traduzido := false   ## o anel do símbolo do culto já foi lido com Ocultismo (docs/73)
+var noticia := ""                ## a manchete do vilão no celular de uma testemunha (docs/73)
 ## Relatórios já recusados ([{quem, oque, onde}]): o mesmo não se manda duas vezes.
 var relatorios_recusados: Array = []
 
@@ -416,7 +418,8 @@ func para_dicionario() -> Dictionary:
 	return {"sujeito": sujeito, "acao": acao, "local": local, "resumo": resumo, "objetivo": objetivo,
 		"perguntas": perguntas.duplicate(true), "pistas": pistas.duplicate(true),
 		"ampliacao_id": ampliacao_id, "ampliacao_verdade": ampliacao_verdade, "ampliada": ampliada,
-		"elemento": elemento, "relatorios_recusados": relatorios_recusados.duplicate(true), "culto": culto.duplicate(true)}
+		"elemento": elemento, "relatorios_recusados": relatorios_recusados.duplicate(true), "culto": culto.duplicate(true),
+		"simbolo_traduzido": simbolo_traduzido, "noticia": noticia}
 
 
 static func de_dicionario(d: Dictionary) -> Caso:
@@ -433,6 +436,8 @@ static func de_dicionario(d: Dictionary) -> Caso:
 	c.culto = (d.get("culto", {}) as Dictionary).duplicate(true)
 	if not d.has("culto"):   # save de antes de docs/71
 		c.culto = Culto.gerar(c._semente_do_caso("culto"), c.elemento)
+	c.simbolo_traduzido = bool(d.get("simbolo_traduzido", false))
+	c.noticia = String(d.get("noticia", ""))
 	c.relatorios_recusados = (d.get("relatorios_recusados", []) as Array).duplicate(true)
 	if not d.has("ampliacao_id"):   # save de antes da investigação ampliada (docs/36)
 		c._sortear_ampliacao()

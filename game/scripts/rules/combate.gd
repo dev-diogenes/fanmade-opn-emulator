@@ -823,6 +823,17 @@ func _perseguidor_alcanca(alvo: Agente) -> String:
 	return "%s alcança e %s" % [melhor.nome, ("acerta: %d de dano" % r.dano) if r.acertou else "erra"]
 
 
+## Família (docs/73): quando um parente cai, os outros de pé ganham +1 dado nos ataques (até +2).
+func _familia_reage(caido: Ameaca) -> void:
+	if caido == null or not caido.culto.get("familia", false) or not caido.esta_fora_de_combate() or caido.mods_cena.get("familia_contou", false):
+		return
+	caido.mods_cena["familia_contou"] = true
+	for s in participantes:
+		if s is Ameaca and s != caido and s.lado == caido.lado and (s as Ameaca).culto.get("familia", false) and not s.esta_fora_de_combate():
+			s.mods_cena["dados_ataque"] = mini(2, int(s.mods_cena.get("dados_ataque", 0)) + 1)
+			_log("[color=#e0574a]%s vê o parente cair e avança com raiva (+1 dado).[/color]" % s.nome)
+
+
 ## Ameaça que foge (docs/72): uma pessoa quase morta, sozinha no lado dela, larga a luta.
 func fuga_da_ameaca(amea: Ameaca) -> void:
 	amea.mods_cena["fugiu"] = true
@@ -3667,8 +3678,10 @@ func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 
 		alvo.sofrer_dano_nao_letal(final)
 		if alvo.tem(Ser.INCONSCIENTE):
 			_log("%s desaba, desacordado." % alvo.nome)
+		_familia_reage(amea_alvo)
 		return final
 	alvo.sofrer_dano(final)
+	_familia_reage(amea_alvo)
 	if atacante is Ameaca and (atacante as Ameaca).tem_hab("sadismo"):
 		atacante.mods_cena["sadismo"] = true
 	if amea_alvo != null:

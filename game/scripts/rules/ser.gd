@@ -221,7 +221,7 @@ func modificar_ataque(arma: Dictionary, alvo: Ser) -> Dictionary:
 	var mods := {"bonus_ataque": 0, "dados_extras": -penalidade_ataque_temporaria, "margem": 0, "bonus_dano": 0, "dados_dano_extra": 0}
 	mods.bonus_ataque += int(mods_cena.get("ataque_contra", {}).get(alvo, 0))
 	mods.bonus_ataque -= int(mods_cena.get("penalidade_ataque", 0))
-	mods.dados_extras += efeito_ritual("dados_ataque")
+	mods.dados_extras += efeito_ritual("dados_ataque") + int(mods_cena.get("dados_ataque", 0))   # fúria da família (docs/73)
 	mods.dados_dano_extra += efeito_ritual("dados_dano_extra")   # Ordens (comandante mercenário)
 	if tem(AGARRADO):
 		mods.dados_extras -= 1

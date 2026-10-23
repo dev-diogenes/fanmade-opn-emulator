@@ -35,6 +35,9 @@ var _presteza_pendente := false       ## Presteza Atlética: o próximo aliado q
 var _ajuda: Dictionary = {}           ## Agente -> bônus de ajuda pendente
 ## Credencial de fachada (docs/63, OR4), que a Missão passa: {nome, usos, queimada}.
 ## `usos_credencial` conta os desta cena (a Missão soma no fim).
+## A manchete do vilão (docs/73): a primeira testemunha que fala a mostra no celular. "" = nada.
+var noticia := ""
+var noticia_mostrada := false
 var credencial: Dictionary = {}
 var usos_credencial := 0
 var _trilha: Dictionary = {}          ## Agente -> {"sucessos": int, "dados": int} (Na Trilha Certa)
@@ -102,6 +105,20 @@ func _nomear_testemunhas() -> void:
 		p.nome = "%s · %s" % [nome.strip_edges(), papel]
 
 
+## O símbolo do culto (docs/73, EL5): um ponto a mais na cena, até o anel ser traduzido. Só
+## Ocultismo lê o anel (perícia só para treinados); a pista responde "quem" e dá o nome do culto.
+func adicionar_simbolo_do_culto() -> void:
+	if caso == null or caso.culto.is_empty() or caso.simbolo_traduzido or not ponto("simbolo_culto").is_empty():
+		return
+	var cfg: Dictionary = DadosJogo.ler("cultos").get("simbolo", {})
+	if cfg.is_empty():
+		return
+	cena.pontos.append({"id": "simbolo_culto", "nome": String(cfg.nome_ponto), "pericias": (cfg.pericias as Dictionary).duplicate(),
+		"responde": "quem", "pista": String(cfg.pista).replace("{culto}", String(caso.culto.nome)),
+		"simbolo": true, "semente": absi(hash(String(caso.culto.nome))), "elemento": caso.elemento})
+	pontos_restantes.append("simbolo_culto")
+
+
 ## O que o close-up da pista mostra (docs/56): a lente pela perícia, o sentido pelo elemento do
 ## caso (e, na Morte, a assinatura canônica que aquela lente revela).
 func detalhes_da_pista(achada: Dictionary) -> Dictionary:
@@ -111,9 +128,12 @@ func detalhes_da_pista(achada: Dictionary) -> Dictionary:
 	var sentido := String(el.get("assinaturas", {}).get(pericia, el.get("sentido", "")))
 	var p := ponto(String(achada.get("ponto", "")))
 	var ind := String(achada.get("indicio", ""))
-	return {"titulo": String(p.get("nome", "")), "lente": String(lentes.get(pericia, "")), "sentido": sentido,
+	var d := {"titulo": String(p.get("nome", "")), "lente": String(lentes.get(pericia, "")), "sentido": sentido,
 		"texto": String(achada.get("texto", "")), "rotulo": String(Caso.indicio(ind).get("rotulo", "")) if ind != "" else "",
-		"duvidosa": achada.get("duvidosa", false)}
+		"duvidosa": achada.get("duvidosa", false), "noticia": String(achada.get("noticia", ""))}
+	if p.get("simbolo", false):   # docs/73: o close-up mostra o símbolo na cor do elemento
+		d["simbolo"] = {"semente": int(p.semente), "elemento": String(p.elemento)}
+	return d
 
 
 # --- Turnos ---------------------------------------------------------------------
@@ -345,8 +365,18 @@ func _encontrar_pista(a: Agente, ponto_id: String, incerta: bool = false, sorte:
 		original = "%s, %s, %s. %s" % [t.nome, t.aparencia, t.jeito, original]
 	var pista := caso.registrar_pista(original, p.responde, cena.id, incerta, sorte)
 	var texto := String(pista.texto)
-	pistas_encontradas.append({"ponto": ponto_id, "texto": texto, "responde": p.responde, "agente": a.nome,
-		"indicio": pista.indicio, "duvidosa": incerta, "pericia": pericia})
+	var achada := {"ponto": ponto_id, "texto": texto, "responde": p.responde, "agente": a.nome,
+		"indicio": pista.indicio, "duvidosa": incerta, "pericia": pericia}
+	if p.get("simbolo", false):
+		caso.simbolo_traduzido = true
+		_log("[color=#e3c27a]%s traduz o anel do símbolo: o culto assina \"%s\".[/color]" % [a.nome, caso.culto.nome])
+	if noticia != "" and not noticia_mostrada and testemunhas.has(ponto_id):
+		noticia_mostrada = true
+		var linha := String(DadosJogo.ler("cultos").noticia.texto).replace("{testemunha}", String(testemunhas[ponto_id].nome)).replace("{manchete}", noticia)
+		achada["noticia"] = linha
+		caso.noticia = noticia
+		_log("[color=#7fd3c7]%s[/color]" % linha)
+	pistas_encontradas.append(achada)
 	var rotulo := String(Caso.indicio(pista.indicio).get("rotulo", "")) if pista.indicio != "" else ""
 	if incerta:
 		_log("[color=#eda64a]Depoimento incerto:[/color] %s%s [i](a testemunha hesita; pode estar enganada)[/i]" % [texto, "  [color=#e3c27a][?%s][/color]" % rotulo.to_upper() if rotulo != "" else ""])

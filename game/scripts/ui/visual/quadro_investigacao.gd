@@ -66,6 +66,10 @@ func _reconstruir() -> void:
 		texto_objetivo += "\nNos muros e nas portas: %s." % caso.culto.sinal
 		if caso.resposta("quem") != "":
 			texto_objetivo += "\nCulto: %s, %s, organizado em %s." % [caso.culto.nome, caso.culto.fachada.nome, caso.culto.estrutura.nome]
+		elif caso.simbolo_traduzido:   # docs/73: o anel do símbolo dá o nome antes da dedução
+			texto_objetivo += "\nO anel do símbolo assina: %s." % caso.culto.nome
+	if caso.noticia != "":   # docs/73: a manchete do vilão vista no celular de uma testemunha
+		texto_objetivo += "\nNo celular de uma testemunha: \"%s\"." % caso.noticia
 	var objetivo := _bilhete(texto_objetivo, Vector2(size.x - 40, 0), 0.0, Tema.FONTE_P)
 	objetivo.position = Vector2(20, 40)
 	_conteudo.add_child(objetivo)
@@ -73,7 +77,12 @@ func _reconstruir() -> void:
 	var colunas := maxi(1, caso.perguntas.size())
 	var largura := (size.x - 40) / colunas
 	_lb = minf(LARGURA_BILHETE, largura - 8.0)   # com a 4ª pergunta (docs/36), o bilhete estreita
-	var topo := 40.0 + 90.0   # espaço para o "Deduzir" entre o objetivo e os bilhetes (docs/32)
+	# Espaço para o "Deduzir" entre o objetivo e os bilhetes (docs/32). O objetivo cresce com o
+	# culto, o símbolo e a notícia (docs/73): os bilhetes descem junto.
+	var lbl_obj: Label = objetivo.get_child(0)
+	var alt_obj := lbl_obj.get_theme_font("font").get_multiline_string_size(texto_objetivo, HORIZONTAL_ALIGNMENT_LEFT,
+		size.x - 60.0, Tema.FONTE_P).y + 28.0
+	var topo := maxf(40.0 + 90.0, 40.0 + alt_obj + 46.0)
 	var novas := caso.pistas.size() > _pistas_vistas
 	for i in caso.perguntas.size():
 		var q: Dictionary = caso.perguntas[i]

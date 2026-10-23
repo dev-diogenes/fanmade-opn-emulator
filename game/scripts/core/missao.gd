@@ -1050,6 +1050,8 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool, semente_s
 			if caso != null and caso.pergunta("quem").get("respondida", false):
 				am.nome = caso.sujeito.get("chefe_titulo", am.nome)
 		ameacas.append(am)
+	if _culto_vale_na_luta():
+		ameacas = _estrutura_nos_cultistas(ameacas)
 	# Balanceamento (p.187): fora do covil, a soma do VD das ameaças não passa da soma do NEX
 	# de quem entra no combate (× dificuldade); sempre sobra ao menos a mais fraca.
 	if not participantes.is_empty():
@@ -1063,6 +1065,8 @@ func _preparar_encontro(h: Vector2i, encontro_id: String, chefe: bool, semente_s
 			var chefe_am: Dictionary = ameacas[0]
 			var sobra := int(orcamento * float(_cfg.get("dificuldade_covil", 1.5))) - int(chefe_am.get("vd", 0))
 			ameacas = [chefe_am] + escolher_por_vd(ameacas.slice(1), sobra, false)
+	if _culto_vale_na_luta():
+		_marcar_lider(ameacas)
 	for a in participantes:
 		armas[a] = a.arma()   # a arma de cada um agora: sem munição, vira coronhada (docs/67)
 	encontro_pendente = {
@@ -1232,6 +1236,89 @@ static func escolher_por_vd(lista: Array, orcamento: int, ao_menos_uma: bool = t
 	if escolhidas.is_empty() and not ordenadas.is_empty() and ao_menos_uma:
 		escolhidas.append(ordenadas[-1])
 	return escolhidas
+
+
+# --- O culto na luta (docs/73) ------------------------------------------------------------
+
+const CULTISTAS := ["iniciado", "investido", "lider_de_culto"]
+
+
+## A estrutura do culto mexe nos encontros só nas missões procedurais da carreira (como os
+## outros efeitos do culto, docs/71), e nunca num alarme falso.
+func _culto_vale_na_luta() -> bool:
+	return caso != null and not caso.culto.is_empty() and extras.get("culto", false) and not alarme_falso
+
+
+## As regras de luta da estrutura (cultos.json): lidas pelo id, para valer também em saves antigos.
+func _regras_da_estrutura() -> Dictionary:
+	var id := String(caso.culto.get("estrutura", {}).get("id", ""))
+	for e in DadosJogo.ler("cultos").estruturas:
+		if String(e.id) == id:
+			return e.get("encontro", {})
+	return {}
+
+
+## Antes do orçamento de VD: troca, soma e marca os cultistas do encontro pela estrutura. O
+## chefe do covil não muda. Fichas copiadas: o traço vai em ficha.culto (Ameaca.culto).
+func _estrutura_nos_cultistas(ameacas: Array) -> Array:
+	var r := _regras_da_estrutura()
+	if r.is_empty() or not ameacas.any(func(am): return String(am.get("id", "")) in CULTISTAS and not am.get("chefe", false)):
+		return ameacas
+	var lista: Array = []
+	var trocou_um := false
+	for am in ameacas:
+		var id := String(am.get("id", ""))
+		if am.get("chefe", false) or not id in CULTISTAS:
+			lista.append(am)
+			continue
+		if (r.get("trocar", {}) as Dictionary).has(id):
+			id = String(r.trocar[id])
+		elif not trocou_um and (r.get("trocar_um", {}) as Dictionary).has(id):
+			trocou_um = true
+			var novo := ameaca_info(String(r.trocar_um[id])).duplicate(true)
+			novo.nome = String(r.get("nome_trocado", novo.nome))
+			lista.append(novo)
+			continue
+		lista.append(_cultista(id, r, lista.size()))
+	if r.has("extra"):
+		lista.append(_cultista(String(r.extra), r, lista.size()))
+	return lista
+
+
+## Um cultista com o traço da estrutura: a fuga, a família (o parentesco no nome) e a máscara.
+func _cultista(id: String, r: Dictionary, i: int) -> Dictionary:
+	var am := ameaca_info(id).duplicate(true)
+	var traco := {}
+	if r.has("fuga"):
+		traco["fuga"] = String(r.fuga)
+	if r.get("familia", false):
+		traco["familia"] = true
+		var parentes: Array = r.get("parentes", [])
+		if not parentes.is_empty():
+			am.nome = "%s, %s" % [am.nome, parentes[(absi(hash("%d|parente" % semente)) + i) % parentes.size()]]
+	if r.has("sufixo"):
+		am.nome = "%s %s" % [am.nome, String(r.sufixo)]
+	am.ficha["culto"] = traco
+	return am
+
+
+## Hierarquia (docs/73): depois do orçamento, com dois ou mais cultistas, o mais forte é o líder
+## e os outros, a escolta. Com um só, não há a quem obedecer.
+func _marcar_lider(ameacas: Array) -> void:
+	if not _regras_da_estrutura().get("lider", false):
+		return
+	var cultistas := ameacas.filter(func(am): return String(am.get("id", "")) in CULTISTAS and not am.get("chefe", false))
+	if cultistas.size() < 2:
+		return
+	cultistas.sort_custom(func(a, b): return int(a.vd) > int(b.vd))
+	for i in cultistas.size():
+		var am: Dictionary = cultistas[i]
+		if not am.ficha.has("culto"):
+			am.ficha = am.ficha.duplicate(true)
+			am.ficha["culto"] = {}
+		am.ficha.culto[("lider" if i == 0 else "escolta")] = true
+		if i == 0:
+			am.nome = "%s (líder)" % am.nome
 
 
 ## Encontros que podem surgir: nível até o da Membrana e cuja ameaça mais fraca tenha VD de até
@@ -1530,6 +1617,13 @@ func criar_cena_investigacao() -> CenaInvestigacao:
 	var d := Dados.new(int(investigacao_pendente.get("semente", 1)))
 	var cena := CenaInvestigacao.nova(ruleset, d, caso, investigacao_pendente.cena, investigacao_pendente.agentes, "", membrana, extras.get("cenas", []))
 	cena.credencial = credencial.duplicate()   # docs/63: a cena usa, a Missão soma no fim
+	# O culto na cena (docs/73): o símbolo para traduzir e, se o caso é do vilão, a notícia no
+	# celular de uma testemunha. Num alarme falso não há culto por trás.
+	if caso != null and not alarme_falso:
+		cena.adicionar_simbolo_do_culto()
+		var vil: Dictionary = sinal.get("vilao", {})
+		if (vil.get("ligado", false) or vil.get("final", false)) and caso.noticia == "":
+			cena.noticia = Culto.recorte(vil, caso.culto, semente)
 	return cena
 
 

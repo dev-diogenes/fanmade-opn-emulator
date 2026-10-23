@@ -185,9 +185,15 @@ static func agir_antes(c: Combate, ser: Ameaca, alvo: Ser) -> bool:
 
 ## Enxames não atacam: só chegam perto (o dano vem no fim do turno).
 ## Uma pessoa (não criatura, fora do covil) com um quarto dos PV ou menos, sem ninguém de pé do
-## lado dela, foge (docs/72). Criaturas do Outro Lado não fogem.
+## lado dela, foge (docs/72). Criaturas do Outro Lado não fogem. A estrutura do culto (docs/73)
+## muda a conta: células e a escolta sem líder fogem com metade; a mente coletiva não foge.
 static func deve_fugir(c: Combate, ser: Ameaca) -> bool:
-	if ser.criatura or bool(c.regras.get("chefe", false)) or ser.pv * 4 > ser.pv_maximo or ser.pv <= 0:
+	var fuga := String(ser.culto.get("fuga", ""))
+	if ser.criatura or bool(c.regras.get("chefe", false)) or fuga == "nunca" or ser.pv <= 0:
+		return false
+	var sem_lider: bool = ser.culto.get("escolta", false) and not c.participantes.any(func(s): return s is Ameaca and (s as Ameaca).culto.get("lider", false) and not s.esta_fora_de_combate())
+	var fracao := 2 if fuga == "metade" or sem_lider else 4
+	if ser.pv * fracao > ser.pv_maximo:
 		return false
 	return not c.participantes.any(func(s): return s != ser and s.lado == ser.lado and not s.esta_fora_de_combate())
 

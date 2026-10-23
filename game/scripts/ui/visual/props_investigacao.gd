@@ -101,6 +101,40 @@ static func lousa() -> Node3D:
 	return n
 
 
+## O símbolo do culto pintado num pedaço de muro (docs/73, EL5): o traço do meio na cor do
+## elemento e um anel de oito sigilos pequenos em volta, o alfabeto do Conhecimento.
+static func simbolo(semente: int, cor: Color) -> Node3D:
+	var n := Node3D.new()
+	_caixa(n, Vector3(1.5, 1.6, 0.18), Vector3(0, 0.8, -0.05), Color("5b5148"))
+	_caixa(n, Vector3(1.6, 0.08, 0.24), Vector3(0, 1.62, -0.05), Color("3e3731"))
+	n.add_child(_pintura(Sigilo.imagem(semente, 192, Color.WHITE, 7.0), cor, 0.75, Vector3(0, 0.85, 0.05)))
+	for i in 8:
+		var ang := TAU * i / 8.0
+		var pos := Vector3(cos(ang) * 0.58, 0.85 + sin(ang) * 0.58, 0.05)
+		n.add_child(_pintura(Sigilo.imagem(semente + 31 * (i + 1), 64, Color.WHITE, 4.0), Tema.ELEMENTO.conhecimento, 0.22, pos))
+	return n
+
+
+static func _pintura(textura: Texture2D, cor: Color, tamanho: float, pos: Vector3) -> MeshInstance3D:
+	var q := QuadMesh.new()
+	q.size = Vector2(tamanho, tamanho)
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = textura
+	m.albedo_color = cor
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.emission_enabled = true
+	m.emission = cor
+	m.emission_energy_multiplier = 0.8
+	m.emission_texture = textura
+	var mi := MeshInstance3D.new()
+	mi.mesh = q
+	mi.material_override = m
+	mi.position = pos
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
+
+
 static func _caixa(pai: Node3D, tamanho: Vector3, pos: Vector3, cor: Color, emissao: float = 0.0) -> MeshInstance3D:
 	var m := BoxMesh.new()
 	m.size = tamanho

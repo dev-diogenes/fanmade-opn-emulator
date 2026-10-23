@@ -26,6 +26,8 @@ var ficha_original: Dictionary = {}   ## ficha usada para criar (cópias do escu
 ## Forma de Sangue (Mulher Afogada): {"resistencias", "cura_acelerada", "deslocamento"} até o enigma ser resolvido
 var forma_de_sangue: Dictionary = {}
 var transformacao: Dictionary = {}   ## {"nome", "ficha"}: a 0 PV vira outra criatura (Enpap-X)
+## O traço da estrutura do culto na luta (docs/73): {"fuga": "metade"|"nunca", "familia", "lider", "escolta"}
+var culto: Dictionary = {}
 
 const CONDICOES_PARALISIA := ["agarrado", "enredado", "imovel", "lento", "paralisado"]
 
@@ -67,6 +69,7 @@ func aplicar_ficha(ficha: Dictionary) -> void:
 	conjurador = ficha.get("conjurador", {}).duplicate(true)
 	forma_de_sangue = ficha.get("forma_de_sangue", {}).duplicate(true)
 	transformacao = ficha.get("transformacao", {})
+	culto = ficha.get("culto", {})
 
 
 func atributo(atributo_id: String) -> int:

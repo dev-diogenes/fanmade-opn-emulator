@@ -23,12 +23,27 @@
     {"id": "loja", "nome": "uma loja de penhores", "dica": "compram objetos que ninguém quer"}
   ],
   "estruturas": [
-    {"id": "celulas", "nome": "células sem líder", "texto": "Cada grupo age sozinho e sabe pouco dos outros: o preso conta menos.", "efeito": {"segredos_preso": -1}},
-    {"id": "hierarquia", "nome": "uma hierarquia com um líder", "texto": "Há alguém no topo, e os de baixo sabem a quem obedecem: o preso conta mais.", "efeito": {"segredos_preso": 1}},
-    {"id": "mente_coletiva", "nome": "uma mente coletiva mascarada", "texto": "De máscara, falam como um só: o preso quase não fala.", "efeito": {"segredos_preso": -2}},
-    {"id": "familia", "nome": "uma família", "texto": "Laços de sangue e de casa: protegem uns aos outros.", "efeito": {"segredos_preso": 0}},
-    {"id": "empresa", "nome": "uma empresa com diretoria", "texto": "Tudo tem nota fiscal e procuração: a papelada também é pista.", "efeito": {"segredos_preso": 1}}
+    {"id": "celulas", "nome": "células sem líder", "texto": "Cada grupo age sozinho e sabe pouco dos outros: o preso conta menos.", "efeito": {"segredos_preso": -1},
+      "encontro": {"trocar": {"investido": "iniciado", "lider_de_culto": "investido"}, "extra": "iniciado", "fuga": "metade", "texto": "Na luta: mais cultistas, mais fracos, e ninguém segura a posição (fogem com metade dos PV)."}},
+    {"id": "hierarquia", "nome": "uma hierarquia com um líder", "texto": "Há alguém no topo, e os de baixo sabem a quem obedecem: o preso conta mais.", "efeito": {"segredos_preso": 1},
+      "encontro": {"extra": "iniciado", "lider": true, "texto": "Na luta: um líder com escolta; se o líder cai, a escolta perde a coragem (foge com metade dos PV)."}},
+    {"id": "mente_coletiva", "nome": "uma mente coletiva mascarada", "texto": "De máscara, falam como um só: o preso quase não fala.", "efeito": {"segredos_preso": -2},
+      "encontro": {"extra": "iniciado", "fuga": "nunca", "sufixo": "mascarado", "texto": "Na luta: mascarados a mais, que não fogem nem se dispersam."}},
+    {"id": "familia", "nome": "uma família", "texto": "Laços de sangue e de casa: protegem uns aos outros.", "efeito": {"segredos_preso": 0},
+      "encontro": {"familia": true, "parentes": ["tio", "tia", "primo", "prima", "irmão", "irmã", "avô", "avó"], "texto": "Na luta: quando um parente cai, os outros ganham +1 dado nos ataques (até +2)."}},
+    {"id": "empresa", "nome": "uma empresa com diretoria", "texto": "Tudo tem nota fiscal e procuração: a papelada também é pista.", "efeito": {"segredos_preso": 1},
+      "encontro": {"trocar_um": {"iniciado": "capanga"}, "nome_trocado": "Segurança da empresa", "texto": "Na luta: a empresa paga seguranças (um capanga no lugar de um cultista)."}}
   ],
+  "simbolo": {
+    "nota": "EL5 do relatório (docs/73): o símbolo do culto junta o traço do elemento a um anel de sigilos, e quem tem Ocultismo traduz o anel. Aparece nas cenas até ser traduzido. Texto nosso.",
+    "nome_ponto": "Símbolo na parede",
+    "pericias": {"ocultismo": 15},
+    "pista": "Pintado na parede, o símbolo do culto: um traço do Outro Lado no meio e um anel de sigilos em volta. Traduzido, o anel é uma assinatura: \"{culto}\". {indicio}"
+  },
+  "noticia": {
+    "nota": "Os recortes do vilão nas cenas (docs/73): numa missão ligada, a primeira testemunha que fala mostra a manchete no celular.",
+    "texto": "No celular, {testemunha} mostra uma notícia: \"{manchete}\"."
+  },
   "metodos": [
     {"id": "autoridades", "nome": "manda na polícia e na prefeitura", "texto": "A credencial de fachada se queima mais rápido.", "efeito": {"credencial_limite": -1}},
     {"id": "transmissoes", "nome": "transmite os rituais pela internet", "texto": "Gente demais viu: a Membrana começa mais fraca.", "efeito": {"membrana_inicial": -6}},

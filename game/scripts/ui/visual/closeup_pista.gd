@@ -71,6 +71,15 @@ func _montar(info: Dictionary) -> void:
 			selo.add_theme_font_override("font", ft)
 		selo.rotation_degrees = -5
 		cab.add_child(selo)
+	var simbolo: Dictionary = info.get("simbolo", {})
+	if not simbolo.is_empty():   # docs/73: o símbolo do culto, na cor do elemento
+		var tr := TextureRect.new()
+		tr.texture = Sigilo.imagem(int(simbolo.semente), 96, Tema.ELEMENTO.get(String(simbolo.elemento), Tema.TINTA), 4.0)
+		tr.custom_minimum_size = Vector2(72, 72)
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cab.add_child(tr)
 	var lente := String(info.get("lente", ""))
 	if lente != "":
 		var l := _linha("Com %s." % lente, Color(Tema.TINTA, 0.7))
@@ -87,6 +96,12 @@ func _montar(info: Dictionary) -> void:
 	corpo.custom_minimum_size = Vector2(560, 0)
 	v.add_child(corpo)
 	_textos.append(corpo)
+	var noticia := String(info.get("noticia", ""))
+	if noticia != "":   # docs/73: a manchete do vilão no celular da testemunha
+		var n := _linha(noticia, Color("1f5c58"))
+		n.custom_minimum_size = Vector2(560, 0)
+		v.add_child(n)
+		_textos.append(n)
 
 
 func _linha(texto: String, cor: Color) -> Label:

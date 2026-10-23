@@ -75,6 +75,7 @@
 | [70-traumas-e-fobias.md](70-traumas-e-fobias.md) | Quem enlouquece pode voltar com fobia do elemento do caso (Vontade DT 20): abalado diante da criatura desse elemento; a Enfermaria trata, com o agente fora da próxima missão. Camada do jogo, não do livro |
 | [71-cultos-vilao-e-subgenero.md](71-cultos-vilao-e-subgenero.md) | Um culto sorteado por caso em cinco eixos (elemento, fachada, estrutura, método, sinal) que mexe na Membrana, no chefe, na credencial e nos presos; um vilão da carreira que liga os casos por recortes de jornal até a sede; e o subgênero do sinal (perseguição, isolados, transmissão) |
 | [72-itens-de-campo-fuga-e-cacada.md](72-itens-de-campo-fuga-e-cacada.md) | Itens paranormais com efeito (câmera de aura, medidor, scanner, escuta, emissor), arremesso, amarras como armadilha, mina e algemas; fuga do grupo e caçada ao fugitivo por teste estendido (p.86-87); as correções e o playtest pela interface |
+| [73-culto-na-investigacao-e-na-luta.md](73-culto-na-investigacao-e-na-luta.md) | O símbolo do culto na parede, que só o Ocultismo traduz (nome do culto e pista de quem); a manchete do vilão no celular de uma testemunha; e a estrutura do culto nos encontros (células, hierarquia com líder, mascarados, família com fúria, seguranças da empresa) |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.
