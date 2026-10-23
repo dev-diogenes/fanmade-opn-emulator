@@ -25,6 +25,7 @@ var indice := 0
 var movimento_restante := 0
 var movimento_rolado := false
 var pode_escalar := false
+var movimento_tatico := false   ## Movimento Tático pago neste turno (docs/76)
 ## Covil selado (docs/42): só abre quando o grupo sabe onde ele fica ("onde" respondida ou um
 ## evento que o revele), ou à força, com a Membrana rompida.
 var covil_localizado := false               ## Tirou 20 nos dados de movimento: sobe a serra neste turno (docs/34)
@@ -66,6 +67,8 @@ var rastros: Dictionary = {}
 ## O caçador da Perseguição (docs/74): {"lista", "estagio", "encontro", "derrotas", "volta_em",
 ## "banido"}; {} sem ele. No mapa, é o encontro com "cacador": true.
 var cacador: Dictionary = {}
+## Achados da missão (O Crime Compensa, docs/76): as armas de quem caiu nos combates.
+var itens_achados: Array = []
 var alivio := 0
 var passos_da_caca: Array = []   ## [{"de": Vector2i, "para": Vector2i}]
 var _covil_selado_avisado := -1
@@ -237,7 +240,9 @@ func destinos() -> Dictionary:
 	var a := agente_atual()
 	if a == null or not movimento_rolado or ocupado():
 		return {}
+	mapa.tatico = movimento_tatico
 	var custos := mapa.alcancaveis(posicao(a), movimento_restante, true, pode_escalar)
+	mapa.tatico = false
 	custos.erase(posicao(a))
 	return custos
 
@@ -247,12 +252,17 @@ func mover(destino: Vector2i) -> bool:
 	var a := agente_atual()
 	if a == null or not destinos().has(destino):
 		return false
+	mapa.tatico = movimento_tatico
 	var passos := mapa.caminho(posicao(a), destino, true, pode_escalar)
-	if passos.is_empty() or mapa.custo_do_caminho(passos, pode_escalar) > movimento_restante:
+	var custo_total := mapa.custo_do_caminho(passos, pode_escalar)
+	if passos.is_empty() or custo_total > movimento_restante:
+		mapa.tatico = false
 		return false
 	_descansou.erase(a)
 	for h in passos:
 		movimento_restante -= mapa.custo(h, pode_escalar)
+		if h == passos[-1]:
+			mapa.tatico = false
 		posicoes[a] = h
 		# Do alto da serra se vê longe (docs/34)
 		var visao := int(_cfg.visao) + (int(_cfg.get("visao_da_serra", 2)) if mapa.escalavel(h) else 0)
@@ -319,7 +329,7 @@ func descansar() -> bool:
 
 # --- Interlúdio (p.92-93, docs/48) ------------------------------------------------------
 
-const ACOES_INTERLUDIO := ["dormir", "relaxar", "alimentar", "exercitar", "ler", "revisar"]
+const ACOES_INTERLUDIO := ["dormir", "relaxar", "alimentar", "exercitar", "ler", "revisar", "selo"]
 
 
 ## Quem participa: os agentes no hex do agente da vez que ainda não fizeram interlúdio aqui.
@@ -340,6 +350,33 @@ func condicao_interludio() -> String:
 	return String(_cfg.interludio.condicao_por_lugar.get(tipo, "normal"))
 
 
+## O descanso de um agente: na vila, a hospedagem segue o limite de crédito dele (p.62);
+## Patrocinador da Ordem (p.30) conta um nível acima. Fora da vila, a condição do lugar.
+func condicao_de(a: Agente) -> String:
+	var cond := condicao_interludio()
+	var cfg: Dictionary = _cfg.interludio.get("credito", {})
+	var tipo: String = mapa.conteudo(posicao(a)).get("tipo", "")
+	if cfg.is_empty() or not tipo in cfg.get("lugares", []):
+		return cond
+	var hosp := String(cfg.hospedagem.get(credito_de(a), cond))
+	var ordem: Array = _cfg.interludio.multiplicador.keys()
+	return hosp if ordem.find(hosp) > ordem.find(cond) else cond
+
+
+## O limite de crédito do agente (p.62), um acima com Patrocinador da Ordem (p.30).
+func credito_de(a: Agente) -> String:
+	return a.credito()
+
+
+## Rituais de que o agente pode fazer um selo agora (Criar Selo, p.43): conhece, têm efeito no
+## combate, cabem no PE e ainda há lugar (selos até a Presença).
+func rituais_para_selo(a: Agente) -> Array:
+	if not a.tem_habilidade("criar_selo") or a.selos().size() >= maxi(1, a.atributo("pre")):
+		return []
+	return Array(a.rituais).filter(func(rid): var r := ruleset.ritual(rid); return r.get("implementado", false) \
+		and not r.get("efeitos", []).is_empty() and a.custo_ritual(rid) <= a.pe + a.pe_temporario)
+
+
 ## Pontos que dá para revisar: ["cena:ponto"].
 func pontos_revisaveis() -> Array:
 	var lista: Array = []
@@ -356,9 +393,16 @@ func interludio(escolhas: Dictionary) -> Dictionary:
 	if participantes.is_empty():
 		return {"ok": false, "erro": "não há interlúdio aqui agora"}
 	var cfg: Dictionary = _cfg.interludio
-	var cond := condicao_interludio()
+	var cond_lugar := condicao_interludio()
 	var linhas: Array[String] = []
 	var relaxam := 0
+	# Ingrediente Secreto (p.27): o prato do chef vale como segundo prato de quem se alimenta
+	var prato_do_chef := ""
+	for a in participantes:
+		var e: Dictionary = escolhas.get(a.id, {})
+		if a.tem_habilidade("ingrediente_secreto") and "alimentar" in e.get("acoes", []) and String(e.get("prato", "")) != "":
+			prato_do_chef = String(e.prato)
+			break
 	for a in participantes:
 		var e: Dictionary = escolhas.get(a.id, {})
 		if "relaxar" in e.get("acoes", []):
@@ -369,20 +413,32 @@ func interludio(escolhas: Dictionary) -> Dictionary:
 		if acoes.is_empty():
 			continue
 		var prato := String(e.get("prato", "")) if "alimentar" in acoes else ""
+		var pratos: Array = [prato] if prato != "" else []
+		if prato != "" and prato_do_chef != "":
+			pratos.append(prato_do_chef)
+		var cond := condicao_de(a)
 		var lim := ruleset.limite_pe(a.nex)
 		var feito: Array[String] = []
-		if prato != "":
-			feito.append(String(cfg.pratos.get(prato, {}).get("nome", prato)).to_lower())
+		for p in pratos:
+			feito.append(String(cfg.pratos.get(p, {}).get("nome", p)).to_lower())
+		if pratos.size() > 1:
+			feito[-1] += " (Ingrediente Secreto)"
 		if "dormir" in acoes:
-			var mult_pv := float(cfg.multiplicador[cfg.passo_seguinte[cond] if prato == "nutritivo" else cond])
-			var mult_pe := float(cfg.multiplicador[cfg.passo_seguinte[cond] if prato == "energetico" else cond])
+			var passo_pv := cond
+			var passo_pe := cond
+			for _i in pratos.count("nutritivo"):
+				passo_pv = cfg.passo_seguinte[passo_pv]
+			for _i in pratos.count("energetico"):
+				passo_pe = cfg.passo_seguinte[passo_pe]
+			var mult_pv := float(cfg.multiplicador[passo_pv])
+			var mult_pe := float(cfg.multiplicador[passo_pe])
 			var pv := maxi(1, int(lim * mult_pv))
 			var pe := maxi(1, int(lim * mult_pe))
 			a.curar(pv)
 			a.recuperar_pe(pe)
 			feito.append("dorme (+%d PV, +%d PE)" % [pv, pe])
 		if "relaxar" in acoes:
-			var san := maxi(1, int(lim * float(cfg.multiplicador[cond]))) + relaxam + (2 if prato == "favorito" else 0)
+			var san := maxi(1, int(lim * float(cfg.multiplicador[cond]))) + relaxam + 2 * pratos.count("favorito")
 			a.recuperar_sanidade(san)
 			feito.append("relaxa (+%d SAN)" % san)
 		if "exercitar" in acoes:
@@ -392,14 +448,20 @@ func interludio(escolhas: Dictionary) -> Dictionary:
 			a.bonus_leitura = mini(a.bonus_leitura + 1, maxi(1, a.atributo("int")))
 			feito.append("lê (+1d6 guardado em INT/PRE)")
 		if "revisar" in acoes:
-			feito.append(_revisar_caso(a, String(e.get("revisar", "")), prato == "rapido"))
+			feito.append(_revisar_caso(a, String(e.get("revisar", "")), pratos.count("rapido")))
+		if "selo" in acoes:   # Criar Selo (p.43): paga o custo do ritual e guarda o selo
+			var rid := String(e.get("selo", ""))
+			if rid in rituais_para_selo(a):
+				a.gastar_pe(a.custo_ritual(rid), true)
+				a.equipamento.append("selo:" + rid)
+				feito.append("faz um selo de %s" % ruleset.ritual(rid).nome)
 		_descansou[a] = posicao(a)
 		linhas.append("%s: %s." % [a.nome, ", ".join(PackedStringArray(feito))])
 	if linhas.is_empty():
 		return {"ok": false, "erro": "ninguém escolheu ações"}
 	movimento_restante = 0
 	movimento_rolado = true
-	_log("[color=#7fd3c7][b]Interlúdio[/b] (descanso %s).[/color]" % cond)
+	_log("[color=#7fd3c7][b]Interlúdio[/b] (descanso %s).[/color]" % cond_lugar)
 	for l in linhas:
 		_log(l)
 	return {"ok": true, "linhas": linhas}
@@ -407,7 +469,7 @@ func interludio(escolhas: Dictionary) -> Dictionary:
 
 ## Revisar Caso (p.93): volta às anotações de um ponto que ficou para trás; teste com a melhor
 ## perícia do ponto contra a DT dele. Passando, a pista entra no caso. Devolve o texto.
-func _revisar_caso(a: Agente, alvo: String, prato_rapido: bool) -> String:
+func _revisar_caso(a: Agente, alvo: String, pratos_rapidos: int) -> String:
 	var partes := alvo.split(":")
 	if partes.size() != 2:
 		return "revisa o caso, sem saber por onde começar"
@@ -433,8 +495,8 @@ func _revisar_caso(a: Agente, alvo: String, prato_rapido: bool) -> String:
 			melhor = per
 	var dt := int(ponto.pericias[melhor])
 	var t := a.testar(dados, melhor, dt)
-	if t != null and prato_rapido:
-		t.somar_bonus(5)   # prato rápido (p.93)
+	if t != null and pratos_rapidos > 0:
+		t.somar_bonus(5 * pratos_rapidos)   # prato rápido (p.93); dois com o Ingrediente Secreto
 	if t == null or not t.sucesso:
 		return "revisa %s (%s), mas não vê nada novo" % [ponto.nome, ruleset.pericia(melhor).nome]
 	revisaveis[r_idx].pontos.erase(partes[1])
@@ -465,6 +527,7 @@ func _iniciar_turno_do_agente() -> void:
 	movimento_restante = 0
 	movimento_rolado = false
 	pode_escalar = false
+	movimento_tatico = false
 	acao_usada = false
 	ultimo_movimento = {}
 	var a := agente_atual()
@@ -715,6 +778,94 @@ func itens_de_mapa(a: Agente) -> Array:
 	return lista
 
 
+# --- Poderes no mapa (docs/76) -------------------------------------------------------------
+
+var vislumbres_usados: Array = []   ## ids de quem já teve os Vislumbres do Passado nesta missão
+var magnum_opus_usado: Array = []   ## ids de quem já foi reconhecido nesta missão (Magnum Opus)
+
+
+## Por que o poder não pode ser usado agora no mapa ("" = pode): movimento_tatico, vislumbres
+## ou improvisar.
+func motivo_poder_no_mapa(a: Agente, poder: String) -> String:
+	if a == null or a != agente_atual() or ocupado() or a.esta_fora_de_combate():
+		return "Não é a vez dele."
+	match poder:
+		"movimento_tatico":
+			if not a.tem_habilidade("movimento_tatico"):
+				return "Sem o poder."
+			if movimento_tatico:
+				return "Já está valendo neste turno."
+			if a.pe + a.pe_temporario < 1:
+				return "PE insuficientes."
+		"vislumbres":
+			if not a.tem_habilidade("vislumbres_do_passado"):
+				return "Sem o poder."
+			if a.id in vislumbres_usados:
+				return "Uma vez por missão."
+		"improvisar":
+			if not a.tem_habilidade("improvisar_componentes"):
+				return "Sem o poder."
+			if acao_usada:
+				return "A ação deste turno já foi usada."
+		_:
+			return "Poder desconhecido."
+	return ""
+
+
+## Os poderes que o agente pode usar no mapa ([id, texto]); o motivo vem de motivo_poder_no_mapa.
+func poderes_no_mapa(a: Agente) -> Array:
+	var lista: Array = []
+	if a == null:
+		return lista
+	if a.tem_habilidade("movimento_tatico"):
+		lista.append(["movimento_tatico", "Movimento tático (1 PE): mato, lama e serra custam 1 neste turno"])
+	if a.tem_habilidade("vislumbres_do_passado"):
+		lista.append(["vislumbres", "Vislumbres do Passado (Intelecto DT 10, uma vez por missão)"])
+	if a.tem_habilidade("improvisar_componentes"):
+		lista.append(["improvisar", "Improvisar componentes (Investigação DT 15, a ação do turno)"])
+	return lista
+
+
+## Usa um poder no mapa. Movimento Tático (p.39): 1 PE, todo hex custa 1 e dá para subir a
+## serra neste turno. Vislumbres do Passado (p.26): Intelecto DT 10, 1d4 PE temporários e os
+## hexes em volta revelados. Improvisar Componentes (p.44): a ação do turno e Investigação DT 15.
+func usar_poder_no_mapa(poder: String, elemento: String = "") -> Dictionary:
+	var a := agente_atual()
+	var motivo := motivo_poder_no_mapa(a, poder)
+	if motivo != "":
+		return {"ok": false, "erro": motivo}
+	match poder:
+		"movimento_tatico":
+			a.gastar_pe(1)
+			movimento_tatico = true
+			pode_escalar = true
+			_log("%s lê o terreno: neste turno, mato, lama e serra custam como estrada (Movimento Tático)." % a.nome)
+			return {"ok": true}
+		"vislumbres":
+			vislumbres_usados.append(a.id)
+			var t := Teste.rolar(dados, a.atributo("int"), 0, 10)
+			if not t.sucesso:
+				_log("%s fecha os olhos, mas o lugar não lembra nada (Intelecto %s)." % [a.nome, t.descrever()])
+				return {"ok": true, "sucesso": false, "teste": t}
+			var pe := dados.rolar(4)
+			a.ganhar_pe_temporario(pe)
+			mapa.revelar(posicao(a), 2)
+			_log("[color=#e3c27a]%s já esteve aqui antes de esquecer (Intelecto %s): +%d PE temporários, e o lugar em volta volta à memória.[/color]" % [a.nome, t.descrever(), pe])
+			return {"ok": true, "sucesso": true, "teste": t, "pe": pe}
+		"improvisar":
+			if not elemento in ["sangue", "morte", "conhecimento", "energia"]:
+				return {"ok": false, "erro": "Não há componentes desse elemento."}
+			acao_usada = true
+			var t := a.testar(dados, "investigacao", 15)
+			var ok := t != null and t.sucesso
+			if ok and not elemento in a.componentes_improvisados:
+				a.componentes_improvisados.append(elemento)
+			_log("%s revira o lugar atrás de componentes de %s (Investigação %s): %s" % [a.nome, elemento, t.descrever() if t != null else "—",
+				"acha o que serve até o fim da missão." if ok else "nada que sirva."])
+			return {"ok": true, "sucesso": ok, "teste": t}
+	return {"ok": false}
+
+
 ## Por que o item de mapa não pode ser usado agora ("" = pode).
 func motivo_item_de_mapa(a: Agente, item_id: String) -> String:
 	var u: Dictionary = ruleset.equipamento(item_id).get("uso_mapa", {})
@@ -724,7 +875,7 @@ func motivo_item_de_mapa(a: Agente, item_id: String) -> String:
 		return "A ação deste turno já foi usada."
 	if String(u.get("treinado", "")) != "" and not a.treinado_em(String(u.treinado)):
 		return "Pede %s treinado." % ruleset.pericia(String(u.treinado)).nome
-	if int(u.get("pe", 0)) > a.pe + a.pe_temporario:
+	if a.custo_pe_do_item(item_id, int(u.get("pe", 0))) > a.pe + a.pe_temporario:
 		return "PE insuficientes."
 	if String(u.tipo) == "escuta" and escuta_instalada:
 		return "A escuta já está gravando."
@@ -740,8 +891,9 @@ func usar_item_de_mapa(item_id: String, opcao: String = "") -> Dictionary:
 	var u: Dictionary = info.uso_mapa
 	if String(u.tipo) == "emissor" and not opcao in ["sangue", "morte", "conhecimento", "energia", "medo"]:
 		return {}
-	if int(u.get("pe", 0)) > 0:
-		a.gastar_pe(int(u.pe))
+	var custo_pe := a.custo_pe_do_item(item_id, int(u.get("pe", 0)))   # Ferramentas Paranormais (p.43)
+	if custo_pe > 0:
+		a.gastar_pe(custo_pe)
 	acao_usada = true
 	var texto := ""
 	match String(u.tipo):
@@ -890,7 +1042,7 @@ func _ritual_de_mapa_disponivel(a: Agente, rid: String) -> bool:
 	var m: Dictionary = r.get("mapa", {})
 	if m.is_empty() or int(r.circulo) > a.circulo_maximo():
 		return false
-	if r.elemento != "medo" and a.afinidade != r.elemento and not a.equipamento.any(func(i): return ruleset.equipamento(i).get("componentes", "") == r.elemento):
+	if a.faltam_componentes(rid) and a.custo_camuflar(rid) == 0:   # Camuflar Ocultismo: sem componentes, +2 PE
 		return false
 	if m.get("uma_vez", false) and rid in rituais_usados_no_mapa:
 		return false
@@ -907,7 +1059,7 @@ func _ritual_de_mapa_disponivel(a: Agente, rid: String) -> bool:
 func _conjurar_ritual_de_mapa(a: Agente, rid: String) -> Dictionary:
 	var r := ruleset.ritual(rid)
 	var m: Dictionary = r.mapa
-	var custo := a.custo_ritual(rid)
+	var custo := a.custo_ritual(rid) + a.custo_camuflar(rid)   # Camuflar Ocultismo: sem componentes, +2 PE (docs/76)
 	if not a.gastar_pe(custo):
 		return {}
 	if m.get("uma_vez", false):
@@ -1431,6 +1583,7 @@ func concluir_encontro(vencedor: String, rendidos: int = 0, escapados: int = 0) 
 	var h: Vector2i = encontro_pendente.hex
 	var chefe: bool = encontro_pendente.chefe
 	var era_cacador: bool = encontro_pendente.get("cacador", false)
+	var ameacas_vencidas: Array = encontro_pendente.get("ameacas", [])
 	for a in encontro_pendente.agentes:
 		a.encerrar_cena()
 	var participantes: Array = encontro_pendente.agentes
@@ -1450,6 +1603,7 @@ func concluir_encontro(vencedor: String, rendidos: int = 0, escapados: int = 0) 
 		# apaga o lugar: antes, vencer a caça em cima do covil apagava o covil.
 		if chefe or String(mapa.conteudo(h).get("tipo", "")) == "encontro":
 			mapa.limpar_conteudo(h)
+		_guardar_achados(ameacas_vencidas)
 		_log("[color=#6fcf8e]Encontro vencido.[/color]")
 		if chefe and extras.get("covil", {}).is_empty() and caso != null:
 			_abrir_varredura(h, participantes)
@@ -1464,6 +1618,18 @@ func concluir_encontro(vencedor: String, rendidos: int = 0, escapados: int = 0) 
 				_tratar_queda(a)
 	_ajustar_indice()
 	_verificar_derrota()
+
+
+## As armas das pessoas vencidas viram achados da missão (O Crime Compensa, p.28): só as que
+## existem no arsenal do livro, sem repetir.
+func _guardar_achados(ameacas: Array) -> void:
+	for am in ameacas:
+		if String(ruleset.ameaca(String(am.get("id", ""))).get("tipo", "pessoa")) != "pessoa" or am.get("ficha", {}).get("criatura", false):
+			continue
+		for at in am.get("ficha", {}).get("ataques", []):
+			var id := String(at.get("id", ""))
+			if id != "" and id != "desarmado" and ruleset.tem_arma(id) and not id in itens_achados:
+				itens_achados.append(id)
 
 
 ## O grupo fugiu (docs/72): o encontro (ou o covil) continua no mapa; o grupo recua para um hex
@@ -1661,6 +1827,9 @@ func criar_cena_investigacao() -> CenaInvestigacao:
 	cena.credencial = credencial.duplicate()   # docs/63: a cena usa, a Missão soma no fim
 	# O culto na cena (docs/73): o símbolo para traduzir e, se o caso é do vilão, a notícia no
 	# celular de uma testemunha. Num alarme falso não há culto por trás.
+	for a in cena.agentes:   # Magnum Opus (p.27): uma vez por missão
+		if a.tem_habilidade("magnum_opus") and not a.id in magnum_opus_usado:
+			cena.magnum_opus.append(a)
 	if caso != null and not alarme_falso:
 		cena.adicionar_simbolo_do_culto()
 		var vil: Dictionary = sinal.get("vilao", {})
@@ -1681,6 +1850,9 @@ func concluir_investigacao(resultado: Dictionary) -> void:
 	if not resultado.get("pistas", []).is_empty():
 		_anotar_rumor(h)
 	_somar_usos_da_credencial(int(resultado.get("usos_credencial", 0)), h)
+	for id in resultado.get("magnum_opus", []):
+		if not id in magnum_opus_usado:
+			magnum_opus_usado.append(id)
 	for t in resultado.get("testemunhas", []):
 		testemunhas_vistas.append({"nome": String(t.nome), "papel": String(t.papel), "cena": String(t.get("cena", "")), "sumiu": false})
 	if String(resultado.get("cena", "")) != "" and not resultado.get("restantes", []).is_empty():
@@ -2404,6 +2576,7 @@ func para_dicionario() -> Dictionary:
 		"movimento_restante": movimento_restante, "movimento_rolado": movimento_rolado, "acao_usada": acao_usada,
 		"pode_escalar": pode_escalar, "covil_localizado": covil_localizado,
 		"evento_pendente": ev, "encontro_pendente": enc, "reforcos": reforcos, "pistas": pistas, "cacador": cacador.duplicate(),
+		"itens_achados": itens_achados.duplicate(), "vislumbres_usados": vislumbres_usados.duplicate(), "magnum_opus_usado": magnum_opus_usado.duplicate(),
 		"caso": caso.para_dicionario() if caso != null else {}, "modificador_chefe": modificador_chefe,
 		"investigacao_pendente": {"hex": [investigacao_pendente.hex.x, investigacao_pendente.hex.y], "cena": investigacao_pendente.cena,
 			"semente": int(investigacao_pendente.semente)} if not investigacao_pendente.is_empty() else {},
@@ -2480,6 +2653,9 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.bonus_de_ritual = (d.get("bonus_de_ritual", {}) as Dictionary).duplicate(true)
 	m.escuta_instalada = bool(d.get("escuta_instalada", false))
 	m.cacador = (d.get("cacador", {}) as Dictionary).duplicate()
+	m.itens_achados = (d.get("itens_achados", []) as Array).duplicate()
+	m.vislumbres_usados = (d.get("vislumbres_usados", []) as Array).duplicate()
+	m.magnum_opus_usado = (d.get("magnum_opus_usado", []) as Array).duplicate()
 	if not m.cacador.is_empty():
 		m.cacador.derrotas = int(m.cacador.get("derrotas", 0))
 		m.cacador.volta_em = int(m.cacador.get("volta_em", -1))

@@ -37,6 +37,8 @@ var amostras := 0
 ## O vilão que liga os casos (docs/71): a empresa de fachada e os recortes que a apontam.
 var vilao: Dictionary = {}
 var recortes: Array = []
+## O Crime Compensa (docs/76): as armas achadas na última missão; o criminoso leva uma na próxima.
+var achados: Array = []
 var _proximo_id := 1
 
 
@@ -302,6 +304,7 @@ func encerrar_missao() -> Dictionary:
 		pp_base += int(m.sinal.bonus_pp)   # ninguém dava nada por esse sinal (docs/62)
 		linhas_pp.append("Sinal de confiança baixa, e era real: %+d" % int(m.sinal.bonus_pp))
 	pp_base += _fechar_vilao(m, linhas_pp)   # docs/71
+	_fechar_achados(m)   # docs/76
 	match m.varredura:   # docs/62
 		"equipe":
 			pp_base -= 2
@@ -472,6 +475,42 @@ func _ligar_ao_vilao(sinal: Dictionary) -> Dictionary:
 	return s
 
 
+## Fim de missão (docs/76): o item de O Crime Compensa era só para esta missão e sai do
+## inventário; os achados desta viram a lista da próxima; os componentes improvisados acabam.
+func _fechar_achados(m: Missao) -> void:
+	for a in m.agentes_iniciais:
+		if a.item_do_crime != "":
+			a.equipamento.erase(a.item_do_crime)
+			a.item_do_crime = ""
+		a.componentes_improvisados.clear()
+	achados = m.itens_achados.duplicate()
+
+
+## Escolhe o item de O Crime Compensa (p.28) para a próxima missão: entra no inventário fora da
+## cota da patente. "" desfaz. Devolve o erro ("" = ok).
+func escolher_item_do_crime(a: Agente, item_id: String) -> String:
+	if not a.tem_habilidade("o_crime_compensa"):
+		return "Sem o poder."
+	if a.item_do_crime != "":
+		a.equipamento.erase(a.item_do_crime)
+		a.item_do_crime = ""
+	if item_id == "":
+		return ""
+	if not item_id in achados:
+		return "Esse item não foi achado na última missão."
+	for outro in roster:
+		if outro != a and outro.item_do_crime == item_id:
+			return "%s já leva esse item." % outro.nome
+	var lista := Array(a.equipamento)
+	a.item_do_crime = item_id
+	var motivo := a.motivo_bloqueio(item_id, lista)
+	if motivo != "":
+		a.item_do_crime = ""
+		return motivo
+	a.equipamento.append(item_id)
+	return ""
+
+
 ## Três recortes no quadro: a Ordem acha a sede do vilão.
 func vilao_encontrado() -> bool:
 	return not vilao.is_empty() and recortes.size() >= int(DadosJogo.ler("cultos").vilao.get("recortes_para_achar", 3))
@@ -549,7 +588,7 @@ func para_dicionario() -> Dictionary:
 		"memorial": memorial.duplicate(true), "opcoes": opcoes.duplicate(), "controles": controles.para_dicionario(),
 		"missoes_concluidas": missoes_concluidas, "ultimo_relatorio": ultimo_relatorio.duplicate(true), "eco_do_covil": eco_do_covil,
 		"contencao": contencao.duplicate(true), "pista_do_preso": pista_do_preso.duplicate(), "amostras": amostras,
-		"vilao": vilao.duplicate(true), "recortes": recortes.duplicate(true),
+		"vilao": vilao.duplicate(true), "recortes": recortes.duplicate(true), "achados": achados.duplicate(),
 		"campanhas": campanhas.duplicate(true), "recrutas_extras": recrutas_extras.duplicate(true),
 		"missao": missao.para_dicionario() if missao != null else {},
 		# Agentes que estão na missão mas saíram do roster (mortos aguardando o relatório)
@@ -592,6 +631,7 @@ static func de_dicionario(d: Dictionary, ruleset_: Ruleset = null) -> Carreira:
 	c.amostras = int(d.get("amostras", 0))
 	c.vilao = (d.get("vilao", {}) as Dictionary).duplicate(true)
 	c.recortes = (d.get("recortes", []) as Array).duplicate(true)
+	c.achados = (d.get("achados", []) as Array).duplicate()
 	c.ultimo_relatorio = d.get("ultimo_relatorio", {})
 	c.campanhas = d.get("campanhas", {})
 	c.recrutas_extras = d.get("recrutas_extras", [])

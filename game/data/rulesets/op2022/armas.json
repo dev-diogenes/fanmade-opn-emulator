@@ -1,5 +1,9 @@
 {
   "ref": "p.66-69",
+  "objetos": {"ref": "p.100", "nota": "Tabela 4.5: Resistência a Dano e PV da arma como objeto, pela empunhadura e pelo material (manobra quebrar, p.95). Sem material na lista, metal.",
+    "armas": {"leve": {"madeira": {"rd": 5, "pv": 2}, "metal": {"rd": 10, "pv": 5}}, "uma_mao": {"madeira": {"rd": 5, "pv": 5}, "metal": {"rd": 10, "pv": 10}},
+      "duas_maos": {"madeira": {"rd": 5, "pv": 10}, "metal": {"rd": 10, "pv": 20}}},
+    "madeira": ["machadinha", "bastao", "cajado", "acha", "arco", "arco_composto", "lanca", "nunchaku", "maca", "gadanho"]},
   "nota": "Tabela 3.3 inteira (armas simples, táticas e pesadas). 'margem' = menor d20 que ameaça crítico. 'ataque': corpo_a_corpo, disparo (arcos, bestas) ou fogo. 'alcance' só para ataque à distância ou arremesso. 'empunhadura': leve, uma_mao ou duas_maos. Regras das descrições (p.68-69): agil (Agilidade no lugar da Força), automatica (rajada), recarga (ação de movimento a cada disparo), dano_duas_maos, explode, forca_minima, meio_dano_alem_de, mira_veterano, explosao, linha.",
   "armas": [
     {"id": "desarmado", "nome": "Ataque desarmado", "categoria": 0, "dano": "1d3", "margem": 20, "multiplicador": 2, "tipo_dano": "impacto", "pericia": "luta", "soma_forca": true, "nao_letal": true, "ataque": "corpo_a_corpo", "leve": true, "espacos": 0, "proficiencia": "armas_simples"},

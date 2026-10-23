@@ -17,6 +17,7 @@ var _caixa_requisicao: VBoxContainer
 ## Arsenal por agente (docs/64): a lista de quem se equipa, as cotas e a carga
 var _lista_arsenal: VBoxContainer
 var _cotas_arsenal: HBoxContainer
+var _linha_crime: HFlowContainer   ## O Crime Compensa (docs/76): os achados da última missão
 var _barra_carga: ProgressBar
 var _lbl_carga: Label
 var _lbl_aviso_arsenal: Label
@@ -247,6 +248,9 @@ func _montar_interface() -> void:
 	_cotas_arsenal = HBoxContainer.new()
 	_cotas_arsenal.add_theme_constant_override("separation", Tema.ESPACO_M)
 	direita_a.add_child(_cotas_arsenal)
+	_linha_crime = HFlowContainer.new()
+	_linha_crime.add_theme_constant_override("h_separation", Tema.ESPACO_P)
+	direita_a.add_child(_linha_crime)
 	var linha_carga := HBoxContainer.new()
 	linha_carga.add_theme_constant_override("separation", Tema.ESPACO_M)
 	direita_a.add_child(linha_carga)
@@ -320,6 +324,8 @@ func _montar_interface() -> void:
 				_botoes_quantidade(chk, id)
 			if not carreira.ruleset.classes_para_modificar(item).is_empty() and not item.has("maldicoes"):
 				_botao_oficina(chk, id, Ruleset.empilhavel(item))
+			if String(item.get("tipo", "")) != "arma" and not Ruleset.empilhavel(item):
+				_botoes_poder_item(chk, id)
 			_checks_itens[id] = chk
 			fluxo.add_child(chk)
 
@@ -667,6 +673,62 @@ func _botao_oficina(etiqueta: Button, item_id: String, com_quantidade: bool) -> 
 	b.pressed.connect(func(): _abrir_oficina(item_id))
 	b.visible = false
 	etiqueta.add_child(b)
+
+
+## Mochila de Utilidades (p.39) e Ferramenta Favorita (p.28): o item marcado conta uma categoria
+## abaixo (a Mochila também ocupa 1 espaço a menos). Um item por poder; clicar de novo desfaz.
+func _botoes_poder_item(etiqueta: Button, item_id: String) -> void:
+	var y := 32   # entre a linha da categoria e o carimbo "requisitado"
+	for par in [["mochila_de_utilidades", "Mochila", "Mochila de Utilidades: conta uma categoria abaixo e ocupa 1 espaço a menos."],
+			["ferramenta_favorita", "Favorita", "Ferramenta Favorita: conta uma categoria abaixo."]]:
+		var b := Button.new()
+		b.name = "Poder_" + String(par[0])
+		b.text = par[1]
+		b.toggle_mode = true
+		b.focus_mode = Control.FOCUS_NONE
+		b.add_theme_font_size_override("font_size", Tema.FONTE_P - 1)
+		b.tooltip_text = par[2]
+		b.position = Vector2(172, y)
+		y -= 26
+		var poder: String = par[0]
+		b.pressed.connect(func():
+			if _selecionado == null:
+				return
+			_selecionado.escolhas[poder] = "" if String(_selecionado.escolhas.get(poder, "")) == item_id else item_id
+			_salvar()
+			_atualizar_arsenal())
+		b.visible = false
+		etiqueta.add_child(b)
+
+
+## O Crime Compensa (p.28): os achados da última missão, para levar um sem contar na cota.
+func _atualizar_linha_crime(a: Agente) -> void:
+	for f in _linha_crime.get_children():
+		f.queue_free()
+	_linha_crime.visible = a != null and a.tem_habilidade("o_crime_compensa")
+	if not _linha_crime.visible:
+		return
+	var l := Label.new()
+	l.text = "O Crime Compensa:"
+	l.tooltip_text = "Leve uma arma achada na última missão; ela não conta na cota da patente e sai do inventário quando a missão acabar."
+	_linha_crime.add_child(l)
+	if carreira.achados.is_empty():
+		var nada := Label.new()
+		nada.text = "nada achado na última missão."
+		nada.add_theme_color_override("font_color", Tema.TEXTO_SUAVE)
+		_linha_crime.add_child(nada)
+		return
+	for id in carreira.achados:
+		var b := Button.new()
+		b.toggle_mode = true
+		b.button_pressed = a.item_do_crime == String(id)
+		b.text = String(carreira.ruleset.equipamento(String(id)).get("nome", id))
+		b.pressed.connect(func():
+			var erro := carreira.escolher_item_do_crime(a, "" if a.item_do_crime == String(id) else String(id))
+			_lbl_aviso_arsenal.text = erro
+			_salvar()
+			_atualizar_arsenal())
+		_linha_crime.add_child(b)
 
 
 ## Oficina (docs/68): marca as modificações do item requisitado. Mostra como o item fica e se
@@ -1061,7 +1123,7 @@ func _atualizar_arsenal() -> void:
 		f.queue_free()
 	for cat in [1, 2, 3, 4]:
 		var limite := int(lim.get(str(cat), 0))
-		var usados := a.equipamento.filter(func(i): return int(carreira.ruleset.equipamento(i).get("categoria", 0)) == cat).size()
+		var usados := a._contam_na_cota(Array(a.equipamento)).filter(func(i): return a.categoria_do_item(i) == cat).size()   # docs/76
 		var chip := Label.new()
 		chip.text = "Cat. %s  %s" % [["", "I", "II", "III", "IV"][cat], ("%d/%d" % [usados, limite]) if limite > 0 else "—"]
 		chip.add_theme_stylebox_override("normal", Tema.caixa(Color(Tema.PEDRA, 0.9), Tema.OURO if limite > 0 else Tema.OURO_ESCURO, 1, 4, Vector2(8, 2)))
@@ -1100,12 +1162,18 @@ func _atualizar_arsenal() -> void:
 		var oficina := b.get_node_or_null("Oficina")
 		if oficina != null:
 			oficina.visible = marcado
+		for poder in ["mochila_de_utilidades", "ferramenta_favorita"]:   # docs/76
+			var bp := b.get_node_or_null("Poder_" + poder)
+			if bp != null:
+				bp.visible = marcado and a.tem_habilidade(poder)
+				bp.set_pressed_no_signal(String(a.escolhas.get(poder, "")) == item_id)
 		b.set_pressed_no_signal(marcado)
 		b.disabled = motivo != ""
 		b.modulate = Color(1, 1, 1, 0.45) if motivo != "" else Color.WHITE
 		var base_dica := String(b.get_meta("dica", b.tooltip_text))
 		b.set_meta("dica", base_dica)
 		b.tooltip_text = base_dica + ("\n\nBloqueado: " + motivo if motivo != "" else "") + ("\n" + aviso if aviso != "" else "")
+	_atualizar_linha_crime(a)
 	for cat in _cabecalhos_cat:   # some a categoria sem etiqueta no grupo escolhido
 		(_cabecalhos_cat[cat] as Label).visible = visiveis.has(_fluxos_cat[cat])
 		(_fluxos_cat[cat] as Control).visible = visiveis.has(_fluxos_cat[cat])

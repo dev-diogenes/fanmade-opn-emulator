@@ -6,9 +6,10 @@ extends RefCounted
 ## `participantes`; agentes da investigação, pelo índice na cena; hexes e células, como [x, y].
 ## Números chegam da rede como float: tudo passa por int() aqui.
 
-const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar", "deduzir", "interludio", "relatar", "pesquisa"]
-const ACOES_INVESTIGACAO := ["examinar", "procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair", "deduzir", "relatar", "fotografar"]
-const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "usar", "armadilha", "mina", "detonar", "algemar", "fugir", "cacar", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair",
+const ACOES_MAPA := ["rolar_movimento", "mover", "descansar", "encerrar_turno", "resolver_evento", "usar_item", "conjurar", "deduzir", "interludio", "relatar", "pesquisa", "poder"]
+const ACOES_INVESTIGACAO := ["examinar", "procurar", "facilitar", "ajudar", "passar", "encerrar", "acao_extra", "trilha_certa", "sair", "deduzir", "relatar", "fotografar", "nerd"]
+const ACOES_COMBATE := ["mover", "agredir", "conjurar", "granada", "contra", "item", "usar", "armadilha", "mina", "detonar", "algemar", "fugir", "cacar",
+	"trocar_arma", "movimento_tatico", "nerd", "improvisar", "decifrar", "apagar", "soltar", "habilidade", "ia", "encerrar_turno", "sair",
 	"socorrer", "acalmar", "manobra", "levantar", "pegar_arma"]
 ## Modo Mestre (Fase 8.3): valem em qualquer tela, só do peer do mestre
 const ACOES_MESTRE := ["narrar", "membrana", "revelar", "encontro", "evento", "limpar", "curar", "ferir", "sanidade"]
@@ -61,6 +62,8 @@ static func aplicar_mapa(m: Missao, cmd: Dictionary) -> Dictionary:
 		"interludio":
 			var esc = cmd.get("escolhas", {})
 			return m.interludio(esc if esc is Dictionary else {})
+		"poder":   # poderes no mapa (docs/76): movimento_tatico, vislumbres, improvisar
+			return m.usar_poder_no_mapa(String(cmd.get("poder", "")), String(cmd.get("elemento", "")))
 		"deduzir":
 			var r := m.deduzir(String(cmd.get("pergunta", "")), String(cmd.get("candidato", "")))
 			return {"ok": r.get("ok", false), "deducao": r}
@@ -109,6 +112,8 @@ static func aplicar_investigacao(cena: CenaInvestigacao, cmd: Dictionary) -> Dic
 			return {"ok": cena.acao_extra(String(cmd.habilidade))}
 		"fotografar":   # câmera de aura (docs/72)
 			return cena.fotografar_aura()
+		"nerd":   # docs/76
+			return cena.nerd()
 		"trilha_certa":
 			var a := _agente_da_cena(cena, cmd.get("agente", -1))
 			return {"ok": a != null and cena.pagar_na_trilha_certa(a)}
@@ -260,9 +265,22 @@ static func aplicar_combate(c: Combate, armas: Dictionary, cmd: Dictionary) -> D
 				return {"ok": false, "erro": "alvo inválido"}
 			if String(cmd.get("tipo", "")) == "fintar":
 				return c.fintar(ator, alvo_m)
-			return c.manobra(ator, alvo_m, String(cmd.get("tipo", "")))
+			return c.manobra(ator, alvo_m, String(cmd.get("tipo", "")), _opcoes(cmd))
 		"levantar":
 			return {"ok": c.levantar(ator)}
+		"trocar_arma":   # sacar outra arma (p.97); Saque Rápido deixa livre (docs/76)
+			if not ator is Agente:
+				return {"ok": false, "erro": "só agentes"}
+			var rt := c.trocar_arma(ator as Agente, String(cmd.get("arma", "")))
+			if rt.ok:
+				armas[ator] = rt.arma
+			return rt
+		"movimento_tatico":
+			return c.movimento_tatico(ator as Agente) if ator is Agente else {"ok": false, "erro": "só agentes"}
+		"nerd":
+			return c.nerd(ator as Agente, ser(c, cmd.get("alvo", -1))) if ator is Agente else {"ok": false, "erro": "só agentes"}
+		"improvisar":
+			return c.improvisar_componentes(ator as Agente, String(cmd.get("elemento", ""))) if ator is Agente else {"ok": false, "erro": "só agentes"}
 		"pegar_arma":
 			return {"ok": c.pegar_arma(ator)}
 		"socorrer", "acalmar":

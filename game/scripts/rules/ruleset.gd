@@ -302,6 +302,8 @@ func lista_amaldicoados() -> Array:
 ## Itens amaldiçoados (p.154) são montados a partir da base: a primeira maldição soma II à
 ## categoria e as seguintes, I; o item recebe a lista "maldicoes".
 func equipamento(item_id: String) -> Dictionary:
+	if item_id.begins_with("selo:"):
+		return selo(item_id.trim_prefix("selo:"))
 	if item_id.contains("+"):
 		if not _modificados.has(item_id):
 			_modificados[item_id] = _montar_modificado(item_id)
@@ -357,6 +359,17 @@ func modificacao(mod_id: String) -> Dictionary:
 		if m.id == mod_id:
 			return m
 	return {}
+
+
+## Selo paranormal (p.161, Criar Selo p.43): guarda um ritual; ativá-lo conjura o ritual sem PE
+## nem componentes e o desfaz em cinzas. A categoria é o círculo do ritual. Id: "selo:<ritual>".
+func selo(ritual_id: String) -> Dictionary:
+	var r := ritual(ritual_id)
+	if r.is_empty():
+		return {}
+	return {"id": "selo:" + ritual_id, "nome": "Selo de %s" % r.nome, "tipo": "item", "grupo": "paranormal",
+		"categoria": int(r.get("circulo", 1)), "espacos": 1, "consumivel": true, "selo": ritual_id, "ref": "p.161",
+		"descricao": "Sigilos gravados num objeto pequeno, com %s dentro. Ativar: a ação do ritual (no mínimo padrão); quem não conhece o ritual testa Ocultismo (DT 20 + custo). Não pede PE nem componentes." % r.nome}
 
 
 ## O id do item sem as modificações ("pistola+certeira" -> "pistola").

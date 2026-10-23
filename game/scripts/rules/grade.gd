@@ -231,9 +231,10 @@ func cobertura(atacante: Ser, alvo: Ser) -> String:
 # --- Movimento -------------------------------------------------------------
 
 ## Custo de entrar numa célula vinda de `de`: 1 (ortogonal) ou 2 (diagonal), dobrado em terreno difícil.
-func custo_passo(de: Vector2i, para: Vector2i) -> int:
+## `tatico`: Movimento Tático (p.39) ignora o custo dobrado do terreno difícil e de subir.
+func custo_passo(de: Vector2i, para: Vector2i, tatico: bool = false) -> int:
 	var custo := 2 if de.x != para.x and de.y != para.y else 1
-	if terreno.get(para, "") in [DIFICIL, ELEVADO] or dificil_por_efeito.has(para):
+	if not tatico and (terreno.get(para, "") in [DIFICIL, ELEVADO] or dificil_por_efeito.has(para)):
 		custo *= 2
 	return custo
 
@@ -285,7 +286,7 @@ func alcancaveis(ser: Ser, limite: int) -> Dictionary:
 				var quem := ocupante(prox)
 				if quem != null and quem.lado != ser.lado and not quem.esta_fora_de_combate():
 					continue
-				var novo: int = custos[atual] + custo_passo(atual, prox)
+				var novo: int = custos[atual] + custo_passo(atual, prox, ser.mods_cena.get("movimento_tatico", false))
 				if novo <= limite and novo < int(custos.get(prox, 1 << 30)):
 					custos[prox] = novo
 					fila.append(prox)

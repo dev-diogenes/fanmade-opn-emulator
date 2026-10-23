@@ -103,6 +103,8 @@
     "caca": {"raio": 6, "rastro_turnos": 2, "alivio_depois_de_combate": 1, "nota": "docs/53, diretor de Alien: Isolation: anda 1 hex por turno da noite até o agente mais isolado a até 'raio' hexes, deixa rastro e recua por 'alivio' turnos depois de um combate. Vilas e o ponto de encontro são seguros."}
   },
   "interludio": {
+    "credito": {"nota": "Limite de crédito (p.62): na vila, a hospedagem segue o crédito de cada agente (baixo: normal; médio: confortável; alto ou ilimitado: luxuosa). Patrocinador da Ordem conta um nível acima.",
+      "hospedagem": {"baixo": "normal", "medio": "confortavel", "alto": "luxuosa", "ilimitado": "luxuosa"}, "lugares": ["vila"]},
     "ref": "p.92-93",
     "descricao": "Numa vila ou no ponto de encontro, o grupo faz um interlúdio (docs/48): cada agente no hex escolhe até duas ações. Uma vez por visita.",
     "acoes_por_agente": 2,

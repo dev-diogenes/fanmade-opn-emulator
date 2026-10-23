@@ -544,6 +544,15 @@ func _opcoes_procurar(a: Agente) -> void:
 		_selo(selos, "perito", "Perito")
 	if a.classe_id == "especialista":
 		_selo(selos, "ecletico", "Eclético")
+	# Poderes (docs/76): Mãos Rápidas no Crime, Magnum Opus numa testemunha, Nerd na cena
+	if "crime" in pt.pericias and cena.pode_maos_rapidas(a, "crime"):
+		_selo(selos, "maos_rapidas", "Mãos Rápidas (Crime sem gastar a ação, 1 PE)")
+	if a in cena.magnum_opus and bool(pt.get("depoimento", false)):
+		_selo(selos, "magnum_opus", "Magnum Opus (+5 em Presença, 1×/missão)")
+	if a.tem_habilidade("nerd") and not a.id in cena.nerd_usado:
+		var bn = _botao_papel(selos, "⚡ Nerd (2 PE, Atualidades DT 20: +5 no próximo teste)", false, func(): _enviar("nerd"), false)
+		if bn is Button:
+			bn.disabled = a.pe + a.pe_temporario < 2
 	for hab in ["incansavel", "pensamento_agil", "guiado_pelo_paranormal"]:
 		if a.tem_habilidade(hab):
 			_botao_papel(selos, "⚡ %s (2 PE)" % a.ruleset.poder(a.classe_id, hab).nome, false, _usar_extra.bind(hab), false)
@@ -806,6 +815,10 @@ func _opcoes_selos(a: Agente, pericia: String) -> Dictionary:
 		op["credencial"] = true
 	if _selos.get("ecletico", false) and a.classe_id == "especialista":
 		op["ecletico"] = true
+	if _selos.get("maos_rapidas", false) and cena.pode_maos_rapidas(a, pericia):
+		op["maos_rapidas"] = true   # docs/76
+	if _selos.get("magnum_opus", false) and cena.pode_magnum_opus(a, cena.ponto(_ponto), pericia):
+		op["magnum_opus"] = true
 	return op
 
 

@@ -425,9 +425,13 @@ func agredir(atacante: Ser, alvo: Ser, arma: Dictionary, pe_foco: int = 0, opcoe
 	if atacante.mods_cena.has("prendendo") or pode_disparar(atacante, arma) != "" or acoes_restantes(atacante).padrao <= 0:
 		return _ataque_invalido(atacante, alvo, arma)
 	if String(atacante.mods_cena.get("descarregada", "")) == String(arma.get("id", "")) and arma.get("recarga", false):
-		gastar_acao(atacante, "movimento")   # recarregar a besta, a balestra ou a bazuca (p.68)
+		if recarga_livre(atacante, arma):
+			atacante.mods_cena["recarga_livre_rodada"] = rodada   # Saque Rápido (p.35): uma vez por rodada
+			_log("%s recarrega %s num gesto (Saque Rápido)." % [atacante.nome, arma.get("nome", "a arma")])
+		else:
+			gastar_acao(atacante, "movimento")   # recarregar a besta, a balestra ou a bazuca (p.68)
+			_log("%s recarrega %s." % [atacante.nome, arma.get("nome", "a arma")])
 		atacante.mods_cena.erase("descarregada")
-		_log("%s recarrega %s." % [atacante.nome, arma.get("nome", "a arma")])
 	gastar_acao(atacante, "padrao")
 	var res := atacar(atacante, alvo, arma, pe_foco, opcoes)
 	if arma.get("linha", false) and res.teste != null:
@@ -541,8 +545,9 @@ func usar_item_combate(agente: Agente, item_id: String, alvo: Ser) -> Dictionary
 		return {"ok": false, "erro": motivo}
 	if acoes.has(agente) and not gastar_acao(agente, String(uso.get("acao", "padrao"))):
 		return {"ok": false, "erro": "sem ação"}
-	if int(uso.get("pe", 0)) > 0:
-		agente.gastar_pe(int(uso.pe))
+	var custo_pe := agente.custo_pe_do_item(item_id, int(uso.get("pe", 0)))   # Ferramentas Paranormais (p.43)
+	if custo_pe > 0:
+		agente.gastar_pe(custo_pe)
 	if info.has("cargas"):
 		agente.usar_carga(item_id)
 	var res := {"ok": true, "acertou": true, "textos": []}
@@ -576,7 +581,7 @@ func usar_item_combate(agente: Agente, item_id: String, alvo: Ser) -> Dictionary
 			if uso.has("manter"):   # amarras: repete Vontade no turno dela, enquanto o agente paga
 				alvo.rituais_ativos[item_id] = {"conjurador": agente, "aflicao": {"nome": info.nome, "pericia": String(uso.manter.pericia),
 					"dt": agente.dt_habilidade(String(uso.get("dt_atributo", "agi"))), "sucessos": 0, "encerra_apos": 1,
-					"condicao_falha": String(uso.condicao), "pe_por_turno": int(uso.manter.pe_por_turno), "pagador": agente}}
+					"condicao_falha": String(uso.condicao), "pe_por_turno": agente.custo_pe_do_item(item_id, int(uso.manter.pe_por_turno)), "pagador": agente}}
 			if String(uso.condicao) == Ser.INCONSCIENTE and alvo is Ameaca and not (alvo as Ameaca).criatura:
 				alvo.mods_cena["rendido"] = true   # dormiu: a Ordem interroga depois (docs/40)
 			res.textos.append("%s fica %s" % [alvo.nome, String(uso.condicao).replace("_", " ")])
@@ -617,11 +622,13 @@ func preparar_armadilha(agente: Agente, item_id: String, celula: Vector2i) -> Di
 		return {"ok": false, "erro": "sem as amarras"}
 	if grade == null or not grade.tem(agente) or Grade.distancia(grade.posicao(agente), celula) > int(Grade.ALCANCES.get(String(arm.get("alcance", "curto")), 6)):
 		return {"ok": false, "erro": "fora de alcance"}
-	if agente.pe + agente.pe_temporario < int(arm.pe):
+	var custo_arm := agente.custo_pe_do_item(item_id, int(arm.pe))   # Ferramentas Paranormais (p.43)
+	if agente.pe + agente.pe_temporario < custo_arm:
 		return {"ok": false, "erro": "PE insuficientes"}
 	if acoes.has(agente) and not gastar_acao(agente, "completa"):
 		return {"ok": false, "erro": "pede a ação completa"}
-	agente.gastar_pe(int(arm.pe), true)
+	if custo_arm > 0:
+		agente.gastar_pe(custo_arm, true)
 	agente.equipamento.erase(item_id)   # as amarras ficam no chão
 	var celulas := grade.celulas_da_area("esfera", grade.posicao(agente), celula, float(arm.get("raio", 1.5)))
 	grade.marcar_dificil(celulas, true)
@@ -936,7 +943,7 @@ func motivo_item_combate(agente: Agente, item_id: String, alvo: Ser) -> String:
 		var alc := String(uso.get("alcance", "adjacente"))
 		if (alc == "adjacente" and not grade.estao_adjacentes(agente, alvo)) or (alc != "adjacente" and not grade.em_alcance(agente, alvo, alc)):
 			return "Fora de alcance."
-	if int(uso.get("pe", 0)) > agente.pe_disponivel_no_turno():
+	if agente.custo_pe_do_item(item_id, int(uso.get("pe", 0))) > agente.pe_disponivel_no_turno():
 		return "PE insuficientes."
 	if acoes.has(agente):
 		var a := acoes_restantes(agente)
@@ -1002,7 +1009,7 @@ func acalmar(agente: Agente, alvo: Ser, pericia: String = "diplomacia") -> Resul
 ## Agarrar, derrubar, desarmar e empurrar: um ataque corpo a corpo que, em vez de dano, faz
 ## outra coisa. Teste de manobra (ataque corpo a corpo, Luta) oposto pela Luta do alvo; empate,
 ## de novo. Gasta a ação padrão. Agarrar quem você já agarra esmaga (dano desarmado).
-const MANOBRAS := ["agarrar", "derrubar", "desarmar", "empurrar"]
+const MANOBRAS := ["agarrar", "derrubar", "desarmar", "empurrar", "quebrar"]
 
 
 ## "" se a manobra pode ser feita agora, ou o motivo.
@@ -1028,14 +1035,15 @@ func pode_manobrar(atacante: Ser, alvo: Ser, tipo: String) -> String:
 				return "%s não pode ser derrubado" % alvo.nome
 			if alvo.tem(Ser.CAIDO):
 				return "%s já está no chão" % alvo.nome
-		"desarmar":
+		"desarmar", "quebrar":
 			if _arma_de_mao(alvo).is_empty():
 				return "%s não segura nenhuma arma" % alvo.nome
 	return ""
 
 
 ## Faz a manobra. {ok, erro?, tipo, venceu, diferenca, textos}
-func manobra(atacante: Ser, alvo: Ser, tipo: String) -> Dictionary:
+## `opcoes`: {"demolidor": true} paga 1 PE do Golpe Demolidor na manobra quebrar (p.35).
+func manobra(atacante: Ser, alvo: Ser, tipo: String, opcoes: Dictionary = {}) -> Dictionary:
 	var motivo := pode_manobrar(atacante, alvo, tipo)
 	if motivo != "":
 		return {"ok": false, "erro": motivo}
@@ -1070,12 +1078,52 @@ func manobra(atacante: Ser, alvo: Ser, tipo: String) -> Dictionary:
 			var arma := _arma_de_mao(alvo)
 			alvo.mods_cena["arma_caida"] = String(arma.get("id", ""))
 			res.textos.append("%s derruba %s de %s." % [atacante.nome, String(arma.get("nome", "a arma")).to_lower(), alvo.nome])
+		"quebrar":
+			res.textos.append(_quebrar_arma(atacante, alvo, bool(opcoes.get("demolidor", false))))
 		"empurrar":
 			var andou := _empurrar(atacante, alvo, 1 + dif / 5)
 			res.textos.append("%s empurra %s %s." % [atacante.nome, alvo.nome, ("%s m" % str(andou * 1.5).replace(".", ",")) if andou > 0 else "contra o obstáculo"])
 	for t in res.textos:
 		_log(t)
 	return res
+
+
+## Quebrar (p.95 e Tabela 4.5, p.100): o golpe vai na arma que o alvo segura. O dano da arma de
+## quem bate (com a Força, no corpo a corpo) menos a RD do objeto sai dos PV dele; a 0 PV, a
+## arma quebra e o alvo luta desarmado. Golpe Demolidor (p.35): 1 PE, dois dados a mais.
+func _quebrar_arma(atacante: Ser, alvo: Ser, demolidor: bool) -> String:
+	var alvo_arma := _arma_de_mao(alvo)
+	if alvo_arma.is_empty():
+		return "%s não segura nada que dê para quebrar." % alvo.nome
+	var id := String(alvo_arma.get("id", ""))
+	var obj := objeto_da_arma(id)
+	var minha: Dictionary = arma_em_maos(atacante, (atacante as Agente).arma()) if atacante is Agente else ((atacante as Ameaca).ataques[0] if not (atacante as Ameaca).ataques.is_empty() else ruleset.arma("desarmado"))
+	var expr := String(minha.get("dano", "1d3"))
+	var dano := dados.rolar_expressao(expr)
+	if minha.get("soma_forca", false) or String(minha.get("ataque", "corpo_a_corpo")) == "corpo_a_corpo":
+		dano += atacante.atributo("for")
+	var extra := ""
+	if demolidor and atacante is Agente and (atacante as Agente).tem_habilidade("golpe_demolidor") and (atacante as Agente).gastar_pe(1):
+		var faces := expr.get_slice("d", 1).to_int()
+		if faces > 0:
+			dano += dados.rolar_expressao("2d%d" % faces)
+			extra = " (Golpe Demolidor)"
+	var final := maxi(0, dano - int(obj.rd))
+	var pv := int(alvo.mods_cena.get("arma_pv", obj.pv)) - final
+	alvo.mods_cena["arma_pv"] = pv
+	if pv <= 0:
+		alvo.mods_cena["arma_quebrada"] = id
+		return "%s acerta %s de %s%s: %d de dano, e a arma quebra." % [atacante.nome, String(alvo_arma.get("nome", "a arma")).to_lower(), alvo.nome, extra, final]
+	return "%s acerta %s de %s%s: %d de dano (faltam %d PV)." % [atacante.nome, String(alvo_arma.get("nome", "a arma")).to_lower(), alvo.nome, extra, final, pv]
+
+
+## RD e PV de uma arma como objeto (Tabela 4.5, p.100), pela empunhadura e pelo material.
+func objeto_da_arma(arma_id: String) -> Dictionary:
+	var cfg: Dictionary = ruleset.dados.get("armas", {}).get("objetos", {})
+	var emp := String(ruleset.arma(arma_id).get("empunhadura", "leve")) if ruleset.tem_arma(arma_id) else "leve"
+	var material := "madeira" if arma_id in cfg.get("madeira", []) else "metal"
+	var o: Dictionary = cfg.get("armas", {}).get(emp, cfg.get("armas", {}).get("leve", {})).get(material, {"rd": 10, "pv": 5})
+	return {"rd": int(o.get("rd", 10)), "pv": int(o.get("pv", 5))}
 
 
 ## Teste de manobra (p.85): Luta do atacante, com os modificadores de ataque corpo a corpo
@@ -1122,7 +1170,7 @@ func _empurrar(atacante: Ser, alvo: Ser, quadrados: int) -> int:
 ## A arma que o ser segura e que pode ser derrubada ({} se nenhuma ou já caída).
 ## Agentes: a arma equipada (não o desarmado). Ameaças: um ataque que seja arma da tabela.
 func _arma_de_mao(ser: Ser) -> Dictionary:
-	if ser.mods_cena.has("arma_caida"):
+	if ser.mods_cena.has("arma_caida") or ser.mods_cena.has("arma_quebrada"):
 		return {}
 	if ser is Agente:
 		var a := (ser as Agente).arma()
@@ -1180,6 +1228,9 @@ func arma_em_maos(atacante: Ser, arma: Dictionary) -> Dictionary:
 	var caida := String(atacante.mods_cena.get("arma_caida", ""))
 	if caida != "" and String(arma.get("id", "")) == caida:
 		return ruleset.arma("desarmado")
+	var quebrada := String(atacante.mods_cena.get("arma_quebrada", ""))
+	if quebrada != "" and String(arma.get("id", "")) == quebrada:
+		return ruleset.arma("desarmado")   # quebrada pela manobra (p.95)
 	if atacante is Agente and String(arma.get("id", "")) in (atacante as Agente).equipamento and not (atacante as Agente).tem_municao(arma):
 		return (atacante as Agente).coronhada(arma)
 	return arma
@@ -1190,10 +1241,114 @@ func arma_em_maos(atacante: Ser, arma: Dictionary) -> Dictionary:
 func pode_disparar(atacante: Ser, arma: Dictionary) -> String:
 	if not arma.get("recarga", false) or String(atacante.mods_cena.get("descarregada", "")) != String(arma.get("id", "")):
 		return ""
-	if not acoes.has(atacante):
+	if not acoes.has(atacante) or recarga_livre(atacante, arma):
 		return ""
 	var a := acoes_restantes(atacante)
 	return "" if int(a.movimento) > 0 and int(a.padrao) > 0 else "Recarregar pede uma ação de movimento antes do disparo."
+
+
+## Saque Rápido (p.35): com a contagem de munição, uma vez por rodada recarrega uma arma de
+## disparo (arco, besta, balestra) como ação livre.
+func recarga_livre(atacante: Ser, arma: Dictionary) -> bool:
+	return atacante is Agente and (atacante as Agente).tem_habilidade("saque_rapido") and String(arma.get("ataque", "")) == "disparo" \
+		and int(atacante.mods_cena.get("recarga_livre_rodada", -1)) != rodada
+
+
+# --- Poderes de classe no combate (docs/76) ------------------------------------------------
+
+## Sacar outra arma (p.97): ação de movimento; com Saque Rápido (p.35), livre. `arma_id` é uma
+## arma do equipamento ou "desarmado". Devolve {ok, erro?, arma, livre}.
+func trocar_arma(agente: Agente, arma_id: String) -> Dictionary:
+	if arma_id != "desarmado" and (not arma_id in agente.equipamento or String(ruleset.equipamento(arma_id).get("tipo", "")) != "arma"):
+		return {"ok": false, "erro": "essa arma não está com %s" % agente.nome}
+	if arma_id == agente.arma_id:
+		return {"ok": false, "erro": "já está na mão"}
+	var livre := agente.tem_habilidade("saque_rapido")
+	if not livre and acoes.has(agente) and not gastar_acao(agente, "movimento"):
+		return {"ok": false, "erro": "sacar pede uma ação de movimento"}
+	agente.arma_id = arma_id
+	var arma := agente.arma()
+	_log("%s %s %s%s." % [agente.nome, "guarda a arma e fica de mãos livres" if arma_id == "desarmado" else "saca", "" if arma_id == "desarmado" else String(arma.get("nome", "a arma")).to_lower(),
+		" num gesto (Saque Rápido)" if livre else ""])
+	return {"ok": true, "arma": arma, "livre": livre}
+
+
+## Movimento Tático (p.39): 1 PE e, até o fim do turno, terreno difícil e subir num ponto alto não
+## custam deslocamento a mais. Ação livre.
+func movimento_tatico(agente: Agente) -> Dictionary:
+	if not agente.tem_habilidade("movimento_tatico"):
+		return {"ok": false, "erro": "sem o poder"}
+	if agente.mods_cena.get("movimento_tatico", false):
+		return {"ok": false, "erro": "já está valendo neste turno"}
+	if not agente.gastar_pe(1):
+		return {"ok": false, "erro": "PE insuficientes"}
+	agente.mods_cena["movimento_tatico"] = true
+	_log("%s lê o terreno: neste turno, mato e degrau não atrasam (Movimento Tático)." % agente.nome)
+	return {"ok": true}
+
+
+## Nerd (p.39): uma vez por cena, 2 PE e Atualidades DT 20. Passando, mostra as fraquezas do alvo:
+## vulnerabilidades, resistências, imunidades, o elemento (e o que o oprime) e o enigma.
+func nerd(agente: Agente, alvo: Ser) -> Dictionary:
+	if not agente.tem_habilidade("nerd"):
+		return {"ok": false, "erro": "sem o poder"}
+	if agente.mods_cena.get("nerd_usado", false):
+		return {"ok": false, "erro": "uma vez por cena"}
+	if alvo == null or alvo.lado == agente.lado:
+		return {"ok": false, "erro": "escolha um inimigo"}
+	if not agente.gastar_pe(2):
+		return {"ok": false, "erro": "PE insuficientes"}
+	agente.mods_cena["nerd_usado"] = true
+	var t := agente.testar(dados, "atualidades", 20)
+	if t == null or not t.sucesso:
+		_log("%s puxa da memória tudo o que leu sobre isso (Atualidades %s): nada que sirva." % [agente.nome, t.descrever() if t != null else "—"])
+		return {"ok": true, "teste": t, "sucesso": false, "texto": ""}
+	var texto := fraquezas_de(alvo)
+	alvo.mods_cena["fraquezas_reveladas"] = true
+	_log("[color=#7fd3c7]%s lembra de um livro, de um fórum, de uma série (Atualidades %s): %s[/color]" % [agente.nome, t.descrever(), texto])
+	return {"ok": true, "teste": t, "sucesso": true, "texto": texto}
+
+
+## O que se sabe de um ser: o que o fere mais, o que ele aguenta e o elemento.
+func fraquezas_de(alvo: Ser) -> String:
+	var partes := PackedStringArray()
+	if alvo is Ameaca:
+		var a := alvo as Ameaca
+		if not a.vulnerabilidades.is_empty():
+			partes.append("vulnerável a %s" % ", ".join(PackedStringArray(a.vulnerabilidades)))
+		if a.elemento != "":
+			var op := opressor_de(a.elemento)
+			partes.append("é de %s%s" % [a.elemento, (", que %s oprime" % op) if op != "" else ""])
+		if not a.resistencias_base.is_empty():
+			partes.append("aguenta %s" % ", ".join(PackedStringArray(a.resistencias_base.keys().map(func(k): return "%s %d" % [k, int(a.resistencias_base[k])]))))
+		if not a.imunidades.is_empty():
+			partes.append("imune a %s" % ", ".join(PackedStringArray(a.imunidades)))
+		if a.enigma_pendente():
+			partes.append("o enigma: %s" % String(a.enigma.get("texto", "")))
+	if partes.is_empty():
+		return "%s não tem fraqueza que se note." % alvo.nome
+	return "%s: %s." % [alvo.nome, "; ".join(partes)]
+
+
+## Improvisar Componentes (p.44): uma vez por cena, ação completa e Investigação DT 15. Passando,
+## o agente acha componentes do elemento escolhido, que servem até o fim da missão.
+func improvisar_componentes(agente: Agente, elemento: String) -> Dictionary:
+	if not agente.tem_habilidade("improvisar_componentes"):
+		return {"ok": false, "erro": "sem o poder"}
+	if not elemento in ["sangue", "morte", "conhecimento", "energia"]:
+		return {"ok": false, "erro": "não há componentes desse elemento"}
+	if agente.mods_cena.get("improvisou", false):
+		return {"ok": false, "erro": "uma vez por cena"}
+	if acoes.has(agente) and not gastar_acao(agente, "completa"):
+		return {"ok": false, "erro": "pede a ação completa"}
+	agente.mods_cena["improvisou"] = true
+	var t := agente.testar(dados, "investigacao", 15)
+	var ok := t != null and t.sucesso
+	if ok and not elemento in agente.componentes_improvisados:
+		agente.componentes_improvisados.append(elemento)
+	_log("%s revira o lugar atrás de componentes de %s (Investigação %s): %s" % [agente.nome, elemento, t.descrever() if t != null else "—",
+		"acha o que serve." if ok else "nada que sirva."])
+	return {"ok": true, "teste": t, "sucesso": ok}
 
 
 ## Traumas (docs/70): quem tem fobia do elemento de uma criatura em cena começa abalado.
@@ -1495,13 +1650,16 @@ func pode_conjurar(conjurador: Agente, ritual_id: String, alvo: Ser, forma: Stri
 	var r := ruleset.ritual(ritual_id)
 	if r.is_empty():
 		return "ritual desconhecido"
-	if not conjurador.conhece_ritual(ritual_id):
+	var selo := String(opcoes.get("selo", ""))   # selo paranormal (p.161): sem PE nem componentes
+	if selo != "" and (not conjurador.tem_item(selo) or String(ruleset.equipamento(selo).get("selo", "")) != ritual_id):
+		return "%s não tem esse selo" % conjurador.nome
+	if selo == "" and not conjurador.conhece_ritual(ritual_id):
 		return "%s não conhece %s" % [conjurador.nome, r.nome]
 	if not r.get("implementado", false):
 		return "%s ainda não tem efeito no jogo" % r.nome
 	if r.get("efeitos", []).is_empty():
 		return "%s se usa fora do combate" % r.nome
-	if int(r.circulo) > conjurador.circulo_maximo():
+	if selo == "" and int(r.circulo) > conjurador.circulo_maximo():
 		return "círculo acima do permitido pelo NEX"
 	if forma != "":
 		var f: Dictionary = r.get("formas", {}).get(forma, {})
@@ -1515,12 +1673,12 @@ func pode_conjurar(conjurador: Agente, ritual_id: String, alvo: Ser, forma: Stri
 		return "na forma monstruosa, não dá para conjurar"
 	if not _zonas_em(conjurador).filter(func(z): return z.efeito.get("silencio", false)).is_empty():
 		return "a Dissonância Acústica não deixa conjurar"
-	if r.elemento != "medo" and conjurador.afinidade != r.elemento and not conjurador.equipamento.any(func(i): return ruleset.equipamento(i).get("componentes", "") == r.elemento):
+	if selo == "" and conjurador.faltam_componentes(ritual_id) and conjurador.custo_camuflar(ritual_id) == 0:
 		return "faltam componentes ritualísticos de %s" % r.elemento
-	var custo := conjurador.custo_ritual(ritual_id, forma)
-	if custo > conjurador.limite_pe_rituais():
+	var custo := conjurador.custo_ritual(ritual_id, forma) + conjurador.custo_camuflar(ritual_id)   # Camuflar Ocultismo: +2 PE (p.43)
+	if selo == "" and custo > conjurador.limite_pe_rituais():
 		return "custo (%d PE) acima do limite de PE" % custo
-	if custo > conjurador.pe + conjurador.pe_temporario:
+	if selo == "" and custo > conjurador.pe + conjurador.pe_temporario:
 		return "PE insuficientes"
 	var e := efeito_do_ritual(ritual_id, forma)
 	if e.tipo == "teleporte":
@@ -1636,12 +1794,26 @@ func conjurar(conjurador: Agente, ritual_id: String, alvo: Ser, forma: String = 
 		return {"ok": false, "erro": erro}
 	var r := ruleset.ritual(ritual_id)
 	var cfg: Dictionary = ruleset.dados.rituais
-	var custo := conjurador.custo_ritual(ritual_id, forma) + _custo_extra_das_zonas(conjurador, r)
+	var selo := String(opcoes.get("selo", ""))
+	var camuflar := 0 if selo != "" else conjurador.custo_camuflar(ritual_id)
+	var custo := conjurador.custo_ritual(ritual_id, forma) + _custo_extra_das_zonas(conjurador, r) + camuflar
 	var execucao := String(r.get("execucao", ""))
-	if acoes.has(conjurador) and not execucao.begins_with("livre"):
-		gastar_acao(conjurador, "completa" if execucao.begins_with("completa") else "padrao")
-	conjurador.gastar_pe(custo, true)
-	var res := {"ok": true, "ritual": r, "forma": forma, "custo": custo, "alvo": alvo, "conjurador": conjurador, "textos": [], "danos": {}, "dano_total": 0}
+	if acoes.has(conjurador) and (selo != "" or not execucao.begins_with("livre")):
+		gastar_acao(conjurador, "completa" if execucao.begins_with("completa") else "padrao")   # o selo pede ao menos a padrão
+	if selo != "":
+		# Selo (p.161): quem não conhece o ritual lê os sigilos com Ocultismo (DT 20 + custo)
+		if not conjurador.conhece_ritual(ritual_id):
+			var tl := conjurador.testar(dados, "ocultismo", 20 + custo)
+			if tl == null or not tl.sucesso:
+				_log("%s tenta ler os sigilos do selo, mas não acha o sentido (Ocultismo %s)." % [conjurador.nome, tl.descrever() if tl != null else "sem treino"])
+				return {"ok": false, "erro": "não leu o selo"}
+		conjurador.equipamento.erase(selo)
+		_log("[color=#b98ae6]%s lê o selo em voz alta; os sigilos viram cinza.[/color]" % conjurador.nome)
+	else:
+		conjurador.gastar_pe(custo, true)
+		if camuflar > 0:
+			_log("%s conjura só com a concentração, sem componentes (Camuflar Ocultismo, +2 PE)." % conjurador.nome)
+	var res := {"ok": true, "ritual": r, "forma": forma, "custo": custo, "alvo": alvo, "conjurador": conjurador, "textos": [], "danos": {}, "dano_total": 0, "selo": selo}
 	# Concentração: proteção leve = condição ruim, pesada = terrível (p.129)
 	var prot := conjurador.protecao()
 	if not prot.is_empty():
@@ -1677,7 +1849,7 @@ func conjurar(conjurador: Agente, ritual_id: String, alvo: Ser, forma: String = 
 	var efeito := efeito_do_ritual(ritual_id, forma)
 	if efeito.tipo == "teleporte":
 		_teleportar_ritual(conjurador, efeito, opcoes, res)
-		_log("[color=#b98ae6]%s conjura %s (%d PE).[/color] %s" % [conjurador.nome, r.nome, custo, " ".join(PackedStringArray(res.textos))])
+		_log("[color=#b98ae6]%s conjura %s (%s).[/color] %s" % [conjurador.nome, r.nome, "selo" if selo != "" else "%d PE" % custo, " ".join(PackedStringArray(res.textos))])
 		ritual_conjurado.emit(res)
 		return res
 	var celulas := _celulas_do_efeito(conjurador, efeito, alvo, opcoes)
@@ -1696,7 +1868,7 @@ func conjurar(conjurador: Agente, ritual_id: String, alvo: Ser, forma: String = 
 		conjurador.pv_temporario = maxi(conjurador.pv_temporario, int(res.dano_total))   # Consumir Manancial (verdadeiro)
 		res.textos.append("%s recebe %d PV temporários." % [conjurador.nome, int(res.dano_total)])
 	var em := alvo.nome if alvos.size() == 1 and alvo != null and alvos[0] == alvo else ("%d alvo(s)" % alvos.size() if not efeito.has("area") else "uma área (%d atingido(s))" % alvos.size())
-	_log("[color=#b98ae6]%s conjura %s%s em %s (%d PE).[/color] %s" % [conjurador.nome, r.nome, "" if forma == "" else " " + forma, em, custo, " ".join(PackedStringArray(res.textos))])
+	_log("[color=#b98ae6]%s conjura %s%s em %s (%s).[/color] %s" % [conjurador.nome, r.nome, "" if forma == "" else " " + forma, em, "selo" if selo != "" else "%d PE" % custo, " ".join(PackedStringArray(res.textos))])
 	ritual_conjurado.emit(res)
 	_verificar_fim()
 	return res
@@ -2245,6 +2417,7 @@ func _tem_evasao(ser: Ser, resistencia: String) -> bool:
 ## Fim do turno: enxames ferem quem está junto deles; a múmia a 0 PV morre se não se recuperou.
 func _fim_de_turno(ser: Ser) -> void:
 	_envelhecer_fintas(ser)
+	ser.mods_cena.erase("movimento_tatico")   # Movimento Tático vale até o fim do turno (p.39)
 	if ser is Ameaca and not ser.esta_fora_de_combate():
 		var amea := ser as Ameaca
 		var enx := amea.habilidade("enxame")

@@ -28,13 +28,19 @@ func terreno(h: Vector2i) -> String:
 
 ## Custo para ENTRAR no hex; -1 = intransponível. `escalar` (docs/34): quem tirou 20 nos
 ## dados de movimento do turno sobe a serra, pagando o `custo_escalada` do terreno.
+## Movimento Tático (p.39, docs/76): a Missão liga durante a vez de quem pagou; todo hex que dá
+## para entrar custa 1, e a serra também (sem a penalidade de escalar).
+var tatico := false
+
+
 func custo(h: Vector2i, escalar: bool = false) -> int:
 	if not tem(h):
 		return -1
 	var t: Dictionary = terrenos.get(terreno(h), {})
 	if escalar and t.get("escalavel", false):
-		return int(t.get("custo_escalada", 2))
-	return int(t.get("custo", 1))
+		return 1 if tatico else int(t.get("custo_escalada", 2))
+	var c := int(t.get("custo", 1))
+	return mini(c, 1) if tatico else c
 
 
 func passavel(h: Vector2i, escalar: bool = false) -> bool:

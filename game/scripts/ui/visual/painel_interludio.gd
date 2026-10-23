@@ -7,11 +7,11 @@ extends CanvasLayer
 ##   PainelInterludio.abrir(self, missao, func(escolhas): ...)
 
 const NOMES := {"dormir": "Dormir", "relaxar": "Relaxar", "alimentar": "Alimentar-se", "exercitar": "Exercitar-se",
-	"ler": "Ler", "revisar": "Revisar caso"}
+	"ler": "Ler", "revisar": "Revisar caso", "selo": "Criar selo"}
 
 var missao: Missao
 var ao_encerrar: Callable
-var escolhas: Dictionary = {}   ## agente_id -> {"acoes": [], "prato": "", "revisar": ""}
+var escolhas: Dictionary = {}   ## agente_id -> {"acoes": [], "prato": "", "revisar": "", "selo": ""}
 var _linhas: Dictionary = {}    ## agente_id -> VBoxContainer
 var _encerrar: Button
 
@@ -60,7 +60,7 @@ func _montar() -> void:
 	sub.add_theme_font_size_override("font_size", Tema.FONTE_P)
 	v.add_child(sub)
 	for a in missao.participantes_interludio():
-		escolhas[a.id] = {"acoes": [], "prato": "", "revisar": ""}
+		escolhas[a.id] = {"acoes": [], "prato": "", "revisar": "", "selo": ""}
 		var linha := VBoxContainer.new()
 		linha.add_theme_constant_override("separation", Tema.ESPACO_P)
 		v.add_child(linha)
@@ -98,7 +98,9 @@ func _redesenhar(a: Agente) -> void:
 		f.queue_free()
 	var e: Dictionary = escolhas[a.id]
 	var cab := Label.new()
-	cab.text = "%s  ·  PV %d/%d · PE %d/%d · SAN %d/%d  ·  ações %d/2" % [a.nome, a.pv, a.pv_maximo, a.pe, a.pe_maximo, a.san, a.san_maximo, (e.acoes as Array).size()]
+	cab.text = "%s  ·  PV %d/%d · PE %d/%d · SAN %d/%d  ·  ações %d/2  ·  descanso %s" % [a.nome, a.pv, a.pv_maximo, a.pe, a.pe_maximo, a.san, a.san_maximo,
+		(e.acoes as Array).size(), missao.condicao_de(a)]
+	cab.tooltip_text = "Na vila, a hospedagem segue o limite de crédito (%s, p.62)." % missao.credito_de(a)
 	cab.add_theme_color_override("font_color", Tema.TINTA)
 	var negrito := Tema._fonte(Tema.ARQ_NEGRITO)
 	if negrito != null:
@@ -108,13 +110,15 @@ func _redesenhar(a: Agente) -> void:
 	botoes.add_theme_constant_override("separation", Tema.ESPACO_P)
 	linha.add_child(botoes)
 	for acao in Missao.ACOES_INTERLUDIO:
+		if acao == "selo" and not a.tem_habilidade("criar_selo"):
+			continue   # Criar Selo (docs/76): só quem tem o poder
 		var b := Button.new()
 		b.text = NOMES[acao]
 		b.toggle_mode = true
 		b.theme_type_variation = "BotaoPapel"
 		b.button_pressed = acao in e.acoes
 		b.tooltip_text = _dica(a, acao)
-		b.disabled = acao == "revisar" and missao.pontos_revisaveis().is_empty()
+		b.disabled = (acao == "revisar" and missao.pontos_revisaveis().is_empty()) or (acao == "selo" and missao.rituais_para_selo(a).is_empty())
 		b.pressed.connect(func(): _alternar(a, acao))
 		botoes.add_child(b)
 	if "alimentar" in e.acoes:
@@ -122,6 +126,9 @@ func _redesenhar(a: Agente) -> void:
 			func(k): return String(missao._cfg.interludio.pratos[k].nome), func(k): return String(missao._cfg.interludio.pratos[k].texto), a)
 	if "revisar" in e.acoes:
 		_sub_lista(linha, "Revisar:", missao.pontos_revisaveis(), e, "revisar", func(k): return _nome_ponto(k), func(_k): return "", a)
+	if "selo" in e.acoes:
+		_sub_lista(linha, "Selo de:", missao.rituais_para_selo(a), e, "selo",
+			func(k): return "%s · %d PE" % [missao.ruleset.ritual(k).nome, a.custo_ritual(k)], func(k): return String(missao.ruleset.ritual(k).get("descricao", "")), a)
 
 
 func _sub_lista(linha: VBoxContainer, titulo: String, opcoes: Array, e: Dictionary, chave: String, nome: Callable, dica: Callable, a: Agente) -> void:
@@ -160,7 +167,11 @@ func _dica(a: Agente, acao: String) -> String:
 	match acao:
 		"dormir": return "Recupera %d PV e %d PE (limite de PE do NEX)." % [lim, lim]
 		"relaxar": return "Recupera %d SAN, +1 por agente que relaxar neste interlúdio (contando você)." % lim
-		"alimentar": return "Um prato com benefício neste interlúdio."
+		"alimentar":
+			var chef := missao.participantes_interludio().filter(func(x): return x.tem_habilidade("ingrediente_secreto"))
+			return "Um prato com benefício neste interlúdio." + ("
+%s cozinha: quem se alimenta ganha também o prato dele (Ingrediente Secreto)." % chef[0].nome if not chef.is_empty() else "")
+		"selo": return "Fabrica o selo de um ritual que conhece, pagando o custo em PE (Criar Selo). Selos ao mesmo tempo: até %d." % maxi(1, a.atributo("pre"))
 		"exercitar": return "+1d6 no próximo teste de AGI, FOR ou VIG desta missão (até %d guardados)." % maxi(1, a.atributo("vig"))
 		"ler": return "+1d6 no próximo teste de INT ou PRE desta missão (até %d guardados)." % maxi(1, a.atributo("int"))
 		"revisar": return "Volta a um ponto que ficou para trás numa cena já vista e testa para achar a pista."
@@ -191,6 +202,8 @@ func _atualizar_encerrar() -> void:
 		if "alimentar" in e.acoes and String(e.prato) == "":
 			completo = false
 		if "revisar" in e.acoes and String(e.revisar) == "":
+			completo = false
+		if "selo" in e.acoes and String(e.get("selo", "")) == "":
 			completo = false
 	_encerrar.disabled = not (algum and completo)
 

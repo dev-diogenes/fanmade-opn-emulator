@@ -438,7 +438,7 @@ func _montar_habilidades() -> Control:
 	dir.add_child(l2)
 	var l3 := HBoxContainer.new()
 	l3.add_theme_constant_override("separation", 10)
-	l3.add_child(campo("Crédito", String(pat.get("credito", "—")), 80))
+	l3.add_child(campo("Crédito", agente.credito(), 80))   # Patrocinador da Ordem: um acima (docs/76)
 	l3.add_child(campo("Carga", "%d / %d%s" % [agente.espacos_usados(), agente.capacidade_carga(), " !" if agente.sobrecarregado() else ""], 80))
 	dir.add_child(l3)
 	dir.add_child(aba("Inventário"))

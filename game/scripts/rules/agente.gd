@@ -72,6 +72,10 @@ var equipamento: Array[String] = []   ## Ids requisitados para a missão (armas,
 var municao_gasta: Dictionary = {}    ## tipo de munição -> cenas já gastas do pacote aberto (p.69)
 var cargas_gastas: Dictionary = {}    ## item de cargas (taser, spray, pistolas) -> cargas usadas
 var traumas: Array[Dictionary] = []   ## fobias que ficaram de missões (docs/70): [{"elemento", "missao"}]
+## Componentes improvisados nesta missão (Improvisar Componentes, docs/76): elementos. Fora do save.
+var componentes_improvisados: Array = []
+## O Crime Compensa (docs/76): o item achado que entra na próxima missão sem contar na cota.
+var item_do_crime := ""
 var em_tratamento := false            ## na Enfermaria da Base: fica fora da próxima missão
 var pe := 0
 var pe_temporario := 0           ## Gastos antes dos PE normais; somem no fim da cena
@@ -637,8 +641,87 @@ func capacidade_carga() -> int:
 func espacos_usados() -> int:
 	var total := 0
 	for item_id in equipamento:
-		total += int(ruleset.equipamento(item_id).get("espacos", 1))
+		total += espacos_do_item(item_id)
 	return total
+
+
+# --- Poderes que mexem no equipamento (docs/76) ----------------------------------------------
+
+## Mochila de Utilidades e Ferramenta Favorita valem para um item escolhido: não arma e não
+## empilhável (um item só, não um pacote de várias unidades).
+func pode_escolher_para_poder(item_id: String) -> bool:
+	var e := ruleset.equipamento(item_id)
+	return not e.is_empty() and String(e.get("tipo", "")) != "arma" and not Ruleset.empilhavel(e)
+
+
+## A categoria do item para este agente: Mochila de Utilidades e Ferramenta Favorita (o item
+## escolhido) e Ferramentas Paranormais (todo item paranormal) descem uma categoria cada.
+func categoria_do_item(item_id: String) -> int:
+	var e := ruleset.equipamento(item_id)
+	var cat := int(e.get("categoria", 0))
+	var base := Ruleset.base_do_item(item_id)
+	if String(e.get("tipo", "")) != "arma":
+		for poder in ["mochila_de_utilidades", "ferramenta_favorita"]:
+			if tem_habilidade(poder) and String(escolhas.get(poder, "")) == base:
+				cat -= 1
+	if tem_habilidade("ferramentas_paranormais") and String(e.get("grupo", "")) == "paranormal":
+		cat -= 1
+	return maxi(0, cat)
+
+
+## Os espaços do item para este agente: o item da Mochila de Utilidades ocupa 1 a menos.
+func espacos_do_item(item_id: String) -> int:
+	var e := ruleset.equipamento(item_id)
+	var esp := int(e.get("espacos", 1))
+	if tem_habilidade("mochila_de_utilidades") and String(escolhas.get("mochila_de_utilidades", "")) == Ruleset.base_do_item(item_id) \
+			and String(e.get("tipo", "")) != "arma":
+		esp -= 1
+	return maxi(0, esp)
+
+
+## Ferramentas Paranormais: itens paranormais ativam sem gastar PE.
+func custo_pe_do_item(item_id: String, custo: int) -> int:
+	if tem_habilidade("ferramentas_paranormais") and String(ruleset.equipamento(item_id).get("grupo", "")) == "paranormal":
+		return 0
+	return custo
+
+
+## Itens da lista que contam na cota da patente: uma unidade do item de O Crime Compensa fica fora.
+func _contam_na_cota(lista: Array) -> Array:
+	var resto := lista.duplicate()
+	if item_do_crime != "" and item_do_crime in resto:
+		resto.erase(item_do_crime)
+	return resto
+
+
+## Componentes ritualísticos do elemento: no equipamento ou improvisados nesta missão.
+func tem_componentes(elemento: String) -> bool:
+	return elemento in componentes_improvisados or equipamento.any(func(i): return ruleset.equipamento(i).get("componentes", "") == elemento)
+
+
+## O ritual pede componentes que o agente não tem (o Medo e a afinidade não pedem).
+func faltam_componentes(ritual_id: String) -> bool:
+	var r := ruleset.ritual(ritual_id)
+	return String(r.get("elemento", "")) != "medo" and afinidade != String(r.get("elemento", "")) and not tem_componentes(String(r.get("elemento", "")))
+
+
+## Camuflar Ocultismo (p.43): sem componentes, conjura por +2 PE. 0 quando não precisa.
+func custo_camuflar(ritual_id: String) -> int:
+	return 2 if faltam_componentes(ritual_id) and tem_habilidade("camuflar_ocultismo") else 0
+
+
+## O limite de crédito (p.62): o da patente, um acima com Patrocinador da Ordem (p.30).
+const NIVEIS_CREDITO := ["baixo", "medio", "alto", "ilimitado"]
+func credito() -> String:
+	var i := NIVEIS_CREDITO.find(String(patente().get("credito", "baixo")))
+	for e in efeitos("limite_credito"):
+		i += int(e.get("valor", 1))
+	return String(NIVEIS_CREDITO[clampi(i, 0, NIVEIS_CREDITO.size() - 1)])
+
+
+## Selos que o agente tem no equipamento.
+func selos() -> Array:
+	return Array(equipamento).filter(func(i): return String(i).begins_with("selo:"))
 
 
 func sobrecarregado() -> bool:
@@ -661,7 +744,7 @@ func consumir_item(item_id: String) -> bool:
 func espacos_de(lista: Array) -> int:
 	var total := 0
 	for item_id in lista:
-		total += int(ruleset.equipamento(item_id).get("espacos", 1))
+		total += espacos_do_item(item_id)
 	return total
 
 
@@ -677,13 +760,14 @@ func motivo_bloqueio(item_id: String, lista: Array, mais_uma: bool = false) -> S
 		return ""
 	if item_id in lista and not Ruleset.empilhavel(e):
 		return "Basta um."
-	var cat := int(e.get("categoria", 0))
+	var cat := categoria_do_item(item_id)
 	var romano: String = ["0", "I", "II", "III", "IV"][clampi(cat, 0, 4)]
-	if cat > 0:
+	var do_crime := item_id == item_do_crime and not item_id in lista   # O Crime Compensa: fora da cota
+	if cat > 0 and not do_crime:
 		var limite := int(patente().get("itens_por_categoria", {}).get(str(cat), 0))
 		if limite <= 0:
 			return "A patente %s ainda não libera itens de categoria %s." % [patente().get("nome", "?"), romano]
-		var usados := lista.filter(func(i): return int(ruleset.equipamento(i).get("categoria", 0)) == cat).size()
+		var usados := _contam_na_cota(lista).filter(func(i): return categoria_do_item(i) == cat).size()
 		if usados >= limite:
 			return "Já leva %d de %d itens de categoria %s." % [usados, limite, romano]
 	if e.has("maldicoes") and pp < int(ruleset.cfg_maldicoes().get("patente_minima_pp", 50)):
@@ -692,7 +776,7 @@ func motivo_bloqueio(item_id: String, lista: Array, mais_uma: bool = false) -> S
 	if e.get("tipo", "") == "protecao" and lista.any(func(i): return ruleset.equipamento(i).get("tipo", "") == "protecao" and ruleset.equipamento(i).get("escudo", false) == eh_escudo):
 		return "Só dá para levar um escudo." if eh_escudo else "Só dá para vestir uma proteção."
 	var maximo := capacidade_carga() * int(ruleset.regra_carga().get("maximo_multiplicador", 2))
-	if espacos_de(lista) + int(e.get("espacos", 1)) > maximo:
+	if espacos_de(lista) + espacos_do_item(item_id) > maximo:
 		return "Passaria da carga máxima (%d espaços)." % maximo
 	return ""
 
@@ -748,15 +832,21 @@ func validar_equipamento(lista: Array) -> Array[String]:
 	var espacos := 0
 	var protecoes := 0
 	var escudos := 0
+	var na_cota := _contam_na_cota(lista)
 	for item_id in lista:
 		var e := ruleset.equipamento(item_id)
 		if e.is_empty():
 			erros.append("Item desconhecido: %s" % item_id)
 			continue
-		var cat := int(e.get("categoria", 0))
+		espacos += espacos_do_item(item_id)
+	for item_id in na_cota:
+		var cat := categoria_do_item(item_id)
 		if cat > 0:
 			por_categoria[cat] = int(por_categoria.get(cat, 0)) + 1
-		espacos += int(e.get("espacos", 1))
+	for item_id in lista:
+		var e := ruleset.equipamento(item_id)
+		if e.is_empty():
+			continue
 		if e.tipo == "protecao" and not e.get("escudo", false):
 			protecoes += 1
 		if e.get("escudo", false):
@@ -809,7 +899,7 @@ func para_dicionario() -> Dictionary:
 		"transicao_mundano": transicao_mundano.duplicate(),
 		"pp": pp, "arma": arma_id, "equipamento": Array(equipamento),
 		"municao_gasta": municao_gasta.duplicate(), "cargas_gastas": cargas_gastas.duplicate(),
-		"traumas": traumas.duplicate(true), "em_tratamento": em_tratamento,
+		"traumas": traumas.duplicate(true), "em_tratamento": em_tratamento, "item_do_crime": item_do_crime,
 		"rituais": Array(rituais), "san_perdida": san_perdida,
 		"poderes_paranormais": poderes_paranormais.duplicate(true), "afinidade": afinidade,
 		"afinidade_escolhida": afinidade_escolhida,
@@ -889,6 +979,7 @@ static func de_dicionario(p_ruleset: Ruleset, d: Dictionary) -> Agente:
 	for t in d.get("traumas", []):
 		a.traumas.append({"elemento": String(t.get("elemento", "medo")), "missao": int(t.get("missao", 0))})
 	a.em_tratamento = bool(d.get("em_tratamento", false))
+	a.item_do_crime = String(d.get("item_do_crime", ""))
 	a.recalcular_maximos(true)
 	a.pv = int(d.get("pv", a.pv_maximo))
 	a.pe = int(d.get("pe", a.pe_maximo))

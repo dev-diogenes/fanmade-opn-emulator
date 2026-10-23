@@ -85,6 +85,13 @@ var _painel_fim: RelatorioFim
 var _lbl_fim: Label
 var _btn_fim: Button
 var _btn_fugir: Button
+# Poderes de classe no combate (docs/76)
+var _btn_arma: MenuButton
+var _btn_mov_tatico: Button
+var _btn_nerd: Button
+var _btn_improvisar: MenuButton
+var _chk_demolidor: Button
+var _selo_sel := ""   ## o selo que vai ser lido no próximo ritual (Criar Selo)
 var _btn_cacar: Button      ## no relatório do fim: caçar quem fugiu (docs/72)
 var _titulo_slots: Label
 var _caixa_mestre: VBoxContainer
@@ -408,11 +415,13 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 				_mostrar_fim(_vencedor, ["Caçada: %s." % res.placar] + Array(res.textos) + [
 					("%s foi pego e vai para o interrogatório." % res.alvo.nome) if res.pegou else ("%s escapou. O culto vai saber." % res.alvo.nome)])
 			return res
-		"usar", "armadilha", "mina", "detonar", "algemar":
+		"usar", "armadilha", "mina", "detonar", "algemar", "trocar_arma", "movimento_tatico", "nerd", "improvisar":
 			if not res.get("ok", false):
 				_registrar("[color=#eda64a]Não deu: %s[/color]" % res.get("erro", "?"))
 			elif res.get("teste") is ResultadoTeste:
 				_ultimo_teste = res.teste
+			if String(cmd.get("acao", "")) == "trocar_arma" and res.get("ok", false):
+				armas[ator] = res.arma   # a mesma arma que o FluxoCombate usa
 		"item":
 			var nome_item: String = ruleset.equipamento(String(cmd.get("item", ""))).get("nome", "item")
 			if res.ok:
@@ -509,7 +518,11 @@ func _clicar_celula(celula: Vector2i) -> void:
 		return
 	elif _modo == "manobra" and agente != null and alvo != null and alvo.lado != agente.lado:
 		_modo = ""
-		_enviar("manobra", {"alvo": Comandos.ref(combate, alvo), "tipo": _manobra_sel})
+		_enviar("manobra", {"alvo": Comandos.ref(combate, alvo), "tipo": _manobra_sel,
+			"opcoes": {"demolidor": _chk_demolidor.button_pressed and _chk_demolidor.visible}})
+	elif _modo == "nerd" and agente != null and alvo != null and alvo.lado != agente.lado:
+		_modo = ""
+		_enviar("nerd", {"alvo": Comandos.ref(combate, alvo)})
 	elif _modo == "atacar" and agente != null and alvo != null and alvo.lado != agente.lado:
 		var opcoes := {}
 		if _chk_ae.button_pressed and agente.classe_id == "combatente":
@@ -872,7 +885,7 @@ func _montar_interface() -> void:
 	_btn_manobra.flat = false
 	_btn_manobra.tooltip_text = "Em vez de dano: Luta contra a Luta do alvo. Ação padrão, inimigo ao lado."
 	var menu := _btn_manobra.get_popup()
-	for par in [["Agarrar", "agarrar"], ["Derrubar", "derrubar"], ["Desarmar", "desarmar"], ["Empurrar", "empurrar"], ["Fintar (Enganação)", "fintar"]]:
+	for par in [["Agarrar", "agarrar"], ["Derrubar", "derrubar"], ["Desarmar", "desarmar"], ["Empurrar", "empurrar"], ["Quebrar a arma", "quebrar"], ["Fintar (Enganação)", "fintar"]]:
 		menu.add_item(par[0])
 		menu.set_item_metadata(menu.item_count - 1, par[1])
 	menu.index_pressed.connect(func(i: int): _modo_manobra(String(menu.get_item_metadata(i))))
@@ -887,6 +900,37 @@ func _montar_interface() -> void:
 	# Fugir (docs/72): o grupo todo tenta escapar num teste estendido (p.86-87)
 	_btn_fugir = _botao("Fugir", func(): _enviar("fugir"))
 	extras.add_child(_btn_fugir)
+	# Poderes de classe (docs/76): sacar outra arma, Movimento Tático, Nerd, Improvisar Componentes
+	_btn_arma = MenuButton.new()
+	_btn_arma.text = "Arma ▾"
+	_btn_arma.flat = false
+	_btn_arma.tooltip_text = "Sacar outra arma: ação de movimento (p.97); livre com Saque Rápido."
+	_btn_arma.about_to_popup.connect(_montar_menu_arma)
+	_btn_arma.get_popup().index_pressed.connect(func(i: int): _enviar("trocar_arma", {"arma": String(_btn_arma.get_popup().get_item_metadata(i))}))
+	extras.add_child(_btn_arma)
+	_btn_mov_tatico = _botao("Movimento tático (1 PE)", func(): _enviar("movimento_tatico"))
+	_btn_mov_tatico.tooltip_text = "Até o fim do turno, terreno difícil e subir num ponto alto não custam deslocamento a mais (p.39)."
+	extras.add_child(_btn_mov_tatico)
+	_btn_nerd = _botao("Nerd (2 PE)", func():
+		_modo = "nerd"
+		_registrar("Escolha o inimigo de que o Nerd quer lembrar alguma coisa.")
+		_atualizar())
+	_btn_nerd.tooltip_text = "Uma vez por cena: Atualidades DT 20. Passando, mostra as fraquezas do inimigo escolhido (p.39)."
+	extras.add_child(_btn_nerd)
+	_btn_improvisar = MenuButton.new()
+	_btn_improvisar.text = "Improvisar componentes ▾"
+	_btn_improvisar.flat = false
+	_btn_improvisar.tooltip_text = "Uma vez por cena, ação completa: Investigação DT 15 acha componentes do elemento, que servem até o fim da missão (p.44)."
+	for el in ["sangue", "morte", "conhecimento", "energia"]:
+		_btn_improvisar.get_popup().add_item(el.capitalize())
+		_btn_improvisar.get_popup().set_item_metadata(_btn_improvisar.get_popup().item_count - 1, el)
+	_btn_improvisar.get_popup().index_pressed.connect(func(i: int): _enviar("improvisar", {"elemento": String(_btn_improvisar.get_popup().get_item_metadata(i))}))
+	extras.add_child(_btn_improvisar)
+	_chk_demolidor = Button.new()
+	_chk_demolidor.toggle_mode = true
+	_chk_demolidor.text = "Golpe Demolidor (1 PE)"
+	_chk_demolidor.tooltip_text = "Na manobra quebrar, 1 PE soma dois dados de dano da arma ao golpe no item (p.35)."
+	extras.add_child(_chk_demolidor)
 
 	# Bilhete de rituais e itens (acima dos retratos do grupo)
 	_bilhete = PanelContainer.new()
@@ -1014,8 +1058,28 @@ func _rituais_disponiveis(agente: Agente) -> Array:
 				var fm: Dictionary = rr.formas[forma]
 				if int(fm.get("circulo", 1)) > agente.circulo_maximo() or (fm.get("afinidade", false) and agente.afinidade != rr.elemento):
 					continue
-			lista.append([[rid, forma], forma, "%s%s · %d PE" % [rr.nome, "" if forma == "" else " — " + forma, agente.custo_ritual(rid, forma)]])
+			var camuflar := agente.custo_camuflar(rid)   # Camuflar Ocultismo: sem componentes, +2 PE (docs/76)
+			lista.append([[rid, forma], forma, "%s%s · %d PE%s" % [rr.nome, "" if forma == "" else " — " + forma, agente.custo_ritual(rid, forma) + camuflar,
+				" (sem componentes)" if camuflar > 0 else ""]])
 	return lista
+
+
+## Sacar outra arma (docs/76): as armas do inventário, e ficar de mãos livres.
+func _montar_menu_arma() -> void:
+	var menu := _btn_arma.get_popup()
+	menu.clear()
+	var agente := _agente_da_vez()
+	if agente == null:
+		return
+	var vistos := {}
+	for i in agente.equipamento:
+		if String(ruleset.equipamento(i).get("tipo", "")) == "arma" and i != agente.arma_id and not vistos.has(i):
+			vistos[i] = true
+			menu.add_item(String(ruleset.equipamento(i).get("nome", i)))
+			menu.set_item_metadata(menu.item_count - 1, i)
+	if agente.arma_id != "desarmado":
+		menu.add_item("Guardar a arma (desarmado)")
+		menu.set_item_metadata(menu.item_count - 1, "desarmado")
 
 
 ## [item_id, texto] dos itens de combate: explosivos, itens contra criaturas e os de uso do
@@ -1044,6 +1108,10 @@ func _itens_de_combate(agente: Agente) -> Array:
 			lista.append(["#algemar", "Algemas: prender quem está caído ou agarrado"])
 	if combate.tem_mina(agente):
 		lista.append(["#detonar", "Detonar a mina (ação padrão)"])
+	for selo in agente.selos():   # Criar Selo (docs/76): qualquer um lê, sem PE nem componentes
+		if not vistos.has(selo):
+			vistos[selo] = true
+			lista.append([selo, "%s: ler (sem PE%s)" % [ruleset.equipamento(selo).nome, "" if agente.conhece_ritual(selo.trim_prefix("selo:")) else "; Ocultismo para quem não conhece"]])
 	return lista
 
 
@@ -1136,6 +1204,9 @@ func _conjurar(_agente: Agente, rid: String, forma: String, alvo: Ser, opcoes: D
 		op["celula"] = Comandos.vetor(opcoes.celula)
 	if opcoes.has("alvos"):
 		op["alvos"] = opcoes.alvos.map(func(x): return Comandos.ref(combate, x))
+	if _selo_sel != "":
+		op["selo"] = _selo_sel   # o selo, lido em voz alta (docs/76)
+		_selo_sel = ""
 	_modo = ""
 	if alvo != null:
 		_close(alvo, true)
@@ -1161,6 +1232,12 @@ func _decifrar() -> void:
 func _modo_item() -> void:
 	var agente := _agente_da_vez()
 	if agente == null or _item_sel == "":
+		return
+	if _item_sel.begins_with("selo:"):   # selo paranormal (docs/76): o ritual dele, sem PE
+		_selo_sel = _item_sel
+		_ritual_sel = [_item_sel.trim_prefix("selo:"), ""]
+		_item_sel = ""
+		_modo_ritual()
 		return
 	var info := ruleset.equipamento(_item_sel)
 	if _item_sel == "#detonar":
@@ -1292,6 +1369,20 @@ func _atualizar() -> void:
 	_btn_levantar.visible = agente != null and agente.tem(Ser.CAIDO)
 	_btn_pegar.visible = agente != null and agente.mods_cena.has("arma_caida")
 	_btn_fugir.visible = agente != null and not combate.encerrado
+	# Poderes de classe (docs/76)
+	var outras_armas: Array = [] if agente == null else Array(agente.equipamento).filter(func(i): return String(ruleset.equipamento(i).get("tipo", "")) == "arma" and i != agente.arma_id)
+	_btn_arma.visible = agente != null and (not outras_armas.is_empty() or agente.arma_id != "desarmado")
+	if agente != null:
+		var livre := agente.tem_habilidade("saque_rapido")
+		_btn_arma.disabled = not livre and int(restam.get("movimento", 0)) <= 0 and int(restam.get("padrao", 0)) <= 0
+		_btn_arma.text = "Arma ▾" + (" (livre)" if livre else "")
+	_btn_mov_tatico.visible = agente != null and agente.tem_habilidade("movimento_tatico")
+	_btn_mov_tatico.disabled = agente == null or agente.mods_cena.get("movimento_tatico", false) or agente.pe + agente.pe_temporario < 1
+	_btn_nerd.visible = agente != null and agente.tem_habilidade("nerd")
+	_btn_nerd.disabled = agente == null or agente.mods_cena.get("nerd_usado", false) or agente.pe + agente.pe_temporario < 2
+	_btn_improvisar.visible = agente != null and agente.tem_habilidade("improvisar_componentes")
+	_btn_improvisar.disabled = agente == null or agente.mods_cena.get("improvisou", false) or int(restam.get("padrao", 0)) <= 0 or int(restam.get("movimento", 0)) <= 0
+	_chk_demolidor.visible = agente != null and agente.tem_habilidade("golpe_demolidor")
 	if agente != null:
 		var por_que := combate.motivo_fugir(agente)
 		var dif := combate.dificuldade_da_fuga()

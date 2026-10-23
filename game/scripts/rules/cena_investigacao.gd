@@ -35,6 +35,12 @@ var _presteza_pendente := false       ## Presteza Atlética: o próximo aliado q
 var _ajuda: Dictionary = {}           ## Agente -> bônus de ajuda pendente
 ## Credencial de fachada (docs/63, OR4), que a Missão passa: {nome, usos, queimada}.
 ## `usos_credencial` conta os desta cena (a Missão soma no fim).
+## Magnum Opus (p.27, docs/76): quem ainda pode ser reconhecido nesta missão; usado, sai da lista.
+var magnum_opus: Array = []
+var magnum_opus_usado: Array = []   ## ids
+## Nerd (p.39): +5 no próximo procurar pistas do grupo nesta cena; quem já usou.
+var dica_nerd := 0
+var nerd_usado: Array = []
 ## A manchete do vilão (docs/73): a primeira testemunha que fala a mostra no celular. "" = nada.
 var noticia := ""
 var noticia_mostrada := false
@@ -233,6 +239,9 @@ func _preparar_procurar(a: Agente, p: Dictionary, pericia: String, opcoes: Dicti
 		presteza = true
 	if bool(opcoes.get("credencial", false)) and pode_usar_credencial(p):
 		bonus += int(DadosJogo.ler("sinais").credencial.bonus)   # acesso e jurisdição (docs/63)
+	if bool(opcoes.get("magnum_opus", false)) and pode_magnum_opus(a, p, pericia):
+		bonus += 5   # Magnum Opus (p.27): a testemunha o reconhece
+	bonus += dica_nerd   # Nerd (p.39): a dica vale para o próximo teste
 	op["bonus_extra"] = int(op.get("bonus_extra", 0)) + bonus
 	op["dados_extras"] = int(op.get("dados_extras", 0)) + extras
 	if _atributo_forcado != "":
@@ -307,6 +316,14 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 	if _trilha.has(a):
 		_trilha[a].dados = 0
 	var resultado := {"teste": teste, "sucesso": teste.sucesso, "pista": ""}
+	dica_nerd = 0
+	if bool(opcoes.get("magnum_opus", false)) and pode_magnum_opus(a, p, pericia):
+		magnum_opus.erase(a)
+		magnum_opus_usado.append(a.id)
+		_log("[color=#e3c27a]%s é reconhecido pela obra famosa: a testemunha se abre (Magnum Opus, +5).[/color]" % a.nome)
+	if bool(opcoes.get("maos_rapidas", false)) and pode_maos_rapidas(a, pericia) and a.gastar_pe(1):
+		_acoes_extras += 1   # Mãos Rápidas (p.39): o teste de Crime vira ação livre
+		_log("%s faz isso num gesto (Mãos Rápidas, 1 PE): ainda tem a ação do turno." % a.nome)
 	var com_credencial := bool(opcoes.get("credencial", false)) and pode_usar_credencial(p)
 	if com_credencial:
 		_usar_credencial(a, p)
@@ -328,6 +345,34 @@ func procurar(ponto_id: String, pericia: String, pe_foco: int = 0, opcoes: Dicti
 			_log("[color=#eda64a]Descuidos acumulados: a urgência aumenta (−1 rodada).[/color]")
 	_acao_concluida()
 	return resultado
+
+
+## Magnum Opus (p.27): numa testemunha, com perícia de Presença, uma vez por missão.
+func pode_magnum_opus(a: Agente, p: Dictionary, pericia: String) -> bool:
+	return a in magnum_opus and bool(p.get("depoimento", false)) and ruleset.atributo_da_pericia(pericia) == "pre"
+
+
+## Mãos Rápidas (p.39): 1 PE e o teste de Crime não gasta a ação.
+func pode_maos_rapidas(a: Agente, pericia: String) -> bool:
+	return pericia == "crime" and a.tem_habilidade("maos_rapidas") and a.pe + a.pe_temporario >= 1
+
+
+## Nerd (p.39): uma vez por cena, 2 PE e Atualidades DT 20, sem gastar a ação. Passando, o
+## próximo teste de procurar pistas do grupo nesta cena ganha +5 (a dica da série favorita).
+func nerd() -> Dictionary:
+	var a := agente_atual()
+	if a == null or not a.tem_habilidade("nerd") or a.id in nerd_usado:
+		return {"ok": false, "erro": "uma vez por cena"}
+	if not a.gastar_pe(2):
+		return {"ok": false, "erro": "PE insuficientes"}
+	nerd_usado.append(a.id)
+	var t := a.testar(dados, "atualidades", 20)
+	var ok := t != null and t.sucesso
+	if ok:
+		dica_nerd = 5
+	_log("%s lembra de uma coisa que leu (Atualidades %s): %s" % [a.nome, t.descrever() if t != null else "—",
+		"uma dica, +5 no próximo teste de procurar pistas." if ok else "não ajuda em nada."])
+	return {"ok": true, "sucesso": ok, "teste": t}
 
 
 ## A credencial vale numa testemunha (ponto de depoimento) enquanto não queimou.
@@ -629,7 +674,7 @@ func resultado() -> Dictionary:
 	return {"pistas": pistas_encontradas.duplicate(true), "perguntas": perguntas_respondidas.duplicate(true),
 		"urgencia_estourada": urgencia_estourada, "penalidade": penalidade, "motivo": motivo_fim,
 		"cena": String(cena.get("id", "")), "restantes": pontos_restantes.duplicate(),   # Revisar Caso (docs/48)
-		"testemunhas": testemunhas_ouvidas(), "usos_credencial": usos_credencial}
+		"testemunhas": testemunhas_ouvidas(), "usos_credencial": usos_credencial, "magnum_opus": magnum_opus_usado.duplicate()}
 
 
 ## As testemunhas que o grupo ouviu nesta cena (docs/56): [{nome, papel, cena}].

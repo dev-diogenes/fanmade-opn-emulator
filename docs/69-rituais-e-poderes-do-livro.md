@@ -95,17 +95,7 @@ Ficam no botão **Ação** do mapa, como a Cicatrização, e não aparecem no co
   - Sopro do Caos, Desacelerar Impacto, Eco Espiral e Transfigurar Água;
   - Contato Paranormal e Convocação Instantânea.
 - **Partes de rituais:** algumas formas discentes e verdadeiras e os modos de vários rituais. Cada ritual diz na ficha o que falta.
-- **Poderes de classe sem efeito:**
-  - Golpe Demolidor e Saque Rápido: não há objetos para quebrar nem ação para sacar;
-  - Mãos Rápidas;
-  - Mochila de Utilidades: pede escolher o item;
-  - Movimento Tático;
-  - Nerd;
-  - Camuflar Ocultismo;
-  - Criar Selo;
-  - Ferramentas Paranormais;
-  - Improvisar Componentes.
-- **Poderes de origem sem efeito:** Vislumbres do Passado, Magnum Opus, Ingrediente Secreto, O Crime Compensa, Ferramenta Favorita e Patrocinador da Ordem.
+- **Poderes de classe e de origem que faltavam:** ganharam efeito no docs/76.
 - **Poder paranormal sem efeito:** Afortunado.
 
 ## Onde está
