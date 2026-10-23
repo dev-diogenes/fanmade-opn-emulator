@@ -11,6 +11,7 @@ signal encontro_iniciado(config: Dictionary)
 signal investigacao_iniciada(config: Dictionary)
 signal turno_mudou(agente: Agente)
 signal missao_encerrada(vitoria: bool)
+signal fala(agente: Agente, texto: String)   ## frases curtas no mapa (docs/75): só voz
 
 var ruleset: Ruleset
 var dados: Dados
@@ -471,6 +472,32 @@ func _iniciar_turno_do_agente() -> void:
 		a.nova_cena_de_insanidade()
 		a.iniciar_turno()   # zera o PE do turno e conta "enlouquecendo" também no mapa
 		turno_mudou.emit(a)
+		_falas_no_mapa(a)
+
+
+# --- Frases curtas no mapa (docs/75, AG6) --------------------------------------------------
+
+var _falas_ditas: Dictionary = {}   ## "nome|estado" -> true: já falou, até o estado passar
+var _falas := 0
+
+
+## No começo da vez, o agente perturbado ou ferido diz uma linha. Uma vez por estado: a fala volta
+## só depois que o estado passa (descansou, curou) e volta de novo.
+func _falas_no_mapa(a: Agente) -> void:
+	var estado := Falas.estado_de(a)
+	for e in ["perturbado", "ferido"]:
+		if e != estado:
+			_falas_ditas.erase("%s|%s" % [a.nome, e])
+	var chave := "%s|%s" % [a.nome, estado]
+	if estado == "" or _falas_ditas.has(chave):
+		return
+	_falas_ditas[chave] = true
+	var texto := Falas.de(a, estado, _falas)
+	if texto == "":
+		return
+	_falas += 1
+	_log("[i][color=#d9c9a3]%s: \"%s\"[/color][/i]" % [a.nome, texto])
+	fala.emit(a, texto)
 
 
 # --- Eventos ---------------------------------------------------------------

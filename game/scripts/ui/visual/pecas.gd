@@ -1306,6 +1306,34 @@ static func marcador(tipo: String) -> Node3D:
 	return n
 
 
+## Balão de fala (docs/75): a frase curta do agente, acima da cabeça, por alguns segundos. Um
+## por vez em cada um (o novo troca o anterior).
+static func balao_sobre(pai: Node3D, alvo: Node3D, texto: String, altura: float) -> Label3D:
+	if alvo.has_meta("balao"):
+		var antigo = alvo.get_meta("balao")
+		if is_instance_valid(antigo):
+			antigo.queue_free()
+	var l := rotulo("“%s”" % texto, 30, Tema.PERGAMINHO)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.width = 400.0
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	l.offset = Vector2(150, 0)   # o texto nasce na cabeça e corre para a direita: os agentes começam na borda esquerda
+	l.outline_size = 10
+	var f := Tema.fonte_maquina()
+	if f != null:
+		l.font = f
+	l.position = alvo.position + Vector3(0, altura, 0)
+	pai.add_child(l)
+	alvo.set_meta("balao", l)
+	l.modulate.a = 0.0
+	var tw := l.create_tween()
+	tw.tween_property(l, "modulate:a", 1.0, 0.2)
+	tw.tween_interval(3.2)
+	tw.tween_property(l, "modulate:a", 0.0, 0.6)
+	tw.tween_callback(l.queue_free)
+	return l
+
+
 static func rotulo(texto: String, tamanho: int = 48, cor: Color = Color.WHITE) -> Label3D:
 	var l := Label3D.new()
 	l.text = texto

@@ -224,6 +224,10 @@ func _atualizar_unidade(s: Ser) -> void:
 	var destino := posicao(grade.posicao(s))
 	if grade.terreno.get(grade.posicao(s), "") == Grade.ELEVADO:
 		destino.y += ALTURA_ELEVADO   # em cima do bloco (docs/40)
+	if _baloes_pendentes.has(s) and is_inside_tree():
+		var texto: String = _baloes_pendentes[s]
+		_baloes_pendentes.erase(s)
+		(func(): Pecas.balao_sobre(self, no, texto, 1.95)).call_deferred()   # depois de a peça ir para o lugar
 	if _posicoes.get(s) != destino:
 		if _posicoes.has(s) and is_inside_tree():
 			var tw := create_tween()
@@ -361,6 +365,17 @@ func _cercar(estilo: Dictionary) -> void:
 
 
 ## Texto que sobe e some sobre um ser: dano, "ERROU", "CRÍTICO" (docs/12).
+## A frase curta do agente (docs/75) num balão acima dele. Quem fala antes de ter peça (a fobia,
+## no começo do combate) ganha o balão quando a peça aparece.
+var _baloes_pendentes: Dictionary = {}   ## Ser -> texto
+func balao(s: Ser, texto: String) -> void:
+	var no: Node3D = _unidades.get(s)
+	if no == null or not is_inside_tree():
+		_baloes_pendentes[s] = texto
+		return
+	Pecas.balao_sobre(self, no, texto, 1.95)
+
+
 func texto_flutuante(s: Ser, texto: String, cor: Color, grande: bool = false) -> void:
 	var no: Node3D = _unidades.get(s)
 	if no == null or not is_inside_tree():

@@ -1,0 +1,26 @@
+{
+  "nota": "Frases curtas (AG6 do relatório, docs/75): uma linha que o agente diz conforme o estado, como os barks de Darkest Dungeon. Só voz: não mudam regras. Por classe; 'geral' vale para quem não tem lista. A fobia usa as frases de traumas.json. {nome} é o aliado que caiu. Texto próprio.",
+  "estados": {
+    "ferido": {
+      "combatente": ["Só pegou de raspão.", "Já levei pior. Vem.", "Isso vai deixar marca."],
+      "especialista": ["Preciso estancar isso. Rápido.", "Ok... ok. Ainda dá pra andar.", "Alguém tem gaze? Sério."],
+      "ocultista": ["O sangue chama a atenção do Outro Lado.", "Dor é só informação.", "Ainda não é a minha vez."],
+      "mundano": ["Isso tá sangrando muito.", "Eu não fui feito pra isso.", "Me tira daqui, por favor."],
+      "geral": ["Tô ferido, mas tô de pé.", "Isso dói mais do que parece."]
+    },
+    "perturbado": {
+      "combatente": ["Vocês ouviram isso? ...Esquece.", "Foco. Tem alguém atrás de mim.", "Não é real. Não pode ser real."],
+      "especialista": ["Os números não fecham. Nada aqui fecha.", "Eu anotei tudo. Por que as páginas estão em branco?", "Isso não tava aqui um segundo atrás."],
+      "ocultista": ["A Membrana tá fina. Dá pra ouvir eles.", "Não olhem nos olhos dele.", "Ele sabe o meu nome."],
+      "mundano": ["Eu quero ir pra casa.", "Tem alguém chamando a gente. Tem sim!", "Por que tá tão frio?"],
+      "geral": ["Tem alguma coisa errada comigo.", "Vocês também tão vendo?"]
+    },
+    "aliado_caiu": {
+      "combatente": ["{nome}! Segura aí, eu cubro.", "Ninguém fica pra trás. Ninguém!", "Vão pagar por isso."],
+      "especialista": ["{nome} caiu! Preciso chegar nele.", "Respira, {nome}. Respira.", "Mudança de plano: tirar {nome} daqui."],
+      "ocultista": ["Não leve {nome}. Ainda não.", "{nome}... fica do lado de cá.", "O Outro Lado tá cobrando."],
+      "mundano": ["{nome}?! {nome}, levanta!", "Não, não, não...", "A gente tem que correr. Agora."],
+      "geral": ["{nome}! Aguenta firme!", "Alguém ajuda {nome}!"]
+    }
+  }
+}

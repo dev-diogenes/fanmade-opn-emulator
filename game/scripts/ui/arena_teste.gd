@@ -146,6 +146,9 @@ func iniciar_combate(semente: int) -> void:
 	combate.registro.connect(_registrar)
 	combate.ser_adicionado.connect(_ao_adicionar)
 	combate.virada.connect(_ao_virada)
+	combate.fala.connect(func(s: Ser, texto: String):   # frases curtas (docs/75)
+		if _tab3d != null:
+			_tab3d.balao(s, texto))
 	if _tab3d != null:
 		_tab3d.construir(grade, String(config.get("terreno", "")), String(config.get("local", "")))   # o chão do hex (docs/22); no covil, o lugar do caso (docs/58)
 	combate.ataque_resolvido.connect(_ao_atacar)

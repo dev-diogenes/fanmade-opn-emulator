@@ -54,12 +54,16 @@ static func intensidade(ag: Agente) -> float:
 	return clampf((0.5 - float(ag.san) / ag.san_maximo) / 0.5, minimo, 1.0)
 
 
-## As frases do efeito de insanidade de quem está na vez (vazio sem efeito).
+## As frases do efeito de insanidade de quem está na vez e as da fobia dele (docs/70 e docs/75:
+## os sussurros da fobia). Vazio sem nenhum dos dois.
 static func frases_do_efeito(ag: Agente) -> Array:
 	var lista := []
 	if ag != null:
 		for e in ag.insanidades():
 			lista.append_array(e.get("frases", []))
+		var fobias: Dictionary = DadosJogo.ler("traumas").get("fobias", {})
+		for t in ag.traumas:
+			lista.append_array(fobias.get(String(t.get("elemento", "")), {}).get("frases", []))
 	return lista
 
 

@@ -77,6 +77,7 @@
 | [72-itens-de-campo-fuga-e-cacada.md](72-itens-de-campo-fuga-e-cacada.md) | Itens paranormais com efeito (câmera de aura, medidor, scanner, escuta, emissor), arremesso, amarras como armadilha, mina e algemas; fuga do grupo e caçada ao fugitivo por teste estendido (p.86-87); as correções e o playtest pela interface |
 | [73-culto-na-investigacao-e-na-luta.md](73-culto-na-investigacao-e-na-luta.md) | O símbolo do culto na parede, que só o Ocultismo traduz (nome do culto e pista de quem); a manchete do vilão no celular de uma testemunha; e a estrutura do culto nos encontros (células, hierarquia com líder, mascarados, família com fúria, seguranças da empresa) |
 | [74-cacador-e-dicas.md](74-cacador-e-dicas.md) | O caçador da Perseguição: uma criatura do elemento do caso que anda todo turno, contorna obstáculos e, derrubada, volta mais forte até o caso responder o quê; as dicas de primeira vez (munição, Oficina, fobias, subgênero, caçador, fuga, caçada, culto) e os passos novos do tutorial |
+| [75-frases-curtas.md](75-frases-curtas.md) | Frases curtas (AG6): o agente diz uma linha conforme o estado (ferido, perturbado, aliado caído, fobia), num balão acima dele e no registro, no combate e no mapa; os sussurros da fobia nas alucinações. Só voz, sem regra |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

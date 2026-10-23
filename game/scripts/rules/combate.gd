@@ -16,6 +16,7 @@ signal ritual_conjurado(resultado: Dictionary)
 signal registro(texto: String)
 signal ser_adicionado(ser: Ser)   ## um ser entrou no meio do combate (cópias do escutado)
 signal virada(ser: Ser, texto: String)   ## o chefe do caso virou na metade dos PV (docs/58)
+signal fala(ser: Ser, texto: String)   ## frases curtas (docs/75): só voz, não muda regra
 
 const REACOES := ["bloqueio", "esquiva", "contra_ataque"]
 const ORDEM_LESAO := ["agi", "for", "int", "pre", "vig"]   ## 1d6: 1..5; 6 = nenhuma (p.184)
@@ -42,6 +43,7 @@ var inspiracoes_pendentes: Array[Dictionary] = []
 var _indice := -1
 var _armadilhas: Array = []   ## amarras armadas (docs/72): {celulas, elemento, dt, dono, nome}
 var fugiram := false          ## o grupo fugiu da luta (docs/72)
+var _falas := 0               ## quantas frases curtas já saíram (varia a escolha, docs/75)
 const PERICIAS_FUGA := ["atletismo", "acrobacia", "furtividade", "percepcao", "sobrevivencia", "pilotagem", "tatica"]
 const PERICIAS_CACADA := ["atletismo", "percepcao", "sobrevivencia", "investigacao", "intimidacao", "pilotagem"]
 var _minas: Array = []        ## minas instaladas (docs/72): {dono, pos, direcao, dt, info}
@@ -167,6 +169,7 @@ func presenca_perturbadora(fonte: Ameaca = null) -> Array[Dictionary]:
 		ag.sofrer_dano_mental(dano)
 		resultados.append({"agente": ag, "teste": t, "passou": passou, "dano": san_antes - ag.san})
 		_log("[color=#b98ae6]%s encara %s (Vontade DT %d): %s — perde %d de Sanidade.[/color]" % [ag.nome, pior.nome, int(p.dt), "resiste" if passou else "falha", san_antes - ag.san])
+		_falas_do_estado(ag)
 	return resultados
 
 
@@ -823,6 +826,39 @@ func _perseguidor_alcanca(alvo: Agente) -> String:
 	return "%s alcança e %s" % [melhor.nome, ("acerta: %d de dano" % r.dano) if r.acertou else "erra"]
 
 
+# --- Frases curtas (docs/75, AG6) -----------------------------------------------------------
+
+## A fala sai no registro e no sinal `fala` (a arena mostra o balão). Só voz.
+func _falar(a: Agente, estado: String, extra: Dictionary = {}) -> void:
+	var texto := Falas.de(a, estado, _falas, extra)
+	if texto == "":
+		return
+	_falas += 1
+	_log("[i][color=#d9c9a3]%s: \"%s\"[/color][/i]" % [a.nome, texto])
+	fala.emit(a, texto)
+
+
+## Depois de um golpe: quem ficou perturbado ou ferido fala uma vez por cena de cada estado; quem
+## caiu faz o primeiro aliado de pé falar.
+func _falas_do_estado(alvo: Ser) -> void:
+	if not alvo is Agente:
+		return
+	var a := alvo as Agente
+	if a.esta_fora_de_combate():
+		if a.mods_cena.get("falou_queda", false):
+			return
+		a.mods_cena["falou_queda"] = true
+		for s in participantes:
+			if s is Agente and s != a and not s.esta_fora_de_combate():
+				_falar(s as Agente, "aliado_caiu", {"nome": a.nome})
+				break
+		return
+	var estado := Falas.estado_de(a)
+	if estado != "" and not a.mods_cena.get("falou_" + estado, false):
+		a.mods_cena["falou_" + estado] = true
+		_falar(a, estado)
+
+
 ## Família (docs/73): quando um parente cai, os outros de pé ganham +1 dado nos ataques (até +2).
 func _familia_reage(caido: Ameaca) -> void:
 	if caido == null or not caido.culto.get("familia", false) or not caido.esta_fora_de_combate() or caido.mods_cena.get("familia_contou", false):
@@ -1177,6 +1213,7 @@ func _fobias_no_inicio() -> void:
 			if el in elementos:
 				s.aplicar_condicao(String(cfg.get("condicao_em_combate", Ser.ABALADO)))
 				_log("[color=#e0574a]%s: %s começa abalado.[/color]" % [String(cfg.fobias.get(el, {}).get("nome", "Fobia")), s.nome])
+				_falar(s as Agente, "fobia", {"elemento": el})
 				break
 
 
@@ -3647,6 +3684,7 @@ func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 
 		var san_antes := alvo.san
 		var pv_antes := alvo.pv
 		alvo.sofrer_dano_mental(dano)
+		_falas_do_estado(alvo)
 		return (san_antes - alvo.san) + (pv_antes - alvo.pv)
 	var paranormal: bool = tipo_dano in TIPOS_PARANORMAIS
 	if _reducoes_declaradas.has(alvo):
@@ -3679,6 +3717,7 @@ func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 
 		if alvo.tem(Ser.INCONSCIENTE):
 			_log("%s desaba, desacordado." % alvo.nome)
 		_familia_reage(amea_alvo)
+		_falas_do_estado(alvo)
 		return final
 	alvo.sofrer_dano(final)
 	_familia_reage(amea_alvo)
@@ -3730,6 +3769,7 @@ func aplicar_dano(alvo: Ser, dano: int, tipo_dano: String = "", rd_extra: int = 
 			(alvo as Agente).pagar_preco_da_maldicao("vig")
 		else:
 			_ao_passar_resistencia(alvo)
+	_falas_do_estado(alvo)
 	return final
 
 

@@ -523,6 +523,13 @@ func _atualizar_marcador(h: Vector2i, tipo: String) -> void:
 		gira.tween_method(func(a: float): peca.rotation.y = a, 0.0, TAU, 8.0)
 
 
+## A frase curta do agente no mapa (docs/75), num balão acima da peça dele.
+func balao(a: Agente, texto: String) -> void:
+	var ficha: Node3D = _fichas.get(a)
+	if ficha != null and is_inside_tree():
+		Pecas.balao_sobre(self, ficha, texto, 1.45)
+
+
 func _atualizar_agentes(missao: Missao) -> void:
 	var por_hex: Dictionary = {}
 	for i in missao.agentes_iniciais.size():

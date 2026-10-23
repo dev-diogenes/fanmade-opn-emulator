@@ -89,6 +89,7 @@ func _ready() -> void:
 	missao.investigacao_iniciada.connect(_ao_investigar)
 	missao.missao_encerrada.connect(_ao_encerrar)
 	missao.turno_mudou.connect(_ao_mudar_turno)
+	missao.fala.connect(func(a: Agente, texto: String): _mapa3d.balao(a, texto))   # docs/75
 	_mapa3d.focar_agente(missao, true)
 	if missao.encerrada:
 		_ao_encerrar(missao.vitoria)
