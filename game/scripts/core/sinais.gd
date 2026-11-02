@@ -45,6 +45,22 @@ static func gerar(semente_base: int) -> Array:
 	return lista
 
 
+## A abertura da missão (AU6): a frase-tema do elemento e a premissa do sinal ("lugar banal +
+## evento estranho + quem chamou a Ordem"). Sem sinal, a premissa fica vazia.
+static func abertura(sinal: Dictionary, elemento: String, semente: int) -> Dictionary:
+	var d := DadosJogo.ler("abertura")
+	var frases: Array = d.frases_tema.get(elemento, d.frases_tema.geral)
+	var premissa := ""
+	if not sinal.is_empty() and String(sinal.get("relato", "")) != "":
+		var relato := String(sinal.relato)
+		var fonte := String(sinal.get("fonte", ""))   # só a primeira letra muda: "WhatsApp" continua igual
+		fonte = fonte.left(1).to_lower() + fonte.substr(1)
+		if String(sinal.get("rotulo", "")) != "":
+			fonte += " (confiança %s)" % sinal.rotulo
+		premissa = String(d.premissa).replace("{relato}", relato.left(1).to_upper() + relato.substr(1)).replace("{fonte}", fonte)
+	return {"frase": String(_escolher(frases, semente, "frase_tema")), "premissa": premissa}
+
+
 ## O ponto de encontro do briefing (OR3): um lugar banal, com senha e resposta.
 static func fachada(semente: int) -> Dictionary:
 	return (_escolher(DadosJogo.ler("sinais").fachadas, semente, "fachada") as Dictionary).duplicate()

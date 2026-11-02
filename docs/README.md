@@ -80,6 +80,8 @@
 | [75-frases-curtas.md](75-frases-curtas.md) | Frases curtas (AG6): o agente diz uma linha conforme o estado (ferido, perturbado, aliado caído, fobia), num balão acima dele e no registro, no combate e no mapa; os sussurros da fobia nas alucinações. Só voz, sem regra |
 | [76-poderes-que-faltavam.md](76-poderes-que-faltavam.md) | Os 10 poderes de classe e os 6 de origem que faltavam, com o efeito do livro: manobra quebrar, sacar outra arma, selos, componentes improvisados, Nerd, Movimento Tático, Mochila e Ferramenta Favorita no Arsenal, achados de O Crime Compensa, o prato do chef e o crédito na hospedagem |
 | [77-sigilos-e-cifra.md](77-sigilos-e-cifra.md) | Sigilos pela gramática da wiki (sem copiar os oficiais): miolo por elemento, anéis pela forma do ritual, alfabeto de 26 glifos, o nome do culto escrito no anel e a tabela de letras da Ordem que facilita ler os próximos símbolos |
+| [79-vasculhado-e-abertura.md](79-vasculhado-e-abertura.md) | Local vasculhado (IN6) no mapa e na cena, frase-tema e premissa na abertura da missão (AU6) e a correção do arquivo do caso que não abria sozinho |
+| [80-critica-terror.md](80-critica-terror.md) | Crítica de todas as telas pelo clima de terror, com luminância e saturação medidas: a luz está ao contrário (Base e combate claros), mapa saturado, excesso de molduras; 5 recomendações com metas |
 | [sprints/](sprints/) | Planejamento por sprint (objetivo, capacidade, backlog, riscos) |
 | [adr/](adr/) | Decisões de arquitetura |
 

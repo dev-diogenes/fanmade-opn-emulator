@@ -15,6 +15,7 @@ var _ponto := ""
 var _vista: SubViewportContainer
 var _visao: Investigacao3D
 var _lbl_topo: Label
+var _carimbo_vasculhado: Label   ## IN6: a cena não tem mais pistas
 var _lbl_urgencia: Label
 var _fita: Control
 var _lbl_vez: Label
@@ -171,6 +172,20 @@ func _montar_topo() -> void:
 	_lbl_topo.add_theme_constant_override("outline_size", 8)
 	_lbl_topo.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	topo.add_child(_lbl_topo)
+	_carimbo_vasculhado = Label.new()
+	_carimbo_vasculhado.text = "VASCULHADO"
+	_carimbo_vasculhado.tooltip_text = "Não há mais pistas aqui. Dá para sair sem perder nada."
+	_carimbo_vasculhado.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_carimbo_vasculhado.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_carimbo_vasculhado.add_theme_color_override("font_color", Tema.cor_sucesso())
+	_carimbo_vasculhado.add_theme_stylebox_override("normal", Tema.caixa(Color(0, 0, 0, 0.55), Tema.cor_sucesso(), 3, 4, Vector2(10, 2)))
+	_carimbo_vasculhado.add_theme_font_size_override("font_size", Tema.FONTE_M + 2)
+	var ft_carimbo := Tema.fonte_titulo()
+	if ft_carimbo != null:
+		_carimbo_vasculhado.add_theme_font_override("font", ft_carimbo)
+	_carimbo_vasculhado.rotation_degrees = -4
+	_carimbo_vasculhado.visible = false
+	topo.add_child(_carimbo_vasculhado)
 	var linha := HBoxContainer.new()
 	linha.alignment = BoxContainer.ALIGNMENT_CENTER
 	linha.add_theme_constant_override("separation", Tema.ESPACO_M)
@@ -651,6 +666,10 @@ func _atualizar() -> void:
 		if a != null and _controles.usa_controle(a) and is_inside_tree():
 			_cartas.procurar.grab_focus.call_deferred()
 	_lbl_topo.text = String(cena.cena.nome).to_upper()
+	var vasculhado := cena.pontos_restantes.is_empty()
+	if vasculhado and not _carimbo_vasculhado.visible:
+		Som.tocar("carimbo")
+	_carimbo_vasculhado.visible = vasculhado
 	_lbl_urgencia.text = "urgência %s · rodada %d de %d" % [String(cena.urgencia.get("nome", "")).to_lower(), mini(cena.rodada, cena.rodadas_max), cena.rodadas_max]
 	_fita.definir(cena.rodadas_max, cena.rodada - 1)
 	_lbl_urgencia.add_theme_color_override("font_color", Tema.PERIGO if cena.rodada >= cena.rodadas_max else Tema.PERGAMINHO)

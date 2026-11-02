@@ -39,6 +39,9 @@ var caso: Caso
 ## Modificador de PV do chefe pelas investigações (+0.2 fortalecido, −0.2 enfraquecido)
 var modificador_chefe := 0.0
 var encerrada := false
+## O arquivo do caso já abriu na tela do mapa (antes valia "registro vazio", mas o culto e o
+## subgênero escrevem no registro ao criar a missão, e o briefing não aparecia)
+var briefing_visto := false
 var vitoria := false
 ## Opções da run (Carreira): modo_morte, lesoes, inspiracao_resoluta
 var opcoes: Dictionary = {"modo_morte": "normal", "lesoes": true, "inspiracao_resoluta": true}
@@ -60,6 +63,9 @@ var _cfg: Dictionary
 var _descansou: Dictionary = {}          ## Agente -> hex onde já fez interlúdio nesta visita
 ## Pontos de cenas já vistas que ficaram para trás: [{"cena", "pontos": [ids]}] (Revisar Caso, docs/48)
 var revisaveis: Array = []
+## Locais já investigados (IN6, docs/79): cena -> {"hex": [q, r], "restantes": pontos que ficaram}.
+## Com 0, o local está vasculhado: o mapa e a cena avisam que não há mais nada a achar.
+var locais_investigados: Dictionary = {}
 var _turnos_sem_surgimento := 0
 ## Medo no mapa (docs/53): por onde algo passou ({hex: turno do mundo}), os turnos de alívio
 ## depois de um combate e os passos da caçada no último turno do mundo (para a tela animar).
@@ -379,6 +385,15 @@ func rituais_para_selo(a: Agente) -> Array:
 		and not r.get("efeitos", []).is_empty() and a.custo_ritual(rid) <= a.pe + a.pe_temporario)
 
 
+## O que o grupo já sabe de um hex investigado (IN6): {"cena", "restantes"} ou {}.
+func local_investigado(h: Vector2i) -> Dictionary:
+	for cena_id in locais_investigados:
+		var l: Dictionary = locais_investigados[cena_id]
+		if int(l.hex[0]) == h.x and int(l.hex[1]) == h.y:
+			return {"cena": String(cena_id), "restantes": int(l.restantes)}
+	return {}
+
+
 ## Pontos que dá para revisar: ["cena:ponto"].
 func pontos_revisaveis() -> Array:
 	var lista: Array = []
@@ -502,6 +517,8 @@ func _revisar_caso(a: Agente, alvo: String, pratos_rapidos: int) -> String:
 	if t == null or not t.sucesso:
 		return "revisa %s (%s), mas não vê nada novo" % [ponto.nome, ruleset.pericia(melhor).nome]
 	revisaveis[r_idx].pontos.erase(partes[1])
+	if locais_investigados.has(partes[0]):   # IN6: um ponto a menos no local
+		locais_investigados[partes[0]].restantes = (revisaveis[r_idx].pontos as Array).size()
 	if (revisaveis[r_idx].pontos as Array).is_empty():
 		revisaveis.remove_at(r_idx)
 	var incerta: bool = ponto.get("depoimento", false) and t.total - dt < CenaInvestigacao.MARGEM_DEPOIMENTO_FIRME
@@ -1860,6 +1877,8 @@ func concluir_investigacao(resultado: Dictionary) -> void:
 		testemunhas_vistas.append({"nome": String(t.nome), "papel": String(t.papel), "cena": String(t.get("cena", "")), "sumiu": false})
 	if String(resultado.get("cena", "")) != "" and not resultado.get("restantes", []).is_empty():
 		revisaveis.append({"cena": String(resultado.cena), "pontos": (resultado.restantes as Array).duplicate()})
+	if String(resultado.get("cena", "")) != "":   # IN6
+		locais_investigados[String(resultado.cena)] = {"hex": [h.x, h.y], "restantes": (resultado.get("restantes", []) as Array).size()}
 	for p in resultado.get("perguntas", []):
 		_aplicar_efeito_pergunta(p)
 	var pen: Dictionary = resultado.get("penalidade", {})
@@ -2589,8 +2608,9 @@ func para_dicionario() -> Dictionary:
 		"credencial": credencial.duplicate(), "presos": presos.duplicate(true), "sigilos_conhecidos": sigilos_conhecidos.duplicate(),
 		"rituais_usados_no_mapa": rituais_usados_no_mapa.duplicate(), "bonus_de_ritual": bonus_de_ritual.duplicate(true), "escuta_instalada": escuta_instalada,
 		"rastros": rastros.keys().map(func(h): return [h.x, h.y, int(rastros[h])]), "descansos": descansos, "revisaveis": revisaveis.duplicate(true),
+		"locais_investigados": locais_investigados.duplicate(true),
 		"historico": historico.slice(maxi(0, historico.size() - 300)),
-		"encerrada": encerrada, "vitoria": vitoria, "extras": extras.duplicate(true),
+		"encerrada": encerrada, "vitoria": vitoria, "extras": extras.duplicate(true), "briefing_visto": briefing_visto,
 	}
 
 
@@ -2637,6 +2657,9 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	m.pistas = int(d.get("pistas", 0))
 	m._turnos_sem_surgimento = int(d.get("turnos_sem_surgimento", 0))
 	m.revisaveis = (d.get("revisaveis", []) as Array).duplicate(true)
+	for cena_id in d.get("locais_investigados", {}):
+		var l: Dictionary = d.locais_investigados[cena_id]
+		m.locais_investigados[String(cena_id)] = {"hex": [int(l.hex[0]), int(l.hex[1])], "restantes": int(l.restantes)}
 	m.alivio = int(d.get("alivio", 0))
 	m.testemunhas_vistas = (d.get("testemunhas_vistas", []) as Array).duplicate(true)
 	for k in d.get("pesquisa", {}):
@@ -2673,6 +2696,8 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 	for linha in d.get("historico", []):
 		m.historico.append(linha)
 	m.encerrada = d.get("encerrada", false)
+	# Saves antigos: missão com registro já andando conta como briefing visto
+	m.briefing_visto = bool(d.get("briefing_visto", m.turno_mundo > 1 or m.historico.size() > 3))
 	m.vitoria = d.get("vitoria", false)
 	m.caso = Caso.de_dicionario(d.caso) if not d.get("caso", {}).is_empty() else Caso.gerar(m.dados)
 	m.modificador_chefe = float(d.get("modificador_chefe", 0.0))

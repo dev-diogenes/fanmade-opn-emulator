@@ -249,7 +249,7 @@ func test_preferencias_de_efeitos_e_pausa():
 	assert_false(Preferencias.efeito("grao"))
 	var m := MenuPausa.abrir(self)
 	assert_true(MenuPausa.aberto(self))
-	assert_eq(m._ajustes.get_child_count(), 15, "duas seções, texto, resultados, escala, flashes, qualidade, daltonismo, atalhos, volume, câmera e quatro efeitos")
+	assert_eq(m._ajustes.get_child_count(), 18, "três seções, texto, resultados, escala, flashes, qualidade, daltonismo, atalhos, volume, câmera, quatro efeitos, o relatório do playtest e onde ele foi salvo")
 	m.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Preferencias.caminho))
 	Preferencias.caminho = antes

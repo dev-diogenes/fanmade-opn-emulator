@@ -641,3 +641,40 @@ func test_revisar_caso_acha_o_ponto_que_ficou():
 	assert_true(r.ok)
 	assert_eq(m.caso.pistas.size(), antes + 1, "a pista da escrivaninha entra no caso")
 	assert_true(m.pontos_revisaveis().is_empty())
+
+
+# --- Local vasculhado (IN6, docs/79) ----------------------------------------------------------
+
+func test_local_fica_vasculhado_e_revisar_fecha_o_que_sobrou():
+	var vizinho: Vector2i = Hex.vizinhos(m.posicao(cleber)).filter(func(h): return m.mapa.tem(h))[0]
+	m._preparar_investigacao(vizinho, "casa_abandonada")
+	m.concluir_investigacao({"pistas": [], "perguntas": [], "penalidade": {}, "cena": "casa_abandonada", "restantes": ["escrivaninha"]})
+	assert_eq(m.local_investigado(vizinho), {"cena": "casa_abandonada", "restantes": 1}, "ficou um ponto para revisar")
+	assert_eq(m.local_investigado(m.posicao(cleber)), {}, "outro hex não foi investigado")
+	_no_inicio()
+	m.dados.forcar([20, 20, 20])
+	m.interludio({bianca.id: {"acoes": ["revisar"], "revisar": "casa_abandonada:escrivaninha"}})
+	assert_eq(int(m.local_investigado(vizinho).restantes), 0, "revisado o último ponto: vasculhado")
+	var d := m.para_dicionario()
+	assert_eq(int(d.locais_investigados.casa_abandonada.restantes), 0, "fica no save")
+
+
+func test_cena_sem_pontos_aparece_vasculhada():
+	var vizinho: Vector2i = Hex.vizinhos(m.posicao(cleber)).filter(func(h): return m.mapa.tem(h))[0]
+	m._preparar_investigacao(vizinho, "casa_abandonada")
+	m.concluir_investigacao({"pistas": [], "perguntas": [], "penalidade": {}, "cena": "casa_abandonada", "restantes": []})
+	assert_eq(int(m.local_investigado(vizinho).restantes), 0)
+
+
+# --- Abertura da missão (AU6, docs/79) ---------------------------------------------------------
+
+func test_abertura_tem_frase_tema_e_premissa():
+	var sinal := Sinais.de(77, "media")
+	var ab := Sinais.abertura(sinal, String(sinal.elemento), 77)
+	assert_true(String(ab.frase) in DadosJogo.ler("abertura").frases_tema[String(sinal.elemento)], "frase do elemento")
+	assert_eq(ab, Sinais.abertura(sinal, String(sinal.elemento), 77), "a mesma semente, a mesma abertura")
+	var fonte := String(sinal.fonte)
+	assert_string_contains(String(ab.premissa), "Quem chamou a Ordem: " + fonte.left(1).to_lower() + fonte.substr(1), "só a primeira letra muda")
+	assert_string_contains(String(ab.premissa), "confiança " + String(sinal.rotulo))
+	assert_eq(String(Sinais.abertura({}, "medo", 1).premissa), "", "sem sinal, sem premissa")
+	assert_true(String(Sinais.abertura({}, "elemento_inventado", 1).frase) in DadosJogo.ler("abertura").frases_tema.geral)

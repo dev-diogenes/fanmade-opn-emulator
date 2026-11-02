@@ -1,0 +1,33 @@
+{
+  "nota": "AU6 do relatório (docs/79): a abertura de cada missão procedural tem uma frase-tema e a premissa no formato 'lugar banal + evento estranho + quem chamou a Ordem'. Frases nossas; não usam a frase de abertura da série.",
+  "premissa": "{relato}. Quem chamou a Ordem: {fonte}.",
+  "frases_tema": {
+    "sangue": [
+      "Tudo o que sente fome acaba achando a porta.",
+      "O corpo lembra o que a cabeça tenta esquecer.",
+      "Toda dor quer companhia."
+    ],
+    "morte": [
+      "O tempo também apodrece.",
+      "Nada termina. Só para de fazer barulho.",
+      "Em algum lugar, um relógio está atrasado para sempre."
+    ],
+    "conhecimento": [
+      "Há coisas que só existem enquanto alguém lembra delas.",
+      "Toda resposta cobra a pergunta seguinte.",
+      "Ler é deixar alguém entrar."
+    ],
+    "energia": [
+      "O caos não quer destruir. Quer brincar.",
+      "Toda luz que pisca está tentando dizer alguma coisa.",
+      "Nenhuma regra resiste a quem ri dela."
+    ],
+    "medo": [
+      "O que se esconde no escuro aprendeu a esperar.",
+      "Ninguém vê a Membrana até ela rasgar."
+    ],
+    "geral": [
+      "A Realidade é fina onde ninguém está olhando."
+    ]
+  }
+}

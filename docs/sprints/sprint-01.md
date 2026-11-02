@@ -16,6 +16,9 @@
 | 02/11 | Captura do sigilo no chão da arena e do muro 3D | ✅ aparecem e o anel escreve o nome. Ajuste para a crítica: a espiral da Morte (cinza) tem pouco contraste no muro marrom |
 | 02/11 | Crítica de primeiro contato (título, aviso de conteúdo, selo, convite do tutorial, Base com briefing) numa carreira nova | ✅ nada bloqueia: a ordem aviso → título → convite → Base funciona; os avisos de IA e de conteúdo são legíveis (só parecem apagados sob o escurecido do aviso). As críticas anteriores (docs/15, 20, 51 e 57) já cobriram contraste e encaixe |
 | 02/11 | Contraste do símbolo no muro | ✅ contorno escuro sob o miolo e cinza mais claro para a Morte |
+| 02/11 | Extras IN6 (local vasculhado) e AU6 (frase-tema e premissa), docs/79 | ✅, e corrigido o arquivo do caso que não abria sozinho desde o docs/71 |
+
+> **Ajuste de rota (02/11):** a crítica do docs/80 mostrou que a luz está ao contrário: a Base e o combate são as telas mais claras. As recomendações de custo baixo e só visuais entram como extra da Sprint 01. O breu no combate vai para a 02, porque mexe na leitura tática e precisa de playtest. A build continua o objetivo número 1 e só espera os modelos de exportação.
 
 ## Capacidade
 
@@ -43,6 +46,7 @@ Escala de pontos: 1 é menos de 1 h; 3 é meio dia; 5 é um dia.
 | P1 | Subir no itch.io como **rascunho privado ou com senha** | 1 | Dono | Build e checagem de licença |
 | P2 (extra) | AU6: frase-tema e premissa na abertura da missão ("lugar banal + evento estranho + quem chamou a Ordem") | 2 | Claude | — |
 | P2 (extra) | IN6: selo de "vasculhado" no local sem mais pistas | 1 | Claude | — |
+| P2 (extra, entrou em 02/11) | Crítica de terror (docs/80) e os dois ganhos baratos dela: **mapa com cor lavada** (AU3) e **menos moldura dourada**. Só visual, sem regra: não fere o congelamento de sistemas e deixa a build mais próxima do clima que o playtest deve avaliar | 3 | Claude | — |
 
 **Carga planejada:** P0 + P1 = 18 pontos de Claude e 4 do dono, cerca de 85% da capacidade com o buffer de 75% contado. O P2 entra só se sobrar tempo.
 
@@ -83,6 +87,6 @@ Escala de pontos: 1 é menos de 1 h; 3 é meio dia; 5 é um dia.
 
 | Sprint | Objetivo |
 |---|---|
-| 02 | Corrigir e equilibrar a partir dos relatórios: tutorial, ritmo da missão, dificuldade do caso |
-| 03 | Os P2 baratos do relatório (ME8 sinais de sanidade, AU3 cor só no paranormal), mais o polimento 2.5 dos marcos de OP |
+| 02 | Corrigir e equilibrar a partir dos relatórios: tutorial, ritmo da missão, dificuldade do caso. **Breu no combate** (docs/80, recomendação 1): luz pelos agentes, raio que cai com a Membrana e ajuste "combate mais claro". Testar no playtest se a grade continua legível |
+| 03 | Base sob luminária e sigilos que acendem por perto (docs/80, 3 e 5), ME8 sinais de sanidade, mais o polimento 2.5 dos marcos de OP |
 | 04 | Lançamento 9: página no itch.io, build pública, missões da comunidade |

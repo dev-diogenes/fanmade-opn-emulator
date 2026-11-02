@@ -380,7 +380,9 @@ static func _hex_livre(m: Missao, h: Vector2i) -> bool:
 ## passar por JSON) contam igual, e as chaves vão ordenadas: o hash do host e o de um cliente
 ## que carregou o checkpoint batem quando o jogo está igual.
 static func hash_missao(m: Missao) -> int:
-	var d := {"missao": m.para_dicionario(), "agentes": m.agentes_iniciais.map(func(a): return a.para_dicionario())}
+	var md := m.para_dicionario()
+	md.erase("briefing_visto")   # é da tela de cada um, não do estado do jogo
+	var d := {"missao": md, "agentes": m.agentes_iniciais.map(func(a): return a.para_dicionario())}
 	return JSON.stringify(_normalizar(d), "", true).hash()
 
 

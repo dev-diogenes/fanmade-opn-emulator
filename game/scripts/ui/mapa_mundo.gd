@@ -81,7 +81,8 @@ func _ready() -> void:
 	_montar_interface()
 	for linha in missao.historico:
 		_log.append_text(linha + "\n")
-	if missao.historico.is_empty():
+	if not missao.briefing_visto:
+		missao.briefing_visto = true
 		_mostrar_briefing.call_deferred()
 		_registrar("[b]Missão iniciada.[/b] O covil está em algum lugar a leste. A Membrana já começa a ceder.")
 	missao.registro.connect(_registrar_sem_guardar)
@@ -736,12 +737,16 @@ func _mostrar_briefing() -> void:
 		var perguntas: Array = c.perguntas.map(func(q): return "  [ ] " + String(q.texto))
 		texto = "%s\n\nOBJETIVO: %s\n\nPERGUNTAS EM ABERTO:\n%s" % [c.resumo, c.objetivo, "\n".join(PackedStringArray(perguntas))]
 		# O sinal e o ponto de encontro de fachada (docs/62), na missão procedural
-		if missao.extras.is_empty():
+		if not missao.extras.has("id") and not missao.extras.has("campanha"):   # procedural (o culto do docs/71 também mora em extras)
 			var f := Sinais.fachada(missao.semente)
 			var topo := "PONTO DE ENCONTRO: %s.\nSenha: \"%s\" Resposta: \"%s\"\n\n" % [f.lugar, f.senha, f.resposta]
-			if not missao.sinal.is_empty():
-				topo += "SINAL: %s, confiança %s.\n\n" % [missao.sinal.fonte, missao.sinal.rotulo]
-			texto = topo + texto
+			# A abertura (AU6): a frase-tema e a premissa vêm antes de tudo; a premissa já diz
+			# quem chamou e a confiança, no lugar da antiga linha SINAL
+			var ab := Sinais.abertura(missao.sinal, c.elemento, missao.semente)
+			var cabeca := "\"%s\"\n\n" % ab.frase
+			if String(ab.premissa) != "":
+				cabeca += "O CASO: %s\n\n" % ab.premissa
+			texto = cabeca + topo + texto
 	else:
 		texto = "Uma ameaça paranormal foi detectada na região. Encontrem a origem e contenham-na."
 	DialogoPapel.perguntar(self, "Arquivo do caso", texto, "Iniciar operação", func(): pass, "Fechar", false)
@@ -1017,6 +1022,10 @@ func _mostrar_dica(pos: Vector2) -> void:
 			"mirante": "▲ Mirante: algo espera lá em cima"}
 		if nomes.has(tipo):
 			linhas.append(nomes[tipo])
+		var local := missao.local_investigado(h)   # IN6
+		if not local.is_empty():
+			linhas.append("✔ Vasculhado: não há mais nada a achar aqui" if int(local.restantes) == 0
+				else "Investigado: ficaram %d ponto(s) (Revisar Caso, no interlúdio)" % int(local.restantes))
 		if tipo == "objetivo" and not missao.covil_aberto():
 			linhas.append("Entrada escondida: responda \"Onde fica o covil?\"")
 		var a := missao.agente_atual()
