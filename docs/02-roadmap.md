@@ -50,6 +50,6 @@
 
 ## Próximos passos (01/11/2026)
 
-1. **Sigilos e cifra (docs/77):** sigilos originais por elemento e por ritual, seguindo a gramática descrita na wiki sem copiar os símbolos oficiais, e um alfabeto cifrado para o símbolo do culto.
-2. **Build de playtest (docs/78):** export do Windows, relatório do testador gerado no jogo e roteiro de playtest. Destrava os critérios "com pessoas" das Fases 2, 5, 6 e 8.
+1. ✅ **Sigilos e cifra (docs/77):** sigilos originais por elemento e por ritual, seguindo a gramática descrita na wiki sem copiar os símbolos oficiais, e um alfabeto cifrado para o símbolo do culto.
+2. **Build de playtest (docs/78), Sprint 01 ([sprints/sprint-01.md](sprints/sprint-01.md)):** export do Windows, relatório do testador gerado no jogo e roteiro de playtest. Destrava os critérios "com pessoas" das Fases 2, 5, 6 e 8.
 3. **Depois dos playtests:** balanceamento, os P2 que restam do relatório de pesquisa (`reports/`) e o polimento 2.5.

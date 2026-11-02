@@ -95,6 +95,26 @@ func _montar(saidas: Array) -> void:
 			Preferencias.definir_efeito(e[0], v)
 			Som.aplicar_volume())
 		_ajustes.add_child(c)
+	_secao("Playtest")   # docs/78: o testador gera o relatório e manda de volta
+	var rel := Button.new()
+	rel.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	rel.text = "Gerar relatório do playtest"
+	rel.tooltip_text = "Grava um .txt com o tutorial, a carreira e o registro da missão. Nada é enviado pela internet."
+	var rel_onde := Label.new()
+	rel_onde.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rel_onde.custom_minimum_size = Vector2(340, 0)
+	rel_onde.add_theme_font_size_override("font_size", Tema.FONTE_P)
+	rel_onde.visible = false
+	rel.pressed.connect(func():
+		var jogo := get_node_or_null("/root/Jogo")
+		var caminho := RelatorioPlaytest.gerar(jogo.carreira if jogo != null else null)
+		rel_onde.visible = true
+		rel_onde.text = ("Relatório salvo em:
+" + caminho) if caminho != "" else "Não foi possível gravar o relatório."
+		if caminho != "" and DisplayServer.get_name() != "headless":
+			OS.shell_open(caminho.get_base_dir()))
+	_ajustes.add_child(rel)
+	_ajustes.add_child(rel_onde)
 	for s in saidas:
 		var texto: String = s[0]
 		var acao: Callable = s[1]

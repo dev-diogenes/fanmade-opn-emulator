@@ -79,6 +79,8 @@
 | [74-cacador-e-dicas.md](74-cacador-e-dicas.md) | O caçador da Perseguição: uma criatura do elemento do caso que anda todo turno, contorna obstáculos e, derrubada, volta mais forte até o caso responder o quê; as dicas de primeira vez (munição, Oficina, fobias, subgênero, caçador, fuga, caçada, culto) e os passos novos do tutorial |
 | [75-frases-curtas.md](75-frases-curtas.md) | Frases curtas (AG6): o agente diz uma linha conforme o estado (ferido, perturbado, aliado caído, fobia), num balão acima dele e no registro, no combate e no mapa; os sussurros da fobia nas alucinações. Só voz, sem regra |
 | [76-poderes-que-faltavam.md](76-poderes-que-faltavam.md) | Os 10 poderes de classe e os 6 de origem que faltavam, com o efeito do livro: manobra quebrar, sacar outra arma, selos, componentes improvisados, Nerd, Movimento Tático, Mochila e Ferramenta Favorita no Arsenal, achados de O Crime Compensa, o prato do chef e o crédito na hospedagem |
+| [77-sigilos-e-cifra.md](77-sigilos-e-cifra.md) | Sigilos pela gramática da wiki (sem copiar os oficiais): miolo por elemento, anéis pela forma do ritual, alfabeto de 26 glifos, o nome do culto escrito no anel e a tabela de letras da Ordem que facilita ler os próximos símbolos |
+| [sprints/](sprints/) | Planejamento por sprint (objetivo, capacidade, backlog, riscos) |
 | [adr/](adr/) | Decisões de arquitetura |
 
 Legenda usada no brainstorm: ✅ decidido · 💡 proposta · ❓ em aberto.

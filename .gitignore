@@ -30,3 +30,6 @@ desktop.ini
 
 # --- Claude Code (configurações locais) ---
 .claude/settings.local.json
+
+# Playtests com pessoas: fichas e relatórios podem ter nomes reais (docs/78)
+playtests/
