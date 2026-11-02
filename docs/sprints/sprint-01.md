@@ -22,8 +22,9 @@
 | 02/11 | Online: combate sem fim termina em retirada; vigia de 600 s | ✅ bateria de 8 corridas (normal, tarde e mestre) toda OK; commit 7da92db, no GitHub |
 | 02/11 | Adiantados da Sprint 03: Base sob luminária e sigilos por perto (docs/80) | ✅ Base: Missão de 101 para 69 e Agentes de 95 para 69 de luminância |
 | 02/11 | ME8 (sinais de sanidade no mapa) | Parte visual já existia (docs/17: a imagem respira, vultos e sussurros). A recuperação por boas ações é regra nova: fica para depois do playtest |
+| 02/11 | Modelos de exportação 4.6.1 mono (só Windows x86_64) e a **build** | ✅ `builds/Membrana.exe` (117 MB, PCK embutido); teste de fumaça OK; dados, campanhas e selo no pacote; sem o PDF |
 
-> **Estado (02/11, noite):** os itens do Claude e os extras sem regra nova estão feitos. A sprint espera duas coisas do dono: **os modelos de exportação do Godot 4.6.1 mono** (para a build e o teste de fumaça) e **o push** dos commits locais. Sem eles, rodadas novas do loop não têm o que avançar sem quebrar o congelamento de sistemas.
+> **Estado (02/11, madrugada):** a build saiu. Falta o lado das pessoas: recrutar os testadores, rodar as sessões do docs/78 e, se o dono quiser, subir no itch.io como rascunho privado.
 
 > **Ajuste de rota (02/11):** a crítica do docs/80 mostrou que a luz está ao contrário: a Base e o combate são as telas mais claras. As recomendações de custo baixo e só visuais entram como extra da Sprint 01. O breu no combate vai para a 02, porque mexe na leitura tática e precisa de playtest. A build continua o objetivo número 1 e só espera os modelos de exportação.
 
