@@ -14,7 +14,8 @@
 | 02/11 | Relatório do testador (Pausa → Playtest) | ✅ 3 testes |
 | 02/11 | `tools/exportar.sh` (cria o preset, exporta, teste de fumaça) | ✅ pronto, **bloqueado**: faltam os modelos em `%APPDATA%\Godot\export_templates\4.6.1.stable.mono\` |
 | 02/11 | Captura do sigilo no chão da arena e do muro 3D | ✅ aparecem e o anel escreve o nome. Ajuste para a crítica: a espiral da Morte (cinza) tem pouco contraste no muro marrom |
-| — | Crítica de primeiro contato (design e acessibilidade) | pendente |
+| 02/11 | Crítica de primeiro contato (título, aviso de conteúdo, selo, convite do tutorial, Base com briefing) numa carreira nova | ✅ nada bloqueia: a ordem aviso → título → convite → Base funciona; os avisos de IA e de conteúdo são legíveis (só parecem apagados sob o escurecido do aviso). As críticas anteriores (docs/15, 20, 51 e 57) já cobriram contraste e encaixe |
+| 02/11 | Contraste do símbolo no muro | ✅ contorno escuro sob o miolo e cinza mais claro para a Morte |
 
 ## Capacidade
 

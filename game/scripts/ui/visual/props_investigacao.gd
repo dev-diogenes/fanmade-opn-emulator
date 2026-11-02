@@ -108,7 +108,13 @@ static func simbolo(semente: int, cor: Color, elemento: String = "", cifra: Arra
 	var n := Node3D.new()
 	_caixa(n, Vector3(1.5, 1.6, 0.18), Vector3(0, 0.8, -0.05), Color("5b5148"))
 	_caixa(n, Vector3(1.6, 0.08, 0.24), Vector3(0, 1.62, -0.05), Color("3e3731"))
-	n.add_child(_pintura(Sigilo.imagem(semente, 192, Color.WHITE, 7.0, elemento), cor, 0.75, Vector3(0, 0.85, 0.05)))
+	# Contorno escuro por baixo do miolo, para o traço não sumir no muro (a Morte, cinza, sumia);
+	# no muro a Morte usa um cinza mais claro, ainda de lodo e cinza
+	var cor_miolo := Color("9a94a4") if elemento == "morte" else cor
+	var contorno := _pintura(Sigilo.imagem(semente, 192, Color.WHITE, 15.0, elemento), Color(0.03, 0.02, 0.04), 0.75, Vector3(0, 0.85, 0.045))
+	(contorno.material_override as StandardMaterial3D).emission_enabled = false
+	n.add_child(contorno)
+	n.add_child(_pintura(Sigilo.imagem(semente, 192, Color.WHITE, 7.0, elemento), cor_miolo, 0.75, Vector3(0, 0.85, 0.05)))
 	var letras := cifra.filter(func(i): return int(i) >= 0)
 	var total := letras.size() if not letras.is_empty() else 8
 	var tamanho := clampf(1.9 / maxf(total, 8), 0.1, 0.22)
