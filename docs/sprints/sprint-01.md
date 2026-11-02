@@ -5,6 +5,17 @@
 
 > Por que este objetivo: o jogo tem 834 testes automáticos e 77 docs, mas nenhum critério "com pessoas" das Fases 2, 5, 6 e 8 foi cumprido. Todo o equilíbrio vem do piloto automático. Sem build não há playtest, e sem playtest cada sistema novo aumenta o risco do teto de complexidade (veja o relatório em `reports/`).
 
+## Andamento
+
+| Data | Item | Situação |
+|---|---|---|
+| 02/11 | docs/77 sigilos e cifra | ✅ commit f486d15 (834 testes, 9 corridas online iguais) |
+| 02/11 | docs/78 roteiro de playtest | ✅ |
+| 02/11 | Relatório do testador (Pausa → Playtest) | ✅ 3 testes |
+| 02/11 | `tools/exportar.sh` (cria o preset, exporta, teste de fumaça) | ✅ pronto, **bloqueado**: faltam os modelos em `%APPDATA%\Godot\export_templates.6.1.stable.mono\` |
+| — | Captura do sigilo no chão da arena e do muro 3D | pendente |
+| — | Crítica de primeiro contato (design e acessibilidade) | pendente |
+
 ## Capacidade
 
 | Quem | Disponibilidade | Alocação | Notas |
