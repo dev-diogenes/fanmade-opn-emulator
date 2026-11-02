@@ -154,6 +154,9 @@ func transformar(tema: String) -> void:
 	_quarto()
 	_env.ambient_light_color = LUZES[tipo_sala][0]
 	_luz_parede.light_color = LUZES[tipo_sala][1]
+	if _material_sigilo != null and tipo_sala in ELEMENTOS:   # o sigilo do chão vira o do elemento (docs/77)
+		_material_sigilo.albedo_texture = Sigilo.imagem(4242, 256, Color.WHITE, 4.0, tipo_sala, 2)
+		_material_sigilo.emission_texture = _material_sigilo.albedo_texture
 
 
 func _cilindro(raio_base: float, raio_topo: float, altura: float, pos: Vector3, cor: Color, emissao := 0.0) -> MeshInstance3D:
@@ -455,7 +458,8 @@ func _sigilo_central() -> void:
 	var plano := PlaneMesh.new()
 	plano.size = Vector2(2.4, 2.4)
 	_material_sigilo = StandardMaterial3D.new()
-	_material_sigilo.albedo_texture = Sigilo.imagem(4242, 256, Color.WHITE, 4.0)
+	# Com afinidade, o sigilo do elemento na forma verdadeira (docs/77); antes dela, o genérico
+	_material_sigilo.albedo_texture = Sigilo.imagem(4242, 256, Color.WHITE, 4.0, tipo_sala if tipo_sala in ELEMENTOS else "", 2)
 	_material_sigilo.albedo_color = COR_RITUAL
 	_material_sigilo.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_material_sigilo.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

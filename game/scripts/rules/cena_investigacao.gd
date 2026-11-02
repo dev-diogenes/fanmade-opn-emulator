@@ -46,6 +46,8 @@ var noticia := ""
 var noticia_mostrada := false
 var credencial: Dictionary = {}
 var usos_credencial := 0
+## Letras de sigilo que a Ordem já conhece (docs/77)
+var sigilos_conhecidos: Array = []
 var _trilha: Dictionary = {}          ## Agente -> {"sucessos": int, "dados": int} (Na Trilha Certa)
 var _acoes_extras := 0
 var _atributo_forcado := ""           ## Incansável: a ação extra usa Força ou Agilidade
@@ -113,15 +115,31 @@ func _nomear_testemunhas() -> void:
 
 ## O símbolo do culto (docs/73, EL5): um ponto a mais na cena, até o anel ser traduzido. Só
 ## Ocultismo lê o anel (perícia só para treinados); a pista responde "quem" e dá o nome do culto.
+## O anel escreve o nome do culto no alfabeto de sigilos (docs/77): com metade das letras na tabela
+## da Ordem, a DT cai; com todas, qualquer um lê o anel pela tabela (Investigação).
 func adicionar_simbolo_do_culto() -> void:
 	if caso == null or caso.culto.is_empty() or caso.simbolo_traduzido or not ponto("simbolo_culto").is_empty():
 		return
 	var cfg: Dictionary = DadosJogo.ler("cultos").get("simbolo", {})
 	if cfg.is_empty():
 		return
-	cena.pontos.append({"id": "simbolo_culto", "nome": String(cfg.nome_ponto), "pericias": (cfg.pericias as Dictionary).duplicate(),
-		"responde": "quem", "pista": String(cfg.pista).replace("{culto}", String(caso.culto.nome)),
-		"simbolo": true, "semente": absi(hash(String(caso.culto.nome))), "elemento": caso.elemento})
+	var nome := String(caso.culto.nome)
+	var pericias: Dictionary = (cfg.pericias as Dictionary).duplicate()
+	var tabela: Dictionary = cfg.get("tabela", {})
+	var faltam := Cifra.faltam(nome, sigilos_conhecidos)
+	var total := Cifra.letras(nome).size()
+	var nome_ponto := String(cfg.nome_ponto)
+	if total > 0 and faltam == 0:
+		for k in pericias:
+			pericias[k] = int(tabela.get("dt_conhecida", 5))
+		pericias["investigacao"] = int(tabela.get("dt_investigacao", 10))
+		nome_ponto += " (sigilos conhecidos)"
+	elif total > 0 and faltam * 2 <= total:
+		for k in pericias:
+			pericias[k] = int(pericias[k]) - int(tabela.get("reducao_metade", 5))
+	cena.pontos.append({"id": "simbolo_culto", "nome": nome_ponto, "pericias": pericias,
+		"responde": "quem", "pista": String(cfg.pista).replace("{culto}", nome),
+		"simbolo": true, "semente": absi(hash(nome)), "elemento": caso.elemento, "texto_cifrado": nome})
 	pontos_restantes.append("simbolo_culto")
 
 
@@ -138,7 +156,9 @@ func detalhes_da_pista(achada: Dictionary) -> Dictionary:
 		"texto": String(achada.get("texto", "")), "rotulo": String(Caso.indicio(ind).get("rotulo", "")) if ind != "" else "",
 		"duvidosa": achada.get("duvidosa", false), "noticia": String(achada.get("noticia", ""))}
 	if p.get("simbolo", false):   # docs/73: o close-up mostra o símbolo na cor do elemento
-		d["simbolo"] = {"semente": int(p.semente), "elemento": String(p.elemento)}
+		var nome := String(p.get("texto_cifrado", ""))
+		d["simbolo"] = {"semente": int(p.semente), "elemento": String(p.elemento), "cifra": Cifra.cifrar(nome),
+			"leitura": Cifra.normalizar(nome), "novas": Cifra.faltam(nome, sigilos_conhecidos)}
 	return d
 
 

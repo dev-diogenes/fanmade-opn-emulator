@@ -601,6 +601,8 @@ func _ao_conjurar(res: Dictionary) -> void:
 	Som.tocar("ritual")
 	if _tab3d != null and res.get("conjurador") is Ser:
 		_tab3d.animar_ataque(res.conjurador, true)
+		if res.get("ritual") is Dictionary:
+			_tab3d.sigilo_de_ritual(res.conjurador, res.ritual, String(res.get("forma", "")))   # docs/77
 
 
 func _ao_encerrar(vencedor: String) -> void:

@@ -37,6 +37,8 @@ var amostras := 0
 ## O vilão que liga os casos (docs/71): a empresa de fachada e os recortes que a apontam.
 var vilao: Dictionary = {}
 var recortes: Array = []
+## Letras do alfabeto de sigilos que a Ordem já leu nos símbolos de culto (docs/77)
+var sigilos_conhecidos: Array = []
 ## O Crime Compensa (docs/76): as armas achadas na última missão; o criminoso leva uma na próxima.
 var achados: Array = []
 var _proximo_id := 1
@@ -204,6 +206,7 @@ func iniciar_missao(grupo: Array, semente: int, sinal: Dictionary = {}) -> Missa
 	if not sinal.is_empty():
 		op["sinal"] = _ligar_ao_vilao(sinal)
 	missao = Missao.nova(semente, ruleset, grupo.duplicate(), op)
+	missao.sigilos_conhecidos = sigilos_conhecidos.duplicate()   # docs/77
 	missao.aplicar_efeitos_do_culto()   # docs/71
 	if eco_do_covil:
 		missao.plantar_eco_do_covil()
@@ -304,6 +307,7 @@ func encerrar_missao() -> Dictionary:
 		pp_base += int(m.sinal.bonus_pp)   # ninguém dava nada por esse sinal (docs/62)
 		linhas_pp.append("Sinal de confiança baixa, e era real: %+d" % int(m.sinal.bonus_pp))
 	pp_base += _fechar_vilao(m, linhas_pp)   # docs/71
+	_aprender_sigilos(m, linhas_pp)   # docs/77
 	_fechar_achados(m)   # docs/76
 	match m.varredura:   # docs/62
 		"equipe":
@@ -528,6 +532,17 @@ func sinal_do_vilao(semente: int) -> Dictionary:
 	return s
 
 
+## O símbolo traduzido ensina à Ordem as letras do nome do culto (docs/77).
+func _aprender_sigilos(m: Missao, linhas_pp: Array[String]) -> void:
+	if m.caso == null or not m.caso.simbolo_traduzido or m.caso.culto.is_empty():
+		return
+	var antes := sigilos_conhecidos.size()
+	sigilos_conhecidos = Cifra.aprender(sigilos_conhecidos, String(m.caso.culto.nome))
+	var novas := sigilos_conhecidos.size() - antes
+	if novas > 0:
+		linhas_pp.append("Sigilos novos na tabela da Ordem: %d (%d de %d letras) (+0)" % [novas, sigilos_conhecidos.size(), Cifra.ALFABETO.length()])
+
+
 ## Fim de missão: o recorte novo, ou a queda do vilão. Devolve o PP a somar.
 func _fechar_vilao(m: Missao, linhas_pp: Array[String]) -> int:
 	var vil: Dictionary = m.sinal.get("vilao", {})
@@ -589,6 +604,7 @@ func para_dicionario() -> Dictionary:
 		"missoes_concluidas": missoes_concluidas, "ultimo_relatorio": ultimo_relatorio.duplicate(true), "eco_do_covil": eco_do_covil,
 		"contencao": contencao.duplicate(true), "pista_do_preso": pista_do_preso.duplicate(), "amostras": amostras,
 		"vilao": vilao.duplicate(true), "recortes": recortes.duplicate(true), "achados": achados.duplicate(),
+		"sigilos_conhecidos": sigilos_conhecidos.duplicate(),
 		"campanhas": campanhas.duplicate(true), "recrutas_extras": recrutas_extras.duplicate(true),
 		"missao": missao.para_dicionario() if missao != null else {},
 		# Agentes que estão na missão mas saíram do roster (mortos aguardando o relatório)
@@ -631,6 +647,7 @@ static func de_dicionario(d: Dictionary, ruleset_: Ruleset = null) -> Carreira:
 	c.amostras = int(d.get("amostras", 0))
 	c.vilao = (d.get("vilao", {}) as Dictionary).duplicate(true)
 	c.recortes = (d.get("recortes", []) as Array).duplicate(true)
+	c.sigilos_conhecidos = (d.get("sigilos_conhecidos", []) as Array).map(func(x): return String(x))
 	c.achados = (d.get("achados", []) as Array).duplicate()
 	c.ultimo_relatorio = d.get("ultimo_relatorio", {})
 	c.campanhas = d.get("campanhas", {})

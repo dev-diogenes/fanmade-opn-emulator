@@ -89,6 +89,8 @@ var varredura := ""
 var credencial: Dictionary = {}
 ## Cultistas rendidos que vão para a contenção da Base (docs/63, OR8): [{nome, papel, elemento}].
 var presos: Array = []
+## Letras de sigilo que a Ordem conhece (vêm da carreira; a cena usa para ler o símbolo, docs/77)
+var sigilos_conhecidos: Array = []
 ## Rituais de mapa (docs/69): os de uso único já gastos na missão, e o bônus guardado para o
 ## próximo teste de um agente num evento (Enfeitiçar, Distorcer Aparência).
 var rituais_usados_no_mapa: Array = []
@@ -1825,6 +1827,7 @@ func criar_cena_investigacao() -> CenaInvestigacao:
 	var d := Dados.new(int(investigacao_pendente.get("semente", 1)))
 	var cena := CenaInvestigacao.nova(ruleset, d, caso, investigacao_pendente.cena, investigacao_pendente.agentes, "", membrana, extras.get("cenas", []))
 	cena.credencial = credencial.duplicate()   # docs/63: a cena usa, a Missão soma no fim
+	cena.sigilos_conhecidos = sigilos_conhecidos.duplicate()   # docs/77
 	# O culto na cena (docs/73): o símbolo para traduzir e, se o caso é do vilão, a notícia no
 	# celular de uma testemunha. Num alarme falso não há culto por trás.
 	for a in cena.agentes:   # Magnum Opus (p.27): uma vez por missão
@@ -2583,7 +2586,7 @@ func para_dicionario() -> Dictionary:
 		"turnos_sem_surgimento": _turnos_sem_surgimento, "alivio": alivio, "testemunhas_vistas": testemunhas_vistas.duplicate(true),
 		"pesquisa": pesquisa.duplicate(), "rumores": rumores.duplicate(true),
 		"sinal": sinal.duplicate(), "alarme_confirmado": alarme_confirmado, "varredura": varredura,
-		"credencial": credencial.duplicate(), "presos": presos.duplicate(true),
+		"credencial": credencial.duplicate(), "presos": presos.duplicate(true), "sigilos_conhecidos": sigilos_conhecidos.duplicate(),
 		"rituais_usados_no_mapa": rituais_usados_no_mapa.duplicate(), "bonus_de_ritual": bonus_de_ritual.duplicate(true), "escuta_instalada": escuta_instalada,
 		"rastros": rastros.keys().map(func(h): return [h.x, h.y, int(rastros[h])]), "descansos": descansos, "revisaveis": revisaveis.duplicate(true),
 		"historico": historico.slice(maxi(0, historico.size() - 300)),
@@ -2649,6 +2652,7 @@ static func de_dicionario(ruleset_: Ruleset, d: Dictionary, por_id: Dictionary) 
 		m.credencial = {"nome": String(d.credencial.get("nome", "")), "usos": int(d.credencial.get("usos", 0)),
 			"queimada": bool(d.credencial.get("queimada", false)), "limite": int(d.credencial.get("limite", DadosJogo.ler("sinais").credencial.limite))}
 	m.presos = (d.get("presos", []) as Array).duplicate(true)
+	m.sigilos_conhecidos = (d.get("sigilos_conhecidos", []) as Array).map(func(x): return String(x))
 	m.rituais_usados_no_mapa = (d.get("rituais_usados_no_mapa", []) as Array).duplicate()
 	m.bonus_de_ritual = (d.get("bonus_de_ritual", {}) as Dictionary).duplicate(true)
 	m.escuta_instalada = bool(d.get("escuta_instalada", false))

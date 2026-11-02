@@ -38,6 +38,7 @@
     "nota": "EL5 do relatório (docs/73): o símbolo do culto junta o traço do elemento a um anel de sigilos, e quem tem Ocultismo traduz o anel. Aparece nas cenas até ser traduzido. Texto nosso.",
     "nome_ponto": "Símbolo na parede",
     "pericias": {"ocultismo": 15},
+    "tabela": {"nota": "docs/77: o anel escreve o nome do culto no alfabeto de sigilos do jogo. As letras lidas ficam na carreira. Com metade do nome conhecida, a DT cai; com todas, qualquer um lê pela tabela.", "reducao_metade": 5, "dt_conhecida": 5, "dt_investigacao": 10},
     "pista": "Pintado na parede, o símbolo do culto: um traço do Outro Lado no meio e um anel de sigilos em volta. Traduzido, o anel é uma assinatura: \"{culto}\". {indicio}"
   },
   "noticia": {

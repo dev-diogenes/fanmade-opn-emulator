@@ -102,16 +102,21 @@ static func lousa() -> Node3D:
 
 
 ## O símbolo do culto pintado num pedaço de muro (docs/73, EL5): o traço do meio na cor do
-## elemento e um anel de oito sigilos pequenos em volta, o alfabeto do Conhecimento.
-static func simbolo(semente: int, cor: Color) -> Node3D:
+## elemento e um anel de sigilos em volta, no alfabeto do jogo. Com `cifra` (docs/77), o anel
+## escreve o nome do culto, uma letra por sigilo; sem ela, oito sigilos soltos.
+static func simbolo(semente: int, cor: Color, elemento: String = "", cifra: Array = []) -> Node3D:
 	var n := Node3D.new()
 	_caixa(n, Vector3(1.5, 1.6, 0.18), Vector3(0, 0.8, -0.05), Color("5b5148"))
 	_caixa(n, Vector3(1.6, 0.08, 0.24), Vector3(0, 1.62, -0.05), Color("3e3731"))
-	n.add_child(_pintura(Sigilo.imagem(semente, 192, Color.WHITE, 7.0), cor, 0.75, Vector3(0, 0.85, 0.05)))
-	for i in 8:
-		var ang := TAU * i / 8.0
-		var pos := Vector3(cos(ang) * 0.58, 0.85 + sin(ang) * 0.58, 0.05)
-		n.add_child(_pintura(Sigilo.imagem(semente + 31 * (i + 1), 64, Color.WHITE, 4.0), Tema.ELEMENTO.conhecimento, 0.22, pos))
+	n.add_child(_pintura(Sigilo.imagem(semente, 192, Color.WHITE, 7.0, elemento), cor, 0.75, Vector3(0, 0.85, 0.05)))
+	var letras := cifra.filter(func(i): return int(i) >= 0)
+	var total := letras.size() if not letras.is_empty() else 8
+	var tamanho := clampf(1.9 / maxf(total, 8), 0.1, 0.22)
+	for i in total:
+		var ang := -PI / 2.0 + TAU * i / total   # começa em cima e segue no sentido do relógio
+		var pos := Vector3(cos(ang) * 0.6, 0.85 - sin(ang) * 0.6, 0.05)
+		var tex := Sigilo.imagem_glifo(int(letras[i]), 64, Color.WHITE, 5.0) if not letras.is_empty() else Sigilo.imagem(semente + 31 * (i + 1), 64, Color.WHITE, 4.0)
+		n.add_child(_pintura(tex, Tema.ELEMENTO.conhecimento, tamanho, pos))
 	return n
 
 

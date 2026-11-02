@@ -406,6 +406,35 @@ func animar_ataque(s: Ser, ritual: bool = false) -> void:
 			return
 
 
+## O sigilo do ritual no chão de quem conjura (docs/77): acende na cor do elemento e apaga.
+func sigilo_de_ritual(s: Ser, ritual: Dictionary, forma: String = "") -> MeshInstance3D:
+	var no: Node3D = _unidades.get(s)
+	if no == null or not is_inside_tree() or ritual.is_empty():
+		return null
+	var info := Sigilo.de_ritual(ritual, forma)
+	var cor: Color = Tema.ELEMENTO.get(String(info.elemento), Tema.PERGAMINHO)
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = Sigilo.imagem(int(info.semente), 128, Color.WHITE, 4.0, String(info.elemento), int(info.forma))
+	m.albedo_color = Color(cor, 0.0)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var plano := PlaneMesh.new()
+	plano.size = Vector2(1.6, 1.6)
+	var mi := MeshInstance3D.new()
+	mi.name = "SigiloDeRitual"
+	mi.mesh = plano
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.position = no.position + Vector3(0, 0.03, 0)
+	add_child(mi)
+	var tw := mi.create_tween()
+	tw.tween_property(m, "albedo_color:a", 0.95, 0.35)
+	tw.parallel().tween_property(mi, "rotation:y", 0.6, 1.4)
+	tw.tween_property(m, "albedo_color:a", 0.0, 0.7).set_delay(0.4)
+	tw.tween_callback(mi.queue_free)
+	return mi
+
+
 func _voltar_a_ficar_parado(no: Node3D) -> void:
 	if not no.get_meta("caido", false):
 		Pecas.animar(no, "Idle")

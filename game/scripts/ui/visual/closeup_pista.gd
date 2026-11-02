@@ -74,12 +74,14 @@ func _montar(info: Dictionary) -> void:
 	var simbolo: Dictionary = info.get("simbolo", {})
 	if not simbolo.is_empty():   # docs/73: o símbolo do culto, na cor do elemento
 		var tr := TextureRect.new()
-		tr.texture = Sigilo.imagem(int(simbolo.semente), 96, Tema.ELEMENTO.get(String(simbolo.elemento), Tema.TINTA), 4.0)
+		tr.texture = Sigilo.imagem(int(simbolo.semente), 96, Tema.ELEMENTO.get(String(simbolo.elemento), Tema.TINTA), 4.0, String(simbolo.elemento))
 		tr.custom_minimum_size = Vector2(72, 72)
 		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cab.add_child(tr)
+	if not (simbolo.get("cifra", []) as Array).is_empty():
+		v.add_child(_anel_lido(simbolo))
 	var lente := String(info.get("lente", ""))
 	if lente != "":
 		var l := _linha("Com %s." % lente, Color(Tema.TINTA, 0.7))
@@ -102,6 +104,43 @@ func _montar(info: Dictionary) -> void:
 		n.custom_minimum_size = Vector2(560, 0)
 		v.add_child(n)
 		_textos.append(n)
+
+
+## O anel do símbolo lido (docs/77): cada sigilo com a letra embaixo, e quantas letras novas
+## entram na tabela da Ordem.
+func _anel_lido(simbolo: Dictionary) -> Control:
+	var caixa := VBoxContainer.new()
+	caixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fila := HFlowContainer.new()
+	fila.add_theme_constant_override("h_separation", 2)
+	fila.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caixa.add_child(fila)
+	var leitura := String(simbolo.get("leitura", ""))
+	var cifra: Array = simbolo.cifra
+	for k in cifra.size():
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 0)
+		col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		col.custom_minimum_size = Vector2(28, 0)
+		if int(cifra[k]) >= 0:
+			var g := TextureRect.new()
+			g.texture = Sigilo.imagem_glifo(int(cifra[k]), 56, Tema.TINTA, 4.0)
+			g.custom_minimum_size = Vector2(28, 32)
+			g.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			g.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			col.add_child(g)
+		var letra := Label.new()
+		letra.text = leitura.substr(k, 1) if k < leitura.length() else ""
+		letra.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		letra.add_theme_color_override("font_color", Tema.TINTA)
+		letra.add_theme_font_size_override("font_size", Tema.FONTE_P)
+		col.add_child(letra)
+		fila.add_child(col)
+	var novas := int(simbolo.get("novas", 0))
+	if novas > 0:
+		caixa.add_child(_linha("Tabela de sigilos da Ordem: %d letra%s nova%s." % [novas, "" if novas == 1 else "s", "" if novas == 1 else "s"], Color(Tema.TINTA, 0.7)))
+	return caixa
 
 
 func _linha(texto: String, cor: Color) -> Label:
