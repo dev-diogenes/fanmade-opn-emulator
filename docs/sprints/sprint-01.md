@@ -13,7 +13,7 @@
 | 02/11 | docs/78 roteiro de playtest | ✅ |
 | 02/11 | Relatório do testador (Pausa → Playtest) | ✅ 3 testes |
 | 02/11 | `tools/exportar.sh` (cria o preset, exporta, teste de fumaça) | ✅ pronto, **bloqueado**: faltam os modelos em `%APPDATA%\Godot\export_templates\4.6.1.stable.mono\` |
-| — | Captura do sigilo no chão da arena e do muro 3D | pendente |
+| 02/11 | Captura do sigilo no chão da arena e do muro 3D | ✅ aparecem e o anel escreve o nome. Ajuste para a crítica: a espiral da Morte (cinza) tem pouco contraste no muro marrom |
 | — | Crítica de primeiro contato (design e acessibilidade) | pendente |
 
 ## Capacidade
