@@ -110,3 +110,14 @@ O jogo tem uma identidade forte e coerente: o dossiê da Ordem, os papéis datil
 - **Mapa com cor lavada (AU3):** o mapa tem saturação própria, 0,38 (as outras cenas 3D continuam com 0,62), e os tiles clareiam menos. Na área do mundo, sem o HUD e contando só o que não é breu, a saturação caiu de **141 para 59**, abaixo da meta de 80. A área clara visível caiu de 34% para 14%. Marcadores, rastros e presságios brilham e se destacam do chão oliva. Código: `Mapa3D.SATURACAO_MAPA` e `Pecas.clima_membrana(env, valor, saturacao_base)`.
 - **Menos moldura dourada:** painéis, botões em repouso e o fundo das abas usam o traço dourado-escuro (`OURO_ESCURO`) apagado. O dourado vivo fica no hover, no foco, na aba aberta, no painel lateral (mais fraco) e na ação principal (`BotaoPrincipal`). Código: `Tema`.
 - **Ainda não:** a Base sob luminária (lum 101 na aba Missão) fica para a Sprint 03, e o breu no combate (lum 62) para a Sprint 02.
+
+## Feito em 02/11/2026 (recomendações 3 e 5, adiantadas da Sprint 03)
+
+- **A Base sob luminária:**
+  - Os papéis da Base (briefing, relatório e cartões do Arsenal) usam o tom envelhecido (`Tema.caixa_papel_envelhecido`). O cartão marcado continua mais claro: é o "papel em uso".
+  - A ficha do agente ganhou um tom intermediário.
+  - Uma vinheta radial (`Tema.luminaria`) escurece as bordas e deixa a luz no meio da tela.
+  - Luminância medida: aba Missão de **101 para 69**, Agentes de **95 para 69** e Arsenal de **79 para 54**. A área clara (acima de 180) caiu de 36% para 0% na aba Missão.
+  - A tinta continua com cerca de 9:1 de contraste no papel e por volta de 4,7:1 nos cantos mais escuros.
+- **Sigilos que acendem por perto:** na investigação, o sigilo de cada ponto fica escuro de longe (22% da cor e emissão baixa) e acende inteiro a 1,5 m do agente da vez ou quando o ponto é o escolhido (`Investigacao3D.SIGILO_PERTO` e `SIGILO_LONGE`). O pulso continua. A cor escurece em vez de a malha ficar transparente, porque o sigilo é quase todo emissão.
+- **Ainda não:** o breu no combate (lum 62), na Sprint 02.

@@ -20,6 +20,7 @@
 | 02/11 | Crítica de terror (docs/80): mapa com cor lavada e menos dourado | ✅ saturação do mundo de 141 para 59 |
 | 02/11 | Online: comando preso na troca de cena (docs/06) | ✅ achado pela bateria com o mestre; o mapa sai da sessão antes do segundo de transição |
 | 02/11 | Online: combate sem fim termina em retirada; vigia de 600 s | ✅ bateria de 8 corridas (normal, tarde e mestre) toda OK; commit 7da92db, no GitHub |
+| 02/11 | Adiantados da Sprint 03: Base sob luminária e sigilos por perto (docs/80) | ✅ Base: Missão de 101 para 69 e Agentes de 95 para 69 de luminância |
 
 > **Ajuste de rota (02/11):** a crítica do docs/80 mostrou que a luz está ao contrário: a Base e o combate são as telas mais claras. As recomendações de custo baixo e só visuais entram como extra da Sprint 01. O breu no combate vai para a 02, porque mexe na leitura tática e precisa de playtest. A build continua o objetivo número 1 e só espera os modelos de exportação.
 

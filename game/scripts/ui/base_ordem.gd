@@ -94,6 +94,7 @@ func _ready() -> void:
 	_atualizar_tudo()
 	_montar_memorial()
 	_montar_planta()
+	Tema.luminaria(self)   # docs/80: a sala de arquivo sob a luminária
 	# E5 (docs/16): a Base abre na aba Missão, onde se monta o grupo e se começa a jogar.
 	# Se algum agente tem escolha de NEX pendente, abre na aba Agentes, nele.
 	ir_para_aba("Missão")
@@ -509,9 +510,9 @@ func _etiqueta_item(item: Dictionary) -> Button:
 	b.custom_minimum_size = Vector2(372, 76)   # três por linha, nome inteiro em até duas linhas (docs/23)
 	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var amaldicoado := item.has("maldicoes")
-	var papel := Tema.caixa_papel(Vector2(12, 8))
+	var papel := Tema.caixa_papel_envelhecido(Vector2(12, 8))
 	papel.content_margin_left = 58   # espaço do ícone
-	var marcado := Tema.caixa_papel(Vector2(12, 8))
+	var marcado := Tema.caixa_papel_envelhecido(Vector2(12, 8))
 	marcado.content_margin_left = 58
 	marcado.modulate_color = Color(1.0, 0.93, 0.85)
 	for estado in ["normal", "hover", "focus", "disabled"]:
@@ -571,7 +572,7 @@ func _texto_etiqueta(item: Dictionary) -> String:
 func _papel(carimbo: bool) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.theme = Tema.tema_papel()
-	p.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(22, 18)))
+	p.add_theme_stylebox_override("panel", Tema.caixa_papel_envelhecido(Vector2(22, 18)))
 	if carimbo:
 		var c := Label.new()
 		c.text = "CONFIDENCIAL"

@@ -33,6 +33,8 @@ const LODO_MORTE := Color("17141a")
 ## Materiais da Ordem (docs/09, 5.1): papel, tinta, cortiça e fio vermelho
 const PAPEL := Color("e8dcc0")
 const PAPEL_SOMBRA := Color("bfae8a")
+## Papel envelhecido da Base (docs/80, 3): a folha deixa de ser a coisa mais clara da tela
+const PAPEL_ENVELHECIDO := Color("cdbf9f")
 const TINTA := Color("2a2320")
 const CORTICA := Color("8a5a36")
 const FIO := Color("b3121c")
@@ -462,6 +464,38 @@ static func caixa_papel(margem := Vector2(12, 10)) -> StyleBoxTexture:
 	s.content_margin_top = margem.y
 	s.content_margin_bottom = margem.y
 	return s
+
+
+## Papel com o tom envelhecido (a Base); a tinta continua com contraste de ~9:1.
+static func caixa_papel_envelhecido(margem := Vector2(12, 10)) -> StyleBoxTexture:
+	var s := caixa_papel(margem)
+	s.modulate_color = PAPEL_ENVELHECIDO
+	return s
+
+
+## A sala sob a luminária (docs/80, 3): uma vinheta radial por cima da tela, que escurece as
+## bordas e deixa a luz no meio, onde se lê. Não pega cliques; diálogos e tours (CanvasLayer)
+## ficam por cima dela.
+static func luminaria(raiz: Control, centro := Vector2(0.6, 0.45)) -> TextureRect:
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
+	g.colors = PackedColorArray([Color(0, 0, 0, 0.0), Color(0, 0, 0, 0.2), Color(0, 0, 0, 0.6)])
+	var t := GradientTexture2D.new()
+	t.gradient = g
+	t.fill = GradientTexture2D.FILL_RADIAL
+	t.fill_from = centro
+	t.fill_to = centro + Vector2(0.72, 0.62)
+	t.width = 256
+	t.height = 256
+	var r := TextureRect.new()
+	r.name = "Luminaria"
+	r.texture = t
+	r.stretch_mode = TextureRect.STRETCH_SCALE
+	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	r.set_anchors_preset(Control.PRESET_FULL_RECT)
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	raiz.add_child(r)
+	return r
 
 
 ## Pulso de VHS na vista (docs/09, 5.3): pista encontrada = 0.8/0.6 s; falha = 0.35/0.3 s.

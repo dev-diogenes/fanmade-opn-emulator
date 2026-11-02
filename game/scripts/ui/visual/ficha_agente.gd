@@ -59,7 +59,9 @@ static func pagina_um(a: Agente) -> Control:
 func _pagina(nome: String, conteudo: Control) -> Control:
 	var papel := PanelContainer.new()
 	papel.name = nome
-	papel.add_theme_stylebox_override("panel", Tema.caixa_papel(Vector2(22, 16)))
+	var estilo_papel := Tema.caixa_papel(Vector2(22, 16))
+	estilo_papel.modulate_color = Color("dcd0b4")   # docs/80: a folha em uso, um pouco menos clara que o papel novo
+	papel.add_theme_stylebox_override("panel", estilo_papel)
 	papel.theme = Tema.tema_papel()
 	var rolagem := ScrollContainer.new()
 	rolagem.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

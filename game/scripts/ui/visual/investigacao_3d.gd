@@ -9,6 +9,9 @@ const CORES_CHAO := {"casa_abandonada": Color("3b3430"), "capela": Color("3a3640
 var rig: CameraRig
 var _props: Dictionary = {}       ## ponto_id -> Node3D
 var _marcas: Dictionary = {}      ## ponto_id -> Node3D (marcador flutuante)
+## Sigilos que acendem por perto (docs/80, 5): de longe quase apagados, inteiros a esta distância
+const SIGILO_PERTO := 1.5
+const SIGILO_LONGE := 3.4
 var _luz: OmniLight3D
 var _ambiente: Environment
 var _anel_sel: MeshInstance3D
@@ -128,6 +131,7 @@ func _sigilo_no_chao(semente: int, cor: Color) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = plano
 	mi.material_override = m
+	mi.set_meta("cor", cor)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var pulso := mi.create_tween().set_loops()
 	pulso.tween_property(m, "albedo_color:a", 0.35, 1.2).set_trans(Tween.TRANS_SINE)
@@ -214,6 +218,22 @@ func atualizar_rotulos(a: Agente, escolhido: String) -> void:
 		if ver and cam != null and altura_tela > 0.0 and not cam.is_position_behind(rot.global_position):
 			ver = cam.unproject_position(rot.global_position).y < altura_tela * FAIXA_HUD
 		rot.visible = ver
+	# Os sigilos do chão acendem com o agente por perto (ou no ponto escolhido): a lanterna
+	# encontra o achado, em vez de a interface gritar "clique aqui" de longe
+	for pid in _marcas:
+		var marca: MeshInstance3D = _marcas[pid]
+		var k := 1.0
+		if f != null and pid != escolhido:
+			var d := Vector2(marca.position.x - f.position.x, marca.position.z - f.position.z).length()
+			k = 1.0 - clampf((d - SIGILO_PERTO) / (SIGILO_LONGE - SIGILO_PERTO), 0.0, 1.0)
+		# A cor e a emissão escurecem; o alfa fica com o pulso (a transparência da malha não
+		# aparece, porque o sigilo é quase todo emissão)
+		var m := marca.material_override as StandardMaterial3D
+		var base: Color = marca.get_meta("cor", m.emission)
+		var brilho := lerpf(0.22, 1.0, k)
+		m.albedo_color = Color(base.r * brilho, base.g * brilho, base.b * brilho, m.albedo_color.a)
+		m.emission = base * brilho
+		m.emission_energy_multiplier = lerpf(0.15, 1.2, k)
 
 
 func ponto_proximo(a: Agente, restantes: Array) -> String:
