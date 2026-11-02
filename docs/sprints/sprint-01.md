@@ -12,7 +12,7 @@
 | 02/11 | docs/77 sigilos e cifra | ✅ commit f486d15 (834 testes, 9 corridas online iguais) |
 | 02/11 | docs/78 roteiro de playtest | ✅ |
 | 02/11 | Relatório do testador (Pausa → Playtest) | ✅ 3 testes |
-| 02/11 | `tools/exportar.sh` (cria o preset, exporta, teste de fumaça) | ✅ pronto, **bloqueado**: faltam os modelos em `%APPDATA%\Godot\export_templates.6.1.stable.mono\` |
+| 02/11 | `tools/exportar.sh` (cria o preset, exporta, teste de fumaça) | ✅ pronto, **bloqueado**: faltam os modelos em `%APPDATA%\Godot\export_templates\4.6.1.stable.mono\` |
 | — | Captura do sigilo no chão da arena e do muro 3D | pendente |
 | — | Crítica de primeiro contato (design e acessibilidade) | pendente |
 
