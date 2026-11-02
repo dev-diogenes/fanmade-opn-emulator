@@ -19,8 +19,11 @@
 | 02/11 | Extras IN6 (local vasculhado) e AU6 (frase-tema e premissa), docs/79 | ✅, e corrigido o arquivo do caso que não abria sozinho desde o docs/71 |
 | 02/11 | Crítica de terror (docs/80): mapa com cor lavada e menos dourado | ✅ saturação do mundo de 141 para 59 |
 | 02/11 | Online: comando preso na troca de cena (docs/06) | ✅ achado pela bateria com o mestre; o mapa sai da sessão antes do segundo de transição |
+| 02/11 | Online: combate sem fim termina em retirada; vigia de 600 s | ✅ bateria de 8 corridas (normal, tarde e mestre) toda OK; commit 7da92db, no GitHub |
 
 > **Ajuste de rota (02/11):** a crítica do docs/80 mostrou que a luz está ao contrário: a Base e o combate são as telas mais claras. As recomendações de custo baixo e só visuais entram como extra da Sprint 01. O breu no combate vai para a 02, porque mexe na leitura tática e precisa de playtest. A build continua o objetivo número 1 e só espera os modelos de exportação.
+
+> **Ajuste de rota (02/11, tarde):** os itens do Claude na Sprint 01 estão todos feitos, e a build espera só os modelos de exportação. Para o desenvolvimento não parar, os dois itens visuais baratos da Sprint 03 entram agora como extra: a **Base sob luminária** e os **sigilos da investigação que acendem por perto** (docs/80, recomendações 3 e 5). Não mexem em regra e deixam a build de playtest mais próxima do clima. O breu no combate continua na Sprint 02, depois do playtest.
 
 ## Capacidade
 
@@ -90,5 +93,5 @@ Escala de pontos: 1 é menos de 1 h; 3 é meio dia; 5 é um dia.
 | Sprint | Objetivo |
 |---|---|
 | 02 | Corrigir e equilibrar a partir dos relatórios: tutorial, ritmo da missão, dificuldade do caso. **Breu no combate** (docs/80, recomendação 1): luz pelos agentes, raio que cai com a Membrana e ajuste "combate mais claro". Testar no playtest se a grade continua legível |
-| 03 | Base sob luminária e sigilos que acendem por perto (docs/80, 3 e 5), ME8 sinais de sanidade, mais o polimento 2.5 dos marcos de OP |
+| 03 | ME8 sinais de sanidade e o polimento 2.5 dos marcos de OP (a luminária e os sigilos por perto foram adiantados para a Sprint 01) |
 | 04 | Lançamento 9: página no itch.io, build pública, missões da comunidade |
