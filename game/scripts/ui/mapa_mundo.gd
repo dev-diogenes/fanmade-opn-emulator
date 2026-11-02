@@ -385,6 +385,14 @@ func _aplicar_comando(cmd: Dictionary) -> Dictionary:
 	return res
 
 
+## A cena vai trocar (encontro ou investigação): o mapa deixa a sessão já, não depois do segundo
+## de som e pulso. Antes, nesse segundo o host ainda numerava comandos de mapa (que não faziam
+## nada), e o cliente que trocava de cena primeiro ficava com um deles preso na fila.
+func _sair_da_sessao() -> void:
+	if sessao != null:
+		sessao.sair("mapa")
+
+
 func _exit_tree() -> void:
 	if sessao != null:
 		sessao.sair("mapa")
@@ -567,6 +575,7 @@ func _mostrar_rolagem(cmd: Dictionary, res: Dictionary, opcao_evento: Dictionary
 
 
 func _ao_encontro(config: Dictionary) -> void:
+	_sair_da_sessao()
 	_atualizar()
 	Som.tocar("encontro")   # algo viu o grupo: nota grave, fita falhando
 	Tema.pulso_vhs(_vista, 0.9, 1.0)
@@ -576,6 +585,7 @@ func _ao_encontro(config: Dictionary) -> void:
 
 
 func _ao_investigar(_config: Dictionary) -> void:
+	_sair_da_sessao()
 	_atualizar()
 	Som.tocar("pista")
 	await get_tree().create_timer(1.0).timeout

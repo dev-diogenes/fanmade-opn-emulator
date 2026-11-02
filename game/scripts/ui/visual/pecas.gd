@@ -1469,13 +1469,14 @@ static func ambiente(raiz: Node3D, cor_ceu: Color = Color("0b0d18")) -> Environm
 
 ## A Membrana pesa no clima (docs/22): a névoa engrossa e puxa para o vermelho-sangue, e as
 ## cores se lavam ainda mais. Quase nada acima de 75; a partir daí, cresce até 25.
-static func clima_membrana(env: Environment, valor: int) -> void:
+static func clima_membrana(env: Environment, valor: int, saturacao_base: float = -1.0) -> void:
 	if env == null:
 		return
+	var base := saturacao_base if saturacao_base >= 0.0 else float(NOITE.saturacao)
 	var t := intensidade_membrana(valor)
 	env.fog_light_color = (NOITE.nevoa as Color).lerp(Color("3a0c16"), t * 0.75)
 	env.fog_density = float(NOITE.densidade) + 0.03 * t
-	env.adjustment_saturation = float(NOITE.saturacao) - 0.2 * t
+	env.adjustment_saturation = base - 0.2 * t
 	env.ambient_light_color = (NOITE.ambiente as Color).lerp(Color("5a2a3a"), t * 0.5)
 
 

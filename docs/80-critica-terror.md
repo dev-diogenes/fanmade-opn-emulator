@@ -104,3 +104,9 @@ O jogo tem uma identidade forte e coerente: o dossiê da Ordem, os papéis datil
 - [Darkest Dungeon: Light Meter (wiki)](https://darkestdungeon.wiki.gg/wiki/Light_meter)
 - [Darkest Dungeon review (Pocket Gamer)](https://www.pocketgamer.com/darkest-dungeon/review/)
 - [Road to the IGF: Darkest Dungeon (Game Developer)](https://www.gamedeveloper.com/audio/road-to-the-igf-red-hook-studios-i-darkest-dungeon-i-)
+
+## Feito em 02/11/2026 (recomendações 2 e 4)
+
+- **Mapa com cor lavada (AU3):** o mapa tem saturação própria, 0,38 (as outras cenas 3D continuam com 0,62), e os tiles clareiam menos. Na área do mundo, sem o HUD e contando só o que não é breu, a saturação caiu de **141 para 59**, abaixo da meta de 80. A área clara visível caiu de 34% para 14%. Marcadores, rastros e presságios brilham e se destacam do chão oliva. Código: `Mapa3D.SATURACAO_MAPA` e `Pecas.clima_membrana(env, valor, saturacao_base)`.
+- **Menos moldura dourada:** painéis, botões em repouso e o fundo das abas usam o traço dourado-escuro (`OURO_ESCURO`) apagado. O dourado vivo fica no hover, no foco, na aba aberta, no painel lateral (mais fraco) e na ação principal (`BotaoPrincipal`). Código: `Tema`.
+- **Ainda não:** a Base sob luminária (lum 101 na aba Missão) fica para a Sprint 03, e o breu no combate (lum 62) para a Sprint 02.

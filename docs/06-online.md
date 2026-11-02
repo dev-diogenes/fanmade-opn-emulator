@@ -65,3 +65,18 @@ GODOT=/caminho/para/Godot_console.exe tools/teste_online.sh 7
 
 - Com `tarde`, o cliente entra no meio da missão.
 - Com `mestre`, o host é o mestre (joga as ameaças, narra e mexe na Membrana) e o cliente joga todos os agentes.
+
+## Correção: comandos presos na troca de cena (02/11/2026)
+
+Achada pela bateria de dois processos (`tools/teste_online.sh 4 mestre`), com o rastreio de comandos do robô (`ROBO_TRACO=1`).
+
+**O defeito:** quando um movimento dispara um encontro ou uma investigação, o mapa espera um segundo (som e pulso de VHS) antes de trocar de cena. Nesse segundo, a sessão do host continuava no contexto "mapa" e numerava os comandos de mapa que chegavam. Eles não faziam nada (`ok=false`), mas iam para o cliente. Se o cliente trocava de cena primeiro, um desses comandos ficava preso na fila dele, e a partida parava, sem nenhuma dessincronia registrada.
+
+**A correção:**
+- O mapa sai da sessão assim que decide trocar de cena (`MapaMundo._sair_da_sessao`).
+- Os pedidos que chegam nesse intervalo esperam. Quando a próxima tela entra, o host os recusa com "a tela já mudou".
+- Os comandos do mestre também esperam durante a troca. Antes, eles levariam a tela vazia e nunca seriam aplicados no cliente.
+
+**O robô de teste também mudou:** quando o agente não consegue atacar no turno, ele pede a IA do jogo (`ia`) em vez de só encerrar. Antes, alguns combates empacavam até o limite de 600 turnos do `FluxoCombate`.
+
+**Combate sem fim:** a mesma bateria (`7 tarde`) achou uma agente sozinha contra um chefe que se regenera até o Enigma de Medo ser resolvido (docs/58). Ninguém caía, e no limite de 600 turnos do `FluxoCombate` a tela ficava parada, sem vez de ninguém, também no jogo de verdade. Agora, no limite, o combate termina numa retirada do grupo, com o mesmo desfecho de uma fuga que deu certo (`Combate.recuar_por_exaustao`). É decisão do jogo, não do livro.

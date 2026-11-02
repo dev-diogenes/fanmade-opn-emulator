@@ -48,7 +48,9 @@ func iniciar() -> void:
 
 ## Passa para o próximo ser e devolve quem age (null quando o combate acaba). Não joga a IA.
 func proximo() -> Ser:
-	if combate.encerrado or turnos >= LIMITE_TURNOS:
+	if not combate.encerrado and turnos >= LIMITE_TURNOS:
+		combate.recuar_por_exaustao()   # antes a tela ficava parada, sem vez de ninguém
+	if combate.encerrado:
 		return null
 	var rodada_antes := combate.rodada
 	var ser := combate.proximo_turno()

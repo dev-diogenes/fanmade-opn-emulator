@@ -20,7 +20,7 @@ SAIDA="$(mktemp -d)"
 HOST=$!
 "$GODOT" --headless --path . res://tests/rede/robo_online.tscn -- --papel=cliente --porta=$PORTA --semente=$SEMENTE --tarde=$TARDE --mestre=$MESTRE >"$SAIDA/cliente.txt" 2>&1 &
 CLIENTE=$!
-( sleep 300; kill $HOST $CLIENTE 2>/dev/null ) >/dev/null 2>&1 &
+( sleep 600; kill $HOST $CLIENTE 2>/dev/null ) >/dev/null 2>&1 &   # 600 s: um combate sem fim leva o limite de turnos inteiro até a retirada
 VIGIA=$!
 wait $HOST
 wait $CLIENTE

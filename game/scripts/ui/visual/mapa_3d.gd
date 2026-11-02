@@ -8,6 +8,11 @@ const RAIO := 1.0
 const ALTURAS := {"agua": 0.08, "pantano": 0.12, "campo": 0.2, "estrada": 0.2, "cidade": 0.22,
 	"ruina": 0.22, "floresta": 0.24, "morro": 0.5, "serra": 0.85}   # serra: o platô alto (docs/34)
 const COR_NEVOA := Color("1c1b24")
+## Cor lavada no mundo (AU3, docs/80): o mapa tem a saturação mais baixa do jogo, e os tiles
+## clareiam menos. Assim o vermelho de um rastro, o roxo da Energia e os marcadores, que
+## brilham, se destacam do chão em vez de competir com um verde vivo.
+const SATURACAO_MAPA := 0.38
+const CLAREAR_TILE := 0.12
 const COR_DESTAQUE := Color(0.35, 0.65, 1.0, 0.45)
 const COR_LONGE_DO_GRUPO := Color(0.95, 0.6, 0.2, 0.45)   ## destino em que o agente fica sozinho (docs/42)
 const CORES_AGENTES := Tema.CORES_JOGADORES
@@ -177,7 +182,7 @@ func atualizar_rumores(regiao: Dictionary) -> void:
 
 ## A Membrana pesa no clima do mapa (docs/22).
 func clima_membrana(valor: int) -> void:
-	Pecas.clima_membrana(_env, valor)
+	Pecas.clima_membrana(_env, valor, SATURACAO_MAPA)
 
 
 func construir(p_mapa: MapaHex, terrenos: Dictionary) -> void:
@@ -200,7 +205,7 @@ func construir(p_mapa: MapaHex, terrenos: Dictionary) -> void:
 		var terreno := Node3D.new()
 		var altura: float = ALTURAS.get(t, 0.2)
 		var cor_tile := cor if t != "estrada" else Color(_terrenos.get("campo", {}).get("cor", "4f6b3a"))
-		var tile := Pecas.tile_terreno(t, RAIO, altura, hash(h), cor_tile.lightened(0.2 if t in ["agua", "pantano"] else 0.4))
+		var tile := Pecas.tile_terreno(t, RAIO, altura, hash(h), cor_tile.lightened(0.05 if t in ["agua", "pantano"] else CLAREAR_TILE))
 		if tile != null:
 			terreno.add_child(tile)
 			if t in ["cidade", "ruina", "serra"]:   # casas, ruínas e paredão continuam por código

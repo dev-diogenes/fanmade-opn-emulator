@@ -17,6 +17,8 @@
 | 02/11 | Crítica de primeiro contato (título, aviso de conteúdo, selo, convite do tutorial, Base com briefing) numa carreira nova | ✅ nada bloqueia: a ordem aviso → título → convite → Base funciona; os avisos de IA e de conteúdo são legíveis (só parecem apagados sob o escurecido do aviso). As críticas anteriores (docs/15, 20, 51 e 57) já cobriram contraste e encaixe |
 | 02/11 | Contraste do símbolo no muro | ✅ contorno escuro sob o miolo e cinza mais claro para a Morte |
 | 02/11 | Extras IN6 (local vasculhado) e AU6 (frase-tema e premissa), docs/79 | ✅, e corrigido o arquivo do caso que não abria sozinho desde o docs/71 |
+| 02/11 | Crítica de terror (docs/80): mapa com cor lavada e menos dourado | ✅ saturação do mundo de 141 para 59 |
+| 02/11 | Online: comando preso na troca de cena (docs/06) | ✅ achado pela bateria com o mestre; o mapa sai da sessão antes do segundo de transição |
 
 > **Ajuste de rota (02/11):** a crítica do docs/80 mostrou que a luz está ao contrário: a Base e o combate são as telas mais claras. As recomendações de custo baixo e só visuais entram como extra da Sprint 01. O breu no combate vai para a 02, porque mexe na leitura tática e precisa de playtest. A build continua o objetivo número 1 e só espera os modelos de exportação.
 

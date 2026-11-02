@@ -39,6 +39,12 @@ func _ready() -> void:
 	jogo = get_node("/root/Jogo")
 	jogo.salvar_automaticamente = false
 	jogo.sessao.comando_aplicado.connect(func(cmd, _res): _por_tela[cmd.ctx] = int(_por_tela.get(cmd.ctx, 0)) + 1)
+	if OS.get_environment("ROBO_TRACO") != "":   # depuração: cada comando com o hash depois dele
+		jogo.sessao.comando_aplicado.connect(func(cmd, res):
+			var mm: Missao = jogo.missao
+			print("ROBO %s CMD %s %s/%s ok=%s hash=%d inv=%s pos=%s" % [papel, str(cmd.get("seq", "?")), cmd.ctx, cmd.acao, str(res.get("ok", "?")),
+				Comandos.hash_missao(mm) if mm != null else 0, not mm.investigacao_pendente.is_empty() if mm != null else false,
+				str(mm.posicao(mm.agente_atual())) if mm != null and mm.agente_atual() != null else "-"]))
 	jogo.carreira = Carreira.nova()
 	if papel == "host":
 		if mestre:
@@ -185,6 +191,13 @@ func _jogar_arena(cena: Node) -> void:
 		_passo_turno[f.turnos] = 2
 		_enviar(cena, "agredir", {"alvo": Comandos.ref(c, alvo)})
 		return
+	if passo < 2:
+		# Sem ataque possível neste turno (cobertura, enigma, imunidade): a IA do jogo tenta o
+		# resto, uma vez. Antes o robô só encerrava, e alguns combates empacavam até o limite
+		# de turnos do FluxoCombate.
+		_passo_turno[f.turnos] = 3
+		_enviar(cena, "ia")
+		return
 	_enviar(cena, "encerrar_turno")
 
 
@@ -203,8 +216,9 @@ func _jogar_investigacao(cena: Node) -> void:
 func _diagnostico() -> void:
 	var cena := get_tree().current_scene
 	var se: Sessao = jogo.sessao
-	print("ROBO %s DIAG cena=%s modo=%s contexto=%s seq=%d ocupado=%s fila=%s pedidos=%d" % [papel, cena.scene_file_path if cena else "-", se.modo, se.contexto, se.seq, se.ocupado,
-		se._recebidos.map(func(e): return "%d:%s/%s" % [int(e.seq), e.ctx, e.acao]).slice(0, 5), se._pedidos.size()])
+	print("ROBO %s DIAG cena=%s modo=%s contexto=%s seq=%d ocupado=%s fila=%s pedidos=%d dessincronias=%d" % [papel, cena.scene_file_path if cena else "-", se.modo, se.contexto, se.seq, se.ocupado,
+		se._recebidos.map(func(e): return "%d:%s/%s" % [int(e.seq), e.ctx, e.acao]).slice(0, 5), se._pedidos.size(), se.dessincronias])
+	print("ROBO %s DIAG registro=%s" % [papel, se.registro.map(func(e): return "%s:%s/%s" % [str(e.get("seq", "?")), e.ctx, e.acao]).slice(-12)])
 	var m: Missao = jogo.missao
 	if m != null:
 		var a := m.agente_atual()
@@ -214,6 +228,7 @@ func _diagnostico() -> void:
 		var f: FluxoCombate = cena.fluxo
 		var d := f.decisor()
 		print("ROBO %s DIAG combate encerrado=%s vez=%s decisor=%s turnos=%d" % [papel, f.combate.encerrado, f.combate.ser_atual().nome if f.combate.ser_atual() else "-", d.nome if d else "-", f.turnos])
+		print("ROBO %s DIAG seres=%s" % [papel, f.combate.participantes.map(func(x): return "%s %s pv=%d/%d cond=%s pos=%s" % [x.nome, x.lado, x.pv, x.pv_maximo, x.condicoes.keys(), str(f.combate.grade.posicao(x)) if f.combate.grade.tem(x) else "-"])])
 	if cena != null and cena.scene_file_path == "res://scenes/investigacao.tscn":
 		var inv: CenaInvestigacao = cena.cena
 		print("ROBO %s DIAG investigacao encerrada=%s vez=%s" % [papel, inv.encerrada, inv.agente_atual().nome if inv.agente_atual() else "-"])

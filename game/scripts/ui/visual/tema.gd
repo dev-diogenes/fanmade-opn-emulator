@@ -142,10 +142,12 @@ static func criar() -> Theme:
 	painel.shadow_size = 8
 	painel.border_blend = true
 	# Painéis em traço riscado (docs/09): nada de caixa reta
-	var riscado := riscada(Color(OURO, 0.7), Color(PEDRA, 0.94), Vector2(14, 12))
+	# Menos dourado (docs/80): o painel comum tem o traço apagado; o dourado vivo fica para o
+	# foco, o hover, a aba aberta e a ação principal
+	var riscado := riscada(Color(OURO_ESCURO, 0.75), Color(PEDRA, 0.94), Vector2(14, 12))
 	t.set_stylebox("panel", "PanelContainer", riscado)
 	t.set_stylebox("panel", "Panel", riscado)
-	var lateral := riscada(OURO, Color(PEDRA, 0.94), Vector2(14, 12))
+	var lateral := riscada(Color(OURO, 0.5), Color(PEDRA, 0.94), Vector2(14, 12))
 	lateral.escape = 0.0
 	t.set_type_variation("PainelLateral", "PanelContainer")
 	t.set_stylebox("panel", "PainelLateral", lateral)
@@ -173,7 +175,7 @@ static func criar() -> Theme:
 	var normal := caixa(PEDRA_CLARA, OURO_ESCURO, 1, 4, Vector2(14, 7))
 	var foco := caixa(Color(0, 0, 0, 0), OURO_CLARO, 1, 4)
 	for tipo in ["Button", "OptionButton", "MenuButton"]:
-		t.set_stylebox("normal", tipo, riscada(Color(OURO, 0.55), PEDRA_CLARA, Vector2(14, 7), true))
+		t.set_stylebox("normal", tipo, riscada(Color(OURO_ESCURO, 0.9), PEDRA_CLARA, Vector2(14, 7), true))
 		t.set_stylebox("hover", tipo, riscada(OURO_CLARO, Color("33283a"), Vector2(14, 7), true))
 		t.set_stylebox("pressed", tipo, riscada(OURO_CLARO, SANGUE, Vector2(14, 7), true))
 		t.set_stylebox("disabled", tipo, riscada(Color(OURO_ESCURO, 0.4), Color(PEDRA, 0.6), Vector2(14, 7), true))
@@ -237,7 +239,7 @@ static func criar() -> Theme:
 		t.set_stylebox("focus", tipo, StyleBoxEmpty.new())
 
 	# Abas como pastas de arquivo (Base da Ordem)
-	t.set_stylebox("panel", "TabContainer", riscada(Color(OURO, 0.6), Color(PEDRA, 0.9), Vector2(18, 16)))
+	t.set_stylebox("panel", "TabContainer", riscada(Color(OURO_ESCURO, 0.7), Color(PEDRA, 0.9), Vector2(18, 16)))
 	t.set_stylebox("tab_selected", "TabContainer", riscada(OURO_CLARO, Color("2a2230"), Vector2(18, 7), true))
 	t.set_stylebox("tab_unselected", "TabContainer", caixa(Color(PEDRA, 0.8), Color(OURO_ESCURO, 0.5), 1, 3, Vector2(18, 7)))
 	t.set_stylebox("tab_hovered", "TabContainer", riscada(OURO, Color("231d28"), Vector2(18, 7), true))

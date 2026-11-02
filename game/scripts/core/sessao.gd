@@ -164,11 +164,11 @@ func processar_fila() -> void:
 func _passo_do_host() -> bool:
 	var p: Dictionary = _pedidos[0]
 	var cmd: Dictionary = p.cmd
+	if contexto == "":
+		return false   # trocando de cena: todo pedido espera (o do mestre levaria a tela vazia)
 	if String(cmd.ctx) == MESTRE:
 		cmd["tela"] = contexto   # o cliente aplica na mesma tela em que o host aceitou
 	elif String(cmd.ctx) != contexto:
-		if contexto == "":
-			return false   # trocando de cena: o pedido espera
 		_pedidos.pop_front()
 		recusado.emit(int(p.peer), cmd, "a tela já mudou")
 		return true

@@ -818,6 +818,17 @@ func fugir(agente: Agente) -> Dictionary:
 	return res
 
 
+## Combate sem fim (FluxoCombate.LIMITE_TURNOS): ninguém consegue derrubar ninguém, como um
+## chefe que se regenera contra uma agente sozinha. O grupo recua, com o mesmo desfecho de uma
+## fuga que deu certo. Decisão do jogo, não do livro.
+func recuar_por_exaustao() -> void:
+	if encerrado:
+		return
+	fugiram = true
+	_log("[color=#8fa3d9][b]O combate se arrasta até ninguém aguentar.[/b] O grupo recua para longe.[/color]")
+	_verificar_fim()
+
+
 ## Quem persegue alcança quem tropeçou: o perseguidor mais forte ataca (sem contar distância).
 func _perseguidor_alcanca(alvo: Agente) -> String:
 	var melhor: Ameaca = null

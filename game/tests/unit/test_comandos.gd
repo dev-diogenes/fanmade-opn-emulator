@@ -250,3 +250,11 @@ func test_investigacao_age_por_comandos():
 	assert_eq(tela.sessao.registro.size(), antes + 1)
 	assert_eq(tela.sessao.registro.back().acao, "passar")
 	assert_ne(tela.cena.agente_atual(), a, "a vez passou")
+
+
+func test_combate_sem_fim_vira_retirada():
+	var f := _fluxo(7)
+	f.turnos = FluxoCombate.LIMITE_TURNOS
+	assert_null(f.proximo(), "no limite, ninguém mais tem a vez")
+	assert_true(f.combate.encerrado, "o combate acaba em vez de travar a tela")
+	assert_eq(f.combate.lado_vencedor(), "fuga", "o grupo recua, como numa fuga")
